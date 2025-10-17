@@ -1,0 +1,14 @@
+.venv
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.DS_Store  

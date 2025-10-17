@@ -1,7 +1,7 @@
 """Generated classes from CCP4BaseFile.py"""
 
 from ..base_object.base_classes import CData, CContainer
-from ..CCP4FundamentalTypes import CInt, CList, CBoolean, CFloat, CString, COneWord
+from ..base_object.fundamental_types import CInt, CList, CBoolean, CFloat, CString
 from ..base_object.class_metadata import cdata_class, attribute, AttributeType
 
 

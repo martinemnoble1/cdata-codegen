@@ -67,11 +67,11 @@ class HierarchicalObject(ABC):
     """
 
     def __init__(
-        self, parent: Optional["HierarchicalObject"] = None, objectName: str = None
+        self, parent: Optional["HierarchicalObject"] = None, name: str = None
     ):
         self._parent_ref: Optional[weakref.ReferenceType] = None
         self._children: Set[weakref.ReferenceType] = set()
-        self._objectName = objectName or f"{self.__class__.__name__}_{id(self)}"
+        self._name = name or f"{self.__class__.__name__}_{id(self)}"
         self._lock = threading.RLock()
         self._signal_manager = SignalManager()
         self._state = ObjectState.CREATED
@@ -95,24 +95,24 @@ class HierarchicalObject(ABC):
             self.set_parent(parent)
 
         self._state = ObjectState.INITIALIZED
-        logger.debug(f"Created {self._objectName}")
+        logger.debug(f"Created {self._name}")
 
     @property
-    def objectName(self) -> str:
+    def name(self) -> str:
         """Object name for identification and debugging."""
-        return self._objectName
+        return self._name
 
-    @objectName.setter
-    def objectName(self, value: str):
-        old_name = self._objectName
-        self._objectName = value
+    @name.setter
+    def name(self, value: str):
+        old_name = self._name
+        self._name = value
         logger.debug(f"Renamed object from {old_name} to {value}")
 
     @property
     def object_info(self) -> ObjectInfo:
         """Get metadata about this object."""
         return ObjectInfo(
-            name=self._objectName,
+            name=self._name,
             object_type=self.__class__.__name__,
             state=self._state,
             properties=self._properties.copy(),
@@ -146,7 +146,7 @@ class HierarchicalObject(ABC):
         with self._lock:
             if self._state == ObjectState.DESTROYED:
                 logger.warning(
-                    f"Cannot set parent on destroyed object {self._objectName}"
+                    f"Cannot set parent on destroyed object {self._name}"
                 )
                 return False
 
@@ -170,7 +170,7 @@ class HierarchicalObject(ABC):
             # Emit signal
             self.parent_changed.emit(parent)
             logger.debug(
-                f"Set parent of {self._objectName} to {parent._objectName if parent else None}"
+                f"Set parent of {self._name} to {parent._name if parent else None}"
             )
             return True
 
@@ -183,7 +183,7 @@ class HierarchicalObject(ABC):
             child_ref = weakref.ref(child)
             self._children.add(child_ref)
             self.child_added.emit(child)
-            logging.debug(f"Added child {child._objectName} to {self._objectName}")
+            logging.debug(f"Added child {child._name} to {self._name}")
 
     def _remove_child(self, child: "HierarchicalObject"):
         """Internal method to remove a child (called by set_parent)."""
@@ -199,7 +199,7 @@ class HierarchicalObject(ABC):
                 self._children.remove(to_remove)
                 self.child_removed.emit(child)
                 logger.debug(
-                    f"Removed child {child._objectName} from {self._objectName}"
+                    f"Removed child {child._name} from {self._name}"
                 )
 
     def _cleanup_dead_children(self):
@@ -221,7 +221,7 @@ class HierarchicalObject(ABC):
 
         # Direct children first
         for child in children:
-            if child._objectName == name:
+            if child._name == name:
                 return child
 
         # Recursive search if requested
@@ -270,7 +270,7 @@ class HierarchicalObject(ABC):
         path = []
         current = self
         while current is not None:
-            path.insert(0, current._objectName)
+            path.insert(0, current._name)
             current = current.parent()
         return path
 
@@ -449,9 +449,9 @@ class HierarchicalObject(ABC):
         for i, child in enumerate(children):
             # Regular child path
             child_path = (
-                f"{current_path}.{child._objectName}"
+                f"{current_path}.{child._name}"
                 if current_path
-                else child._objectName
+                else child._name
             )
             child._collect_paths(paths, child_path, max_depth - 1)
 
@@ -535,7 +535,7 @@ class HierarchicalObject(ABC):
         if self._state == ObjectState.DESTROYED:
             return
 
-        logger.debug(f"Destroying {self._objectName}")
+        logger.debug(f"Destroying {self._name}")
         self._state = ObjectState.DESTROYING
 
         # Destroy all children first
@@ -548,8 +548,13 @@ class HierarchicalObject(ABC):
             parent._remove_child(self)
             self._parent_ref = None
 
-        # Emit destroyed signal
-        self.destroyed.emit()
+        # Emit destroyed signal if it exists
+        destroyed_signal = getattr(self, 'destroyed', None)
+        if destroyed_signal is not None:
+            try:
+                destroyed_signal.emit()
+            except Exception:
+                pass
 
         # Cleanup
         self._signal_manager.cleanup()
@@ -558,7 +563,7 @@ class HierarchicalObject(ABC):
         self._event_handlers.clear()
 
         self._state = ObjectState.DESTROYED
-        logger.debug(f"Destroyed {self._objectName}")
+        logger.debug(f"Destroyed {self._name}")
 
     def __del__(self):
         """Ensure cleanup on garbage collection."""
@@ -566,10 +571,10 @@ class HierarchicalObject(ABC):
             self.destroy()
 
     def __repr__(self) -> str:
-        parent_name = self.parent()._objectName if self.parent() else "None"
+        parent_name = self.parent()._name if self.parent() else "None"
         child_count = len(self.children())
         return (
-            f"{self.__class__.__name__}(objectName={self._objectName}, "
+            f"{self.__class__.__name__}(name={self._name}, "
             f"parent={parent_name}, children={child_count}, state={self._state.name})"
         )
 

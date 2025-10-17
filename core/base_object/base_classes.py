@@ -24,9 +24,9 @@ class ValueState(Enum):
 class CData(HierarchicalObject):
     """Base class for all CCP4i2 data objects with hierarchical relationships."""
 
-    def __init__(self, parent=None, objectName=None, **kwargs):
+    def __init__(self, parent=None, name=None, **kwargs):
         # Initialize hierarchical object first
-        super().__init__(parent=parent, objectName=objectName)
+        super().__init__(parent=parent, name=name)
 
         # Initialize set state tracking
         self._value_states: Dict[str, ValueState] = {}
@@ -41,9 +41,63 @@ class CData(HierarchicalObject):
         # NEW: Apply metadata-driven attribute creation
         self._apply_metadata_attributes()
 
+        # --- Per-instance metadata copying and override ---
+        # Copy class-level metadata to instance for override flexibility
+        cls = self.__class__
+        # Qualifiers
+        if hasattr(cls, 'qualifiers'):
+            class_qualifiers = getattr(cls, 'qualifiers')
+            print(f"[DEBUG] {cls.__name__}.qualifiers type: {type(class_qualifiers)}, value: {class_qualifiers}")
+            if not isinstance(class_qualifiers, dict):
+                print(f"[WARNING] Class-level qualifiers for {cls.__name__} is not a dict: {type(class_qualifiers)}")
+            if isinstance(class_qualifiers, dict):
+                self.qualifiers = dict(class_qualifiers)
+            elif hasattr(class_qualifiers, 'items'):
+                self.qualifiers = dict(class_qualifiers.items())
+            else:
+                self.qualifiers = {}
+        # Qualifiers order
+        if hasattr(cls, 'qualifiers_order'):
+            self.qualifiers_order = list(getattr(cls, 'qualifiers_order'))
+        # Qualifiers definition
+        if hasattr(cls, 'qualifiers_definition'):
+            self.qualifiers_definition = dict(getattr(cls, 'qualifiers_definition'))
+        # CONTENT_ORDER
+        if hasattr(cls, 'CONTENT_ORDER'):
+            self.CONTENT_ORDER = list(getattr(cls, 'CONTENT_ORDER'))
+        # For CList: subitem
+        if hasattr(cls, 'subItem'):
+            self.subItem = getattr(cls, 'subItem')
+
+        # Allow overrides via kwargs
+        for meta_key in ['qualifiers', 'qualifiers_order', 'qualifiers_definition', 'CONTENT_ORDER', 'subitem']:
+            if meta_key in kwargs:
+                setattr(self, meta_key, kwargs.pop(meta_key))
+
         # Apply provided attributes with hierarchy handling
         for key, value in kwargs.items():
             setattr(self, key, value)
+    def get_qualifier(self, key, default=None):
+        """Get a qualifier value for this instance."""
+        if hasattr(self, 'qualifiers') and self.qualifiers is not None:
+            return self.qualifiers.get(key, default)
+        return default
+
+    def set_qualifier(self, key, value):
+        """Set or override a qualifier value for this instance. Prevent CData objects as values."""
+        if not isinstance(self, CData):
+            raise TypeError(f"set_qualifier called on non-CData object of type {type(self)}. "
+                            "This usually means you overwrote your CData instance with a primitive value.")
+        if not hasattr(self, 'qualifiers') or self.qualifiers is None or not isinstance(self.qualifiers, dict):
+            if hasattr(self, 'qualifiers'):
+                print(f"[WARNING] self.qualifiers is not a dict in set_qualifier: type={type(self.qualifiers)}, value={self.qualifiers}")
+            else:
+                print(f"[WARNING] self.qualifiers attribute is missing in set_qualifier for {type(self)}")
+            self.qualifiers = {}
+        # Prevent storing CData objects as qualifier values
+        if isinstance(value, CData):
+            raise TypeError("Qualifier values must not be CData objects.")
+        self.qualifiers[key] = value
 
     def _apply_metadata_attributes(self):
         """Apply metadata-driven attribute creation if metadata is available."""
@@ -63,13 +117,13 @@ class CData(HierarchicalObject):
         if isinstance(value, CData):
             # Set this object as parent and the attribute name as the child's name
             value.set_parent(self)
-            value.objectName = key
+            value.name = key
         elif isinstance(value, list):
             # Handle list of CData objects
             for i, item in enumerate(value):
                 if isinstance(item, CData):
                     item.set_parent(self)
-                    item.objectName = f"{key}[{i}]"
+                    item.name = f"{key}[{i}]"
 
     def _is_value_type(self) -> bool:
         """Check if this is a simple value type (like CString, CInt, etc.)."""
@@ -132,7 +186,7 @@ class CData(HierarchicalObject):
             # If metadata not available, that's okay
             pass
 
-    def isSet(self, field_name: str) -> bool:
+    def isSet(self, field_name: str = None) -> bool:
         """Check if a field has been explicitly set.
 
         Args:
@@ -141,6 +195,8 @@ class CData(HierarchicalObject):
         Returns:
             True if field has been explicitly set, False otherwise
         """
+        if field_name is None:
+            field_name = "value"
         return (
             self._value_states.get(field_name, ValueState.NOT_SET)
             == ValueState.EXPLICITLY_SET
@@ -153,7 +209,13 @@ class CData(HierarchicalObject):
             field_name: Name of the field to unset
         """
         if hasattr(self, field_name):
-            # Remove the current value
+            attr = getattr(self, field_name)
+            # If the attribute is a CData (or HierarchicalObject), call destroy before deleting
+            if isinstance(attr, HierarchicalObject):
+                try:
+                    attr.destroy()
+                except Exception:
+                    pass
             delattr(self, field_name)
 
         # Mark as not set
@@ -235,8 +297,7 @@ class CData(HierarchicalObject):
             return  # Don't replace the object, just update it
 
         elif (
-            existing_attr is not None
-            and isinstance(existing_attr, CData)
+            existing_attr is not None and isinstance(existing_attr, CData)
             and existing_attr._is_value_type()
         ):
             # Primitive value assignment to existing CData value type
@@ -245,22 +306,20 @@ class CData(HierarchicalObject):
                 # Check type compatibility
                 type_compatible = False
                 if hasattr(existing_attr, "value"):
-                    # Check if the primitive type matches what the CData type expects
+                    # Import types locally to avoid circular import
                     from .fundamental_types import CInt, CFloat, CBoolean
-
+                    try:
+                        from .fundamental_types import CString
+                    except ImportError:
+                        CString = None
                     if isinstance(existing_attr, CInt) and isinstance(value, int):
                         type_compatible = True
-                    elif isinstance(existing_attr, CFloat) and isinstance(
-                        value, (int, float)
-                    ):
+                    elif isinstance(existing_attr, CFloat) and isinstance(value, (int, float)):
                         type_compatible = True
-                    elif isinstance(existing_attr, CBoolean) and isinstance(
-                        value, bool
-                    ):
+                    elif isinstance(existing_attr, CBoolean) and isinstance(value, bool):
                         type_compatible = True
-                    elif isinstance(existing_attr, CString) and isinstance(value, str):
+                    elif CString is not None and isinstance(existing_attr, CString) and isinstance(value, str):
                         type_compatible = True
-
                 if type_compatible:
                     # Update the value attribute of the existing CData object
                     existing_attr.value = value
@@ -272,13 +331,9 @@ class CData(HierarchicalObject):
         # For new attributes or non-smart assignment, handle hierarchy and set normally
         self._setup_hierarchy_for_value(name, value)
         super().__setattr__(name, value)
-
         # Track that this value has been explicitly set (unless it's internal)
-        if (
-            hasattr(self, "_value_states")
-            and not name.startswith("_")
-            and name not in ["parent", "name", "children", "signals"]
-        ):
+        if (hasattr(self, "_value_states") and not name.startswith("_")
+            and name not in ["parent", "name", "children", "signals"]):
             self._value_states[name] = ValueState.EXPLICITLY_SET
 
     def __str__(self):
@@ -295,6 +350,43 @@ class CData(HierarchicalObject):
 
     def __repr__(self):
         return self.__str__()
+
+
+    def set(self, values: dict):
+        """Set attributes from dict, unset others. Avoid overwriting CData-derived attributes with primitives."""
+        metadata = None
+        try:
+            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
+        except Exception:
+            pass
+        if metadata:
+            all_fields = list(metadata.fields.keys())
+        else:
+            all_fields = [k for k in self.__dict__ if not k.startswith('_')
+                         and k not in ['parent', 'name', 'children', 'signals']]
+        for k in all_fields:
+            if k in values:
+                current = getattr(self, k, None)
+                new_value = values[k]
+                # If current is CData-derived and new_value is primitive, update .value
+                if hasattr(current, 'value') and not isinstance(new_value, type(current)):
+                    current.value = new_value
+                else:
+                    setattr(self, k, new_value)
+                self._value_states[k] = ValueState.EXPLICITLY_SET
+            else:
+                self.unSet(k)
+
+
+    def update(self, values: dict):
+        """Update only provided attributes from dict. Avoid overwriting CData-derived attributes with primitives."""
+        for k, v in values.items():
+            current = getattr(self, k, None)
+            if hasattr(current, 'value') and not isinstance(v, type(current)):
+                current.value = v
+            else:
+                setattr(self, k, v)
+            self._value_states[k] = ValueState.EXPLICITLY_SET
 
     def get_metadata(self):
         """Get metadata for this class."""
@@ -441,7 +533,7 @@ class CDataFile(CData):
     """
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
-        # Initialize base class (which will auto-create attributes from metadata)
+        # Pass per-instance metadata overrides to base
         super().__init__(parent=parent, name=name, **kwargs)
 
         # Legacy compatibility
@@ -472,7 +564,6 @@ class CContainer(CData):
         """Add an item to the container."""
         if isinstance(item, CData):
             item.set_parent(self)
-            item.set_name(f"item[{len(self._container_items)}]")
         self._container_items.append(item)
 
     def get_items(self):
@@ -487,104 +578,3 @@ class CContainer(CData):
         """Get item by index."""
         return self._container_items[index]
 
-
-class CString(CData):
-    def __hash__(self):
-        return hash(self.value)
-
-    def __str__(self):
-        return str(self.value)
-
-    def __repr__(self):
-        return repr(self.value)
-
-    def __eq__(self, other):
-        if isinstance(other, CString):
-            return self.value == other.value
-        return self.value == other
-
-    def __ne__(self, other):
-        if isinstance(other, CString):
-            return self.value != other.value
-        return self.value != other
-
-    def __lt__(self, other):
-        if isinstance(other, CString):
-            return self.value < other.value
-        return self.value < other
-
-    def __le__(self, other):
-        if isinstance(other, CString):
-            return self.value <= other.value
-        return self.value <= other
-
-    def __gt__(self, other):
-        if isinstance(other, CString):
-            return self.value > other.value
-        return self.value > other
-
-    def __ge__(self, other):
-        if isinstance(other, CString):
-            return self.value >= other.value
-        return self.value >= other
-
-    def __add__(self, other):
-        if isinstance(other, CString):
-            return CString(self.value + other.value)
-        return CString(self.value + str(other))
-
-    def __radd__(self, other):
-        if isinstance(other, CString):
-            return CString(other.value + self.value)
-        return CString(str(other) + self.value)
-
-    def __getitem__(self, key):
-        return str(self.value)[key]
-
-    def __contains__(self, item):
-        return item in str(self.value)
-
-    def __len__(self):
-        return len(str(self.value))
-
-    """A string value type for testing smart assignment."""
-
-    def __init__(self, value: str = "", parent=None, name=None, **kwargs):
-        self.value = value
-        super().__init__(parent=parent, name=name, **kwargs)
-
-    def __str__(self):
-        return str(self.value)
-
-    def set(self, value: str):
-        """Set the value directly using .set() method."""
-        self.value = value
-        # Mark as explicitly set in parent if we have one
-        if self.parent and hasattr(self.parent, "_value_states") and self.name:
-            self.parent._value_states[self.name] = ValueState.EXPLICITLY_SET
-        return self
-
-    def isSet(self, field_name: str = None) -> bool:
-        """Check if this string value has been set.
-
-        Args:
-            field_name: Optional field name (for compatibility with parent's isSet interface)
-                       If None, uses this object's name in its parent
-
-        Returns:
-            True if value has been explicitly set, False otherwise
-        """
-        if self.parent and hasattr(self.parent, "_value_states"):
-            # Use provided field_name or fall back to this object's name
-            check_name = field_name if field_name is not None else self.name
-            if check_name:
-                return (
-                    self.parent._value_states.get(check_name, ValueState.NOT_SET)
-                    == ValueState.EXPLICITLY_SET
-                )
-
-        # Fallback: check if we have a non-empty value (basic heuristic)
-        return bool(self.value) if self.value != "" else False
-
-    def _is_value_type(self) -> bool:
-        return True

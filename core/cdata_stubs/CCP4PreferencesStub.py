@@ -1,10 +1,10 @@
 """Generated classes from CCP4Preferences.py"""
 
 from ..base_object.base_classes import CData, CContainer
-from ..CCP4FundamentalTypes import CInt, CList, CBoolean, CFloat, CString, COneWord
+from ..base_object.fundamental_types import CInt, CList, CBoolean, CFloat, CString
 from ..base_object.class_metadata import cdata_class, attribute, AttributeType
 
-from .CCP4BaseFile-stub import CDataFileContent, CDataFile, CXmlDataFile, CI2XmlDataFile
+from .CCP4BaseFileStub import CDataFileContent, CDataFile, CXmlDataFile, CI2XmlDataFile
 
 
 @cdata_class(

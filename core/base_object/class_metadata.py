@@ -180,24 +180,26 @@ class MetadataAttributeFactory:
     def create_attribute(
         cls, name: str, attr_def: AttributeDefinition, parent_obj
     ) -> Any:
-        """Create an attribute object from definition.
-
-        Args:
-            name: Name of the attribute
-            attr_def: Attribute definition
-            parent_obj: Parent object to attach attribute to
-
-        Returns:
-            Created attribute object
-        """
+        """Create an attribute object from definition, sourcing qualifiers from class-level metadata."""
         from .base_classes import ValueState
 
+        # Get class-level qualifiers from parent_obj's class metadata
+        qualifiers = {}
+        meta = getattr(parent_obj.__class__, '_metadata', None)
+        if meta and hasattr(meta, 'qualifiers') and meta.qualifiers:
+            qualifiers = meta.qualifiers
+
+        # Helper to get qualifier value, fallback to attribute definition
+        def q(key, default=None):
+            return qualifiers.get(key, getattr(attr_def, key, default))
+
+        # Patch: pass qualifiers to attribute creation
         if attr_def.attr_type == AttributeType.INT:
-            return cls._create_int_attribute(name, attr_def, parent_obj)
+            return cls._create_int_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type == AttributeType.FLOAT:
-            return cls._create_float_attribute(name, attr_def, parent_obj)
+            return cls._create_float_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type == AttributeType.BOOLEAN:
-            return cls._create_boolean_attribute(name, attr_def, parent_obj)
+            return cls._create_boolean_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type in [
             AttributeType.STRING,
             AttributeType.FILEPATH,
@@ -205,35 +207,38 @@ class MetadataAttributeFactory:
             AttributeType.UUID,
             AttributeType.JOB_TITLE,
         ]:
-            return cls._create_string_attribute(name, attr_def, parent_obj)
+            return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type == AttributeType.CUSTOM:
-            return cls._create_custom_attribute(name, attr_def, parent_obj)
+            return cls._create_custom_attribute(name, attr_def, parent_obj, qualifiers)
         else:
             raise ValueError(f"Unknown attribute type: {attr_def.attr_type}")
 
     @classmethod
     def _create_int_attribute(
-        cls, name: str, attr_def: AttributeDefinition, parent_obj
+        cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create an integer attribute."""
+        """Create an integer attribute, sourcing min/max/default from qualifiers."""
         from .base_classes import CData, ValueState
 
         attr = CData(parent=parent_obj, name=name)
 
-        # Set default value
-        default_value = attr_def.default if attr_def.default is not None else 0
+        # Set default value from qualifiers or attribute definition
+        default_value = qualifiers.get('default', attr_def.default)
+        if default_value is None:
+            default_value = 0
         attr.__dict__["value"] = default_value
 
         # Create methods
         def set_value(val):
-            # Validate range if specified
-            if attr_def.min_value is not None and val < attr_def.min_value:
+            min_value = qualifiers.get('min', attr_def.min_value)
+            max_value = qualifiers.get('max', attr_def.max_value)
+            if min_value is not None and val < min_value:
                 raise ValueError(
-                    f"{name} value {val} is below minimum {attr_def.min_value}"
+                    f"{name} value {val} is below minimum {min_value}"
                 )
-            if attr_def.max_value is not None and val > attr_def.max_value:
+            if max_value is not None and val > max_value:
                 raise ValueError(
-                    f"{name} value {val} is above maximum {attr_def.max_value}"
+                    f"{name} value {val} is above maximum {max_value}"
                 )
 
             attr.__dict__["value"] = int(val)
@@ -257,27 +262,28 @@ class MetadataAttributeFactory:
 
     @classmethod
     def _create_float_attribute(
-        cls, name: str, attr_def: AttributeDefinition, parent_obj
+        cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a float attribute."""
+        """Create a float attribute, sourcing min/max/default from qualifiers."""
         from .base_classes import CData, ValueState
 
         attr = CData(parent=parent_obj, name=name)
 
-        # Set default value
-        default_value = attr_def.default if attr_def.default is not None else 0.0
+        default_value = qualifiers.get('default', attr_def.default)
+        if default_value is None:
+            default_value = 0.0
         attr.__dict__["value"] = default_value
 
-        # Create methods
         def set_value(val):
-            # Validate range if specified
-            if attr_def.min_value is not None and val < attr_def.min_value:
+            min_value = qualifiers.get('min', attr_def.min_value)
+            max_value = qualifiers.get('max', attr_def.max_value)
+            if min_value is not None and val < min_value:
                 raise ValueError(
-                    f"{name} value {val} is below minimum {attr_def.min_value}"
+                    f"{name} value {val} is below minimum {min_value}"
                 )
-            if attr_def.max_value is not None and val > attr_def.max_value:
+            if max_value is not None and val > max_value:
                 raise ValueError(
-                    f"{name} value {val} is above maximum {attr_def.max_value}"
+                    f"{name} value {val} is above maximum {max_value}"
                 )
 
             attr.__dict__["value"] = float(val)
@@ -301,18 +307,18 @@ class MetadataAttributeFactory:
 
     @classmethod
     def _create_boolean_attribute(
-        cls, name: str, attr_def: AttributeDefinition, parent_obj
+        cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a boolean attribute."""
+        """Create a boolean attribute, sourcing default from qualifiers."""
         from .base_classes import CData, ValueState
 
         attr = CData(parent=parent_obj, name=name)
 
-        # Set default value
-        default_value = attr_def.default if attr_def.default is not None else False
+        default_value = qualifiers.get('default', attr_def.default)
+        if default_value is None:
+            default_value = False
         attr.__dict__["value"] = default_value
 
-        # Create methods
         def set_value(val):
             attr.__dict__["value"] = bool(val)
             if hasattr(parent_obj, "_value_states"):
@@ -335,28 +341,27 @@ class MetadataAttributeFactory:
 
     @classmethod
     def _create_string_attribute(
-        cls, name: str, attr_def: AttributeDefinition, parent_obj
+        cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a string-type attribute."""
+        """Create a string-type attribute, sourcing default from qualifiers."""
         from .base_classes import CString
 
-        # Use the actual CString class for consistency
         attr = CString(parent=parent_obj, name=name)
 
-        # Set default value if specified
-        if attr_def.default is not None:
-            attr.value = str(attr_def.default)
+        default_value = qualifiers.get('default', attr_def.default)
+        if default_value is not None:
+            attr.value = str(default_value)
 
         return attr
 
     @classmethod
     def _create_custom_attribute(
-        cls, name: str, attr_def: AttributeDefinition, parent_obj
+        cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a custom attribute type."""
+        """Create a custom attribute type, sourcing default from qualifiers."""
         # This would handle custom CData subclasses
         # For now, default to CString
-        return cls._create_string_attribute(name, attr_def, parent_obj)
+        return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
 
 
 def apply_metadata_to_instance(instance):

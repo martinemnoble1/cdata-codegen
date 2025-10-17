@@ -242,8 +242,8 @@ def main():
                 "from ..base_object.base_classes import CData, CContainer\n"
             )
             f.write(
-                "from ..CCP4FundamentalTypes import CInt, CList, CBoolean, CFloat, "
-                "CString, COneWord\n"
+                "from ..base_object.fundamental_types import CInt, CList, CBoolean, CFloat, "
+                "CString\n"
             )
             f.write(
                 "from ..base_object.class_metadata import cdata_class, attribute, "
@@ -251,7 +251,7 @@ def main():
             )
             if basename not in ["CCP4BaseFile.py"]:
                 f.write(
-                    "from .CCP4BaseFile-stub import CDataFileContent, CDataFile, "
+                    "from .CCP4BaseFileStub import CDataFileContent, CDataFile, "
                     "CXmlDataFile, CI2XmlDataFile\n\n"
                 )
             # Write all classes for this file
