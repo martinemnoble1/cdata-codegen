@@ -2,9 +2,9 @@ import pytest
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.cdata_stubs.CCP4ContainerStub import CContainer
+from core.generated.CCP4File import CDataFile
+from core.base_object.base_classes import CContainer
 from core.base_object.fundamental_types import CInt, CList
-from core.cdata_stubs.CCP4BaseFileStub import CDataFile
 
 class TestExample:
     @classmethod
@@ -42,7 +42,7 @@ class TestExample:
         assert isinstance(the_list, CList)
         assert l is the_list
         print(b.get_qualifier("min"))
-        b.set_qualifier("min", CInt(0))
-        b.set_qualifier("max", CInt(100))
+        b.set_qualifier("min", 2)
+        b.set_qualifier("max", 100)
         with pytest.raises(ValueError):
             b.value = 120  # This should raise a ValueError due to the max qualifier

@@ -1,10 +1,16 @@
-"""Generated classes from CCP4Preferences.py"""
+"""Auto-generated from CCP4i2 metadata. DO NOT EDIT.
 
-from ..base_object.base_classes import CData, CContainer
-from ..base_object.fundamental_types import CInt, CList, CBoolean, CFloat, CString
-from ..base_object.class_metadata import cdata_class, attribute, AttributeType
+To extend these classes, create subclasses in core/extensions/
+"""
 
-from .CCP4BaseFileStub import CDataFileContent, CDataFile, CXmlDataFile, CI2XmlDataFile
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Any
+
+# Metadata system
+from core.base_object.class_metadata import cdata_class, attribute, AttributeType
+
+# Base classes
+from core.base_object.base_classes import CContainer
 
 
 @cdata_class(
@@ -188,7 +194,7 @@ from .CCP4BaseFileStub import CDataFileContent, CDataFile, CXmlDataFile, CI2XmlD
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
-        "saveToDb": False
+        "saveToDb": False,
     },
     qualifiers_order=[
         'allowUndefined',
@@ -197,19 +203,27 @@ from .CCP4BaseFileStub import CDataFileContent, CDataFile, CXmlDataFile, CI2XmlD
         'guiLabel',
         'guiDefinition',
         'helpFile',
-        'saveToDb'
-    ],
+        'saveToDb'],
     qualifiers_definition={
-        "allowUndefined": {"type": bool},
-        "default": {"type": dict},
-        "toolTip": {"type": str},
-        "guiLabel": {"type": str},
-        "guiDefinition": {"type": dict},
-        "helpFile": {"type": str},
-        "saveToDb": {"type": bool, "description": "Save this data in the database"}
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
-    gui_label="CPreferences",
 )
 class CPreferences(CContainer):
     """QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None"""
-    pass
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CPreferences.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)

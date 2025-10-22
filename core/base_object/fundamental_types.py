@@ -1,3 +1,4 @@
+
 """Fundamental CCP4i2 data types that form the base of the type system."""
 
 from typing import List, Any, Optional
@@ -47,12 +48,37 @@ class CInt(CData):
         # Handle value setting with proper state tracking
         if value is None:
             # Default initialization - set value but mark as NOT_SET
-            super().__setattr__("value", 0)
+            super().__setattr__("_value", 0)
             if hasattr(self, "_value_states"):
                 self._value_states["value"] = ValueState.NOT_SET
         else:
             # Explicit value provided - mark as EXPLICITLY_SET
             self.value = value
+
+    def _validate_value(self, val):
+        """Validate value against min/max qualifiers."""
+        min_val = self.get_qualifier("min")
+        max_val = self.get_qualifier("max")
+
+        if min_val is not None and val < min_val:
+            raise ValueError(f"Value {val} is below minimum {min_val}")
+        if max_val is not None and val > max_val:
+            raise ValueError(f"Value {val} is above maximum {max_val}")
+
+        return val
+
+    @property
+    def value(self):
+        """Get the integer value."""
+        return getattr(self, "_value", 0)
+
+    @value.setter
+    def value(self, val):
+        """Set the integer value with validation."""
+        validated = self._validate_value(int(val))
+        super().__setattr__("_value", validated)
+        if hasattr(self, "_value_states"):
+            self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def __str__(self):
         return str(self.value)
@@ -336,6 +362,7 @@ class CFloat(CData):
     def _is_value_type(self) -> bool:
         return True
 
+
     # Arithmetic operators
     def __add__(self, other):
         if isinstance(other, CFloat):
@@ -515,6 +542,108 @@ class CFloat(CData):
         return float(self.value) >= other
 
 
+
+@cdata_class(
+    error_codes={
+        "101": {"description": "String too short"},
+        "102": {"description": "String too long"},
+        "103": {"description": "not one of limited allowed values"},
+        "104": {"description": "Contains disallowed characters"}
+    },
+    qualifiers={
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0
+    },
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'
+    ],
+    qualifiers_definition={
+        "default": {"type": str},
+        "maxLength": {"type": int, "description": "Maximum length of string"},
+        "minLength": {"type": int, "description": "Minimum length of string"},
+        "enumerators": {"type": list, "description": "A list of allowed or recommended values for string"},
+        "menuText": {"type": list, "description": "A list of strings equivalent to the enumerators that will appear in the GUI"},
+        "onlyEnumerators": {"type": bool, "description": "If this is true then the enumerators are obligatory - otherwise they are treated as recommended values"},
+        "charWidth": {"type": int, "description": "Width of the string in characters (for GUI layout)"},
+        "allowedCharsCode": {"type": int, "description": "Flag if the text is limited to set of allowed characters"}
+    },
+    gui_label="CString",
+)
+class CString(CData):
+    """String value type with Python string dunder methods."""
+    def __init__(self, value: str = "", parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        self.value = value
+
+    def __hash__(self):
+        """Make CString hashable for use in sets and as dict keys."""
+        return hash(id(self))
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return repr(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, CString):
+            return self.value == other.value
+        return self.value == other
+
+    def __ne__(self, other):
+        if isinstance(other, CString):
+            return self.value != other.value
+        return self.value != other
+
+    def __lt__(self, other):
+        if isinstance(other, CString):
+            return self.value < other.value
+        return self.value < other
+
+    def __le__(self, other):
+        if isinstance(other, CString):
+            return self.value <= other.value
+        return self.value <= other
+
+    def __gt__(self, other):
+        if isinstance(other, CString):
+            return self.value > other.value
+        return self.value > other
+
+    def __ge__(self, other):
+        if isinstance(other, CString):
+            return self.value >= other.value
+        return self.value >= other
+
+    def __add__(self, other):
+        if isinstance(other, CString):
+            return CString(self.value + other.value)
+        return CString(self.value + str(other))
+
+    def __radd__(self, other):
+        if isinstance(other, CString):
+            return CString(other.value + self.value)
+        return CString(str(other) + self.value)
+
+    def __getitem__(self, key):
+        return self.value[key]
+
+    def __contains__(self, item):
+        return item in self.value
+
+    def __len__(self):
+        return len(self.value)
+
 @cdata_class(
     error_codes={
         "101": {"description": "not allowed value"}
@@ -634,9 +763,9 @@ class CList(CData):
         self, items: Optional[List[Any]] = None, parent=None, name=None, **kwargs
     ):
         super().__init__(parent=parent, name=name, **kwargs)
-        self._items = items or []
-        self._item_type = None
-        self._item_qualifiers = {}
+        object.__setattr__(self, '_items', items or [])
+        object.__setattr__(self, '_item_type', None)
+        object.__setattr__(self, '_item_qualifiers', {})
 
         # Register existing items as children
         for i, item in enumerate(self._items):
@@ -646,6 +775,7 @@ class CList(CData):
 
     def append(self, item: Any) -> None:
         """Add an item to the list."""
+        from ..base_object.base_classes import ValueState
         index = len(self._items)
 
         # If item is CData, register as child
@@ -656,7 +786,7 @@ class CList(CData):
         self._items.append(item)
 
         # Mark as explicitly set
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
 
     def insert(self, index: int, item: Any) -> None:
         """Insert an item at specified index."""
@@ -729,146 +859,9 @@ class CList(CData):
     def __str__(self) -> str:
         return f"CList({len(self._items)} items)"
 
-    def __repr__(self) -> str:
-        return f"CList({self._items!r})"
 
-
-
-@cdata_class(
-    error_codes={
-        "101": {"description": "String too short"},
-        "102": {"description": "String too long"},
-        "103": {"description": "not one of limited allowed values"},
-        "104": {"description": "Contains disallowed characters"}
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'
-    ],
-    qualifiers_definition={
-        "default": {"type": str},
-        "maxLength": {"type": int, "description": "Maximum length of string"},
-        "minLength": {"type": int, "description": "Minimum length of string"},
-        "enumerators": {"type": list, "description": "A list of allowed or recommended values for string"},
-        "menuText": {"type": list, "description": "A list of strings equivalent to the enumerators that will appear in the GUI"},
-        "onlyEnumerators": {"type": bool, "description": "If this is true then the enumerators are obligatory - otherwise they are treated as recommended values"},
-        "allowedCharsCode": {"type": int, "description": "Flag if the text is limited to set of allowed characters"}
-    },
-    gui_label="CString",
-)
-class CString(CData):
-    def __hash__(self):
-        return hash(self.value)
-
-    def __str__(self):
-        return str(self.value)
-
-    def __repr__(self):
-        return repr(self.value)
-
-    def __eq__(self, other):
-        if isinstance(other, CString):
-            return self.value == other.value
-        return self.value == other
-
-    def __ne__(self, other):
-        if isinstance(other, CString):
-            return self.value != other.value
-        return self.value != other
-
-    def __lt__(self, other):
-        if isinstance(other, CString):
-            return self.value < other.value
-        return self.value < other
-
-    def __le__(self, other):
-        if isinstance(other, CString):
-            return self.value <= other.value
-        return self.value <= other
-
-    def __gt__(self, other):
-        if isinstance(other, CString):
-            return self.value > other.value
-        return self.value > other
-
-    def __ge__(self, other):
-        if isinstance(other, CString):
-            return self.value >= other.value
-        return self.value >= other
-
-    def __add__(self, other):
-        if isinstance(other, CString):
-            return CString(self.value + other.value)
-        return CString(self.value + str(other))
-
-    def __radd__(self, other):
-        if isinstance(other, CString):
-            return CString(other.value + self.value)
-        return CString(str(other) + self.value)
-
-    def __getitem__(self, key):
-        return str(self.value)[key]
-
-    def __contains__(self, item):
-        return item in str(self.value)
-
-    def __len__(self):
-        return len(str(self.value))
-
-    """A string value type for testing smart assignment."""
-
-    def __init__(self, value: str = "", parent=None, name=None, **kwargs):
-        self.value = value
-        super().__init__(parent=parent, name=name, **kwargs)
-
-    def __str__(self):
-        return str(self.value)
-
-    def set(self, value: str):
-        """Set the value directly using .set() method."""
-        self.value = value
-        # Mark as explicitly set in parent if we have one
-        if self.parent and hasattr(self.parent, "_value_states") and self.name:
-            self.parent._value_states[self.name] = ValueState.EXPLICITLY_SET
-        return self
-
-    def isSet(self, field_name: str = None) -> bool:
-        """Check if this string value has been set.
-
-        Args:
-            field_name: Optional field name (for compatibility with parent's isSet interface)
-                       If None, uses this object's name in its parent
-
-        Returns:
-            True if value has been explicitly set, False otherwise
-        """
-        if self.parent and hasattr(self.parent, "_value_states"):
-            # Use provided field_name or fall back to this object's name
-            check_name = field_name if field_name is not None else self.name
-            if check_name:
-                return (
-                    self.parent._value_states.get(check_name, ValueState.NOT_SET)
-                    == ValueState.EXPLICITLY_SET
-                )
-
-        # Fallback: check if we have a non-empty value (basic heuristic)
-        return bool(self.value) if self.value != "" else False
-
-    def _is_value_type(self) -> bool:
-        return True
+# Alias for COneWord used in CCP4ModelData
+COneWord = CString
 
 # Type aliases for commonly used types
 #CCellLength = CFloat
@@ -877,8 +870,8 @@ class CString(CData):
 #CAngle = CFloat
 #CTime = CInt
 #CSpaceGroup = CString
-#CUUID = CString
-#CProjectId = CUUID
+CUUID = CString
+CProjectId = CUUID
 #CUserId = CString
 #CVersion = CString
 #CProjectName = CString

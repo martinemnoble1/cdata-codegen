@@ -1,3 +1,20 @@
+
+
+# --- CDataFileContent migrated from CCP4File.py ---
+
+
+import sys
+import os
+from typing import Any, Dict
+from enum import Enum, auto
+from .metadata_system import MetadataRegistry
+from .class_metadata import cdata_class, attribute, AttributeType
+
+# --- CDataFileContent migrated from CCP4File.py ---
+
+
+# (Place this after the CData class definition)
+
 """Base classes for the new CData hierarchy."""
 
 import sys
@@ -25,9 +42,9 @@ class CData(HierarchicalObject):
     """Base class for all CCP4i2 data objects with hierarchical relationships."""
 
     def __init__(self, parent=None, name=None, **kwargs):
-        # Initialize hierarchical object first
+        # Initialize hierarchical object first (it only takes parent and name)
         super().__init__(parent=parent, name=name)
-
+        print(f"[DEBUG] Initializing CData instance of type {self.__class__.__name__} with name '{name}'")
         # Initialize set state tracking
         self._value_states: Dict[str, ValueState] = {}
         self._default_values: Dict[str, Any] = {}
@@ -72,11 +89,133 @@ class CData(HierarchicalObject):
         # Allow overrides via kwargs
         for meta_key in ['qualifiers', 'qualifiers_order', 'qualifiers_definition', 'CONTENT_ORDER', 'subitem']:
             if meta_key in kwargs:
-                setattr(self, meta_key, kwargs.pop(meta_key))
+                # Set qualifiers directly as a dict to avoid wrapping as CData
+                if meta_key == 'qualifiers' and isinstance(kwargs[meta_key], dict):
+                    self.qualifiers = kwargs.pop(meta_key)
+                else:
+                    setattr(self, meta_key, kwargs.pop(meta_key))
 
         # Apply provided attributes with hierarchy handling
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def _load_default_values(self):
+        """Load default values from qualifiers metadata."""
+        # Try to get default values from metadata system
+        try:
+            from .metadata_system import MetadataRegistry
+            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
+            if metadata:
+                for field_name, field_meta in metadata.fields.items():
+                    if field_meta.default_value is not None:
+                        self._default_values[field_name] = field_meta.default_value
+                        self._value_states[field_name] = ValueState.NOT_SET
+        except Exception:
+            # If metadata not available, that's okay
+            pass
+
+    def _apply_metadata_attributes(self):
+        """Apply metadata-driven attribute creation if metadata is available."""
+        try:
+            from .metadata_system import MetadataRegistry
+            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
+            if metadata and metadata.fields:
+                for field_name, field_meta in metadata.fields.items():
+                    if not hasattr(self, field_name):
+                        # Create the attribute with default value
+                        if field_meta.default_value is not None:
+                            setattr(self, field_name, field_meta.default_value)
+        except Exception:
+            pass
+
+    def get_qualifier(self, key, default=None):
+        """Get a qualifier value for this instance."""
+        if hasattr(self, 'qualifiers') and self.qualifiers is not None:
+            return self.qualifiers.get(key, default)
+        return default
+
+    def set_qualifier(self, key, value):
+        """Set or override a qualifier value for this instance."""
+        if not hasattr(self, 'qualifiers') or self.qualifiers is None:
+            self.qualifiers = {}
+        self.qualifiers[key] = value
+
+    def set(self, values: dict):
+        """Set attributes from dict, unsetting others."""
+        for key in list(self.__dict__.keys()):
+            if not key.startswith('_') and key not in values:
+                if hasattr(self, key):
+                    delattr(self, key)
+        for key, value in values.items():
+            setattr(self, key, value)
+
+    def update(self, values: dict):
+        """Update attributes from dict without unsetting others."""
+        for key, value in values.items():
+            setattr(self, key, value)
+
+# --- CDataFileContent migrated from CCP4File.py ---
+@cdata_class(
+    error_codes={
+        '0': {'severity': 0, 'description': 'OK'},
+        '1': {'severity': 1, 'description': 'Data has undefined value'},
+        '2': {'severity': 3, 'description': 'Data has undefined value'},
+        '3': {'severity': 2, 'description': 'Missing data'},
+        '4': {'description': 'Missing data'},
+        '5': {'description': 'Attempting to set data of wrong type'},
+        '6': {'description': 'Default value does not satisfy validity check'},
+        '7': {'severity': 2, 'description': 'Unrecognised qualifier in data input'},
+        '8': {'severity': 2, 'description': 'Attempting to get inaccessible attribute:'},
+        '9': {'description': 'Failed to get property'},
+        '10': {'severity': 2, 'description': 'Attempting to set inaccessible attribute:'},
+        '11': {'description': 'Failed to set property:'},
+        '12': {'description': 'Undetermined error setting value from XML'},
+        '13': {'description': 'Unrecognised class name in qualifier'},
+        '14': {'severity': 2, 'description': 'No object name when saving qualifiers to XML'},
+        '15': {'description': 'Error saving qualifier to XML'},
+        '16': {'severity': 2, 'description': 'Unrecognised item in XML data file'},
+        '17': {'description': 'Attempting to set unrecognised qualifier'},
+        '18': {'description': 'Attempting to set qualifier with wrong type'},
+        '19': {'description': 'Attempting to set qualifier with wrong list item type'},
+        '20': {'description': 'Error creating a list/dict item object'},
+        '21': {'description': 'Unknown error setting qualifiers from Xml file'},
+        '22': {'description': 'Unknown error testing validity'},
+        '23': {'description': 'Error saving data object to XML'},
+        '24': {'description': 'Unable to test validity of default', 'severity': 2},
+        '300': {'description': 'Compared objects are the same', 'severity': 0},
+        '315': {'description': 'Both compared objects are null', 'severity': 0},
+        '301': {'description': 'Unable to compare this class of data', 'severity': 2},
+        '302': {'description': 'Other data has null value'},
+        '303': {'description': 'My data has null value'},
+        '304': {'description': 'Data has different values'}
+    },
+    qualifiers={
+        'allowUndefined': True,
+        'default': 'NotImplemented',
+        'toolTip': 'NotImplemented',
+        'guiLabel': 'NotImplemented',
+        'guiDefinition': {},
+        'helpFile': 'NotImplemented',
+        'saveToDb': False
+    },
+    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_definition={
+        'allowUndefined': {'type': "<class 'bool'>"},
+        'default': {'type': "<class 'dict'>"},
+        'toolTip': {'type': "<class 'str'>"},
+        'guiLabel': {'type': "<class 'str'>"},
+        'guiDefinition': {'type': "<class 'dict'>"},
+        'helpFile': {'type': "<class 'str'>"},
+        'saveToDb': {'type': "<class 'bool'>", 'description': 'Save this data in the database'}
+    },
+    gui_label='CDataFileContent'
+)
+class CDataFileContent(CData):
+    """Base class for file content data objects."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
     def get_qualifier(self, key, default=None):
         """Get a qualifier value for this instance."""
         if hasattr(self, 'qualifiers') and self.qualifiers is not None:
@@ -259,6 +398,7 @@ class CData(HierarchicalObject):
 
     def __setattr__(self, name: str, value: Any):
         """Override setattr to handle smart assignment and hierarchical relationships."""
+
         # Allow setting internal attributes normally during initialization
         if (
             name.startswith("_")
@@ -267,6 +407,12 @@ class CData(HierarchicalObject):
         ):
             super().__setattr__(name, value)
             return
+
+        # Special handling for metadata attributes: assign directly if dict or list
+        if name in ["qualifiers", "qualifiers_order", "qualifiers_definition", "CONTENT_ORDER", "subitem"]:
+            if isinstance(value, (dict, list)):
+                object.__setattr__(self, name, value)
+                return
 
         # Handle smart assignment patterns
         existing_attr = getattr(self, name, None)
@@ -423,6 +569,51 @@ class CData(HierarchicalObject):
 
         return get_error_message(error_code)
 
+    def get_merged_metadata(self, key: str) -> dict:
+        """
+        Dynamically merge metadata (e.g., qualifiers, qualifiers_definition, etc.) from all ancestors.
+        Child class values override parent values.
+        Usage: self.get_merged_metadata('qualifiers')
+        """
+        merged = {}
+        for cls in self.__class__.__mro__:
+            if hasattr(cls, key):
+                parent_meta = getattr(cls, key)
+                if isinstance(parent_meta, dict):
+                    merged.update(parent_meta)
+        # Instance-level overrides
+        if hasattr(self, key):
+            instance_meta = getattr(self, key)
+            if isinstance(instance_meta, dict):
+                merged.update(instance_meta)
+        return merged
+
+    def get_merged_order(self, key: str) -> list:
+        """
+        Dynamically merge order lists (e.g., contents_order, qualifiers_order) from all ancestors.
+        Child class values extend parent values, with duplicates removed (child order wins).
+        Usage: self.get_merged_order('contents_order')
+        """
+        seen = set()
+        merged = []
+        for cls in reversed(self.__class__.__mro__):
+            if hasattr(cls, key):
+                parent_order = getattr(cls, key)
+                if isinstance(parent_order, list):
+                    for item in parent_order:
+                        if item not in seen:
+                            merged.append(item)
+                            seen.add(item)
+        # Instance-level overrides
+        if hasattr(self, key):
+            instance_order = getattr(self, key)
+            if isinstance(instance_order, list):
+                for item in instance_order:
+                    if item not in seen:
+                        merged.append(item)
+                        seen.add(item)
+        return merged
+
 
 @cdata_class(
     attributes={
@@ -552,13 +743,217 @@ class CDataFile(CData):
         # TODO: Implement file saving logic
 
 
-@cdata_class(gui_label="CContainer")
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "Error parsing XML"
+        },
+        "102": {
+            "description": "Missing information"
+        },
+        "103": {
+            "description": "Unknown data class"
+        },
+        "104": {
+            "description": "Error creating data object"
+        },
+        "105": {
+            "description": "Error setting data object qualifiers"
+        },
+        "106": {
+            "description": "Error loading container definition"
+        },
+        "107": {
+            "description": "XML file does not have correct function defined in the header"
+        },
+        "108": {
+            "description": "XML undefined error interpreting sub-container"
+        },
+        "109": {
+            "description": "Error attempting to access unknown attribute",
+            "severity": 2
+        },
+        "110": {
+            "description": "Error creating sub-container"
+        },
+        "111": {
+            "description": "XML file does not have expected pluginName defined in the header"
+        },
+        "113": {
+            "description": "Attempting to add object that is not a CData"
+        },
+        "114": {
+            "description": "Attempting to add object without valid name"
+        },
+        "115": {
+            "description": "Attempting to add object with name that is already in container"
+        },
+        "116": {
+            "description": "Error while attempting to add object"
+        },
+        "117": {
+            "description": "Attempting to delete object with unrecognised name"
+        },
+        "118": {
+            "description": "Error while attempting to delete object"
+        },
+        "119": {
+            "description": "Error while attempting to set this container as object parent"
+        },
+        "120": {
+            "description": "Attempting to add object of unrecognised class to container contents"
+        },
+        "121": {
+            "description": "Error while attempting to add to container contents"
+        },
+        "122": {
+            "description": "Error while attempting to make object from new content in container"
+        },
+        "123": {
+            "description": "Unknown error while reading container header"
+        },
+        "124": {
+            "description": "Definition of sub-content for data of class that does not require sub-content"
+        },
+        "125": {
+            "description": "Unknown error while reading container content"
+        },
+        "126": {
+            "description": "No id for sub-container in XML file"
+        },
+        "127": {
+            "description": "Attempting to load container data from file that does not exist"
+        },
+        "128": {
+            "description": "Unknown error creating XML for sub-container"
+        },
+        "129": {
+            "description": "Error retieving data object for XML"
+        },
+        "130": {
+            "description": "Error saving data object to XML"
+        },
+        "131": {
+            "description": "Unknown error writing container contents to XML file"
+        },
+        "132": {
+            "description": "Error changing object name - no name given"
+        },
+        "133": {
+            "description": "Error changing object name - object with new name already exists"
+        },
+        "134": {
+            "description": "Error changing object name - no object with old name"
+        },
+        "135": {
+            "description": "Unknown error changing object name"
+        },
+        "136": {
+            "description": "Error inserting object in container data order"
+        },
+        "137": {
+            "description": "Unknown error restoring data from database"
+        },
+        "138": {
+            "description": "Attempting to copy from otherContainer which is not a CContainer"
+        },
+        "139": {
+            "severity": 2,
+            "description": "Attempting to copy data which is not in this container"
+        },
+        "140": {
+            "severity": 2,
+            "description": "Attempting to copy data which is not in the other container"
+        },
+        "141": {
+            "severity": 2,
+            "description": "Unknown error copying data"
+        },
+        "142": {
+            "description": "Unrecognised class name in file"
+        },
+        "143": {
+            "description": "Item in file does not have an id"
+        },
+        "144": {
+            "description": "Item id in file is not unique"
+        },
+        "145": {
+            "description": "Failed setting command line argument"
+        },
+        "146": {
+            "description": "Insufficient arguments at end of command line"
+        },
+        "147": {
+            "description": "Error handling XmlDataFile for file element in def xml"
+        },
+        "148": {
+            "description": "XmlDataFile for file element in def xml: file not found"
+        },
+        "149": {
+            "description": "XmlDataFile for file element in def xml: can not read xml"
+        },
+        "150": {
+            "description": "loadDataFromXml could not find plugin def file"
+        },
+        "160": {
+            "description": "Error in adding guiAdmin to CContainer"
+        },
+        "161": {
+            "description": "Error adding object to guiAdmin"
+        },
+        "162": {
+            "description": "Error adding guiAdmin to CContainer"
+        },
+        "310": {
+            "description": "Different number of file objects to compare"
+        },
+        "311": {
+            "description": "Different number of XData objects to compare"
+        },
+        "312": {
+            "description": "Different number of key-value pairs to compare"
+        },
+        "313": {
+            "description": "Different values of key-value pair"
+        },
+        "314": {
+            "description": "Error running comparison of object"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'
+    ],
+    qualifiers_definition={
+        "allowUndefined": {"type": bool},
+        "default": {"type": dict},
+        "toolTip": {"type": str},
+        "guiLabel": {"type": str},
+        "guiDefinition": {"type": dict},
+        "helpFile": {"type": str},
+        "saveToDb": {"type": bool, "description": "Save this data in the database"}
+    },
+)
 class CContainer(CData):
     """Base class for container CData classes."""
 
-    def __init__(self, parent=None, name=None, **kwargs):
+    def __init__(self, items=None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)
         self._container_items = []
+        if items is not None:
+            for item in items:
+                self.add_item(item)
 
     def add_item(self, item):
         """Add an item to the container."""
