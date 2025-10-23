@@ -333,29 +333,32 @@ def test_min_max_constraints(def_xml_file):
 
 
 def test_structure_statistics(def_xml_file):
-    """Test counting total parameters parsed."""
+    """Test that task has expected containers and content."""
     task = parse_def_xml_file(def_xml_file)
 
-    def count_params(container):
-        """Count all parameters in a container recursively."""
-        count = 0
-        for attr_name in dir(container):
-            if (
-                not attr_name.startswith('_')
-                and not callable(getattr(container, attr_name))
-                and attr_name not in [
-                    'child_added', 'child_removed', 'destroyed',
-                    'object_info', 'parent_changed', 'state'
-                ]
-            ):
-                attr = getattr(container, attr_name, None)
-                if attr and hasattr(attr, 'name'):
-                    count += 1
-                    if type(attr).__name__ == 'CContainer':
-                        count += count_params(attr)
-        return count
+    # Test containers exist
+    assert hasattr(task, 'inputData')
+    assert hasattr(task, 'outputData')
+    assert hasattr(task, 'controlParameters')
+    assert hasattr(task, 'metalCoordPipeline')
 
-    total_params = count_params(task)
+    # Test inputData contents
+    assert hasattr(task.inputData, 'XYZIN')
+    assert hasattr(task.inputData, 'HKLIN')
+    assert hasattr(task.inputData, 'DICT_LIST')
 
-    # Should have multiple parameters across containers
-    assert total_params > 10
+    # Test outputData contents
+    assert hasattr(task.outputData, 'XYZOUT')
+    assert hasattr(task.outputData, 'FPHIOUT')
+
+    # Test controlParameters contents
+    assert hasattr(task.controlParameters, 'DATA_METHOD')
+    assert hasattr(task.controlParameters, 'ADD_WATERS')
+    assert hasattr(task.controlParameters, 'NCYCLES')
+    assert hasattr(task.controlParameters, 'WEIGHT')
+    assert hasattr(task.controlParameters, 'B_REFINEMENT_MODE')
+    assert hasattr(task.controlParameters, 'OCCUPANCY_REFINEMENT')
+
+    # Test metalCoordPipeline contents
+    assert hasattr(task.metalCoordPipeline, 'RUN_METALCOORD')
+    assert hasattr(task.metalCoordPipeline, 'LINKS')

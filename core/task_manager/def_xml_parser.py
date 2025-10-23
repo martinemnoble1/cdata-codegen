@@ -361,21 +361,38 @@ class DefXmlParser:
 
             elif key == "min":
                 metadata.minimum = value
+                # Also set on object for runtime validation
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("min", value)
+
             elif key == "max":
                 metadata.maximum = value
+                # Also set on object for runtime validation
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("max", value)
+
             elif key == "minLength":
                 metadata.minlength = value
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("minLength", value)
+
             elif key == "maxLength":
                 metadata.maxlength = value
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("maxLength", value)
 
             elif key == "enumerators":
                 metadata.enumerators = value
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("enumerators", value)
 
             elif key == "menuText":
                 metadata.menu_text = value
 
             elif key == "onlyEnumerators":
                 metadata.only_enumerators = value
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("onlyEnumerators", value)
 
             elif key == "toolTip":
                 metadata.help_text = value

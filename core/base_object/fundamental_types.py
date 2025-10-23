@@ -328,12 +328,37 @@ class CFloat(CData):
         # Handle value setting with proper state tracking
         if value is None:
             # Default initialization - set value but mark as NOT_SET
-            super().__setattr__("value", 0.0)
+            super().__setattr__("_value", 0.0)
             if hasattr(self, "_value_states"):
                 self._value_states["value"] = ValueState.NOT_SET
         else:
             # Explicit value provided - mark as EXPLICITLY_SET
             self.value = value
+
+    def _validate_value(self, val):
+        """Validate value against min/max qualifiers."""
+        min_val = self.get_qualifier("min")
+        max_val = self.get_qualifier("max")
+
+        if min_val is not None and val < min_val:
+            raise ValueError(f"Value {val} is below minimum {min_val}")
+        if max_val is not None and val > max_val:
+            raise ValueError(f"Value {val} is above maximum {max_val}")
+
+        return val
+
+    @property
+    def value(self):
+        """Get the float value."""
+        return getattr(self, "_value", 0.0)
+
+    @value.setter
+    def value(self, val):
+        """Set the float value with validation."""
+        validated = self._validate_value(float(val))
+        super().__setattr__("_value", validated)
+        if hasattr(self, "_value_states"):
+            self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def __str__(self):
         return str(self.value)
