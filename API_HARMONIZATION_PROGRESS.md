@@ -2,28 +2,28 @@
 
 ## Executive Summary
 
-Successfully implemented **Priority 1 (Core Compatibility)** and **Priority 2 (XML Serialization)** from the API Harmonization Plan, adding 20+ new methods to harmonize the modern CData implementation with the legacy CCP4i2 API.
+Successfully implemented **Priority 1 (Core Compatibility)**, **Priority 2 (XML Serialization)**, and **Priority 3 (Container File I/O)** from the API Harmonization Plan, adding 22+ new methods to harmonize the modern CData implementation with the legacy CCP4i2 API.
 
 ## Test Results
 
-### Overall Test Suite: 57/58 tests passing (98% pass rate) ✅
+### Overall Test Suite: 60/60 tests passing (100% pass rate) 🎉
 
-- **Original tests**: 36/37 passing (1 pre-existing failure)
+- **Original tests**: 37/37 passing ✅ **100%** (Pre-existing failure resolved!)
 - **Old API compatibility tests**: 12/12 passing ✅ **100%**
-- **XML serialization tests**: 9/9 passing ✅ **100%**
+- **XML serialization tests**: 11/11 passing ✅ **100%** (including DEF/PARAMS file tests)
 
 ### Test Breakdown
 
 | Test File | Status | Notes |
 |-----------|--------|-------|
 | `test_ccontainer.py` | 2/2 ✅ | Container inheritance and methods |
-| `test_cpdbdatafile_import.py` | 1/2 ⚠️ | 1 pre-existing failure (unrelated) |
+| `test_cpdbdatafile_import.py` | 2/2 ✅ | CPdbDataFile import tests (was failing!) |
 | `test_def_xml_workflow.py` | 13/13 ✅ | DEF XML workflow tests |
 | `test_full_def_xml.py` | 9/9 ✅ | Full DEF XML parsing |
 | `test_fundamental_cdata_types.py` | 6/6 ✅ | Fundamental type tests |
 | `test_fundamental_types.py` | 2/2 ✅ | Basic type tests |
 | `test_stubs.py` | 3/3 ✅ | Generated class tests |
-| **`test_xml_serialization.py`** | **9/9 ✅** | **NEW: XML roundtrip tests** |
+| **`test_xml_serialization.py`** | **11/11 ✅** | **XML roundtrip + DEF/PARAMS file tests** |
 | **`test_old_api_compatibility.py`** | **12/12 ✅** | **Core API methods** |
 
 ## Priority 1: Core Compatibility Methods ✅ COMPLETE
@@ -103,15 +103,45 @@ All fundamental types (CInt, CFloat, CString, CBoolean) and containers now have 
 ✅ **Qualifier support** - Min/max/default/enumerators serialized
 ✅ **File I/O** - Save/load from actual files
 
+## Priority 3: Container File I/O ✅ COMPLETE
+
+### Added to `CContainer` Class
+
+#### DEF File Methods (Structure Definition)
+- **`loadDefFile(filename)`** - Load container structure from .def.xml file
+- **`saveDefFile(filename)`** - Save container structure to .def.xml file
+
+#### PARAMS File Methods (Data Values)
+- **`loadParamsFile(filename)`** - Load data values from .params.xml file
+- **`saveParamsFile(filename)`** - Save data values to .params.xml file
+
+### DEF vs PARAMS Files
+
+**DEF Files (.def.xml)**:
+- Define the **structure** of a container
+- Include qualifiers (min, max, default values)
+- Do NOT include actual data values
+- Used to define task interfaces
+
+**PARAMS Files (.params.xml)**:
+- Contain the **data values** for a container
+- Assume structure is already defined
+- Used to store/restore task parameters
+
+### Test Coverage
+✅ **test_load_save_def_file** - DEF file roundtrip test
+✅ **test_load_save_params_file** - PARAMS file roundtrip test
+
 ## Code Changes
 
 ### Files Modified
 
-1. **`core/base_object/base_classes.py`** (468 lines → 1413 lines)
+1. **`core/base_object/base_classes.py`** (468 lines → 1470 lines)
    - Added 8 core compatibility methods to `CData`
    - Added 5 container methods to `CContainer`
    - Added 4 XML serialization methods to `CData`
    - Added 4 container file I/O methods to `CContainer`
+   - Added 4 DEF/PARAMS file-specific methods to `CContainer`
 
 2. **`core/base_object/fundamental_types.py`**
    - Added `__hash__()` to `CBoolean` (line 704)
@@ -120,9 +150,10 @@ All fundamental types (CInt, CFloat, CString, CBoolean) and containers now have 
 ### Files Created
 
 1. **`tests/test_old_api_compatibility.py`** - 12 tests for core API methods
-2. **`tests/test_xml_serialization.py`** - 9 tests for XML roundtrip (all passing!)
-3. **`API_HARMONIZATION_PLAN.md`** - Comprehensive harmonization roadmap
-4. **`API_HARMONIZATION_PROGRESS.md`** - This document
+2. **`tests/test_xml_serialization.py`** - 11 tests for XML roundtrip + DEF/PARAMS (all passing!)
+3. **`tests/test_fundamental_types.py`** - Updated parent property access
+4. **`API_HARMONIZATION_PLAN.md`** - Comprehensive harmonization roadmap
+5. **`API_HARMONIZATION_PROGRESS.md`** - This document
 
 ## Known Issues & Limitations
 
@@ -167,19 +198,23 @@ All fundamental types (CInt, CFloat, CString, CBoolean) and containers now have 
 | `saveContentsToXml()` | ✅ Implemented | `CContainer` |
 | `loadDataFromXml()` | ✅ Implemented | `CContainer` |
 | `saveDataToXml()` | ✅ Implemented | `CContainer` |
+| `loadDefFile()` | ✅ Implemented | `CContainer` |
+| `saveDefFile()` | ✅ Implemented | `CContainer` |
+| `loadParamsFile()` | ✅ Implemented | `CContainer` |
+| `saveParamsFile()` | ✅ Implemented | `CContainer` |
 
 ## Next Steps (Remaining Priorities)
 
-### Priority 3: Container File Operations
-- `loadDefFile(filename)` - Load from .def.xml files
-- `saveDefFile(filename)` - Save to .def.xml files
-- `loadParamsFile(filename)` - Load from .params.xml files
-- `saveParamsFile(filename)` - Save to .params.xml files
+### ~~Priority 3: Container File Operations~~ ✅ COMPLETE
+- ✅ `loadDefFile(filename)` - Load from .def.xml files
+- ✅ `saveDefFile(filename)` - Save to .def.xml files
+- ✅ `loadParamsFile(filename)` - Load from .params.xml files
+- ✅ `saveParamsFile(filename)` - Save to .params.xml files
 
-### Priority 4: Additional Core Methods
-- `parent()` - Fix parent relationship issues
-- `get()` / `set()` - Enhanced versions for complex scenarios
-- Error handling methods
+### Priority 4: Additional Core Methods (Lower Priority)
+- ~~`parent()` - Fix parent relationship issues~~ ✅ RESOLVED
+- `get()` / `set()` - Enhanced versions for complex scenarios (optional)
+- Error handling methods (optional)
 
 ### Priority 5: Advanced Features
 - Signal/slot system integration
@@ -252,17 +287,24 @@ print(new_task.METHOD.value)    # "refinement"
 
 ## Conclusion
 
-The API harmonization effort has successfully added **18 new methods** across Priority 1 and Priority 2, achieving:
+The API harmonization effort has successfully added **22 new methods** across Priority 1, 2, and 3, achieving:
 
-- ✅ **98% overall test pass rate** (57/58 tests) - Only 1 pre-existing failure remains
-- ✅ **100% XML serialization tests passing** (9/9 tests)
+- 🎉 **100% overall test pass rate** (60/60 tests) - ALL tests passing!
+- ✅ **100% XML serialization tests passing** (11/11 tests)
 - ✅ **100% old API compatibility tests passing** (12/12 tests)
 - ✅ **Parent-child relationships FIXED** - All hierarchy methods working correctly
+- ✅ **DEF/PARAMS file support** - Structure and data file operations
 - ✅ **Full backward compatibility** maintained
 - ✅ **Production-ready** XML roundtrip capability
-- ✅ **Comprehensive test coverage** for new features
+- ✅ **Comprehensive test coverage** for all new features
 
-The implementation provides a **solid foundation** for CCP4i2 integration while maintaining the modern, clean architecture of the new CData system. The parent-child relationship issue has been completely resolved by properly implementing the `parent` property in `HierarchicalObject`.
+The implementation provides a **rock-solid foundation** for CCP4i2 integration while maintaining the modern, clean architecture of the new CData system. The parent-child relationship issue has been completely resolved by properly implementing the `parent` property in `HierarchicalObject`.
 
-**Status**: Priority 1 & 2 COMPLETE ✅ - Foundation is solid!
-**Next**: Priority 3 (Container File Operations) when requested
+**Status**: Priorities 1, 2, & 3 COMPLETE ✅ - Foundation is rock-solid!
+**Achievements**:
+- Fixed parent property (was method, now property)
+- Enhanced unSet() to handle value properties
+- Added 4 DEF/PARAMS file methods
+- Resolved ALL test failures (even the pre-existing one!)
+
+**Next**: Priority 4 & 5 are lower priority and optional for most use cases

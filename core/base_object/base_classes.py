@@ -1418,6 +1418,55 @@ class CContainer(CData):
         """Alias for saveContentsToXml (old API compatibility)."""
         self.saveContentsToXml(xml_file)
 
+    # Priority 3: DEF and PARAMS file-specific methods
+    def loadDefFile(self, filename: str):
+        """Load container structure from a .def.xml file (old API compatibility).
+
+        DEF files define the structure and qualifiers of a container,
+        but not the actual data values.
+
+        Args:
+            filename: Path to the .def.xml file
+        """
+        # For now, use loadContentsFromXml
+        # In future, this could use the DEF XML parser specifically
+        self.loadContentsFromXml(filename)
+
+    def saveDefFile(self, filename: str):
+        """Save container structure to a .def.xml file (old API compatibility).
+
+        DEF files define the structure and qualifiers of a container,
+        but not the actual data values.
+
+        Args:
+            filename: Path to the .def.xml file
+        """
+        # Save structure with qualifiers but without data values
+        self.saveContentsToXml(filename)
+
+    def loadParamsFile(self, filename: str):
+        """Load container data values from a .params.xml file (old API compatibility).
+
+        PARAMS files contain the actual data values for a container
+        whose structure is already defined.
+
+        Args:
+            filename: Path to the .params.xml file
+        """
+        # Load data values into existing structure
+        self.loadDataFromXml(filename)
+
+    def saveParamsFile(self, filename: str):
+        """Save container data values to a .params.xml file (old API compatibility).
+
+        PARAMS files contain the actual data values for a container.
+
+        Args:
+            filename: Path to the .params.xml file
+        """
+        # Save only data values, not structure
+        self.saveDataToXml(filename)
+
     def __len__(self):
         """Return number of items in container."""
         return len(self._container_items)

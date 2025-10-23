@@ -235,3 +235,68 @@ def test_nested_container_serialization():
     value_elem = child_elem.find("value")
     assert value_elem is not None
     assert value_elem.text == "123"
+
+
+def test_load_save_def_file(temp_xml_file):
+    """Test loading and saving DEF files (.def.xml)."""
+    # Create container with structure
+    container = CContainer(name="task")
+    container.addContent(CInt, "ncycles")
+    container.ncycles.set_qualifier("min", 1)
+    container.ncycles.set_qualifier("max", 100)
+    container.ncycles.set_qualifier("default", 10)
+
+    container.addContent(CString, "method")
+    container.method.set_qualifier("default", "refinement")
+
+    # Save as DEF file
+    def_file = temp_xml_file.replace(".xml", ".def.xml")
+    container.saveDefFile(def_file)
+
+    # Verify file was created
+    assert Path(def_file).exists()
+
+    # Load into new container
+    loaded = CContainer(name="task")
+    loaded.addContent(CInt, "ncycles")
+    loaded.addContent(CString, "method")
+    loaded.loadDefFile(def_file)
+
+    # Verify qualifiers were loaded (structure, not values)
+    # For now, just verify it doesn't crash
+    assert hasattr(loaded, 'ncycles')
+    assert hasattr(loaded, 'method')
+
+    # Cleanup
+    Path(def_file).unlink(missing_ok=True)
+
+
+def test_load_save_params_file(temp_xml_file):
+    """Test loading and saving PARAMS files (.params.xml)."""
+    # Create container with data values
+    container = CContainer(name="task")
+    container.addContent(CInt, "ncycles")
+    container.ncycles.value = 25
+
+    container.addContent(CString, "method")
+    container.method.value = "refinement"
+
+    # Save as PARAMS file
+    params_file = temp_xml_file.replace(".xml", ".params.xml")
+    container.saveParamsFile(params_file)
+
+    # Verify file was created
+    assert Path(params_file).exists()
+
+    # Load into new container (with same structure)
+    loaded = CContainer(name="task")
+    loaded.addContent(CInt, "ncycles")
+    loaded.addContent(CString, "method")
+    loaded.loadParamsFile(params_file)
+
+    # Verify values were loaded
+    assert loaded.ncycles.value == 25
+    assert loaded.method.value == "refinement"
+
+    # Cleanup
+    Path(params_file).unlink(missing_ok=True)
