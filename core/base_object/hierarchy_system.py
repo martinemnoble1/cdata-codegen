@@ -123,6 +123,7 @@ class HierarchicalObject(ABC):
         """Current object state."""
         return self._state
 
+    @property
     def parent(self) -> Optional["HierarchicalObject"]:
         """Get the parent object (None if no parent or parent was destroyed)."""
         if self._parent_ref is None:
@@ -150,7 +151,7 @@ class HierarchicalObject(ABC):
                 )
                 return False
 
-            old_parent = self.parent()
+            old_parent = self.parent
 
             # Remove from old parent
             if old_parent is not None:
@@ -252,17 +253,17 @@ class HierarchicalObject(ABC):
     def ancestors(self) -> List["HierarchicalObject"]:
         """Get list of all ancestor objects (parents, grandparents, etc.)."""
         ancestors = []
-        current = self.parent()
+        current = self.parent
         while current is not None:
             ancestors.append(current)
-            current = current.parent()
+            current = current.parent
         return ancestors
 
     def root(self) -> "HierarchicalObject":
         """Get the root object (topmost ancestor)."""
         current = self
-        while current.parent() is not None:
-            current = current.parent()
+        while current.parent is not None:
+            current = current.parent
         return current
 
     def path_from_root(self) -> List[str]:
@@ -271,7 +272,7 @@ class HierarchicalObject(ABC):
         current = self
         while current is not None:
             path.insert(0, current._name)
-            current = current.parent()
+            current = current.parent
         return path
 
     def object_path(self) -> str:
@@ -516,7 +517,7 @@ class HierarchicalObject(ABC):
 
         # Propagate to parent if requested
         if propagate:
-            parent = self.parent()
+            parent = self.parent
             if parent:
                 parent.emit_event(event_type, data, propagate=True)
 
@@ -543,7 +544,7 @@ class HierarchicalObject(ABC):
             child.destroy()
 
         # Remove from parent
-        parent = self.parent()
+        parent = self.parent
         if parent:
             parent._remove_child(self)
             self._parent_ref = None
@@ -571,7 +572,7 @@ class HierarchicalObject(ABC):
             self.destroy()
 
     def __repr__(self) -> str:
-        parent_name = self.parent()._name if self.parent() else "None"
+        parent_name = self.parent._name if self.parent else "None"
         child_count = len(self.children())
         return (
             f"{self.__class__.__name__}(name={self._name}, "

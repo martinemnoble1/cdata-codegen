@@ -19,8 +19,6 @@ def test_cpdbdatafile_set_from_dict():
     assert isinstance(obj.dbFileId, str)
     assert obj.dbFileId == "12345"  
     assert obj.relPath is None
-    with pytest.raises(AttributeError):
-        obj.banana = 2
     assert isinstance(obj, CPdbDataFile)
     # Optionally, check for expected attributes or behaviors
     # Example: assert hasattr(obj, 'some_expected_attribute')

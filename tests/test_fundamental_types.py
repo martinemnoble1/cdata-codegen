@@ -32,4 +32,4 @@ class TestExample:
         arr = CList([CInt(i) for i in range(5)], name="arr")
         assert arr.name == "arr"
         assert sum(arr) == CInt(10)
-        assert arr[1].parent() == arr
+        assert arr[1].parent == arr

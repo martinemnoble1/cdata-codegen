@@ -201,7 +201,11 @@ class CData(HierarchicalObject):
         Args:
             field_name: Name of the field to unset
         """
-        if hasattr(self, field_name):
+        # Special case for 'value' property in fundamental types
+        if field_name == 'value' and hasattr(self, '_value'):
+            # Reset the internal _value to None
+            self._value = None
+        elif hasattr(self, field_name):
             attr = getattr(self, field_name)
             # If the attribute is a CData (or HierarchicalObject), call destroy before deleting
             if isinstance(attr, HierarchicalObject):
@@ -209,7 +213,11 @@ class CData(HierarchicalObject):
                     attr.destroy()
                 except Exception:
                     pass
-            delattr(self, field_name)
+            try:
+                delattr(self, field_name)
+            except AttributeError:
+                # Can't delete properties without deleters - that's OK
+                pass
 
         # Mark as not set
         self._value_states[field_name] = ValueState.NOT_SET
@@ -603,7 +611,11 @@ class CDataFileContent(CData):
         Args:
             field_name: Name of the field to unset
         """
-        if hasattr(self, field_name):
+        # Special case for 'value' property in fundamental types
+        if field_name == 'value' and hasattr(self, '_value'):
+            # Reset the internal _value to None
+            self._value = None
+        elif hasattr(self, field_name):
             attr = getattr(self, field_name)
             # If the attribute is a CData (or HierarchicalObject), call destroy before deleting
             if isinstance(attr, HierarchicalObject):
@@ -611,7 +623,11 @@ class CDataFileContent(CData):
                     attr.destroy()
                 except Exception:
                     pass
-            delattr(self, field_name)
+            try:
+                delattr(self, field_name)
+            except AttributeError:
+                # Can't delete properties without deleters - that's OK
+                pass
 
         # Mark as not set
         self._value_states[field_name] = ValueState.NOT_SET

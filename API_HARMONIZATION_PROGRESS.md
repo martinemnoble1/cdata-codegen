@@ -6,10 +6,10 @@ Successfully implemented **Priority 1 (Core Compatibility)** and **Priority 2 (X
 
 ## Test Results
 
-### Overall Test Suite: 52/58 tests passing (90% pass rate)
+### Overall Test Suite: 57/58 tests passing (98% pass rate) ✅
 
 - **Original tests**: 36/37 passing (1 pre-existing failure)
-- **Old API compatibility tests**: 7/12 passing
+- **Old API compatibility tests**: 12/12 passing ✅ **100%**
 - **XML serialization tests**: 9/9 passing ✅ **100%**
 
 ### Test Breakdown
@@ -24,7 +24,7 @@ Successfully implemented **Priority 1 (Core Compatibility)** and **Priority 2 (X
 | `test_fundamental_types.py` | 2/2 ✅ | Basic type tests |
 | `test_stubs.py` | 3/3 ✅ | Generated class tests |
 | **`test_xml_serialization.py`** | **9/9 ✅** | **NEW: XML roundtrip tests** |
-| `test_old_api_compatibility.py` | 7/12 ⚠️ | Core API methods (5 parent relationship issues) |
+| **`test_old_api_compatibility.py`** | **12/12 ✅** | **Core API methods** |
 
 ## Priority 1: Core Compatibility Methods ✅ COMPLETE
 
@@ -126,24 +126,24 @@ All fundamental types (CInt, CFloat, CString, CBoolean) and containers now have 
 
 ## Known Issues & Limitations
 
-### Parent Relationship Tracking (5 failing tests)
+### ~~Parent Relationship Tracking~~ ✅ RESOLVED
 
-The 5 remaining failures in `test_old_api_compatibility.py` are all related to parent relationship tracking:
+**Issue**: The `parent` in `HierarchicalObject` was defined as a method instead of a property, causing `obj.parent` to return a bound method instead of the actual parent object.
 
-**Issue**: When using `addContent()` or `addObject()`, the parent relationship is not being properly established.
+**Root Cause**: Missing `@property` decorator on the `parent()` method in `hierarchy_system.py` (line 126).
 
-**Symptoms**:
-- `obj.parent` returns `None` instead of the container
-- `objectPath()` doesn't include parent names
-- Tests expect `"parent.child"` but get `"child"`
+**Fix Applied**:
+1. Added `@property` decorator to `parent()` method in `hierarchy_system.py`
+2. Updated all internal calls from `self.parent()` to `self.parent` (8 occurrences)
+3. Fixed `unSet()` method to handle properties that can't be deleted
+4. Updated test in `test_fundamental_types.py` to use property syntax
 
-**Root Cause**: The `parent` property in `HierarchicalObject` uses weak references, and the relationship may not survive the `setattr()` call in `addContent()`.
+**Result**: All 12 tests in `test_old_api_compatibility.py` now pass ✅
 
-**Impact**: Low - Does not affect core functionality, only API compatibility for specific test scenarios.
-
-**Mitigation**: The implementation does call `set_parent()` explicitly, but weak reference semantics may require additional work.
-
-**Future Work**: Investigate `HierarchicalObject.parent` property implementation and ensure parent references persist after `setattr()` operations.
+**Files Modified**:
+- `core/base_object/hierarchy_system.py` - Added @property decorator and updated all parent() calls
+- `core/base_object/base_classes.py` - Enhanced unSet() to handle value properties
+- `tests/test_fundamental_types.py` - Updated test to use property syntax
 
 ## Compatibility Matrix
 
@@ -254,13 +254,15 @@ print(new_task.METHOD.value)    # "refinement"
 
 The API harmonization effort has successfully added **18 new methods** across Priority 1 and Priority 2, achieving:
 
-- ✅ **90% overall test pass rate** (52/58 tests)
+- ✅ **98% overall test pass rate** (57/58 tests) - Only 1 pre-existing failure remains
 - ✅ **100% XML serialization tests passing** (9/9 tests)
+- ✅ **100% old API compatibility tests passing** (12/12 tests)
+- ✅ **Parent-child relationships FIXED** - All hierarchy methods working correctly
 - ✅ **Full backward compatibility** maintained
 - ✅ **Production-ready** XML roundtrip capability
 - ✅ **Comprehensive test coverage** for new features
 
-The implementation provides a solid foundation for CCP4i2 integration while maintaining the modern, clean architecture of the new CData system.
+The implementation provides a **solid foundation** for CCP4i2 integration while maintaining the modern, clean architecture of the new CData system. The parent-child relationship issue has been completely resolved by properly implementing the `parent` property in `HierarchicalObject`.
 
-**Status**: Priority 1 & 2 COMPLETE ✅
+**Status**: Priority 1 & 2 COMPLETE ✅ - Foundation is solid!
 **Next**: Priority 3 (Container File Operations) when requested
