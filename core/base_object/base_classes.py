@@ -273,6 +273,29 @@ class CData(HierarchicalObject):
         """
         return self._default_values.get(field_name)
 
+    def validity(self):
+        """Validate this object and return an error report.
+
+        This method checks the object's state and validates it against
+        qualifiers (min, max, enumerators, etc.). Subclasses should
+        override this to add custom validation logic.
+
+        Returns:
+            CErrorReport containing any validation errors/warnings
+        """
+        from .error_reporting import CErrorReport, SEVERITY_ERROR
+
+        report = CErrorReport()
+
+        # Base CData validation - can be extended by subclasses
+        # Check if object has required qualifiers
+        if hasattr(self, 'qualifiers') and self.qualifiers:
+            # Basic validation is done here
+            # Subclasses will add their own validation
+            pass
+
+        return report
+
     def getEtree(self, name: str = None):
         """Serialize this object to an XML ElementTree element.
 

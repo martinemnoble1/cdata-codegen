@@ -285,6 +285,46 @@ class CInt(CData):
             return float(self.value) >= other.value
         return int(self.value) >= other
 
+    def validity(self):
+        """Validate the integer value against qualifiers.
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        from .error_reporting import (CErrorReport, SEVERITY_ERROR,
+                                      SEVERITY_WARNING)
+
+        report = CErrorReport()
+        val = self.value
+
+        # Check min/max constraints
+        min_val = self.get_qualifier("min")
+        if min_val is not None and val < min_val:
+            report.append(
+                "CInt", 101, f"Value {val} is below minimum {min_val}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        max_val = self.get_qualifier("max")
+        if max_val is not None and val > max_val:
+            report.append(
+                "CInt", 102, f"Value {val} is above maximum {max_val}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        # Check enumerators if onlyEnumerators is True
+        only_enumerators = self.get_qualifier("onlyEnumerators")
+        enumerators = self.get_qualifier("enumerators")
+        if only_enumerators and enumerators:
+            if val not in enumerators:
+                report.append(
+                    "CInt", 103,
+                    f"Value {val} not in allowed values {enumerators}",
+                    self.objectName(), SEVERITY_ERROR
+                )
+
+        return report
+
 
 @cdata_class(
     error_codes={
@@ -566,6 +606,45 @@ class CFloat(CData):
             return self.value >= float(other.value)
         return float(self.value) >= other
 
+    def validity(self):
+        """Validate the float value against qualifiers.
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        from .error_reporting import (CErrorReport, SEVERITY_ERROR,
+                                      SEVERITY_WARNING)
+
+        report = CErrorReport()
+        val = self.value
+
+        # Check min/max constraints
+        min_val = self.get_qualifier("min")
+        if min_val is not None and val < min_val:
+            report.append(
+                "CFloat", 101, f"Value {val} is below minimum {min_val}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        max_val = self.get_qualifier("max")
+        if max_val is not None and val > max_val:
+            report.append(
+                "CFloat", 102, f"Value {val} is above maximum {max_val}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        # Check enumerators if onlyEnumerators is True
+        only_enumerators = self.get_qualifier("onlyEnumerators")
+        enumerators = self.get_qualifier("enumerators")
+        if only_enumerators and enumerators:
+            if val not in enumerators:
+                report.append(
+                    "CFloat", 103,
+                    f"Value {val} not in allowed values {enumerators}",
+                    self.objectName(), SEVERITY_ERROR
+                )
+
+        return report
 
 
 @cdata_class(
@@ -669,6 +748,49 @@ class CString(CData):
     def __len__(self):
         return len(self.value)
 
+    def validity(self):
+        """Validate the string value against qualifiers.
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        from .error_reporting import (CErrorReport, SEVERITY_ERROR,
+                                      SEVERITY_WARNING)
+
+        report = CErrorReport()
+        val = self.value
+
+        # Check minLength constraint
+        min_length = self.get_qualifier("minLength")
+        if min_length is not None and len(val) < min_length:
+            report.append(
+                "CString", 101,
+                f"String length {len(val)} below minimum {min_length}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        # Check maxLength constraint
+        max_length = self.get_qualifier("maxLength")
+        if max_length is not None and len(val) > max_length:
+            report.append(
+                "CString", 102,
+                f"String length {len(val)} above maximum {max_length}",
+                self.objectName(), SEVERITY_ERROR
+            )
+
+        # Check enumerators if onlyEnumerators is True
+        only_enumerators = self.get_qualifier("onlyEnumerators")
+        enumerators = self.get_qualifier("enumerators")
+        if only_enumerators and enumerators:
+            if val not in enumerators:
+                report.append(
+                    "CString", 103,
+                    f"Value '{val}' not in allowed values {enumerators}",
+                    self.objectName(), SEVERITY_ERROR
+                )
+
+        return report
+
 @cdata_class(
     error_codes={
         "101": {"description": "not allowed value"}
@@ -753,6 +875,18 @@ class CBoolean(CData):
 
     def __invert__(self):
         return not bool(self.value)
+
+    def validity(self):
+        """Validate the boolean value.
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        from .error_reporting import CErrorReport
+
+        # Boolean values are always valid
+        report = CErrorReport()
+        return report
 
 
 @cdata_class(
