@@ -701,6 +701,10 @@ class CBoolean(CData):
             # Explicit value provided - mark as EXPLICITLY_SET
             self.value = value
 
+    def __hash__(self):
+        """Make CBoolean hashable for use in sets and as dict keys."""
+        return hash(id(self))
+
     def __str__(self):
         return str(self.value)
 

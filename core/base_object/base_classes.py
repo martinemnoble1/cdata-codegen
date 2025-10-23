@@ -154,6 +154,237 @@ class CData(HierarchicalObject):
         for key, value in values.items():
             setattr(self, key, value)
 
+    def objectPath(self) -> str:
+        """Return the full hierarchical path to this object.
+
+        Returns:
+            String path like "project.inputData.XYZIN" for hierarchical objects
+        """
+        path_parts = []
+        current = self
+
+        # Walk up the hierarchy collecting names
+        while current is not None:
+            if hasattr(current, 'name') and current.name:
+                path_parts.insert(0, current.name)
+            current = getattr(current, 'parent', None)
+
+        return ".".join(path_parts) if path_parts else ""
+
+    def objectName(self) -> str:
+        """Return the name of this object.
+
+        Returns:
+            The object's name attribute or empty string
+        """
+        return getattr(self, 'name', '')
+
+    def isSet(self, field_name: str = None) -> bool:
+        """Check if a field has been explicitly set.
+
+        Args:
+            field_name: Name of the field to check. If None, checks the 'value' attribute.
+
+        Returns:
+            True if field has been explicitly set, False otherwise
+        """
+        if field_name is None:
+            field_name = "value"
+        return (
+            self._value_states.get(field_name, ValueState.NOT_SET)
+            == ValueState.EXPLICITLY_SET
+        )
+
+    def unSet(self, field_name: str):
+        """Return a field to its not-set state.
+
+        Args:
+            field_name: Name of the field to unset
+        """
+        if hasattr(self, field_name):
+            attr = getattr(self, field_name)
+            # If the attribute is a CData (or HierarchicalObject), call destroy before deleting
+            if isinstance(attr, HierarchicalObject):
+                try:
+                    attr.destroy()
+                except Exception:
+                    pass
+            delattr(self, field_name)
+
+        # Mark as not set
+        self._value_states[field_name] = ValueState.NOT_SET
+
+    def getValueState(self, field_name: str) -> ValueState:
+        """Get the current state of a field.
+
+        Args:
+            field_name: Name of the field
+
+        Returns:
+            ValueState indicating current state
+        """
+        return self._value_states.get(field_name, ValueState.NOT_SET)
+
+    def setToDefault(self, field_name: str):
+        """Set a field to its default value.
+
+        Args:
+            field_name: Name of the field to set to default
+        """
+        if field_name in self._default_values:
+            # Set without triggering "explicitly set" state
+            self._value_states[field_name] = ValueState.DEFAULT
+            super().__setattr__(field_name, self._default_values[field_name])
+        else:
+            # No default available, unset it
+            self.unSet(field_name)
+
+    def setDefault(self, value: Any):
+        """Set the default value for this object (old API compatibility).
+
+        Args:
+            value: The default value to set
+        """
+        # For simple value types, set the value and mark as DEFAULT
+        if hasattr(self, 'value'):
+            super().__setattr__('_value', value)
+            self._value_states['value'] = ValueState.DEFAULT
+            self._default_values['value'] = value
+        else:
+            # For complex types, store in default values
+            self._default_values['default'] = value
+
+    def getDefaultValue(self, field_name: str) -> Any:
+        """Get the default value for a field.
+
+        Args:
+            field_name: Name of the field
+
+        Returns:
+            Default value or None if no default exists
+        """
+        return self._default_values.get(field_name)
+
+    def getEtree(self, name: str = None):
+        """Serialize this object to an XML ElementTree element.
+
+        Args:
+            name: Optional name for the XML element (uses self.name if not provided)
+
+        Returns:
+            xml.etree.ElementTree.Element representing this object
+        """
+        import xml.etree.ElementTree as ET
+
+        element_name = name if name is not None else getattr(self, 'name', 'data')
+        elem = ET.Element(element_name)
+
+        # For simple value types, store the value as text
+        if hasattr(self, 'value'):
+            value = getattr(self, 'value')
+            if value is not None:
+                elem.text = str(value)
+
+        # For containers and complex types, serialize children
+        for attr_name, attr_value in self.__dict__.items():
+            if attr_name.startswith('_') or attr_name in ['parent', 'name', 'children', 'signals']:
+                continue
+            if isinstance(attr_value, CData):
+                child_elem = attr_value.getEtree(attr_name)
+                elem.append(child_elem)
+
+        return elem
+
+    def setEtree(self, element, ignore_missing: bool = False):
+        """Deserialize from an XML ElementTree element.
+
+        Args:
+            element: xml.etree.ElementTree.Element to deserialize from
+            ignore_missing: If True, ignore attributes in XML that don't exist on this object
+        """
+        # For simple value types, read from text
+        if hasattr(self, 'value') and element.text:
+            # Determine the type and convert
+            if hasattr(self, '__class__'):
+                class_name = self.__class__.__name__
+                if class_name == 'CInt':
+                    self.value = int(element.text)
+                elif class_name == 'CFloat':
+                    self.value = float(element.text)
+                elif class_name == 'CBoolean':
+                    self.value = element.text.lower() in ('true', '1', 'yes')
+                elif class_name == 'CString':
+                    self.value = element.text
+                else:
+                    self.value = element.text
+
+        # For containers, deserialize children
+        for child in element:
+            child_name = child.tag
+            if hasattr(self, child_name):
+                child_obj = getattr(self, child_name)
+                if isinstance(child_obj, CData):
+                    child_obj.setEtree(child, ignore_missing=ignore_missing)
+            elif not ignore_missing:
+                raise AttributeError(f"Object has no attribute '{child_name}'")
+
+    def getQualifiersEtree(self):
+        """Serialize qualifiers to an XML ElementTree element.
+
+        Returns:
+            xml.etree.ElementTree.Element containing qualifiers
+        """
+        import xml.etree.ElementTree as ET
+
+        qualifiers_elem = ET.Element('qualifiers')
+
+        if hasattr(self, 'qualifiers') and self.qualifiers:
+            for key, value in self.qualifiers.items():
+                qual_elem = ET.Element(key)
+                if value is not None:
+                    if isinstance(value, bool):
+                        qual_elem.text = 'true' if value else 'false'
+                    elif isinstance(value, list):
+                        qual_elem.text = ','.join(str(v) for v in value)
+                    else:
+                        qual_elem.text = str(value)
+                qualifiers_elem.append(qual_elem)
+
+        return qualifiers_elem
+
+    def setQualifiersEtree(self, qualifiers_element):
+        """Deserialize qualifiers from an XML ElementTree element.
+
+        Args:
+            qualifiers_element: xml.etree.ElementTree.Element containing qualifiers
+        """
+        if qualifiers_element is None:
+            return
+
+        for child in qualifiers_element:
+            key = child.tag
+            text = child.text
+
+            # Parse the value based on content
+            if text is None:
+                value = None
+            elif text.lower() in ('true', 'false'):
+                value = text.lower() == 'true'
+            elif ',' in text:
+                # List of values
+                value = [item.strip() for item in text.split(',')]
+            else:
+                # Try to parse as number, otherwise keep as string
+                try:
+                    if '.' in text:
+                        value = float(text)
+                    else:
+                        value = int(text)
+                except (ValueError, AttributeError):
+                    value = text
+
+            self.set_qualifier(key, value)
+
 # --- CDataFileContent migrated from CCP4File.py ---
 @cdata_class(
     error_codes={
@@ -325,11 +556,36 @@ class CDataFileContent(CData):
             # If metadata not available, that's okay
             pass
 
+    def objectPath(self) -> str:
+        """Return the full hierarchical path to this object.
+
+        Returns:
+            String path like "project.inputData.XYZIN" for hierarchical objects
+        """
+        path_parts = []
+        current = self
+
+        # Walk up the hierarchy collecting names
+        while current is not None:
+            if hasattr(current, 'name') and current.name:
+                path_parts.insert(0, current.name)
+            current = getattr(current, 'parent', None)
+
+        return ".".join(path_parts) if path_parts else ""
+
+    def objectName(self) -> str:
+        """Return the name of this object.
+
+        Returns:
+            The object's name attribute or empty string
+        """
+        return getattr(self, 'name', '')
+
     def isSet(self, field_name: str = None) -> bool:
         """Check if a field has been explicitly set.
 
         Args:
-            field_name: Name of the field to check
+            field_name: Name of the field to check. If None, checks the 'value' attribute.
 
         Returns:
             True if field has been explicitly set, False otherwise
@@ -384,6 +640,21 @@ class CDataFileContent(CData):
         else:
             # No default available, unset it
             self.unSet(field_name)
+
+    def setDefault(self, value: Any):
+        """Set the default value for this object (old API compatibility).
+
+        Args:
+            value: The default value to set
+        """
+        # For simple value types, set the value and mark as DEFAULT
+        if hasattr(self, 'value'):
+            super().__setattr__('_value', value)
+            self._value_states['value'] = ValueState.DEFAULT
+            self._default_values['value'] = value
+        else:
+            # For complex types, store in default values
+            self._default_values['default'] = value
 
     def getDefaultValue(self, field_name: str) -> Any:
         """Get the default value for a field.
@@ -951,6 +1222,7 @@ class CContainer(CData):
     def __init__(self, items=None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)
         self._container_items = []
+        self._data_order = []  # Track order of content items for dataOrder()
         if items is not None:
             for item in items:
                 self.add_item(item)
@@ -964,6 +1236,171 @@ class CContainer(CData):
     def get_items(self):
         """Get all container items."""
         return self._container_items[:]
+
+    def addContent(self, content_class, name: str, **kwargs):
+        """Add a new content item to the container (old API compatibility).
+
+        Args:
+            content_class: The class type to instantiate
+            name: Name for the new content item
+            **kwargs: Additional arguments to pass to the constructor
+
+        Returns:
+            The newly created content object
+        """
+        # Create instance of the content class WITHOUT parent (to avoid setattr issues)
+        if isinstance(content_class, type):
+            new_obj = content_class(name=name, **kwargs)
+        else:
+            # If it's a string, try to resolve it
+            from .fundamental_types import CInt, CFloat, CBoolean, CString, CList
+            class_map = {
+                'CInt': CInt,
+                'CFloat': CFloat,
+                'CBoolean': CBoolean,
+                'CString': CString,
+                'CList': CList,
+                'CContainer': CContainer,
+            }
+            cls = class_map.get(content_class)
+            if cls is None:
+                raise ValueError(f"Unknown content class: {content_class}")
+            new_obj = cls(name=name, **kwargs)
+
+        # Add to container
+        setattr(self, name, new_obj)
+
+        # Explicitly set parent relationship (in case setattr doesn't handle it)
+        if hasattr(new_obj, 'set_parent'):
+            new_obj.set_parent(self)
+
+        self._data_order.append(name)
+        return new_obj
+
+    def addObject(self, obj: CData, name: str = None):
+        """Add an existing object to the container (old API compatibility).
+
+        Args:
+            obj: The CData object to add
+            name: Optional name for the object (uses obj.name if not provided)
+
+        Returns:
+            The added object
+        """
+        if not isinstance(obj, CData):
+            raise TypeError("Object must be a CData instance")
+
+        obj_name = name if name is not None else getattr(obj, 'name', None)
+        if not obj_name:
+            raise ValueError("Object must have a name")
+
+        # Set parent relationship
+        obj.set_parent(self)
+        obj.name = obj_name
+
+        # Add to container
+        setattr(self, obj_name, obj)
+        if obj_name not in self._data_order:
+            self._data_order.append(obj_name)
+
+        return obj
+
+    def deleteObject(self, name: str):
+        """Delete an object from the container (old API compatibility).
+
+        Args:
+            name: Name of the object to delete
+        """
+        if not hasattr(self, name):
+            raise AttributeError(f"Container has no object named '{name}'")
+
+        obj = getattr(self, name)
+
+        # Cleanup hierarchy if it's a CData object
+        if isinstance(obj, HierarchicalObject):
+            try:
+                obj.destroy()
+            except Exception:
+                pass
+
+        # Remove from container
+        delattr(self, name)
+
+        # Remove from data order
+        if name in self._data_order:
+            self._data_order.remove(name)
+
+    def dataOrder(self) -> list:
+        """Return the order of data items in this container (old API compatibility).
+
+        Returns:
+            List of names in the order they were added
+        """
+        # First check if there's a CONTENT_ORDER defined
+        if hasattr(self, 'CONTENT_ORDER') and self.CONTENT_ORDER:
+            return list(self.CONTENT_ORDER)
+
+        # Otherwise return the dynamic order
+        return list(self._data_order)
+
+    def clear(self):
+        """Remove all content items from the container (old API compatibility)."""
+        # Get list of all content items
+        items_to_remove = list(self._data_order)
+
+        # Delete each one
+        for name in items_to_remove:
+            try:
+                self.deleteObject(name)
+            except Exception:
+                pass
+
+        # Clear the order list
+        self._data_order.clear()
+
+    def loadContentsFromXml(self, xml_file: str):
+        """Load container contents from an XML file (old API compatibility).
+
+        Args:
+            xml_file: Path to the XML file to load
+        """
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        xml_path = Path(xml_file)
+        if not xml_path.exists():
+            raise FileNotFoundError(f"XML file not found: {xml_file}")
+
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+
+        # Use setEtree to deserialize
+        self.setEtree(root, ignore_missing=True)
+
+    def saveContentsToXml(self, xml_file: str):
+        """Save container contents to an XML file (old API compatibility).
+
+        Args:
+            xml_file: Path to the XML file to save
+        """
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        # Get the XML element tree
+        root = self.getEtree()
+
+        # Create the tree and write to file
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="  ")  # Pretty print with 2-space indentation
+        tree.write(xml_file, encoding='utf-8', xml_declaration=True)
+
+    def loadDataFromXml(self, xml_file: str):
+        """Alias for loadContentsFromXml (old API compatibility)."""
+        self.loadContentsFromXml(xml_file)
+
+    def saveDataToXml(self, xml_file: str):
+        """Alias for saveContentsToXml (old API compatibility)."""
+        self.saveContentsToXml(xml_file)
 
     def __len__(self):
         """Return number of items in container."""
