@@ -13,21 +13,22 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CData, CDataFile
 
 # Fundamental types
-from core.base_object.fundamental_types import CFloat, CInt, CList, CProjectId, CString, CUUID
+from core.base_object.fundamental_types import CFloat, CInt, CList, CString
 
 # Cross-file class references
-from core.generated.CCP4File import CFilePath
+from core.generated.CCP4File import CFilePath, CProjectId
+from core.generated.CCP4Data import CUUID
 
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -207,9 +208,9 @@ class CRefmacRigidGroupList(CList):
 
 @cdata_class(
     attributes={
-        "atomType": attribute(AttributeType.STRING, tooltip="atomType attribute"),
-        "Fp": attribute(AttributeType.FLOAT, tooltip="Fp attribute"),
-        "Fpp": attribute(AttributeType.FLOAT, tooltip="Fpp attribute"),
+        "atomType": attribute(AttributeType.STRING),
+        "Fp": attribute(AttributeType.FLOAT),
+        "Fpp": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "0": {
@@ -363,8 +364,8 @@ class CRefmacAnomalousAtom(CData):
 
 @cdata_class(
     attributes={
-        "rigid_group_id": attribute(AttributeType.STRING, tooltip="rigid_group_id attribute"),
-        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="segmentList attribute"),
+        "rigid_group_id": attribute(AttributeType.STRING),
+        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "0": {
@@ -517,9 +518,9 @@ class CRefmacRigidGroupItem(CData):
 
 @cdata_class(
     attributes={
-        "chain_id": attribute(AttributeType.STRING, tooltip="chain_id attribute"),
-        "residue_1": attribute(AttributeType.INT, tooltip="residue_1 attribute"),
-        "residue_2": attribute(AttributeType.INT, tooltip="residue_2 attribute"),
+        "chain_id": attribute(AttributeType.STRING),
+        "residue_1": attribute(AttributeType.INT),
+        "residue_2": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {

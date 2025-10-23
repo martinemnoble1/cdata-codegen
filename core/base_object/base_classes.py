@@ -117,15 +117,14 @@ class CData(HierarchicalObject):
     def _apply_metadata_attributes(self):
         """Apply metadata-driven attribute creation if metadata is available."""
         try:
-            from .metadata_system import MetadataRegistry
-            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
-            if metadata and metadata.fields:
-                for field_name, field_meta in metadata.fields.items():
-                    if not hasattr(self, field_name):
-                        # Create the attribute with default value
-                        if field_meta.default_value is not None:
-                            setattr(self, field_name, field_meta.default_value)
+            from .class_metadata import apply_metadata_to_instance
+
+            apply_metadata_to_instance(self)
+        except ImportError:
+            # Metadata system not available, skip
+            pass
         except Exception:
+            # Any other error, skip silently to avoid breaking existing code
             pass
 
     def get_qualifier(self, key, default=None):
@@ -499,19 +498,6 @@ class CDataFileContent(CData):
         if isinstance(value, CData):
             raise TypeError("Qualifier values must not be CData objects.")
         self.qualifiers[key] = value
-
-    def _apply_metadata_attributes(self):
-        """Apply metadata-driven attribute creation if metadata is available."""
-        try:
-            from .class_metadata import apply_metadata_to_instance
-
-            apply_metadata_to_instance(self)
-        except ImportError:
-            # Metadata system not available, skip
-            pass
-        except Exception:
-            # Any other error, skip silently to avoid breaking existing code
-            pass
 
     def _setup_hierarchy_for_value(self, key: str, value: Any):
         """Set up hierarchical relationships for attribute values."""
@@ -927,13 +913,13 @@ class CDataFileContent(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.STRING, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.STRING, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.STRING, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.STRING, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.STRING),
+        "baseName": attribute(AttributeType.STRING),
+        "relPath": attribute(AttributeType.STRING),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.STRING),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     qualifiers={
         "allowUndefined": True,

@@ -299,10 +299,10 @@ class CImportedJobDefinition(CContainer):
 
 @cdata_class(
     attributes={
-        "name": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="name attribute"),
-        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataType", tooltip="dataType attribute"),
-        "label": attribute(AttributeType.STRING, tooltip="label attribute"),
-        "fileName": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="fileName attribute"),
+        "name": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataType"),
+        "label": attribute(AttributeType.STRING),
+        "fileName": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
     },
     error_codes={
         "0": {

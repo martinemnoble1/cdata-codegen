@@ -165,12 +165,12 @@ class CMatrix33(CData):
 
 @cdata_class(
     attributes={
-        "xMin": attribute(AttributeType.FLOAT, tooltip="xMin attribute"),
-        "yMin": attribute(AttributeType.FLOAT, tooltip="yMin attribute"),
-        "zMin": attribute(AttributeType.FLOAT, tooltip="zMin attribute"),
-        "xMax": attribute(AttributeType.FLOAT, tooltip="xMax attribute"),
-        "yMax": attribute(AttributeType.FLOAT, tooltip="yMax attribute"),
-        "zMax": attribute(AttributeType.FLOAT, tooltip="zMax attribute"),
+        "xMin": attribute(AttributeType.FLOAT),
+        "yMin": attribute(AttributeType.FLOAT),
+        "zMin": attribute(AttributeType.FLOAT),
+        "xMax": attribute(AttributeType.FLOAT),
+        "yMax": attribute(AttributeType.FLOAT),
+        "zMax": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "201": {
@@ -273,9 +273,9 @@ class CAngle(CFloat):
 
 @cdata_class(
     attributes={
-        "x": attribute(AttributeType.FLOAT, tooltip="x attribute"),
-        "y": attribute(AttributeType.FLOAT, tooltip="y attribute"),
-        "z": attribute(AttributeType.FLOAT, tooltip="z attribute"),
+        "x": attribute(AttributeType.FLOAT),
+        "y": attribute(AttributeType.FLOAT),
+        "z": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "201": {
@@ -332,9 +332,9 @@ class CXyz(CData):
 
 @cdata_class(
     attributes={
-        "alpha": attribute(AttributeType.CUSTOM, custom_class="CAngle", tooltip="alpha attribute"),
-        "beta": attribute(AttributeType.CUSTOM, custom_class="CAngle", tooltip="beta attribute"),
-        "gamma": attribute(AttributeType.CUSTOM, custom_class="CAngle", tooltip="gamma attribute"),
+        "alpha": attribute(AttributeType.CUSTOM, custom_class="CAngle"),
+        "beta": attribute(AttributeType.CUSTOM, custom_class="CAngle"),
+        "gamma": attribute(AttributeType.CUSTOM, custom_class="CAngle"),
     },
     error_codes={
         "0": {
@@ -489,8 +489,8 @@ class CEulerRotation(CData):
 
 @cdata_class(
     attributes={
-        "translation": attribute(AttributeType.CUSTOM, custom_class="CXyz", tooltip="translation attribute"),
-        "rotation": attribute(AttributeType.CUSTOM, custom_class="CEulerRotation", tooltip="rotation attribute"),
+        "translation": attribute(AttributeType.CUSTOM, custom_class="CXyz"),
+        "rotation": attribute(AttributeType.CUSTOM, custom_class="CEulerRotation"),
     },
     error_codes={
         "0": {

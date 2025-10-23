@@ -13,10 +13,11 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CData, CDataFile, CDataFileContent
 
 # Fundamental types
-from core.base_object.fundamental_types import CInt, CList, CProjectId, CString, CUUID
+from core.base_object.fundamental_types import CInt, CList, CString
 
 # Cross-file class references
 from core.generated.CCP4Annotation import CHostName, CTime, CUserId
+from core.generated.CCP4Data import CUUID
 
 
 @cdata_class(
@@ -294,7 +295,7 @@ class CExePathList(CList):
 
 @cdata_class(
     attributes={
-        "exportId": attribute(AttributeType.UUID, tooltip="exportId attribute"),
+        "exportId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
     },
     error_codes={
         "0": {
@@ -446,8 +447,8 @@ class CExportedFile(CData):
 
 @cdata_class(
     attributes={
-        "exeName": attribute(AttributeType.STRING, tooltip="exeName attribute"),
-        "exePath": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="exePath attribute"),
+        "exeName": attribute(AttributeType.STRING),
+        "exePath": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
     },
     error_codes={
         "0": {
@@ -675,8 +676,8 @@ class CVersion(CString):
 
 @cdata_class(
     attributes={
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "path": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="path attribute"),
+        "name": attribute(AttributeType.STRING),
+        "path": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
     },
     error_codes={
         "0": {
@@ -1038,13 +1039,13 @@ class CSearchPathList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1160,13 +1161,13 @@ class CPostscriptDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1281,13 +1282,13 @@ class CDataReflFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1404,13 +1405,13 @@ class CYmlFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1526,13 +1527,13 @@ class CPDFDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "1001": {
@@ -1627,13 +1628,13 @@ class CXmlDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1749,13 +1750,13 @@ specific to coordinates, reflections or geometry data."""
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1873,13 +1874,13 @@ class CSceneDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1994,20 +1995,20 @@ class CXmgrDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "function": attribute(AttributeType.CUSTOM, custom_class="CFileFunction", tooltip="function attribute"),
-        "userId": attribute(AttributeType.CUSTOM, custom_class="CUserId", tooltip="userId attribute"),
-        "hostName": attribute(AttributeType.CUSTOM, custom_class="CHostName", tooltip="hostName attribute"),
-        "creationTime": attribute(AttributeType.CUSTOM, custom_class="CTime", tooltip="creationTime attribute"),
-        "ccp4iVersion": attribute(AttributeType.CUSTOM, custom_class="CVersion", tooltip="ccp4iVersion attribute"),
-        "pluginName": attribute(AttributeType.STRING, tooltip="pluginName attribute"),
-        "pluginVersion": attribute(AttributeType.CUSTOM, custom_class="CVersion", tooltip="pluginVersion attribute"),
-        "pluginTitle": attribute(AttributeType.STRING, tooltip="pluginTitle attribute"),
-        "projectName": attribute(AttributeType.CUSTOM, custom_class="CProjectName", tooltip="projectName attribute"),
-        "projectId": attribute(AttributeType.PROJECT_ID, tooltip="projectId attribute"),
-        "jobId": attribute(AttributeType.UUID, tooltip="jobId attribute"),
-        "jobNumber": attribute(AttributeType.STRING, tooltip="jobNumber attribute"),
-        "comment": attribute(AttributeType.STRING, tooltip="comment attribute"),
-        "OS": attribute(AttributeType.STRING, tooltip="OS attribute"),
+        "function": attribute(AttributeType.CUSTOM, custom_class="CFileFunction"),
+        "userId": attribute(AttributeType.CUSTOM, custom_class="CUserId"),
+        "hostName": attribute(AttributeType.CUSTOM, custom_class="CHostName"),
+        "creationTime": attribute(AttributeType.CUSTOM, custom_class="CTime"),
+        "ccp4iVersion": attribute(AttributeType.CUSTOM, custom_class="CVersion"),
+        "pluginName": attribute(AttributeType.STRING),
+        "pluginVersion": attribute(AttributeType.CUSTOM, custom_class="CVersion"),
+        "pluginTitle": attribute(AttributeType.STRING),
+        "projectName": attribute(AttributeType.CUSTOM, custom_class="CProjectName"),
+        "projectId": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "jobId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "jobNumber": attribute(AttributeType.STRING),
+        "comment": attribute(AttributeType.STRING),
+        "OS": attribute(AttributeType.STRING),
     },
     error_codes={
         "101": {
@@ -2081,13 +2082,13 @@ class CI2XmlHeader(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -2204,13 +2205,13 @@ class CTextDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "1001": {
@@ -2305,10 +2306,10 @@ class CEBIValidationXMLDataFile(CXmlDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "header": attribute(AttributeType.CUSTOM, custom_class="CI2XmlHeader", tooltip="header attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "header": attribute(AttributeType.CUSTOM, custom_class="CI2XmlHeader"),
     },
     error_codes={
         "1003": {

@@ -13,11 +13,11 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CData, CDataFile, CDataFileContent
 
 # Fundamental types
-from core.base_object.fundamental_types import CBoolean, CFloat, CInt, CList, COneWord, CProjectId, CString, CUUID
+from core.base_object.fundamental_types import CBoolean, CFloat, CInt, CList, COneWord, CString
 
 # Cross-file class references
-from core.generated.CCP4Data import CRangeSelection
-from core.generated.CCP4File import CFilePath, CMmcifData, CMmcifDataFile
+from core.generated.CCP4Data import CRangeSelection, CUUID
+from core.generated.CCP4File import CFilePath, CMmcifData, CMmcifDataFile, CProjectId
 from core.generated.CCP4ModelData import CElement, CSeqDataFile
 
 
@@ -75,13 +75,13 @@ class CExperimentalDataType(CString):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -201,13 +201,13 @@ class CDialsJsonFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -436,9 +436,9 @@ class CDatasetName(CString):
 
 @cdata_class(
     attributes={
-        "h": attribute(AttributeType.STRING, tooltip="h attribute"),
-        "k": attribute(AttributeType.STRING, tooltip="k attribute"),
-        "l": attribute(AttributeType.STRING, tooltip="l attribute"),
+        "h": attribute(AttributeType.STRING),
+        "k": attribute(AttributeType.STRING),
+        "l": attribute(AttributeType.STRING),
     },
     error_codes={
         "201": {
@@ -496,13 +496,13 @@ class CReindexOperator(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -690,9 +690,9 @@ class CSpaceGroup(CString):
 
 @cdata_class(
     attributes={
-        "moleculeType": attribute(AttributeType.STRING, tooltip="moleculeType attribute"),
-        "seqFile": attribute(AttributeType.CUSTOM, custom_class="CSeqDataFile", tooltip="seqFile attribute"),
-        "numberOfCopies": attribute(AttributeType.INT, tooltip="numberOfCopies attribute"),
+        "moleculeType": attribute(AttributeType.STRING),
+        "seqFile": attribute(AttributeType.CUSTOM, custom_class="CSeqDataFile"),
+        "numberOfCopies": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -847,13 +847,13 @@ what we are searching for. """
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -1019,11 +1019,11 @@ class CCellLength(CFloat):
 
 @cdata_class(
     attributes={
-        "columnGroupType": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="columnGroupType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
-        "dataset": attribute(AttributeType.STRING, tooltip="dataset attribute"),
-        "columnList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="columnList attribute"),
-        "selected": attribute(AttributeType.BOOLEAN, tooltip="selected attribute"),
+        "columnGroupType": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "contentFlag": attribute(AttributeType.INT),
+        "dataset": attribute(AttributeType.STRING),
+        "columnList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "selected": attribute(AttributeType.BOOLEAN),
     },
     error_codes={
         "0": {
@@ -1527,8 +1527,8 @@ class CCrystalName(CString):
 
 @cdata_class(
     attributes={
-        "Fp": attribute(AttributeType.FLOAT, tooltip="Fp attribute"),
-        "Fpp": attribute(AttributeType.FLOAT, tooltip="Fpp attribute"),
+        "Fp": attribute(AttributeType.FLOAT),
+        "Fpp": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "0": {
@@ -1682,8 +1682,8 @@ class CFormFactor(CData):
 
 @cdata_class(
     attributes={
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "columnGroups": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="columnGroups attribute"),
+        "name": attribute(AttributeType.STRING),
+        "columnGroups": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "0": {
@@ -1836,11 +1836,11 @@ class CMtzDataset(CData):
 
 @cdata_class(
     attributes={
-        "runNumber": attribute(AttributeType.INT, tooltip="runNumber attribute"),
-        "batchRange0": attribute(AttributeType.INT, tooltip="batchRange0 attribute"),
-        "batchRange1": attribute(AttributeType.INT, tooltip="batchRange1 attribute"),
-        "resolution": attribute(AttributeType.FLOAT, tooltip="resolution attribute"),
-        "fileNumber": attribute(AttributeType.INT, tooltip="fileNumber attribute"),
+        "runNumber": attribute(AttributeType.INT),
+        "batchRange0": attribute(AttributeType.INT),
+        "batchRange1": attribute(AttributeType.INT),
+        "resolution": attribute(AttributeType.FLOAT),
+        "fileNumber": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -2049,13 +2049,13 @@ class CAnomalousScatteringElement(CElement):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "151": {
@@ -2212,13 +2212,13 @@ class CColumnTypeList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -2401,13 +2401,13 @@ class CColumnGroupList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -2527,13 +2527,13 @@ class CDialsPickleFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -2653,8 +2653,8 @@ class CRefmacKeywordFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "low": attribute(AttributeType.FLOAT, tooltip="low attribute"),
-        "high": attribute(AttributeType.FLOAT, tooltip="high attribute"),
+        "low": attribute(AttributeType.FLOAT),
+        "high": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "201": {
@@ -2935,13 +2935,13 @@ class CXia2ImageSelectionList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3122,13 +3122,13 @@ class CUnmergedDataFileList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3248,13 +3248,13 @@ class CUnmergedDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3374,13 +3374,13 @@ class CMapDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3500,13 +3500,13 @@ class CGenericReflDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -4349,12 +4349,12 @@ class CAltSpaceGroup(CSpaceGroup):
 
 @cdata_class(
     attributes={
-        "a": attribute(AttributeType.CUSTOM, custom_class="CCellLength", tooltip="a attribute"),
-        "b": attribute(AttributeType.CUSTOM, custom_class="CCellLength", tooltip="b attribute"),
-        "c": attribute(AttributeType.CUSTOM, custom_class="CCellLength", tooltip="c attribute"),
-        "alpha": attribute(AttributeType.CUSTOM, custom_class="CCellAngle", tooltip="alpha attribute"),
-        "beta": attribute(AttributeType.CUSTOM, custom_class="CCellAngle", tooltip="beta attribute"),
-        "gamma": attribute(AttributeType.CUSTOM, custom_class="CCellAngle", tooltip="gamma attribute"),
+        "a": attribute(AttributeType.CUSTOM, custom_class="CCellLength"),
+        "b": attribute(AttributeType.CUSTOM, custom_class="CCellLength"),
+        "c": attribute(AttributeType.CUSTOM, custom_class="CCellLength"),
+        "alpha": attribute(AttributeType.CUSTOM, custom_class="CCellAngle"),
+        "beta": attribute(AttributeType.CUSTOM, custom_class="CCellAngle"),
+        "gamma": attribute(AttributeType.CUSTOM, custom_class="CCellAngle"),
     },
     error_codes={
         "0": {
@@ -4511,13 +4511,13 @@ class CCell(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "151": {
@@ -4611,13 +4611,13 @@ class CUnmergedMtzDataFile(CMtzDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -4724,11 +4724,11 @@ class CMiniMtzDataFile(CMtzDataFile):
 
 @cdata_class(
     attributes={
-        "columnName": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="columnName attribute"),
-        "defaultList": attribute(AttributeType.STRING, tooltip="defaultList attribute"),
-        "columnType": attribute(AttributeType.CUSTOM, custom_class="CColumnTypeList", tooltip="columnType attribute"),
-        "partnerTo": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="partnerTo attribute"),
-        "partnerOffset": attribute(AttributeType.INT, tooltip="partnerOffset attribute"),
+        "columnName": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "defaultList": attribute(AttributeType.STRING),
+        "columnType": attribute(AttributeType.CUSTOM, custom_class="CColumnTypeList"),
+        "partnerTo": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "partnerOffset": attribute(AttributeType.INT),
     },
     error_codes={
         "1": {
@@ -4836,10 +4836,10 @@ class CMtzColumnGroupType(CColumnType):
 
 @cdata_class(
     attributes={
-        "columnLabel": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="columnLabel attribute"),
-        "columnType": attribute(AttributeType.CUSTOM, custom_class="CColumnType", tooltip="columnType attribute"),
-        "dataset": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="dataset attribute"),
-        "groupIndex": attribute(AttributeType.INT, tooltip="groupIndex attribute"),
+        "columnLabel": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "columnType": attribute(AttributeType.CUSTOM, custom_class="CColumnType"),
+        "dataset": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "groupIndex": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -4994,9 +4994,9 @@ class CMtzColumn(CData):
 
 @cdata_class(
     attributes={
-        "imageFile": attribute(AttributeType.CUSTOM, custom_class="CImageFile", tooltip="imageFile attribute"),
-        "imageStart": attribute(AttributeType.INT, tooltip="imageStart attribute"),
-        "imageEnd": attribute(AttributeType.INT, tooltip="imageEnd attribute"),
+        "imageFile": attribute(AttributeType.CUSTOM, custom_class="CImageFile"),
+        "imageStart": attribute(AttributeType.INT),
+        "imageEnd": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -5149,12 +5149,12 @@ class CXia2ImageSelection(CData):
 
 @cdata_class(
     attributes={
-        "file": attribute(AttributeType.CUSTOM, custom_class="CUnmergedDataFile", tooltip="file attribute"),
-        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell", tooltip="cell attribute"),
-        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength", tooltip="wavelength attribute"),
-        "crystalName": attribute(AttributeType.STRING, tooltip="crystalName attribute"),
-        "dataset": attribute(AttributeType.STRING, tooltip="dataset attribute"),
-        "excludeSelection": attribute(AttributeType.CUSTOM, custom_class="CRangeSelection", tooltip="excludeSelection attribute"),
+        "file": attribute(AttributeType.CUSTOM, custom_class="CUnmergedDataFile"),
+        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell"),
+        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength"),
+        "crystalName": attribute(AttributeType.STRING),
+        "dataset": attribute(AttributeType.STRING),
+        "excludeSelection": attribute(AttributeType.CUSTOM, custom_class="CRangeSelection"),
     },
     error_codes={
         "0": {
@@ -5311,15 +5311,15 @@ class CImportUnmerged(CData):
 
 @cdata_class(
     attributes={
-        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell", tooltip="cell attribute"),
-        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup", tooltip="spaceGroup attribute"),
-        "resolutionRange": attribute(AttributeType.CUSTOM, custom_class="CResolutionRange", tooltip="resolutionRange attribute"),
-        "listOfColumns": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="listOfColumns attribute"),
-        "datasets": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="datasets attribute"),
-        "crystalNames": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="crystalNames attribute"),
-        "wavelengths": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="wavelengths attribute"),
-        "datasetCells": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="datasetCells attribute"),
-        "merged": attribute(AttributeType.BOOLEAN, tooltip="merged attribute"),
+        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell"),
+        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup"),
+        "resolutionRange": attribute(AttributeType.CUSTOM, custom_class="CResolutionRange"),
+        "listOfColumns": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "datasets": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "crystalNames": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "wavelengths": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "datasetCells": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "merged": attribute(AttributeType.BOOLEAN),
     },
     error_codes={
         "101": {
@@ -5411,14 +5411,14 @@ class CMtzData(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell", tooltip="cell attribute"),
-        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup", tooltip="spaceGroup attribute"),
-        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength", tooltip="wavelength attribute"),
-        "haveFreeRColumn": attribute(AttributeType.BOOLEAN, tooltip="haveFreeRColumn attribute"),
-        "haveFobsColumn": attribute(AttributeType.BOOLEAN, tooltip="haveFobsColumn attribute"),
-        "haveFpmObsColumn": attribute(AttributeType.BOOLEAN, tooltip="haveFpmObsColumn attribute"),
-        "haveIobsColumn": attribute(AttributeType.BOOLEAN, tooltip="haveIobsColumn attribute"),
-        "haveIpmObsColumn": attribute(AttributeType.BOOLEAN, tooltip="haveIpmObsColumn attribute"),
+        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell"),
+        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup"),
+        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength"),
+        "haveFreeRColumn": attribute(AttributeType.BOOLEAN),
+        "haveFobsColumn": attribute(AttributeType.BOOLEAN),
+        "haveFpmObsColumn": attribute(AttributeType.BOOLEAN),
+        "haveIobsColumn": attribute(AttributeType.BOOLEAN),
+        "haveIpmObsColumn": attribute(AttributeType.BOOLEAN),
     },
     error_codes={
         "101": {
@@ -5479,8 +5479,8 @@ specific to coordinates, reflections or geometry data."""
 
 @cdata_class(
     attributes={
-        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup", tooltip="spaceGroup attribute"),
-        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell", tooltip="cell attribute"),
+        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup"),
+        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell"),
     },
     error_codes={
         "101": {
@@ -5548,20 +5548,20 @@ class CSpaceGroupCell(CData):
 
 @cdata_class(
     attributes={
-        "format": attribute(AttributeType.STRING, tooltip="format attribute"),
-        "merged": attribute(AttributeType.STRING, tooltip="merged attribute"),
-        "crystalName": attribute(AttributeType.CUSTOM, custom_class="CCrystalName", tooltip="crystalName attribute"),
-        "datasetName": attribute(AttributeType.CUSTOM, custom_class="CDatasetName", tooltip="datasetName attribute"),
-        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell", tooltip="cell attribute"),
-        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup", tooltip="spaceGroup attribute"),
-        "batchs": attribute(AttributeType.STRING, tooltip="batchs attribute"),
-        "lowRes": attribute(AttributeType.FLOAT, tooltip="lowRes attribute"),
-        "highRes": attribute(AttributeType.FLOAT, tooltip="highRes attribute"),
-        "knowncell": attribute(AttributeType.BOOLEAN, tooltip="knowncell attribute"),
-        "knownwavelength": attribute(AttributeType.BOOLEAN, tooltip="knownwavelength attribute"),
-        "numberLattices": attribute(AttributeType.INT, tooltip="numberLattices attribute"),
-        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength", tooltip="wavelength attribute"),
-        "numberofdatasets": attribute(AttributeType.INT, tooltip="numberofdatasets attribute"),
+        "format": attribute(AttributeType.STRING),
+        "merged": attribute(AttributeType.STRING),
+        "crystalName": attribute(AttributeType.CUSTOM, custom_class="CCrystalName"),
+        "datasetName": attribute(AttributeType.CUSTOM, custom_class="CDatasetName"),
+        "cell": attribute(AttributeType.CUSTOM, custom_class="CCell"),
+        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroup"),
+        "batchs": attribute(AttributeType.STRING),
+        "lowRes": attribute(AttributeType.FLOAT),
+        "highRes": attribute(AttributeType.FLOAT),
+        "knowncell": attribute(AttributeType.BOOLEAN),
+        "knownwavelength": attribute(AttributeType.BOOLEAN),
+        "numberLattices": attribute(AttributeType.INT),
+        "wavelength": attribute(AttributeType.CUSTOM, custom_class="CWavelength"),
+        "numberofdatasets": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -5726,13 +5726,13 @@ class CUnmergedDataContent(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -5842,13 +5842,13 @@ class CPhsDataFile(CMiniMtzDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "301": {
@@ -5919,13 +5919,13 @@ class CObsDataFile(CMiniMtzDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -6036,13 +6036,13 @@ class CMapCoeffsDataFile(CMiniMtzDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -6152,9 +6152,9 @@ class CFreeRDataFile(CMiniMtzDataFile):
 
 @cdata_class(
     attributes={
-        "fileName": attribute(AttributeType.CUSTOM, custom_class="CMiniMtzDataFile", tooltip="fileName attribute"),
-        "columnTag": attribute(AttributeType.STRING, tooltip="columnTag attribute"),
-        "columnNames": attribute(AttributeType.STRING, tooltip="columnNames attribute"),
+        "fileName": attribute(AttributeType.CUSTOM, custom_class="CMiniMtzDataFile"),
+        "columnTag": attribute(AttributeType.STRING),
+        "columnNames": attribute(AttributeType.STRING),
     },
     error_codes={
         "201": {
@@ -6209,8 +6209,8 @@ class CMergeMiniMtz(CData):
 
 @cdata_class(
     attributes={
-        "groupType": attribute(AttributeType.CUSTOM, custom_class="CMtzColumnGroupType", tooltip="groupType attribute"),
-        "columns": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="columns attribute"),
+        "groupType": attribute(AttributeType.CUSTOM, custom_class="CMtzColumnGroupType"),
+        "columns": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "0": {
@@ -6363,12 +6363,12 @@ class CMtzColumnGroup(CData):
 
 @cdata_class(
     attributes={
-        "selected": attribute(AttributeType.BOOLEAN, tooltip="selected attribute"),
-        "obsDataFile": attribute(AttributeType.CUSTOM, custom_class="CObsDataFile", tooltip="obsDataFile attribute"),
-        "crystalName": attribute(AttributeType.CUSTOM, custom_class="CCrystalName", tooltip="crystalName attribute"),
-        "datasetName": attribute(AttributeType.CUSTOM, custom_class="CDatasetName", tooltip="datasetName attribute"),
-        "formFactors": attribute(AttributeType.CUSTOM, custom_class="CFormFactor", tooltip="formFactors attribute"),
-        "formFactorSource": attribute(AttributeType.STRING, tooltip="formFactorSource attribute"),
+        "selected": attribute(AttributeType.BOOLEAN),
+        "obsDataFile": attribute(AttributeType.CUSTOM, custom_class="CObsDataFile"),
+        "crystalName": attribute(AttributeType.CUSTOM, custom_class="CCrystalName"),
+        "datasetName": attribute(AttributeType.CUSTOM, custom_class="CDatasetName"),
+        "formFactors": attribute(AttributeType.CUSTOM, custom_class="CFormFactor"),
+        "formFactorSource": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -6525,8 +6525,8 @@ class CDataset(CData):
 
 @cdata_class(
     attributes={
-        "columnGroup": attribute(AttributeType.CUSTOM, custom_class="CMtzColumnGroup", tooltip="columnGroup attribute"),
-        "datasetName": attribute(AttributeType.STRING, tooltip="datasetName attribute"),
+        "columnGroup": attribute(AttributeType.CUSTOM, custom_class="CMtzColumnGroup"),
+        "datasetName": attribute(AttributeType.STRING),
     },
     error_codes={
         "101": {

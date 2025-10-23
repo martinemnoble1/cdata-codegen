@@ -13,11 +13,11 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CData, CDataFile, CDataFileContent
 
 # Fundamental types
-from core.base_object.fundamental_types import CBoolean, CFloat, CInt, CList, COneWord, CProjectId, CString, CUUID
+from core.base_object.fundamental_types import CBoolean, CFloat, CInt, CList, COneWord, CString
 
 # Cross-file class references
-from core.generated.CCP4Data import CDict
-from core.generated.CCP4File import CFilePath, CI2XmlDataFile
+from core.generated.CCP4Data import CDict, CUUID
+from core.generated.CCP4File import CFilePath, CI2XmlDataFile, CProjectId
 
 
 @cdata_class(
@@ -84,13 +84,13 @@ class CAtomRefmacSelectionList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -229,13 +229,13 @@ class CResidueRangeList(CList):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -356,13 +356,13 @@ class CHhpredDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "identifier": attribute(AttributeType.STRING, tooltip="identifier attribute"),
-        "referenceDb": attribute(AttributeType.STRING, tooltip="referenceDb attribute"),
-        "reference": attribute(AttributeType.STRING, tooltip="reference attribute"),
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "description": attribute(AttributeType.STRING, tooltip="description attribute"),
-        "sequence": attribute(AttributeType.STRING, tooltip="sequence attribute"),
-        "moleculeType": attribute(AttributeType.STRING, tooltip="moleculeType attribute"),
+        "identifier": attribute(AttributeType.STRING),
+        "referenceDb": attribute(AttributeType.STRING),
+        "reference": attribute(AttributeType.STRING),
+        "name": attribute(AttributeType.STRING),
+        "description": attribute(AttributeType.STRING),
+        "sequence": attribute(AttributeType.STRING),
+        "moleculeType": attribute(AttributeType.STRING),
     },
     error_codes={
         "201": {
@@ -478,13 +478,13 @@ What about nucleic/polysach?"""
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -605,7 +605,7 @@ class CTLSDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "alignmentList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="alignmentList attribute"),
+        "alignmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "201": {
@@ -657,13 +657,13 @@ class CHhpredData(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -943,13 +943,13 @@ class CSequenceString(CString):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -1034,12 +1034,12 @@ class CDictDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "groupId": attribute(AttributeType.INT, tooltip="groupId attribute"),
-        "chainIds": attribute(AttributeType.STRING, tooltip="chainIds attribute"),
-        "firstRes": attribute(AttributeType.INT, tooltip="firstRes attribute"),
-        "lastRes": attribute(AttributeType.INT, tooltip="lastRes attribute"),
-        "atoms": attribute(AttributeType.STRING, tooltip="atoms attribute"),
-        "alt": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="alt attribute"),
+        "groupId": attribute(AttributeType.INT),
+        "chainIds": attribute(AttributeType.STRING),
+        "firstRes": attribute(AttributeType.INT),
+        "lastRes": attribute(AttributeType.INT),
+        "atoms": attribute(AttributeType.STRING),
+        "alt": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
     },
     error_codes={
         "0": {
@@ -1203,13 +1203,13 @@ class CAtomRefmacSelectionOccupancy(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "202": {
@@ -1288,10 +1288,10 @@ class CSeqAlignDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "groupId": attribute(AttributeType.INT, tooltip="groupId attribute"),
-        "chainId": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="chainId attribute"),
-        "firstRes": attribute(AttributeType.INT, tooltip="firstRes attribute"),
-        "lastRes": attribute(AttributeType.INT, tooltip="lastRes attribute"),
+        "groupId": attribute(AttributeType.INT),
+        "chainId": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "firstRes": attribute(AttributeType.INT),
+        "lastRes": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -1447,14 +1447,14 @@ class CAtomRefmacSelection(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
-        "selection": attribute(AttributeType.CUSTOM, custom_class="CDict", tooltip="selection attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+        "selection": attribute(AttributeType.CUSTOM, custom_class="CDict"),
     },
     error_codes={
         "1003": {
@@ -1609,8 +1609,8 @@ class CEnsembleList(CList):
 
 @cdata_class(
     attributes={
-        "queryId": attribute(AttributeType.STRING, tooltip="queryId attribute"),
-        "alignmentList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="alignmentList attribute"),
+        "queryId": attribute(AttributeType.STRING),
+        "alignmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "201": {
@@ -1667,9 +1667,9 @@ class CBlastData(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "uniprotId": attribute(AttributeType.STRING, tooltip="uniprotId attribute"),
-        "organism": attribute(AttributeType.STRING, tooltip="organism attribute"),
-        "expressionSystem": attribute(AttributeType.STRING, tooltip="expressionSystem attribute"),
+        "uniprotId": attribute(AttributeType.STRING),
+        "organism": attribute(AttributeType.STRING),
+        "expressionSystem": attribute(AttributeType.STRING),
     },
     error_codes={
         "401": {
@@ -1877,7 +1877,7 @@ class CPdbData(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "monomerList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="monomerList attribute"),
+        "monomerList": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "101": {
@@ -1986,8 +1986,8 @@ class CSeqDataFileList(CList):
 
 @cdata_class(
     attributes={
-        "identifier": attribute(AttributeType.STRING, tooltip="identifier attribute"),
-        "moleculeType": attribute(AttributeType.STRING, tooltip="moleculeType attribute"),
+        "identifier": attribute(AttributeType.STRING),
+        "moleculeType": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -2146,9 +2146,9 @@ or interleaved sequences."""
 
 @cdata_class(
     attributes={
-        "hitId": attribute(AttributeType.STRING, tooltip="hitId attribute"),
-        "querySequence": attribute(AttributeType.STRING, tooltip="querySequence attribute"),
-        "hitSequence": attribute(AttributeType.STRING, tooltip="hitSequence attribute"),
+        "hitId": attribute(AttributeType.STRING),
+        "querySequence": attribute(AttributeType.STRING),
+        "hitSequence": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -2302,9 +2302,9 @@ class CBlastItem(CData):
 
 @cdata_class(
     attributes={
-        "chainId": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="chainId attribute"),
-        "firstRes": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="firstRes attribute"),
-        "lastRes": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="lastRes attribute"),
+        "chainId": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "firstRes": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "lastRes": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
     },
     error_codes={
         "0": {
@@ -2444,7 +2444,7 @@ class CResidueRange(CData):
 
 @cdata_class(
     attributes={
-        "groupIds": attribute(AttributeType.STRING, tooltip="groupIds attribute"),
+        "groupIds": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -2597,10 +2597,10 @@ class CAtomRefmacSelectionGroups(CData):
 
 @cdata_class(
     attributes={
-        "label": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="label attribute"),
-        "number": attribute(AttributeType.INT, tooltip="number attribute"),
-        "use": attribute(AttributeType.BOOLEAN, tooltip="use attribute"),
-        "pdbItemList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="pdbItemList attribute"),
+        "label": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "number": attribute(AttributeType.INT),
+        "use": attribute(AttributeType.BOOLEAN),
+        "pdbItemList": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "0": {
@@ -2757,7 +2757,7 @@ A single ensemble is a CList of structures."""
 
 @cdata_class(
     attributes={
-        "text": attribute(AttributeType.STRING, tooltip="text attribute"),
+        "text": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -2901,13 +2901,13 @@ class CAtomSelection(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3028,13 +3028,13 @@ class CMDLMolDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {
@@ -3155,13 +3155,13 @@ class CBlastDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "id": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="id attribute"),
-        "three_letter_code": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="three_letter_code attribute"),
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "group": attribute(AttributeType.STRING, tooltip="group attribute"),
-        "number_atoms_all": attribute(AttributeType.INT, tooltip="number_atoms_all attribute"),
-        "number_atoms_nh": attribute(AttributeType.INT, tooltip="number_atoms_nh attribute"),
-        "desc_level": attribute(AttributeType.INT, tooltip="desc_level attribute"),
+        "id": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "three_letter_code": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "name": attribute(AttributeType.STRING),
+        "group": attribute(AttributeType.STRING),
+        "number_atoms_all": attribute(AttributeType.INT),
+        "number_atoms_nh": attribute(AttributeType.INT),
+        "desc_level": attribute(AttributeType.INT),
     },
     error_codes={
         "201": {
@@ -3281,9 +3281,9 @@ class COccRefmacSelectionList(CList):
 
 @cdata_class(
     attributes={
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "identifier": attribute(AttributeType.STRING, tooltip="identifier attribute"),
-        "chain": attribute(AttributeType.STRING, tooltip="chain attribute"),
+        "annotation": attribute(AttributeType.STRING),
+        "identifier": attribute(AttributeType.STRING),
+        "chain": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -3437,10 +3437,10 @@ class CHhpredItem(CData):
 
 @cdata_class(
     attributes={
-        "identifier": attribute(AttributeType.STRING, tooltip="identifier attribute"),
-        "formula": attribute(AttributeType.STRING, tooltip="formula attribute"),
-        "dictionaryName": attribute(AttributeType.STRING, tooltip="dictionaryName attribute"),
-        "smiles": attribute(AttributeType.STRING, tooltip="smiles attribute"),
+        "identifier": attribute(AttributeType.STRING),
+        "formula": attribute(AttributeType.STRING),
+        "dictionaryName": attribute(AttributeType.STRING),
+        "smiles": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -3596,12 +3596,12 @@ class CMonomer(CData):
 
 @cdata_class(
     attributes={
-        "sequence": attribute(AttributeType.CUSTOM, custom_class="CSequenceString", tooltip="sequence attribute"),
-        "nCopies": attribute(AttributeType.INT, tooltip="nCopies attribute"),
-        "polymerType": attribute(AttributeType.STRING, tooltip="polymerType attribute"),
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "description": attribute(AttributeType.STRING, tooltip="description attribute"),
-        "source": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="source attribute"),
+        "sequence": attribute(AttributeType.CUSTOM, custom_class="CSequenceString"),
+        "nCopies": attribute(AttributeType.INT),
+        "polymerType": attribute(AttributeType.STRING),
+        "name": attribute(AttributeType.STRING),
+        "description": attribute(AttributeType.STRING),
+        "source": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
     },
     error_codes={
         "0": {
@@ -3758,7 +3758,7 @@ class CAsuContentSeq(CData):
 
 @cdata_class(
     attributes={
-        "seqList": attribute(AttributeType.CUSTOM, custom_class="CAsuContentSeqList", tooltip="seqList attribute"),
+        "seqList": attribute(AttributeType.CUSTOM, custom_class="CAsuContentSeqList"),
     },
     error_codes={
         "101": {
@@ -3810,14 +3810,14 @@ class CAsuContent(CDataFileContent):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
-        "selection": attribute(AttributeType.CUSTOM, custom_class="CAtomSelection", tooltip="selection attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+        "selection": attribute(AttributeType.CUSTOM, custom_class="CAtomSelection"),
     },
     error_codes={
         "401": {
@@ -3919,9 +3919,9 @@ class CPdbDataFile(CDataFile):
 
 @cdata_class(
     attributes={
-        "structure": attribute(AttributeType.CUSTOM, custom_class="CPdbDataFile", tooltip="structure attribute"),
-        "identity_to_target": attribute(AttributeType.FLOAT, tooltip="identity_to_target attribute"),
-        "rms_to_target": attribute(AttributeType.FLOAT, tooltip="rms_to_target attribute"),
+        "structure": attribute(AttributeType.CUSTOM, custom_class="CPdbDataFile"),
+        "identity_to_target": attribute(AttributeType.FLOAT),
+        "rms_to_target": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "101": {
@@ -3973,14 +3973,14 @@ class CPdbEnsembleItem(CData):
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
-        "selection": attribute(AttributeType.CUSTOM, custom_class="CAtomSelection", tooltip="selection attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+        "selection": attribute(AttributeType.CUSTOM, custom_class="CAtomSelection"),
     },
     error_codes={
         "401": {

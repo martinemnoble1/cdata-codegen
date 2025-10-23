@@ -13,7 +13,7 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CData
 
 # Fundamental types
-from core.base_object.fundamental_types import CFloat, CInt, CList, CString, CUUID
+from core.base_object.fundamental_types import CFloat, CInt, CList, CString
 
 
 @cdata_class(
@@ -549,8 +549,8 @@ class CI2DataType(CString):
 
 @cdata_class(
     attributes={
-        "taskName": attribute(AttributeType.STRING, tooltip="taskName attribute"),
-        "patch": attribute(AttributeType.STRING, tooltip="patch attribute"),
+        "taskName": attribute(AttributeType.STRING),
+        "patch": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -963,8 +963,8 @@ class CFollowFromJob(CUUID):
 
 @cdata_class(
     attributes={
-        "start": attribute(AttributeType.FLOAT, tooltip="start attribute"),
-        "end": attribute(AttributeType.FLOAT, tooltip="end attribute"),
+        "start": attribute(AttributeType.FLOAT),
+        "end": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "101": {
@@ -1000,8 +1000,8 @@ class CFloatRange(CRange):
 
 @cdata_class(
     attributes={
-        "start": attribute(AttributeType.INT, tooltip="start attribute"),
-        "end": attribute(AttributeType.INT, tooltip="end attribute"),
+        "start": attribute(AttributeType.INT),
+        "end": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {

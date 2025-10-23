@@ -60,10 +60,10 @@ class CUserId(CString):
 
 @cdata_class(
     attributes={
-        "taskName": attribute(AttributeType.STRING, tooltip="taskName attribute"),
-        "version": attribute(AttributeType.STRING, tooltip="version attribute"),
-        "title": attribute(AttributeType.STRING, tooltip="title attribute"),
-        "references": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="references attribute"),
+        "taskName": attribute(AttributeType.STRING),
+        "version": attribute(AttributeType.STRING),
+        "title": attribute(AttributeType.STRING),
+        "references": attribute(AttributeType.CUSTOM, custom_class="CList"),
     },
     error_codes={
         "100": {
@@ -173,12 +173,12 @@ class CHostName(CString):
 
 @cdata_class(
     attributes={
-        "year": attribute(AttributeType.INT, tooltip="year attribute"),
-        "month": attribute(AttributeType.STRING, tooltip="month attribute"),
-        "day": attribute(AttributeType.INT, tooltip="day attribute"),
-        "yearRange": attribute(AttributeType.INT, tooltip="yearRange attribute"),
-        "monthRange": attribute(AttributeType.INT, tooltip="monthRange attribute"),
-        "dayRange": attribute(AttributeType.INT, tooltip="dayRange attribute"),
+        "year": attribute(AttributeType.INT),
+        "month": attribute(AttributeType.STRING),
+        "day": attribute(AttributeType.INT),
+        "yearRange": attribute(AttributeType.INT),
+        "monthRange": attribute(AttributeType.INT),
+        "dayRange": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -404,7 +404,7 @@ class CAnnotationList(CList):
 
 @cdata_class(
     attributes={
-        "tag": attribute(AttributeType.STRING, tooltip="tag attribute"),
+        "tag": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -544,19 +544,19 @@ class CMetaDataTag(CData):
 
 @cdata_class(
     attributes={
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
-        "mechanism": attribute(AttributeType.STRING, tooltip="mechanism attribute"),
-        "serverList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="serverList attribute"),
-        "userExtensible": attribute(AttributeType.BOOLEAN, tooltip="userExtensible attribute"),
-        "customCodeFile": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="customCodeFile attribute"),
-        "queueOptionsFile": attribute(AttributeType.CUSTOM, custom_class="CDataFile", tooltip="queueOptionsFile attribute"),
-        "ccp4Dir": attribute(AttributeType.STRING, tooltip="ccp4Dir attribute"),
-        "tempDir": attribute(AttributeType.STRING, tooltip="tempDir attribute"),
-        "sge_root": attribute(AttributeType.STRING, tooltip="sge_root attribute"),
-        "keyFilename": attribute(AttributeType.STRING, tooltip="keyFilename attribute"),
-        "validate": attribute(AttributeType.STRING, tooltip="validate attribute"),
-        "timeout": attribute(AttributeType.FLOAT, tooltip="timeout attribute"),
-        "maxTries": attribute(AttributeType.INT, tooltip="maxTries attribute"),
+        "name": attribute(AttributeType.STRING),
+        "mechanism": attribute(AttributeType.STRING),
+        "serverList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "userExtensible": attribute(AttributeType.BOOLEAN),
+        "customCodeFile": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
+        "queueOptionsFile": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
+        "ccp4Dir": attribute(AttributeType.STRING),
+        "tempDir": attribute(AttributeType.STRING),
+        "sge_root": attribute(AttributeType.STRING),
+        "keyFilename": attribute(AttributeType.STRING),
+        "validate": attribute(AttributeType.STRING),
+        "timeout": attribute(AttributeType.FLOAT),
+        "maxTries": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -794,12 +794,12 @@ class CMetaDataTagList(CList):
 
 @cdata_class(
     attributes={
-        "pmid": attribute(AttributeType.INT, tooltip="pmid attribute"),
-        "title": attribute(AttributeType.STRING, tooltip="title attribute"),
-        "authorList": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="authorList attribute"),
-        "source": attribute(AttributeType.STRING, tooltip="source attribute"),
-        "url": attribute(AttributeType.STRING, tooltip="url attribute"),
-        "selected": attribute(AttributeType.BOOLEAN, tooltip="selected attribute"),
+        "pmid": attribute(AttributeType.INT),
+        "title": attribute(AttributeType.STRING),
+        "authorList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "source": attribute(AttributeType.STRING),
+        "url": attribute(AttributeType.STRING),
+        "selected": attribute(AttributeType.BOOLEAN),
     },
     error_codes={
         "101": {
@@ -898,10 +898,10 @@ class CTime(CInt):
 
 @cdata_class(
     attributes={
-        "family": attribute(AttributeType.STRING, tooltip="family attribute"),
-        "style": attribute(AttributeType.INT, tooltip="style attribute"),
-        "pointSize": attribute(AttributeType.INT, tooltip="pointSize attribute"),
-        "weight": attribute(AttributeType.INT, tooltip="weight attribute"),
+        "family": attribute(AttributeType.STRING),
+        "style": attribute(AttributeType.INT),
+        "pointSize": attribute(AttributeType.INT),
+        "weight": attribute(AttributeType.INT),
     },
     error_codes={
         "0": {
@@ -1112,8 +1112,8 @@ class CAuthor(CString):
 
 @cdata_class(
     attributes={
-        "platformNode": attribute(AttributeType.STRING, tooltip="platformNode attribute"),
-        "userId": attribute(AttributeType.CUSTOM, custom_class="CUserId", tooltip="userId attribute"),
+        "platformNode": attribute(AttributeType.STRING),
+        "userId": attribute(AttributeType.CUSTOM, custom_class="CUserId"),
     },
     error_codes={
         "0": {
@@ -1317,9 +1317,9 @@ class CHostname(CHostName):
 
 @cdata_class(
     attributes={
-        "text": attribute(AttributeType.STRING, tooltip="text attribute"),
-        "time": attribute(AttributeType.CUSTOM, custom_class="CTime", tooltip="time attribute"),
-        "author": attribute(AttributeType.CUSTOM, custom_class="CUserId", tooltip="author attribute"),
+        "text": attribute(AttributeType.STRING),
+        "time": attribute(AttributeType.CUSTOM, custom_class="CTime"),
+        "author": attribute(AttributeType.CUSTOM, custom_class="CUserId"),
     },
     error_codes={
         "0": {

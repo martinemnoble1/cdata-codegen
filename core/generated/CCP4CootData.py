@@ -13,21 +13,22 @@ from core.base_object.class_metadata import cdata_class, attribute, AttributeTyp
 from core.base_object.base_classes import CDataFile
 
 # Fundamental types
-from core.base_object.fundamental_types import CInt, CProjectId, CString, CUUID
+from core.base_object.fundamental_types import CInt, CString
 
 # Cross-file class references
-from core.generated.CCP4File import CFilePath
+from core.generated.CCP4Data import CUUID
+from core.generated.CCP4File import CFilePath, CProjectId
 
 
 @cdata_class(
     attributes={
-        "project": attribute(AttributeType.PROJECT_ID, tooltip="project attribute"),
-        "baseName": attribute(AttributeType.FILEPATH, tooltip="baseName attribute"),
-        "relPath": attribute(AttributeType.FILEPATH, tooltip="relPath attribute"),
-        "annotation": attribute(AttributeType.STRING, tooltip="annotation attribute"),
-        "dbFileId": attribute(AttributeType.UUID, tooltip="dbFileId attribute"),
-        "subType": attribute(AttributeType.INT, tooltip="subType attribute"),
-        "contentFlag": attribute(AttributeType.INT, tooltip="contentFlag attribute"),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
     },
     error_codes={
         "101": {

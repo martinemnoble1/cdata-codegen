@@ -411,8 +411,8 @@ class CCustomTaskParamList(CList):
 
 @cdata_class(
     attributes={
-        "text": attribute(AttributeType.STRING, tooltip="text attribute"),
-        "name": attribute(AttributeType.STRING, tooltip="name attribute"),
+        "text": attribute(AttributeType.STRING),
+        "name": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {
@@ -565,16 +565,16 @@ class CCustomComFile(CData):
 
 @cdata_class(
     attributes={
-        "name": attribute(AttributeType.CUSTOM, custom_class="COneWord", tooltip="name attribute"),
-        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataType", tooltip="dataType attribute"),
-        "label": attribute(AttributeType.STRING, tooltip="label attribute"),
-        "obligatory": attribute(AttributeType.BOOLEAN, tooltip="obligatory attribute"),
-        "saveDataToDb": attribute(AttributeType.BOOLEAN, tooltip="saveDataToDb attribute"),
-        "function": attribute(AttributeType.CUSTOM, custom_class="CCustomTaskFileFunction", tooltip="function attribute"),
-        "mergeTo": attribute(AttributeType.STRING, tooltip="mergeTo attribute"),
-        "splitColumns": attribute(AttributeType.STRING, tooltip="splitColumns attribute"),
-        "requiredContentType": attribute(AttributeType.CUSTOM, custom_class="CList", tooltip="requiredContentType attribute"),
-        "outputFilePath": attribute(AttributeType.STRING, tooltip="outputFilePath attribute"),
+        "name": attribute(AttributeType.CUSTOM, custom_class="COneWord"),
+        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataType"),
+        "label": attribute(AttributeType.STRING),
+        "obligatory": attribute(AttributeType.BOOLEAN),
+        "saveDataToDb": attribute(AttributeType.BOOLEAN),
+        "function": attribute(AttributeType.CUSTOM, custom_class="CCustomTaskFileFunction"),
+        "mergeTo": attribute(AttributeType.STRING),
+        "splitColumns": attribute(AttributeType.STRING),
+        "requiredContentType": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "outputFilePath": attribute(AttributeType.STRING),
     },
     error_codes={
         "0": {

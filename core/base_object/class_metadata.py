@@ -10,40 +10,30 @@ from enum import Enum
 
 
 class AttributeType(Enum):
-    """Types of attributes that can be created."""
+    """Types of attributes that can be created.
+
+    Only fundamental types (CInt, CFloat, CBoolean, CString) have their own enum values.
+    All other types (CFilePath, CUUID, CList, etc.) should use CUSTOM with custom_class parameter.
+    """
 
     INT = "CInt"
     FLOAT = "CFloat"
     BOOLEAN = "CBoolean"
     STRING = "CString"
-    FILEPATH = "CFilePath"
-    PROJECT_ID = "CProjectId"
-    UUID = "CUUID"
-    JOB_TITLE = "CJobTitle"
     CUSTOM = "Custom"
 
 
 @dataclass
 class AttributeDefinition:
-    """Definition of a class attribute."""
+    """Definition of a class attribute.
+
+    All attribute constraints (min/max/default/enumerators/etc.) should be
+    defined in the class-level qualifiers, not here. This class only defines
+    what TYPE of attribute to create.
+    """
 
     attr_type: AttributeType
-    default: Any = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    enumerators: Optional[List[str]] = None
-    tooltip: Optional[str] = None
-    must_exist: bool = False
-    allow_undefined: bool = True
-    file_extensions: Optional[List[str]] = None
-    custom_class: Optional[str] = None  # For custom types
-
-    def __post_init__(self):
-        """Validate attribute definition."""
-        if self.attr_type == AttributeType.CUSTOM and not self.custom_class:
-            raise ValueError(
-                "Custom attribute type requires custom_class to be specified"
-            )
+    custom_class: Optional[str] = None  # For AttributeType.CUSTOM types
 
 
 @dataclass
@@ -66,22 +56,25 @@ class ClassMetadata:
 _CLASS_METADATA_REGISTRY: Dict[str, ClassMetadata] = {}
 
 
-def attribute(attr_type: AttributeType, **kwargs) -> AttributeDefinition:
+def attribute(attr_type: AttributeType, custom_class: Optional[str] = None) -> AttributeDefinition:
     """Helper function to create attribute definitions.
 
+    All attribute constraints (min/max/default/enumerators/etc.) should be
+    defined in class-level qualifiers, not here.
+
     Args:
-        attr_type: The type of attribute
-        **kwargs: Additional attribute properties
+        attr_type: The type of attribute (INT, FLOAT, STRING, CUSTOM, etc.)
+        custom_class: For AttributeType.CUSTOM, the class name to instantiate
 
     Returns:
         AttributeDefinition instance
 
     Example:
-        project = attribute(AttributeType.PROJECT_ID)
-        size = attribute(AttributeType.INT, default=0, min_value=0)
-        file_path = attribute(AttributeType.FILEPATH, file_extensions=['txt', 'log'])
+        project = attribute(AttributeType.CUSTOM, custom_class="CProjectId")
+        label = attribute(AttributeType.CUSTOM, custom_class="COneWord")
+        items = attribute(AttributeType.CUSTOM, custom_class="CList")
     """
-    return AttributeDefinition(attr_type=attr_type, **kwargs)
+    return AttributeDefinition(attr_type=attr_type, custom_class=custom_class)
 
 
 def cdata_class(
@@ -111,8 +104,8 @@ def cdata_class(
     Example:
         @cdata_class(
             attributes={
-                'project': attribute(AttributeType.PROJECT_ID),
-                'baseName': attribute(AttributeType.FILEPATH),
+                'project': attribute(AttributeType.CUSTOM, custom_class="CProjectId"),
+                'baseName': attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
                 'size': attribute(AttributeType.INT, default=0, min_value=0)
             },
             file_extensions=['dat', 'txt'],
@@ -200,13 +193,7 @@ class MetadataAttributeFactory:
             return cls._create_float_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type == AttributeType.BOOLEAN:
             return cls._create_boolean_attribute(name, attr_def, parent_obj, qualifiers)
-        elif attr_def.attr_type in [
-            AttributeType.STRING,
-            AttributeType.FILEPATH,
-            AttributeType.PROJECT_ID,
-            AttributeType.UUID,
-            AttributeType.JOB_TITLE,
-        ]:
+        elif attr_def.attr_type == AttributeType.STRING:
             return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
         elif attr_def.attr_type == AttributeType.CUSTOM:
             return cls._create_custom_attribute(name, attr_def, parent_obj, qualifiers)
@@ -222,16 +209,14 @@ class MetadataAttributeFactory:
 
         attr = CData(parent=parent_obj, name=name)
 
-        # Set default value from qualifiers or attribute definition
-        default_value = qualifiers.get('default', attr_def.default)
-        if default_value is None:
-            default_value = 0
+        # Set default value from qualifiers
+        default_value = qualifiers.get('default', 0)
         attr.__dict__["value"] = default_value
 
         # Create methods
         def set_value(val):
-            min_value = qualifiers.get('min', attr_def.min_value)
-            max_value = qualifiers.get('max', attr_def.max_value)
+            min_value = qualifiers.get('min')
+            max_value = qualifiers.get('max')
             if min_value is not None and val < min_value:
                 raise ValueError(
                     f"{name} value {val} is below minimum {min_value}"
@@ -269,14 +254,13 @@ class MetadataAttributeFactory:
 
         attr = CData(parent=parent_obj, name=name)
 
-        default_value = qualifiers.get('default', attr_def.default)
-        if default_value is None:
-            default_value = 0.0
+        # Set default value from qualifiers
+        default_value = qualifiers.get('default', 0.0)
         attr.__dict__["value"] = default_value
 
         def set_value(val):
-            min_value = qualifiers.get('min', attr_def.min_value)
-            max_value = qualifiers.get('max', attr_def.max_value)
+            min_value = qualifiers.get('min')
+            max_value = qualifiers.get('max')
             if min_value is not None and val < min_value:
                 raise ValueError(
                     f"{name} value {val} is below minimum {min_value}"
@@ -314,9 +298,8 @@ class MetadataAttributeFactory:
 
         attr = CData(parent=parent_obj, name=name)
 
-        default_value = qualifiers.get('default', attr_def.default)
-        if default_value is None:
-            default_value = False
+        # Set default value from qualifiers
+        default_value = qualifiers.get('default', False)
         attr.__dict__["value"] = default_value
 
         def set_value(val):
@@ -344,11 +327,12 @@ class MetadataAttributeFactory:
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
         """Create a string-type attribute, sourcing default from qualifiers."""
-        from .base_classes import CString
+        from .fundamental_types import CString
 
         attr = CString(parent=parent_obj, name=name)
 
-        default_value = qualifiers.get('default', attr_def.default)
+        # Set default value from qualifiers if provided
+        default_value = qualifiers.get('default')
         if default_value is not None:
             attr.value = str(default_value)
 
@@ -358,10 +342,96 @@ class MetadataAttributeFactory:
     def _create_custom_attribute(
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a custom attribute type, sourcing default from qualifiers."""
-        # This would handle custom CData subclasses
-        # For now, default to CString
-        return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
+        """Create a custom attribute type using the custom_class specification."""
+        from .base_classes import CData, ValueState
+
+        # Get the custom class name
+        custom_class_name = attr_def.custom_class
+        if not custom_class_name:
+            # Fallback to CString if no custom class specified
+            return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
+
+        # Build a class registry (similar to DEF XML parser)
+        custom_class = cls._get_class_from_registry(custom_class_name)
+
+        if custom_class is None:
+            # Class not found, fallback to CString
+            print(f"Warning: Custom class '{custom_class_name}' not found for attribute '{name}', using CString")
+            return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
+
+        # Create instance of the custom class
+        try:
+            obj = custom_class(parent=parent_obj, name=name)
+
+            # Apply qualifiers
+            if qualifiers:
+                # Ensure qualifiers attribute exists
+                if not hasattr(obj, 'qualifiers') or obj.qualifiers is None:
+                    obj.qualifiers = {}
+                # Update qualifiers
+                if isinstance(obj.qualifiers, dict):
+                    obj.qualifiers.update(qualifiers)
+                else:
+                    obj.qualifiers = qualifiers
+
+            # Set default value from qualifiers if provided
+            default_value = qualifiers.get('default')
+            if default_value is not None and hasattr(obj, 'value'):
+                obj.value = default_value
+                if hasattr(parent_obj, "_value_states"):
+                    parent_obj._value_states[name] = ValueState.DEFAULT
+
+            return obj
+        except Exception as e:
+            print(f"Warning: Failed to create custom class '{custom_class_name}': {e}")
+            return cls._create_string_attribute(name, attr_def, parent_obj, qualifiers)
+
+    @classmethod
+    def _get_class_from_registry(cls, class_name: str):
+        """Get a class from the registry, building it if needed."""
+        # Import here to avoid circular dependencies
+        from .fundamental_types import CInt, CFloat, CBoolean, CString, CList
+        from .base_classes import CContainer
+
+        # Build a simple registry - only fundamental types and container
+        # Other classes are imported dynamically below
+        registry = {
+            "CInt": CInt,
+            "CFloat": CFloat,
+            "CBoolean": CBoolean,
+            "CString": CString,
+            "CContainer": CContainer,
+            "CList": CList,
+        }
+
+        # Try to get from basic registry first
+        if class_name in registry:
+            return registry[class_name]
+
+        # Try to import from core.generated modules
+        try:
+            import importlib
+            # Try importing from various possible locations
+            # Order matters - try most specific first
+            possible_modules = [
+                'core.generated.CCP4Data',      # COneWord, CDict, etc.
+                'core.generated.CCP4ModelData', # CEnsemble, CPdbDataFile, etc.
+                'core.generated.CCP4File',      # CFilePath, CI2XmlDataFile, etc.
+                f'core.generated.{class_name}', # Direct module match
+                f'core.{class_name}',           # Core module match
+            ]
+
+            for module_path in possible_modules:
+                try:
+                    module = importlib.import_module(module_path)
+                    if hasattr(module, class_name):
+                        return getattr(module, class_name)
+                except (ImportError, AttributeError):
+                    continue
+        except Exception:
+            pass
+
+        return None
 
 
 def apply_metadata_to_instance(instance):
@@ -371,18 +441,24 @@ def apply_metadata_to_instance(instance):
         instance: The instance to apply metadata to
     """
     # Collect attributes from all ancestor classes with metadata
+    # Walk MRO in REVERSE order so that child classes override parent classes
     merged_attributes = {}
-    for cls in instance.__class__.__mro__:
+    for cls in reversed(instance.__class__.__mro__):
         if cls is object:
             continue
         metadata = getattr(cls, "_metadata", None)
         if metadata:
-            # Parent attributes are added first, child overrides
+            # Parent attributes are added first (because we're in reverse),
+            # then child overrides them
             merged_attributes.update(metadata.attributes)
 
     # Create attributes from merged metadata
     for attr_name, attr_def in merged_attributes.items():
-        if not hasattr(instance, attr_name):
+        # Check if attribute exists in instance __dict__ (not class attributes)
+        # This is important because generated classes have type annotations like
+        # `label: Optional[COneWord] = None` which creates a class attribute,
+        # but we want to replace it with an actual COneWord instance
+        if attr_name not in instance.__dict__:
             attr_obj = MetadataAttributeFactory.create_attribute(
                 attr_name, attr_def, instance
             )
