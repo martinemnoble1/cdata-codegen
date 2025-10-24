@@ -81,23 +81,21 @@ class ProductionCodeGenerator:
                 tooltip = attr_info.get('tooltip', f'{attr_name} attribute')
 
                 # Determine if this is a fundamental type or custom class
-                # Map to AttributeType (only for types that have enum values)
+                # Map to AttributeType (only fundamental types have enum values)
+                # All other types (CFilePath, CUUID, CProjectId, CList, etc.) use AttributeType.CUSTOM
                 type_map = {
                     'CInt': 'AttributeType.INT',
                     'CFloat': 'AttributeType.FLOAT',
                     'CString': 'AttributeType.STRING',
                     'CBoolean': 'AttributeType.BOOLEAN',
-                    'CUUID': 'AttributeType.UUID',
-                    'CFilePath': 'AttributeType.FILEPATH',
-                    'CProjectId': 'AttributeType.PROJECT_ID',
                 }
 
                 if attr_type in type_map:
                     attr_type_enum = type_map[attr_type]
-                    lines.append(f'        "{attr_name}": attribute({attr_type_enum}, tooltip="{tooltip}"),')
+                    lines.append(f'        "{attr_name}": attribute({attr_type_enum}),')
                 else:
-                    # Custom class or CList
-                    lines.append(f'        "{attr_name}": attribute(AttributeType.CUSTOM, custom_class="{attr_type}", tooltip="{tooltip}"),')
+                    # Custom class - includes CFilePath, CUUID, CProjectId, CList, etc.
+                    lines.append(f'        "{attr_name}": attribute(AttributeType.CUSTOM, custom_class="{attr_type}"),')
 
             lines.append('    },')
 
