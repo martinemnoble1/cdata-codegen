@@ -78,7 +78,6 @@ class ProductionCodeGenerator:
             for attr_name, attr_info in attributes.items():
                 attr_type_str = attr_info.get('class', 'str')
                 attr_type = self.type_resolver.resolve_type_name(attr_type_str)
-                tooltip = attr_info.get('tooltip', f'{attr_name} attribute')
 
                 # Determine if this is a fundamental type or custom class
                 # Map to AttributeType (only fundamental types have enum values)
