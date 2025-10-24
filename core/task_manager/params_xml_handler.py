@@ -18,8 +18,8 @@ from datetime import datetime
 import socket
 import os
 
-from ..new_cdata.base_classes import CData, CContainer
-from ..new_cdata.fundamental_types import *
+from ..base_object.base_classes import CData, CContainer
+from ..base_object.fundamental_types import *
 
 
 class ParamsXmlHandler:

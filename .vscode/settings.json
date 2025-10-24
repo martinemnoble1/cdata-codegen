@@ -1,0 +1,9 @@
+  "terminal.integrated.env.osx": {
+    "CCP4I2_ROOT": "../ccp4i2"
+  },
+  "terminal.integrated.env.linux": {
+    "CCP4I2_ROOT": "../ccp4i2"
+  },
+  "terminal.integrated.env.windows": {
+    "CCP4I2_ROOT": "..\\ccp4i2"
+  }

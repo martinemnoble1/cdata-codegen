@@ -7,6 +7,7 @@ This document outlines the plan to harmonize the "new" CData implementation (mod
 ## Current Status
 
 ### New Implementation (What We Have)
+
 - **Location**: `core/base_object/`
 - **Architecture**:
   - `HierarchicalObject` → `CData` → fundamental types & generated classes
@@ -16,6 +17,7 @@ This document outlines the plan to harmonize the "new" CData implementation (mod
   - Property-based value validation
 
 ### Old API (What's Expected)
+
 - **Qt-based**: Originally subclassed `QtCore.QObject`
 - **XML-based**: Heavy use of eTree for serialization
 - **Container-focused**: CContainer with dynamic contents from DEF files
@@ -27,78 +29,78 @@ This document outlines the plan to harmonize the "new" CData implementation (mod
 
 ### Phase 1: Core Data Methods ✅ (Already Implemented)
 
-| Old API Method | New Implementation | Status | Notes |
-|----------------|-------------------|---------|-------|
-| `__init__(parent, qualifiers)` | `__init__(parent, name, **kwargs)` | ✅ Implemented | Modern uses kwargs |
-| `parent()` | `get_parent()` via HierarchicalObject | ✅ Implemented | |
-| `objectName()` | `name` property | ✅ Implemented | Direct attribute access |
-| `objectPath()` | **❌ Missing** | 🔨 Need to add | Path with underscore separator |
-| `set(data)` | `set()` in CDataFile, value setter in fundamentals | ⚠️ Partial | Need standardization |
-| `get(name=None)` | `value` property / direct access | ⚠️ Partial | Need dict-style get() |
-| `unSet()` | **❌ Missing** | 🔨 Need to add | Reset to NOT_SET state |
-| `isSet()` | `isSet()` | ✅ Implemented | In fundamental types |
-| `validity()` | Validation in setters | ⚠️ Partial | Need CErrorReport return |
-| `fix()` | **❌ Missing** | 📝 Optional | Auto-fix invalid data |
-| `setDefault()` | **❌ Missing** | 🔨 Need to add | Set to default value |
+| Old API Method                 | New Implementation                                 | Status         | Notes                          |
+| ------------------------------ | -------------------------------------------------- | -------------- | ------------------------------ |
+| `__init__(parent, qualifiers)` | `__init__(parent, name, **kwargs)`                 | ✅ Implemented | Modern uses kwargs             |
+| `parent()`                     | `get_parent()` via HierarchicalObject              | ✅ Implemented |                                |
+| `objectName()`                 | `name` property                                    | ✅ Implemented | Direct attribute access        |
+| `objectPath()`                 | **❌ Missing**                                     | 🔨 Need to add | Path with underscore separator |
+| `set(data)`                    | `set()` in CDataFile, value setter in fundamentals | ⚠️ Partial     | Need standardization           |
+| `get(name=None)`               | `value` property / direct access                   | ⚠️ Partial     | Need dict-style get()          |
+| `unSet()`                      | **❌ Missing**                                     | 🔨 Need to add | Reset to NOT_SET state         |
+| `isSet()`                      | `isSet()`                                          | ✅ Implemented | In fundamental types           |
+| `validity()`                   | Validation in setters                              | ⚠️ Partial     | Need CErrorReport return       |
+| `fix()`                        | **❌ Missing**                                     | 📝 Optional    | Auto-fix invalid data          |
+| `setDefault()`                 | **❌ Missing**                                     | 🔨 Need to add | Set to default value           |
 
 ### Phase 2: Qualifier Methods ⚠️ (Partially Implemented)
 
-| Old API Method | New Implementation | Status | Notes |
-|----------------|-------------------|---------|-------|
-| `qualifiers(name, default, custom)` | `get_qualifier()` | ⚠️ Partial | Need dict return mode |
-| `qualifiersDefinition(name)` | Class metadata | ⚠️ Partial | Need accessor method |
-| `qualifiersOrder()` | **❌ Missing** | 📝 Optional | For GUI ordering |
-| `pythonType()` | `PYTHONTYPE` in decorators | ⚠️ Partial | Need accessor method |
+| Old API Method                      | New Implementation         | Status      | Notes                 |
+| ----------------------------------- | -------------------------- | ----------- | --------------------- |
+| `qualifiers(name, default, custom)` | `get_qualifier()`          | ⚠️ Partial  | Need dict return mode |
+| `qualifiersDefinition(name)`        | Class metadata             | ⚠️ Partial  | Need accessor method  |
+| `qualifiersOrder()`                 | **❌ Missing**             | 📝 Optional | For GUI ordering      |
+| `pythonType()`                      | `PYTHONTYPE` in decorators | ⚠️ Partial  | Need accessor method  |
 
 ### Phase 3: XML/Serialization Methods ❌ (Not Implemented)
 
-| Old API Method | New Implementation | Status | Notes |
-|----------------|-------------------|---------|-------|
-| `getEtree()` | **❌ Missing** | 🔨 **High Priority** | Export to eTree/XML |
-| `setEtree(element)` | **❌ Missing** | 🔨 **High Priority** | Import from eTree/XML |
-| `getQualifiersEtree()` | **❌ Missing** | 🔨 **High Priority** | Export qualifiers to XML |
-| `setQualifiersEtree(element)` | **❌ Missing** | 🔨 **High Priority** | Import qualifiers from XML |
+| Old API Method                | New Implementation | Status               | Notes                      |
+| ----------------------------- | ------------------ | -------------------- | -------------------------- |
+| `getEtree()`                  | **❌ Missing**     | 🔨 **High Priority** | Export to eTree/XML        |
+| `setEtree(element)`           | **❌ Missing**     | 🔨 **High Priority** | Import from eTree/XML      |
+| `getQualifiersEtree()`        | **❌ Missing**     | 🔨 **High Priority** | Export qualifiers to XML   |
+| `setQualifiersEtree(element)` | **❌ Missing**     | 🔨 **High Priority** | Import qualifiers from XML |
 
 ### Phase 4: Signal/Event Methods ✅ (Modernized)
 
-| Old API Method | New Implementation | Status | Notes |
-|----------------|-------------------|---------|-------|
-| `emitDataChanged()` | Signal system in HierarchicalObject | ✅ Modernized | No Qt dependency |
-| Qt signals/slots | Modern signal system | ✅ Modernized | Pure Python implementation |
+| Old API Method      | New Implementation                  | Status        | Notes                      |
+| ------------------- | ----------------------------------- | ------------- | -------------------------- |
+| `emitDataChanged()` | Signal system in HierarchicalObject | ✅ Modernized | No Qt dependency           |
+| Qt signals/slots    | Modern signal system                | ✅ Modernized | Pure Python implementation |
 
 ### Phase 5: Container Methods ⚠️ (Partially Implemented)
 
-| Old API Method | New Implementation | Status | Notes |
-|----------------|-------------------|---------|-------|
-| `loadContentsFromXml(fileName)` | **❌ Missing** | 🔨 High Priority | Load DEF file |
-| `loadDataFromXml(fileName)` | **❌ Missing** | 🔨 High Priority | Load PARAMS file |
-| `saveContentsToXml(fileName)` | **❌ Missing** | 🔨 High Priority | Save DEF file |
-| `saveDataToXml(fileName)` | **❌ Missing** | 🔨 High Priority | Save PARAMS file |
-| `loadContentsFromEtree(element)` | **❌ Missing** | 🔨 High Priority | We have DEF XML parser |
-| `loadDataFromEtree(element)` | **❌ Missing** | 🔨 High Priority | Need params import |
-| `saveContentsToEtree()` | **❌ Missing** | 🔨 High Priority | |
-| `saveDataToEtree()` | **❌ Missing** | 🔨 High Priority | |
-| `addContent(name, cls, qualifiers)` | `add_item()` in CContainer | ⚠️ Partial | Need standardization |
-| `addObject(name, object, afterObject)` | **❌ Missing** | 🔨 Need to add | |
-| `replaceObject(name, object)` | **❌ Missing** | 📝 Optional | |
-| `deleteObject(name)` | `remove_item()` | ⚠️ Partial | |
-| `renameObject(oldName, newName)` | **❌ Missing** | 📝 Optional | |
-| `clear()` | **❌ Missing** | 🔨 Need to add | Remove all contents |
-| `dataOrder()` | **❌ Missing** | 🔨 Need to add | List all object names |
-| `addHeader()` | **❌ Missing** | 🔨 Need to add | For XML export |
-| `parseCommandLine()` | **❌ Missing** | 📝 Optional | For CLI usage |
+| Old API Method                         | New Implementation         | Status           | Notes                  |
+| -------------------------------------- | -------------------------- | ---------------- | ---------------------- |
+| `loadContentsFromXml(fileName)`        | **❌ Missing**             | 🔨 High Priority | Load DEF file          |
+| `loadDataFromXml(fileName)`            | **❌ Missing**             | 🔨 High Priority | Load PARAMS file       |
+| `saveContentsToXml(fileName)`          | **❌ Missing**             | 🔨 High Priority | Save DEF file          |
+| `saveDataToXml(fileName)`              | **❌ Missing**             | 🔨 High Priority | Save PARAMS file       |
+| `loadContentsFromEtree(element)`       | **❌ Missing**             | 🔨 High Priority | We have DEF XML parser |
+| `loadDataFromEtree(element)`           | **❌ Missing**             | 🔨 High Priority | Need params import     |
+| `saveContentsToEtree()`                | **❌ Missing**             | 🔨 High Priority |                        |
+| `saveDataToEtree()`                    | **❌ Missing**             | 🔨 High Priority |                        |
+| `addContent(name, cls, qualifiers)`    | `add_item()` in CContainer | ⚠️ Partial       | Need standardization   |
+| `addObject(name, object, afterObject)` | **❌ Missing**             | 🔨 Need to add   |                        |
+| `replaceObject(name, object)`          | **❌ Missing**             | 📝 Optional      |                        |
+| `deleteObject(name)`                   | `remove_item()`            | ⚠️ Partial       |                        |
+| `renameObject(oldName, newName)`       | **❌ Missing**             | 📝 Optional      |                        |
+| `clear()`                              | **❌ Missing**             | 🔨 Need to add   | Remove all contents    |
+| `dataOrder()`                          | **❌ Missing**             | 🔨 Need to add   | List all object names  |
+| `addHeader()`                          | **❌ Missing**             | 🔨 Need to add   | For XML export         |
+| `parseCommandLine()`                   | **❌ Missing**             | 📝 Optional      | For CLI usage          |
 
 ### Phase 6: Class Attributes ⚠️ (Partially Implemented)
 
-| Old API Attribute | New Implementation | Status | Notes |
-|-------------------|-------------------|---------|-------|
-| `CONTENTS` | `attributes_definition` in decorator | ✅ Modernized | Via @cdata_class |
-| `PYTHONTYPE` | `gui_type_hint` in decorator | ✅ Modernized | |
-| `QUALIFIERS` | `qualifiers_definition` in decorator | ✅ Modernized | |
-| `QUALIFIERS_ORDER` | **❌ Missing** | 📝 Optional | For GUI |
-| `QUALIFIERS_DEFINITION` | `qualifiers_definition` | ✅ Implemented | |
-| `ERROR_CODES` | **❌ Missing** | 📝 Optional | Task-specific errors |
-| `PROPERTIES` | Python `@property` | ✅ Modernized | Native Python |
+| Old API Attribute       | New Implementation                   | Status         | Notes                |
+| ----------------------- | ------------------------------------ | -------------- | -------------------- |
+| `CONTENTS`              | `attributes_definition` in decorator | ✅ Modernized  | Via @cdata_class     |
+| `PYTHONTYPE`            | `gui_type_hint` in decorator         | ✅ Modernized  |                      |
+| `QUALIFIERS`            | `qualifiers_definition` in decorator | ✅ Modernized  |                      |
+| `QUALIFIERS_ORDER`      | **❌ Missing**                       | 📝 Optional    | For GUI              |
+| `QUALIFIERS_DEFINITION` | `qualifiers_definition`              | ✅ Implemented |                      |
+| `ERROR_CODES`           | **❌ Missing**                       | 📝 Optional    | Task-specific errors |
+| `PROPERTIES`            | Python `@property`                   | ✅ Modernized  | Native Python        |
 
 ---
 
@@ -107,6 +109,7 @@ This document outlines the plan to harmonize the "new" CData implementation (mod
 ### Priority 1: Core Compatibility (Essential for Legacy Code)
 
 #### Task 1.1: Add Missing Core Methods to CData
+
 **File**: `core/base_object/base_classes.py`
 
 ```python
@@ -209,9 +212,11 @@ class CData(HierarchicalObject):
 ```
 
 #### Task 1.2: Standardize set() Method
+
 **File**: `core/base_object/fundamental_types.py`
 
 Update all fundamental types to have consistent `set()` method:
+
 ```python
 def set(self, value):
     """Set value (legacy API compatibility).
@@ -227,6 +232,7 @@ def set(self, value):
 ```
 
 #### Task 1.3: Add dataOrder() to CContainer
+
 **File**: `core/base_object/base_classes.py`
 
 ```python
@@ -263,6 +269,7 @@ class CContainer(CData):
 ### Priority 2: XML Serialization (Critical for CCP4i2 Integration)
 
 #### Task 2.1: Implement getEtree() / setEtree()
+
 **File**: `core/base_object/xml_serialization.py` (NEW)
 
 ```python
@@ -326,7 +333,8 @@ class XMLSerializationMixin:
 ```
 
 #### Task 2.2: Integrate with DEF XML Parser
-**File**: `core/task_manager/def_xml_parser.py`
+
+**File**: `core/task_manager/def_xml_handler.py`
 
 Connect the parser to use `setEtree()` / `setQualifiersEtree()` methods.
 
@@ -335,13 +343,14 @@ Connect the parser to use `setEtree()` / `setQualifiersEtree()` methods.
 ### Priority 3: Container File I/O (For DEF/PARAMS Files)
 
 #### Task 3.1: Add XML File Methods to CContainer
+
 **File**: `core/base_object/base_classes.py`
 
 ```python
 class CContainer(CData, XMLSerializationMixin):
     def loadContentsFromXml(self, fileName):
         """Load content definition from DEF file (legacy API)."""
-        from ..task_manager.def_xml_parser import parse_def_xml_file
+        from ..task_manager.def_xml_handler import parse_def_xml_file
         result = parse_def_xml_file(fileName)
         # Copy contents from result to self
         return None  # Success (CErrorReport)
@@ -391,6 +400,7 @@ class CContainer(CData, XMLSerializationMixin):
 ### Priority 4: Error Reporting (For Validation)
 
 #### Task 4.1: Create CErrorReport Class
+
 **File**: `core/base_object/error_reporting.py` (NEW)
 
 ```python
@@ -412,6 +422,7 @@ class CErrorReport:
 ```
 
 #### Task 4.2: Update set() to Return CErrorReport
+
 Update all `set()` methods to return `CErrorReport` instead of None/raising exceptions.
 
 ---
@@ -419,23 +430,27 @@ Update all `set()` methods to return `CErrorReport` instead of None/raising exce
 ## Implementation Schedule
 
 ### Week 1: Core Compatibility
+
 - [ ] Task 1.1: Add missing core methods
 - [ ] Task 1.2: Standardize set() method
 - [ ] Task 1.3: Add CContainer methods
 - [ ] Test: Verify basic API compatibility
 
 ### Week 2: XML Serialization
+
 - [ ] Task 2.1: Implement getEtree/setEtree
 - [ ] Task 2.2: Integrate with DEF parser
 - [ ] Task 4.1: Create CErrorReport
 - [ ] Test: Round-trip XML serialization
 
 ### Week 3: Container File I/O
+
 - [ ] Task 3.1: Add XML file methods
 - [ ] Task 4.2: Update error reporting
 - [ ] Test: Load/save DEF and PARAMS files
 
 ### Week 4: Integration & Testing
+
 - [ ] Integration testing with legacy code
 - [ ] Documentation updates
 - [ ] Migration guide for existing code
@@ -445,16 +460,19 @@ Update all `set()` methods to return `CErrorReport` instead of None/raising exce
 ## Testing Strategy
 
 ### Unit Tests
+
 - Test each legacy method for correct behavior
 - Test backward compatibility with old calling patterns
 - Test new + old API methods work together
 
 ### Integration Tests
+
 - Load actual CCP4i2 DEF files
 - Load/save PARAMS files
 - Test with real task definitions
 
 ### Compatibility Tests
+
 - Run against existing CCP4i2 code
 - Verify no breaking changes
 - Performance benchmarks
@@ -466,6 +484,7 @@ Update all `set()` methods to return `CErrorReport` instead of None/raising exce
 ### Calling Patterns That Will Work
 
 **Getting data:**
+
 ```python
 # Old way (still works)
 value = obj.get()
@@ -475,6 +494,7 @@ value = obj.value
 ```
 
 **Setting data:**
+
 ```python
 # Old way (returns CErrorReport)
 error = obj.set(42)
@@ -484,6 +504,7 @@ obj.value = 42
 ```
 
 **Object hierarchy:**
+
 ```python
 # Old way
 parent_obj = obj.parent()
@@ -516,6 +537,7 @@ path = obj.objectPath()  # Both work!
 - Error reporting needs to be standardized across old/new patterns
 
 ## Status Legend
+
 - ✅ Implemented
 - ⚠️ Partially implemented
 - ❌ Not implemented

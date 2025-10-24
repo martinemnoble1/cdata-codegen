@@ -10,9 +10,8 @@ import inspect
 import logging
 from typing import Dict, Any, Type
 
-from ccp4i2.googlecode import diff_match_patch_py3
 
-CCP4I2_ROOT = str(pathlib.Path(diff_match_patch_py3.__file__).parent.parent)
+CCP4I2_ROOT = str(os.environ["CCP4I2_ROOT"])
 
 
 def find_defxml_files(root_dir):
@@ -80,5 +79,7 @@ def trawl_defxml_files(root_dir=CCP4I2_ROOT):
 if __name__ == "__main__":
     root_directory = CCP4I2_ROOT
     result = trawl_defxml_files(root_directory)
-    with open("defxml_lookup.json", "w") as f:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, "defxml_lookup.json")
+    with open(output_path, "w") as f:
         f.write(json.dumps(result, indent=2))

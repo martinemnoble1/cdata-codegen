@@ -2,13 +2,14 @@
 
 ## Summary
 
-The DEF XML parser in `core/task_manager/def_xml_parser.py` has been successfully updated to work with the new code generation system and file layout.
+The DEF XML parser in `core/task_manager/def_xml_handler.py` has been successfully updated to work with the new code generation system and file layout.
 
 ## Changes Made
 
 ### 1. Updated Import Paths
 
 **Before:**
+
 ```python
 from ..new_cdata.base_classes import CData, CContainer
 from ..new_cdata.fundamental_types import *
@@ -16,6 +17,7 @@ from ..new_cdata.metadata_system import FieldMetadata, ClassMetadata, MetadataRe
 ```
 
 **After:**
+
 ```python
 from ..base_object.base_classes import CData, CContainer, ValueState
 from ..base_object.fundamental_types import (
@@ -29,6 +31,7 @@ from ..base_object.metadata_system import (
 ### 2. Updated Class Registry
 
 The `_build_class_registry()` method now:
+
 - Imports fundamental types from `core.base_object.fundamental_types`
 - Loads all generated classes from `core.generated.*` modules
 - Registers 212 classes total:
@@ -36,6 +39,7 @@ The `_build_class_registry()` method now:
   - 206 generated CData classes from the production generator
 
 **Generated modules loaded:**
+
 - CCP4Annotation
 - CCP4ComFilePatchManager
 - CCP4CootData
@@ -54,7 +58,7 @@ The `_build_class_registry()` method now:
 
 Updated `_apply_qualifiers()` to use `ValueState` from the imported module instead of trying to access it from the object.
 
-### 4. Simplified _create_list_object
+### 4. Simplified \_create_list_object
 
 Removed fallback implementation since CList is now properly available from fundamental_types.
 
@@ -76,7 +80,7 @@ Comprehensive testing shows the parser working perfectly:
 ## Example Usage
 
 ```python
-from core.task_manager.def_xml_parser import parse_def_xml_file
+from core.task_manager.def_xml_handler import parse_def_xml_file
 
 # Parse a .def.xml file
 result = parse_def_xml_file("path/to/task.def.xml")
@@ -111,13 +115,14 @@ CContainer (root: "task_name")
 ## Integration with Production Generator
 
 The parser now seamlessly integrates with:
+
 - **base_object/** - Hand-written fundamental types and base classes
 - **generated/** - Production-generated CData classes
 - **task_manager/** - Task definition parsing and plugin discovery
 
 ## Files Modified
 
-1. **core/task_manager/def_xml_parser.py**
+1. **core/task_manager/def_xml_handler.py**
    - Updated imports to use new paths
    - Rebuilt class registry to load from core.generated
    - Fixed ValueState reference
@@ -125,7 +130,8 @@ The parser now seamlessly integrates with:
 
 ## Related Files (Not Modified)
 
-These files are companions to def_xml_parser.py but don't need updates:
+These files are companions to def_xml_handler.py but don't need updates:
+
 - **core/task_manager/defxml_lookup.py** - Scans for .def.xml files in CCP4i2
 - **core/task_manager/plugin_lookup.py** - Discovers CPluginScript classes
 

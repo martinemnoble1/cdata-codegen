@@ -9,6 +9,7 @@ Successfully updated and converted the XML workflow test files to proper pytest 
 ### 1. Created `tests/test_full_def_xml.py` (9 tests - all passing)
 
 Converted from the old demo script to comprehensive pytest suite testing:
+
 - Full DEF XML parsing with servalcat_pipe task
 - Input/output/control containers structure
 - Multiple CData types (CInt, CFloat, CBoolean, CString, CPdbDataFile, etc.)
@@ -18,6 +19,7 @@ Converted from the old demo script to comprehensive pytest suite testing:
 - Complete task structure verification
 
 **Key Features:**
+
 - Uses pytest fixtures for temp file management
 - Tests all fundamental types
 - Validates qualifier constraints
@@ -26,6 +28,7 @@ Converted from the old demo script to comprehensive pytest suite testing:
 ### 2. Created `tests/test_def_xml_workflow.py` (13 tests - all passing)
 
 New comprehensive workflow tests covering:
+
 - Task loading from DEF XML
 - Initial default states
 - Parameter modification (direct assignment)
@@ -40,12 +43,13 @@ New comprehensive workflow tests covering:
 - Complex multi-step workflow scenarios
 
 **Key Features:**
+
 - Tests complete user workflow
 - Validates state tracking
 - Tests constraint enforcement
 - Verifies independent task instances
 
-### 3. Updated `core/task_manager/def_xml_parser.py`
+### 3. Updated `core/task_manager/def_xml_handler.py`
 
 Enhanced qualifier application to properly set runtime validation:
 
@@ -63,6 +67,7 @@ elif key == "max":
 ```
 
 This ensures:
+
 - Metadata stores qualifier values
 - Objects have runtime access to qualifiers
 - Validation happens during value assignment
@@ -99,6 +104,7 @@ def value(self, val):
 ```
 
 **Benefits:**
+
 - CFloat now validates min/max constraints
 - Consistent with CInt validation pattern
 - Raises ValueError for out-of-bounds values
@@ -151,6 +157,7 @@ All new DEF XML tests pass successfully!
 ## What the Tests Cover
 
 ### Parsing & Structure
+
 - ✅ Parse complete servalcat_pipe task definition
 - ✅ Create proper container hierarchies
 - ✅ Handle nested containers
@@ -158,12 +165,14 @@ All new DEF XML tests pass successfully!
 - ✅ Handle CList with subItem definitions
 
 ### Value Handling
+
 - ✅ Apply default values from qualifiers
 - ✅ Track value states (NOT_SET, DEFAULT, EXPLICITLY_SET)
 - ✅ Support direct value assignment
 - ✅ Handle all fundamental types (CInt, CFloat, CBoolean, CString)
 
 ### Validation
+
 - ✅ Enforce min/max constraints on CInt
 - ✅ Enforce min/max constraints on CFloat
 - ✅ Validate at assignment time
@@ -171,6 +180,7 @@ All new DEF XML tests pass successfully!
 - ✅ Support enumerator constraints
 
 ### Workflow
+
 - ✅ Load fresh tasks with clean defaults
 - ✅ Modify parameters independently
 - ✅ Verify modifications persist
@@ -179,6 +189,7 @@ All new DEF XML tests pass successfully!
 ## Integration Status
 
 The updated tests integrate seamlessly with:
+
 - **core/base_object/** - Fundamental types and base classes
 - **core/generated/** - Production-generated CData classes (212 classes)
 - **core/task_manager/** - DEF XML parser with updated imports
@@ -206,6 +217,7 @@ The one failing test (`test_cpdbdatafile_set_from_dict`) is about the `set()` me
 ✅ **Complete and production-ready!**
 
 The DEF XML parser now has comprehensive pytest coverage with:
+
 - 22 new tests, all passing
 - Proper pytest fixtures and structure
 - Updated import paths for current layout
