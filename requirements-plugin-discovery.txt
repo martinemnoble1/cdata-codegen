@@ -1,0 +1,20 @@
+# Requirements for plugin_lookup.py to discover CCP4i2 plugins
+# These allow importing plugin files without full PySide2/Qt installation
+
+# XML processing - widely used in CCP4i2 for .def.xml and report parsing
+lxml>=4.9.0
+
+# Crystallography library - used by many core CCP4i2 components
+gemmi>=0.6.0
+
+# Network/graph analysis - used by some plugins
+networkx>=3.0
+
+# HTTP requests - used by plugins that access web services
+requests>=2.31.0
+
+# CCTBX/iotbx - Computational Crystallography Toolbox
+# Note: These are larger packages with compiled components
+# Installation: pip install cctbx-base
+# Alternative: conda install -c conda-forge cctbx-base
+cctbx-base>=2024.0; platform_system != "Windows"

@@ -1,203 +1,4 @@
 {
-  "import_serial": {
-    "module": "ccp4i2.wrappers.import_serial.script.import_serial",
-    "class": "import_serial",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "data_entry",
-    "TASKTITLE": "Import Serial Core",
-    "TASKNAME": "import_serial",
-    "TASKVERSION": 1.1,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
   "chainsaw": {
     "module": "ccp4i2.wrappers.chainsaw.script.chainsaw",
     "class": "chainsaw",
@@ -593,72 +394,6 @@
       },
       "312": {
         "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
-  "xia2_multiplex": {
-    "module": "ccp4i2.wrappers.xia2_multiplex.script.xia2_multiplex",
-    "class": "Cxia2_multiplex",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "data_reduction",
-    "TASKTITLE": "Data set combination with xia2.multiplex",
-    "TASKNAME": "xia2_multiplex",
-    "TASKVERSION": 0.0,
-    "WHATNEXT": [
-      "phaser_pipeline",
-      "molrep_pipe",
-      "crank2",
-      "ShelxCD",
-      "ShelxCDE"
-    ],
-    "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CDataReductionPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Failed harvesting integrated data"
-      },
-      "205": {
-        "description": "Failed parsing xia2.json"
-      }
-    }
-  },
-  "adding_stats_to_mmcif_i2": {
-    "module": "ccp4i2.wrappers.adding_stats_to_mmcif_i2.script.adding_stats_to_mmcif_i2",
-    "class": "adding_stats_to_mmcif_i2",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "adding_stats_to_mmcif_i2",
-    "TASKVERSION": 0.1,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": false,
-    "PURGESEARCHLIST": [
-      [
-        "hklin.mtz",
-        0
-      ],
-      [
-        "log_mtzjoin.txt",
-        0
-      ]
-    ],
-    "ERROR_CODES": {
-      "201": {
-        "description": "Failed to analyse output files"
-      },
-      "202": {
-        "description": "Failed applying selection ot PDB file"
-      },
-      "203": {
-        "description": "Input XML file contains neither AIMLESS nor AIMLESS_PIPE nodes"
-      },
-      "204": {
-        "description": "Failed with adding_stats_to_mmcif"
       }
     }
   },
@@ -2235,29 +1970,6 @@
       }
     }
   },
-  "SIMBAD": {
-    "module": "ccp4i2.wrappers.SIMBAD.script.SIMBAD",
-    "class": "SIMBAD",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "SIMBAD",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "modelcraft",
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Something not very good has happened."
-      }
-    }
-  },
   "phaser_mr": {
     "module": "ccp4i2.wrappers.phaser_mr.script.phaser_mr",
     "class": "phaser_mr",
@@ -2289,214 +2001,6 @@
       },
       "204": {
         "description": "Failed analysing log"
-      }
-    }
-  },
-  "edstats": {
-    "module": "ccp4i2.wrappers.edstats.script.edstats",
-    "class": "edstats",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "validation",
-    "TASKTITLE": "Measure agreement between model and density",
-    "TASKNAME": "edstats",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "PURGESEARCHLIST": [
-      [
-        "fft%*/MAPOUT.map",
-        1
-      ]
-    ],
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
       }
     }
   },
@@ -2699,50 +2203,6 @@
       },
       "312": {
         "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
-  "coot1": {
-    "module": "ccp4i2.wrappers.coot1.script.coot1",
-    "class": "coot1",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "model_building",
-    "TASKTITLE": "Coot 1",
-    "TASKNAME": "coot1",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "coot_rebuild",
-      "modelcraft"
-    ],
-    "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {}
-  },
-  "AMPLE": {
-    "module": "ccp4i2.wrappers.AMPLE.script.AMPLE",
-    "class": "AMPLE",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "AMPLE",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "modelcraft",
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Something not very good has happened."
       }
     }
   },
@@ -3798,25 +3258,6 @@
       }
     }
   },
-  "acorn": {
-    "module": "ccp4i2.wrappers.acorn.script.acorn",
-    "class": "acorn",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "density_modification",
-    "TASKTITLE": "Acorn",
-    "TASKNAME": "acorn",
-    "TASKVERSION": 1.0,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Unexpected reflections in input file, list in stdout.txt"
-      }
-    }
-  },
   "freerflag": {
     "module": "ccp4i2.wrappers.freerflag.script.freerflag",
     "class": "freerflag",
@@ -4027,236 +3468,6 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
     "PERFORMANCECLASS": "CModelBuildPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
-  "acedrgNew": {
-    "module": "ccp4i2.wrappers.acedrgNew.script.acedrgNew",
-    "class": "acedrgNew",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "wrappers",
-    "TASKTITLE": "acedrgNew",
-    "TASKNAME": "acedrgNew",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "TIMEOUT_PERIOD": 9999999.9,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Failed to add item to mol list"
-      },
-      "201": {
-        "description": "Failed to setFullPath"
-      },
-      "202": {
-        "description": "Failed to dump XMML"
-      },
-      "203": {
-        "description": "Failed to make RDKit Mol from DICT"
-      }
-    }
-  },
-  "validate_protein": {
-    "module": "ccp4i2.wrappers.validate_protein.script.validate_protein",
-    "class": "validate_protein",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "validate_protein",
-    "TASKVERSION": null,
-    "WHATNEXT": [
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
     "SUBTASKS": [],
     "RUNEXTERNALPROCESS": true,
     "ERROR_CODES": {
@@ -4916,7 +4127,6 @@
   "ProvideAlignment": {
     "module": "ccp4i2.wrappers.ProvideAlignment.script.ProvideAlignment",
     "class": "ProvideAlignment",
-    "module_file": "../../../../../../../../Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/ccp4i2/wrappers/ProvideAlignment/script/ProvideAlignment.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -6171,205 +5381,6 @@
       }
     }
   },
-  "phaser_analysis": {
-    "module": "ccp4i2.wrappers.phaser_analysis.script.phaser_analysis",
-    "class": "phaser_analysis",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "phaser_analysis",
-    "TASKNAME": "phaser_analysis",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": false,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
   "Lidia": {
     "module": "ccp4i2.wrappers.Lidia.script.Lidia",
     "class": "lidia",
@@ -6421,28 +5432,6 @@
       },
       "202": {
         "description": "Failed applying selection ot PDB file"
-      }
-    }
-  },
-  "scaleit": {
-    "module": "ccp4i2.wrappers.scaleit.script.scaleit",
-    "class": "scaleit",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Compare two or more datafiles",
-    "TASKNAME": "scaleit",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Too few datasets defined"
-      },
-      "201": {
-        "description": "Inconsistent cells between datasets"
       }
     }
   },
@@ -6896,35 +5885,6 @@
       },
       "312": {
         "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
-  "servalcat": {
-    "module": "ccp4i2.wrappers.servalcat.script.servalcat",
-    "class": "servalcat",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "wrappers",
-    "TASKTITLE": "Refinement (servalcat)",
-    "TASKNAME": "servalcat",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CServalcatPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "201": {
-        "description": "Refmac returned with non zero status"
-      },
-      "202": {
-        "description": "New library created but strictly required"
-      },
-      "203": {
-        "description": "New library created",
-        "severity": 2
-      },
-      "204": {
-        "description": "Program completed without generating XMLOUT."
       }
     }
   },
@@ -8395,205 +7355,6 @@
       },
       "204": {
         "description": "Program completed without generating XMLOUT."
-      }
-    }
-  },
-  "pdb_redo_api": {
-    "module": "ccp4i2.wrappers.pdb_redo_api.script.pdb_redo_api",
-    "class": "pdb_redo_api",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "refinement",
-    "TASKTITLE": "PDB-REDO Web services",
-    "TASKNAME": "pdb_redo_api",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": false,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
       }
     }
   },
@@ -10654,28 +9415,6 @@
       }
     }
   },
-  "metalCoord": {
-    "module": "ccp4i2.wrappers.metalCoord.script.metalCoord",
-    "class": "metalCoord",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "wrappers",
-    "TASKNAME": "metalCoord",
-    "TASKVERSION": 0.2,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": null,
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "201": {
-        "description": "No output JSON file from metalCoord"
-      },
-      "202": {
-        "description": "Log file does not report successful job completion",
-        "severity": 2
-      }
-    }
-  },
   "chltofom": {
     "module": "ccp4i2.wrappers.chltofom.script.chltofom",
     "class": "chltofom",
@@ -11839,37 +10578,6 @@
       },
       "202": {
         "description": "Failed in processOutputFiles"
-      }
-    }
-  },
-  "xia2_ssx_reduce": {
-    "module": "ccp4i2.wrappers.xia2_ssx_reduce.script.xia2_ssx_reduce",
-    "class": "Cxia2_ssx_reduce",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "data_reduction",
-    "TASKTITLE": "Reduction of serial datasets using xia2.ssx_reduce",
-    "TASKNAME": "xia2_ssx_reduce",
-    "TASKVERSION": 0.0,
-    "WHATNEXT": [
-      "xia2_ssx_reduce",
-      "phaser_pipeline",
-      "molrep_pipe",
-      "prosmart_refmac"
-    ],
-    "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CDataReductionCCPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Failed harvesting integrated data"
-      },
-      "225": {
-        "description": "Unable to find merged MTZ files"
-      },
-      "226": {
-        "description": "A process in the process pool was terminated abruptly while the future was running or pending.\nOverload of RAM memory occured likely.\nRe-run the job with lower batch size and number of processes."
       }
     }
   },
@@ -13558,7 +12266,6 @@
   "xia2_run": {
     "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_run.script.xia2_run",
     "class": "xia2_run",
-    "module_file": "../../../../../../../../Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/ccp4i2/pipelines/import_xia2/wrappers/xia2_run/script/xia2_run.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -13751,205 +12458,6 @@
       "212": {
         "severity": 4,
         "description": "Failed to determine projectId or Directory of presumed existing project"
-      }
-    }
-  },
-  "tableone": {
-    "module": "ccp4i2.pipelines.tableone.script.tableone",
-    "class": "tableone",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Generate Table One",
-    "TASKNAME": "tableone",
-    "TASKVERSION": 1.0,
-    "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "1": {
-        "description": "Data definition file not found"
-      },
-      "2": {
-        "description": "Invalid data for command line"
-      },
-      "3": {
-        "description": "No command to run external process has been provided"
-      },
-      "4": {
-        "description": "Error reading log file"
-      },
-      "5": {
-        "description": "Invalid data for command file"
-      },
-      "6": {
-        "description": "Could not load data file"
-      },
-      "7": {
-        "description": "Error writing command file"
-      },
-      "8": {
-        "description": "Attempting to set invalid working directory"
-      },
-      "9": {
-        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
-      },
-      "10": {
-        "description": "Failed starting external process - no process id returned"
-      },
-      "11": {
-        "description": "Error running external process"
-      },
-      "12": {
-        "description": "Attempting to set invalid waitForFinish"
-      },
-      "13": {
-        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
-      },
-      "14": {
-        "description": "Can not find specified command template"
-      },
-      "15": {
-        "severity": 2,
-        "description": "No command line defined in MakeCommandAndScript()"
-      },
-      "16": {
-        "description": "Script file does not exist"
-      },
-      "17": {
-        "severity": 2,
-        "description": "Error attempting to set output file name"
-      },
-      "18": {
-        "description": "Failed importing plugin module"
-      },
-      "19": {
-        "description": "Failed instantiating plugin object"
-      },
-      "20": {
-        "severity": 2,
-        "description": "Failed finding output data to check"
-      },
-      "21": {
-        "severity": 2,
-        "description": "Failed to register new job with database"
-      },
-      "22": {
-        "description": "Failed to pass database info to new job"
-      },
-      "23": {
-        "description": "Error saving outputData file"
-      },
-      "24": {
-        "description": "Failed to create job sub-directory"
-      },
-      "25": {
-        "severity": 2,
-        "description": "External process return code"
-      },
-      "26": {
-        "severity": 2,
-        "description": "Error saving status to param file"
-      },
-      "27": {
-        "description": "Error interpreting output data for split MTZ"
-      },
-      "28": {
-        "description": "Error interpreting input data for join MTZ"
-      },
-      "30": {
-        "severity": 2,
-        "description": "Warning converting miniMTZ to HKLIN - data not set"
-      },
-      "31": {
-        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
-      },
-      "32": {
-        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
-      },
-      "33": {
-        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
-      },
-      "34": {
-        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
-      },
-      "35": {
-        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
-      },
-      "36": {
-        "description": "Error merging in FreeR flags - insufficient data"
-      },
-      "39": {
-        "description": "Unknown error in script"
-      },
-      "40": {
-        "description": "Process timed out after (secs)"
-      },
-      "41": {
-        "description": "Error checking input data"
-      },
-      "42": {
-        "description": "Error checking output data"
-      },
-      "43": {
-        "description": "Error processing input data"
-      },
-      "44": {
-        "description": "Error creating command line and script"
-      },
-      "45": {
-        "description": "Error in processing output files"
-      },
-      "46": {
-        "description": "Error in finish handler"
-      },
-      "47": {
-        "description": "Error in checking external process after completion"
-      },
-      "48": {
-        "description": "Error in the plugin script startProcess"
-      },
-      "49": {
-        "severity": 2,
-        "description": "Error reading sub-process log file"
-      },
-      "50": {
-        "severity": 2,
-        "description": "Failure while looking for project defaults file"
-      },
-      "51": {
-        "severity": 2,
-        "description": "Failure loading project defaults file"
-      },
-      "52": {
-        "description": "Failure creating project defaults file - no definition for parameter"
-      },
-      "53": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - parameter already in file"
-      },
-      "54": {
-        "severity": 2,
-        "description": "Warning creating project defaults file - failed reading existing file"
-      },
-      "55": {
-        "description": "Error inserting information on hklin content into log file"
-      },
-      "56": {
-        "description": "External process exited with exit code != 0"
-      },
-      "57": {
-        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
-      },
-      "310": {
-        "description": "Output object contains different number of sub-objects"
-      },
-      "311": {
-        "description": "Failure in running comparison code"
-      },
-      "312": {
-        "description": "No evaluation possible with a 'dummy' task"
       }
     }
   },
@@ -14156,38 +12664,6 @@
       }
     }
   },
-  "phaser_pipeline": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.script.phaser_pipeline",
-    "class": "phaser_pipeline",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "phaser_pipeline",
-    "TASKVERSION": 0.0,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "modelcraft",
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Phaser exited with error status"
-      },
-      "202": {
-        "description": "Failed in harvest operation"
-      },
-      "203": {
-        "description": "Columns not present"
-      },
-      "204": {
-        "description": "Failed in plugin:"
-      }
-    }
-  },
   "phaser_EP": {
     "module": "ccp4i2.pipelines.phaser_ep.script.phaser_EP",
     "class": "phaser_EP",
@@ -14203,172 +12679,6 @@
     "ERROR_CODES": {
       "202": {
         "description": "Failed in harvest operation"
-      }
-    }
-  },
-  "shelx": {
-    "module": "ccp4i2.pipelines.shelx.script.shelx_script",
-    "class": "shelx",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKTITLE": "SHELX",
-    "TASKNAME": "shelx",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "servalcat_pipe": {
-    "module": "ccp4i2.pipelines.servalcat_pipe.script.servalcat_pipe",
-    "class": "servalcat_pipe",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "refinement",
-    "TASKTITLE": "Refinement against diffraction data or SPA map & optional restraints from ProSMART & MetalCoord",
-    "TASKNAME": "servalcat_pipe",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "servalcat_pipe",
-      "coot_rebuild",
-      "modelcraft"
-    ],
-    "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 240,
-    "MAXNJOBS": 4,
-    "PERFORMANCECLASS": "CServalcatPerformance",
-    "SUBTASKS": [
-      "servalcat",
-      "prosmart",
-      "metalCoord"
-    ],
-    "RUNEXTERNALPROCESS": false,
-    "PURGESEARCHLIST": [
-      [
-        "refmac%*/hklout.mtz",
-        0,
-        "hklout"
-      ],
-      [
-        "refmac%*/hklout.mtz",
-        7,
-        "hklout"
-      ],
-      [
-        "*%*/ANOMFPHIOUT.mtz",
-        1,
-        "ANOMFPHIOUT"
-      ],
-      [
-        "*%*/DIFANOMFPHIOUT.mtz",
-        1,
-        "DIFANOMFPHIOUT"
-      ]
-    ],
-    "ERROR_CODES": {
-      "101": {
-        "description": "Error copying data file from final job to pipeline directory"
-      }
-    }
-  },
-  "crank2_refatompick": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_refatompick.script.crank2_refatompick",
-    "class": "crank2_refatompick",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_refatompick",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_handdet": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_handdet.script.crank2_handdet",
-    "class": "crank2_handdet",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_handdet",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_mbref": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_mbref.script.crank2_mbref",
-    "class": "crank2_mbref",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_mbref",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_phdmmb": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_phdmmb.script.crank2_phdmmb",
-    "class": "crank2_phdmmb",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_phdmmb",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_dmfull": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_dmfull.script.crank2_dmfull",
-    "class": "crank2_dmfull",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_dmfull",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
       }
     }
   },
@@ -14567,155 +12877,6 @@
       },
       "312": {
         "description": "No evaluation possible with a 'dummy' task"
-      }
-    }
-  },
-  "crank2_comb_phdmmb": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_comb_phdmmb.script.crank2_comb_phdmmb",
-    "class": "crank2_comb_phdmmb",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_comb_phdmmb",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_ref": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_ref.script.crank2_ref",
-    "class": "crank2_ref",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_ref",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_phas": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_phas.script.crank2_phas",
-    "class": "crank2_phas",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_phas",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_faest": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_faest.script.crank2_faest",
-    "class": "crank2_faest",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_faest",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2_substrdet": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_substrdet.script.crank2_substrdet",
-    "class": "crank2_substrdet",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2_substrdet",
-    "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "crank2": {
-    "module": "ccp4i2.pipelines.crank2.script.crank2_script",
-    "class": "crank2",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKTITLE": "Crank2",
-    "TASKNAME": "crank2",
-    "TASKVERSION": 0.02,
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "0": {
-        "description": " "
-      }
-    }
-  },
-  "phaser_rnp_pipeline": {
-    "module": "ccp4i2.pipelines.phaser_rnp_pipeline.script.phaser_rnp_pipeline",
-    "class": "phaser_rnp_pipeline",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "phaser_rnp_pipeline",
-    "TASKVERSION": 0.0,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "modelcraft",
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "ERROR_CODES": {
-      "200": {
-        "description": "Phaser exited with error statut"
-      },
-      "202": {
-        "description": "Failed in harvest operation"
-      },
-      "203": {
-        "description": "Columns not present"
-      },
-      "204": {
-        "description": "Failed in plugin:",
-        "205": {
-          "description": "Failed in pointless reindex operation"
-        }
       }
     }
   },
@@ -15955,45 +14116,6 @@
       }
     }
   },
-  "dr_mr_modelbuild_pipeline": {
-    "module": "ccp4i2.pipelines.dr_mr_modelbuild_pipeline.script.dr_mr_modelbuild_pipeline",
-    "class": "dr_mr_modelbuild_pipeline",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "dr_mr_modelbuild_pipeline",
-    "TASKVERSION": null,
-    "WHATNEXT": [],
-    "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance",
-    "SUBTASKS": [],
-    "RUNEXTERNALPROCESS": true,
-    "PURGESEARCHLIST": [
-      [
-        "molrep_mr%*/align.pdb",
-        1
-      ],
-      [
-        "molrep_mr%*/molrep_mtz.cif",
-        1
-      ],
-      [
-        "molrep_mr%*/molrep.doc.txt",
-        5
-      ]
-    ],
-    "ERROR_CODES": {
-      "301": {
-        "description": "Error reading program xml output from first molrep run"
-      },
-      "302": {
-        "description": "No Laue results in program xml output from first molrep run"
-      },
-      "202": {
-        "description": "Failed in harvesting file from lidia/acedrg"
-      }
-    }
-  },
   "uniqueify": {
     "module": "ccp4i2.pipelines.uniqueify.script.uniqueify",
     "class": "uniqueify",
@@ -16496,35 +14618,434 @@
       }
     }
   },
-  "phaser_simple": {
-    "module": "ccp4i2.pipelines.phaser_simple.script.phaser_simple",
-    "class": "phaser_simple",
+  "refmac_martin": {
+    "module": "ccp4i2.deprecated.refmac_martin.refmac_martin",
+    "class": "refmac_martin",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
-    "TASKMODULE": null,
-    "TASKNAME": "phaser_simple",
+    "TASKMODULE": "deprecated",
+    "TASKTITLE": "Basic refinement with Refmac5",
+    "TASKNAME": "refmac_martin",
     "TASKVERSION": 0.0,
     "WHATNEXT": [
-      "prosmart_refmac",
-      "modelcraft",
-      "coot_rebuild"
+      "refmac_martin",
+      "buccaneer_build_refine_mr"
     ],
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance",
+    "PERFORMANCECLASS": null,
     "SUBTASKS": [],
     "RUNEXTERNALPROCESS": true,
     "ERROR_CODES": {
-      "200": {
-        "description": "Phaser exited with error status"
+      "201": {
+        "description": "Refmac returned with non zero status"
       },
       "202": {
-        "description": "Failed in harvest operation"
+        "description": "New library created but strictly required"
       },
       "203": {
-        "description": "Columns not present"
+        "description": "New library created",
+        "severity": 2
       },
       "204": {
-        "description": "Failed in plugin:"
+        "description": "Program completed without generating XMLOUT."
+      }
+    }
+  },
+  "prosmart_martin": {
+    "module": "ccp4i2.deprecated.prosmart_martin.prosmart_martin",
+    "class": "prosmart_martin",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "deprecated",
+    "TASKTITLE": "Simple prosmart for use in prosmart_refmac pipeline",
+    "TASKNAME": "prosmart_martin",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": null,
+    "SUBTASKS": [],
+    "RUNEXTERNALPROCESS": true,
+    "ERROR_CODES": {
+      "1": {
+        "description": "Data definition file not found"
+      },
+      "2": {
+        "description": "Invalid data for command line"
+      },
+      "3": {
+        "description": "No command to run external process has been provided"
+      },
+      "4": {
+        "description": "Error reading log file"
+      },
+      "5": {
+        "description": "Invalid data for command file"
+      },
+      "6": {
+        "description": "Could not load data file"
+      },
+      "7": {
+        "description": "Error writing command file"
+      },
+      "8": {
+        "description": "Attempting to set invalid working directory"
+      },
+      "9": {
+        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
+      },
+      "10": {
+        "description": "Failed starting external process - no process id returned"
+      },
+      "11": {
+        "description": "Error running external process"
+      },
+      "12": {
+        "description": "Attempting to set invalid waitForFinish"
+      },
+      "13": {
+        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
+      },
+      "14": {
+        "description": "Can not find specified command template"
+      },
+      "15": {
+        "severity": 2,
+        "description": "No command line defined in MakeCommandAndScript()"
+      },
+      "16": {
+        "description": "Script file does not exist"
+      },
+      "17": {
+        "severity": 2,
+        "description": "Error attempting to set output file name"
+      },
+      "18": {
+        "description": "Failed importing plugin module"
+      },
+      "19": {
+        "description": "Failed instantiating plugin object"
+      },
+      "20": {
+        "severity": 2,
+        "description": "Failed finding output data to check"
+      },
+      "21": {
+        "severity": 2,
+        "description": "Failed to register new job with database"
+      },
+      "22": {
+        "description": "Failed to pass database info to new job"
+      },
+      "23": {
+        "description": "Error saving outputData file"
+      },
+      "24": {
+        "description": "Failed to create job sub-directory"
+      },
+      "25": {
+        "severity": 2,
+        "description": "External process return code"
+      },
+      "26": {
+        "severity": 2,
+        "description": "Error saving status to param file"
+      },
+      "27": {
+        "description": "Error interpreting output data for split MTZ"
+      },
+      "28": {
+        "description": "Error interpreting input data for join MTZ"
+      },
+      "30": {
+        "severity": 2,
+        "description": "Warning converting miniMTZ to HKLIN - data not set"
+      },
+      "31": {
+        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
+      },
+      "32": {
+        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
+      },
+      "33": {
+        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
+      },
+      "34": {
+        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
+      },
+      "35": {
+        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
+      },
+      "36": {
+        "description": "Error merging in FreeR flags - insufficient data"
+      },
+      "39": {
+        "description": "Unknown error in script"
+      },
+      "40": {
+        "description": "Process timed out after (secs)"
+      },
+      "41": {
+        "description": "Error checking input data"
+      },
+      "42": {
+        "description": "Error checking output data"
+      },
+      "43": {
+        "description": "Error processing input data"
+      },
+      "44": {
+        "description": "Error creating command line and script"
+      },
+      "45": {
+        "description": "Error in processing output files"
+      },
+      "46": {
+        "description": "Error in finish handler"
+      },
+      "47": {
+        "description": "Error in checking external process after completion"
+      },
+      "48": {
+        "description": "Error in the plugin script startProcess"
+      },
+      "49": {
+        "severity": 2,
+        "description": "Error reading sub-process log file"
+      },
+      "50": {
+        "severity": 2,
+        "description": "Failure while looking for project defaults file"
+      },
+      "51": {
+        "severity": 2,
+        "description": "Failure loading project defaults file"
+      },
+      "52": {
+        "description": "Failure creating project defaults file - no definition for parameter"
+      },
+      "53": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - parameter already in file"
+      },
+      "54": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - failed reading existing file"
+      },
+      "55": {
+        "description": "Error inserting information on hklin content into log file"
+      },
+      "56": {
+        "description": "External process exited with exit code != 0"
+      },
+      "57": {
+        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
+      },
+      "310": {
+        "description": "Output object contains different number of sub-objects"
+      },
+      "311": {
+        "description": "Failure in running comparison code"
+      },
+      "312": {
+        "description": "No evaluation possible with a 'dummy' task"
+      }
+    }
+  },
+  "refmac_wrk": {
+    "module": "ccp4i2.deprecated.refmac_wrk.script.refmac_wrk",
+    "class": "refmac_wrk",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Refmac Replica",
+    "TASKNAME": "refmac_wrk",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": null,
+    "SUBTASKS": [],
+    "RUNEXTERNALPROCESS": true,
+    "ERROR_CODES": {
+      "1": {
+        "description": "Data definition file not found"
+      },
+      "2": {
+        "description": "Invalid data for command line"
+      },
+      "3": {
+        "description": "No command to run external process has been provided"
+      },
+      "4": {
+        "description": "Error reading log file"
+      },
+      "5": {
+        "description": "Invalid data for command file"
+      },
+      "6": {
+        "description": "Could not load data file"
+      },
+      "7": {
+        "description": "Error writing command file"
+      },
+      "8": {
+        "description": "Attempting to set invalid working directory"
+      },
+      "9": {
+        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
+      },
+      "10": {
+        "description": "Failed starting external process - no process id returned"
+      },
+      "11": {
+        "description": "Error running external process"
+      },
+      "12": {
+        "description": "Attempting to set invalid waitForFinish"
+      },
+      "13": {
+        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
+      },
+      "14": {
+        "description": "Can not find specified command template"
+      },
+      "15": {
+        "severity": 2,
+        "description": "No command line defined in MakeCommandAndScript()"
+      },
+      "16": {
+        "description": "Script file does not exist"
+      },
+      "17": {
+        "severity": 2,
+        "description": "Error attempting to set output file name"
+      },
+      "18": {
+        "description": "Failed importing plugin module"
+      },
+      "19": {
+        "description": "Failed instantiating plugin object"
+      },
+      "20": {
+        "severity": 2,
+        "description": "Failed finding output data to check"
+      },
+      "21": {
+        "severity": 2,
+        "description": "Failed to register new job with database"
+      },
+      "22": {
+        "description": "Failed to pass database info to new job"
+      },
+      "23": {
+        "description": "Error saving outputData file"
+      },
+      "24": {
+        "description": "Failed to create job sub-directory"
+      },
+      "25": {
+        "severity": 2,
+        "description": "External process return code"
+      },
+      "26": {
+        "severity": 2,
+        "description": "Error saving status to param file"
+      },
+      "27": {
+        "description": "Error interpreting output data for split MTZ"
+      },
+      "28": {
+        "description": "Error interpreting input data for join MTZ"
+      },
+      "30": {
+        "severity": 2,
+        "description": "Warning converting miniMTZ to HKLIN - data not set"
+      },
+      "31": {
+        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
+      },
+      "32": {
+        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
+      },
+      "33": {
+        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
+      },
+      "34": {
+        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
+      },
+      "35": {
+        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
+      },
+      "36": {
+        "description": "Error merging in FreeR flags - insufficient data"
+      },
+      "39": {
+        "description": "Unknown error in script"
+      },
+      "40": {
+        "description": "Process timed out after (secs)"
+      },
+      "41": {
+        "description": "Error checking input data"
+      },
+      "42": {
+        "description": "Error checking output data"
+      },
+      "43": {
+        "description": "Error processing input data"
+      },
+      "44": {
+        "description": "Error creating command line and script"
+      },
+      "45": {
+        "description": "Error in processing output files"
+      },
+      "46": {
+        "description": "Error in finish handler"
+      },
+      "47": {
+        "description": "Error in checking external process after completion"
+      },
+      "48": {
+        "description": "Error in the plugin script startProcess"
+      },
+      "49": {
+        "severity": 2,
+        "description": "Error reading sub-process log file"
+      },
+      "50": {
+        "severity": 2,
+        "description": "Failure while looking for project defaults file"
+      },
+      "51": {
+        "severity": 2,
+        "description": "Failure loading project defaults file"
+      },
+      "52": {
+        "description": "Failure creating project defaults file - no definition for parameter"
+      },
+      "53": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - parameter already in file"
+      },
+      "54": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - failed reading existing file"
+      },
+      "55": {
+        "description": "Error inserting information on hklin content into log file"
+      },
+      "56": {
+        "description": "External process exited with exit code != 0"
+      },
+      "57": {
+        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
+      },
+      "310": {
+        "description": "Output object contains different number of sub-objects"
+      },
+      "311": {
+        "description": "Failure in running comparison code"
+      },
+      "312": {
+        "description": "No evaluation possible with a 'dummy' task"
       }
     }
   }

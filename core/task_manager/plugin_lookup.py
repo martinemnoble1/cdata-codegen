@@ -4,14 +4,26 @@ import os
 import importlib.util
 import inspect
 import logging
+import json
 from typing import Dict, Any, Type
 
-from ccp4i2.googlecode import diff_match_patch_py3
+# Get CCP4I2_ROOT from environment variable
+CCP4I2_ROOT = os.environ.get("CCP4I2_ROOT")
+if not CCP4I2_ROOT:
+    raise ValueError("CCP4I2_ROOT environment variable is not set")
 
-CCP4I2_ROOT = str(pathlib.Path(diff_match_patch_py3.__file__).parent.parent)
-sys.path.append(CCP4I2_ROOT)
-from core import CCP4PluginScript
-from ccp4i2.core.CCP4PluginScript import CPluginScript
+CCP4I2_ROOT = os.path.abspath(CCP4I2_ROOT)
+
+# Add project root to sys.path for stub modules (PySide2, lxml, etc.)
+# The project root is two levels up from this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(script_dir))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Add CCP4I2_ROOT to sys.path so plugin imports can work
+if CCP4I2_ROOT not in sys.path:
+    sys.path.insert(0, CCP4I2_ROOT)
 
 TASKATTRIBUTES = [
     "COMTEMPLATE",
@@ -78,6 +90,9 @@ def import_module_from_file(module_name: str, fpath: str):
             return mod
         else:
             logger.warning(f"Could not create import spec for {fpath}")
+    except SystemExit as e:
+        # Some ccp4i2 modules call sys.exit() when dependencies are missing
+        logger.warning(f"Module {fpath} called sys.exit({e.code})")
     except Exception as e:
         logger.warning(f"Failed to import {fpath}: {e}")
     return None
@@ -138,10 +153,28 @@ def build_lookup_from_dir(root_dir: str) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    root_directory = CCP4I2_ROOT
-    logger.info(f"Building plugin lookup from: {root_directory}")
-    result = build_lookup_from_dir(root_directory)
-    with open("plugin_lookup.json", "w") as f:
-        import json
+    try:
+        root_directory = CCP4I2_ROOT
+        print(f"Building plugin lookup from: {root_directory}")
+        logger.info(f"Building plugin lookup from: {root_directory}")
 
-        json.dump(result, f, indent=2)
+        result = build_lookup_from_dir(root_directory)
+
+        print(f"Finished scanning, found {len(result)} plugins")
+
+        # Write to script's own directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, "plugin_lookup.json")
+
+        print(f"Writing to: {output_path}")
+        with open(output_path, "w") as f:
+            json.dump(result, f, indent=2)
+
+        print(f"Plugin lookup written to: {output_path}")
+        print(f"Found {len(result)} plugins")
+
+    except Exception as e:
+        print(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
