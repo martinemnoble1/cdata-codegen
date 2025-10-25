@@ -554,22 +554,46 @@ class CPluginScript(CData):
     # Utility methods for backward compatibility with old API
     # =========================================================================
 
-    def makePluginObject(self, taskName: str, **kwargs) -> 'CPluginScript':
+    def makePluginObject(self, taskName: str, version: Optional[str] = None, **kwargs) -> Optional['CPluginScript']:
         """
-        Create a sub-plugin (sub-job) instance.
+        Create a sub-plugin (sub-job) instance using TASKMANAGER.
 
         This is used when a pipeline calls other wrappers as sub-jobs.
 
         Args:
             taskName: Name of the task to instantiate
-            **kwargs: Additional arguments
+            version: Optional version of the task (defaults to latest)
+            **kwargs: Additional arguments passed to the plugin constructor
 
         Returns:
-            New CPluginScript instance
+            New CPluginScript instance, or None if plugin not found
         """
-        # Would dynamically import and instantiate the requested task
-        # For now, placeholder
-        raise NotImplementedError("makePluginObject not yet implemented")
+        # Use TASKMANAGER to get the plugin class
+        task_manager = TASKMANAGER()
+        plugin_class = task_manager.get_plugin_class(taskName, version=version)
+
+        if plugin_class is None:
+            # Log error
+            self.errorReport.append(
+                klass=self.__class__.__name__,
+                code=108,
+                details=f"Plugin '{taskName}' not found in registry",
+                name=taskName
+            )
+            return None
+
+        # Instantiate the plugin
+        try:
+            plugin_instance = plugin_class(**kwargs)
+            return plugin_instance
+        except Exception as e:
+            self.errorReport.append(
+                klass=self.__class__.__name__,
+                code=109,
+                details=f"Failed to instantiate plugin '{taskName}': {e}",
+                name=taskName
+            )
+            return None
 
     def getErrorReport(self) -> CErrorReport:
         """Get the accumulated error report."""
