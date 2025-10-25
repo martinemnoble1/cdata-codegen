@@ -388,7 +388,11 @@ class MetadataAttributeFactory:
 
     @classmethod
     def _get_class_from_registry(cls, class_name: str):
-        """Get a class from the registry, building it if needed."""
+        """Get a class from the registry, building it if needed.
+
+        If class_name ends with 'Stub', tries to find the implementation class first
+        (without the Stub suffix), falling back to the stub if not found.
+        """
         # Import here to avoid circular dependencies
         from .fundamental_types import CInt, CFloat, CBoolean, CString, CList
         from .base_classes import CContainer
@@ -408,24 +412,40 @@ class MetadataAttributeFactory:
         if class_name in registry:
             return registry[class_name]
 
-        # Try to import from core.generated modules
+        # If class_name ends with "Stub", try to get implementation class first
+        impl_class_name = class_name
+        if class_name.endswith('Stub'):
+            impl_class_name = class_name[:-4]  # Remove "Stub" suffix
+
+        # Try to import from core implementation and stub modules
         try:
             import importlib
             # Try importing from various possible locations
-            # Order matters - try most specific first
+            # Order matters - try implementation first, then stubs
             possible_modules = [
-                'core.generated.CCP4Data',      # COneWord, CDict, etc.
-                'core.generated.CCP4ModelData', # CEnsemble, CPdbDataFile, etc.
-                'core.generated.CCP4File',      # CFilePath, CI2XmlDataFile, etc.
-                f'core.generated.{class_name}', # Direct module match
-                f'core.{class_name}',           # Core module match
+                # Try implementation classes first (without Stub suffix)
+                ('core.CCP4Data', impl_class_name),
+                ('core.CCP4ModelData', impl_class_name),
+                ('core.CCP4File', impl_class_name),
+                ('core.CCP4XtalData', impl_class_name),
+                ('core.CCP4Annotation', impl_class_name),
+                ('core.CCP4RefmacData', impl_class_name),
+                ('core.CCP4MathsData', impl_class_name),
+                (f'core.{impl_class_name}', impl_class_name),
+
+                # Then try stub classes
+                ('core.cdata_stubs.CCP4Data', class_name),
+                ('core.cdata_stubs.CCP4ModelData', class_name),
+                ('core.cdata_stubs.CCP4File', class_name),
+                ('core.cdata_stubs.CCP4XtalData', class_name),
+                (f'core.cdata_stubs.{class_name}', class_name),
             ]
 
-            for module_path in possible_modules:
+            for module_path, lookup_name in possible_modules:
                 try:
                     module = importlib.import_module(module_path)
-                    if hasattr(module, class_name):
-                        return getattr(module, class_name)
+                    if hasattr(module, lookup_name):
+                        return getattr(module, lookup_name)
                 except (ImportError, AttributeError):
                     continue
         except Exception:

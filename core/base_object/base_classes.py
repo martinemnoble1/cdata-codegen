@@ -1484,3 +1484,52 @@ class CContainer(CData):
         """Get item by index."""
         return self._container_items[index]
 
+    def __getattr__(self, name: str):
+        """Allow attribute-style access to children by name.
+
+        This enables accessing child objects like container.inputData
+        instead of having to search through children manually.
+
+        Args:
+            name: Name of the child to access
+
+        Returns:
+            The child object with matching name
+
+        Raises:
+            AttributeError: If no child with that name exists
+        """
+        # Avoid infinite recursion for internal attributes
+        if name.startswith('_'):
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+        # Check children from HierarchicalObject hierarchy
+        # Use object.__getattribute__ to avoid recursion
+        try:
+            # Get the 'children' method from HierarchicalObject
+            children_method = object.__getattribute__(self, 'children')
+            children_list = children_method()  # Call the method
+            for child in children_list:
+                # Skip destroyed children
+                if hasattr(child, 'state'):
+                    from .hierarchy_system import ObjectState
+                    if child.state == ObjectState.DESTROYED:
+                        continue
+                # Check if name matches
+                if hasattr(child, 'name') and child.name == name:
+                    return child
+        except (AttributeError, TypeError):
+            pass
+
+        # Also check _container_items (in case items were added via add_item)
+        try:
+            container_items = object.__getattribute__(self, '_container_items')
+            for item in container_items:
+                if hasattr(item, 'name') and item.name == name:
+                    return item
+        except (AttributeError, TypeError):
+            pass
+
+        # Not found - raise AttributeError
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
