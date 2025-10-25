@@ -153,8 +153,8 @@ def test_censemble_label_is_coneword():
     from its type annotations. CEnsemble has type annotation `label: Optional[COneWord]`
     but may not have explicit attribute metadata in the @cdata_class decorator.
     """
-    from core.generated.CCP4ModelData import CEnsemble
-    from core.generated.CCP4Data import COneWord
+    from core.CCP4ModelData import CEnsemble
+    from core.CCP4Data import COneWord
 
     ensemble = CEnsemble(name="testEnsemble")
 

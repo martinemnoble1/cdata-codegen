@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.generated.CCP4File import CDataFile
+from core.base_object.base_classes import CDataFile
 
 class TestCDataFile:
     @classmethod

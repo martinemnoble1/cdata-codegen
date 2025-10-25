@@ -46,16 +46,16 @@ class DefXmlParser:
             }
         )
 
-        # Add all generated classes from core.generated
+        # Add all implementation classes from core/
         import importlib
         import pkgutil
 
         try:
-            # Import from the generated package
-            import core.generated as generated_pkg
+            # Import from the core package (implementation classes)
+            import core
 
-            # Get all module files in the generated directory
-            generated_modules = [
+            # Get all implementation module files
+            implementation_modules = [
                 'CCP4Annotation',
                 'CCP4ComFilePatchManager',
                 'CCP4CootData',
@@ -71,9 +71,9 @@ class DefXmlParser:
                 'CCP4XtalData',
             ]
 
-            for module_name in generated_modules:
+            for module_name in implementation_modules:
                 try:
-                    module = importlib.import_module(f'core.generated.{module_name}')
+                    module = importlib.import_module(f'core.{module_name}')
                     for attr_name in dir(module):
                         if attr_name.startswith('_'):
                             continue
@@ -90,7 +90,7 @@ class DefXmlParser:
                     continue
 
         except ImportError as e:
-            print(f"Note: Generated classes not yet available: {e}")
+            print(f"Note: Implementation classes not yet available: {e}")
 
         return registry
 

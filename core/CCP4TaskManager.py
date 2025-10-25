@@ -1,6 +1,6 @@
 import os
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Type
 from pathlib import Path
 
 import sys
@@ -27,12 +27,57 @@ class CTaskManager:
         except Exception as e:
             print(f"Error loading defxml_lookup.json: {e}")
 
-        # Load plugin_lookup.json
+        # Load plugin_lookup.json (for backward compatibility)
         try:
             with open(plugin_path, "r") as f:
                 self.plugin_lookup = json.load(f)
         except Exception as e:
             print(f"Error loading plugin_lookup.json: {e}")
+
+        # Set up CCP4I2_ROOT for plugin imports
+        ccp4i2_root = os.environ.get("CCP4I2_ROOT")
+        if ccp4i2_root and ccp4i2_root not in sys.path:
+            sys.path.insert(0, ccp4i2_root)
+
+        # Initialize plugin registry (lazy loading)
+        self._plugin_registry = None
+
+    @property
+    def plugin_registry(self):
+        """Get the plugin registry (lazy load on first access)."""
+        if self._plugin_registry is None:
+            from .task_manager.plugin_registry import get_registry
+            self._plugin_registry = get_registry()
+        return self._plugin_registry
+
+    def get_plugin_class(self, task_name: str, version: Optional[str] = None) -> Optional[Type]:
+        """
+        Get a plugin class by name, with lazy loading.
+
+        Args:
+            task_name: Name of the task/plugin (e.g., "refmac", "pointless")
+            version: Optional version (currently ignored - uses latest)
+
+        Returns:
+            Plugin class, or None if not found
+        """
+        return self.plugin_registry.get_plugin_class(task_name, version)
+
+    def get_plugin_metadata(self, task_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get plugin metadata without importing the plugin.
+
+        Args:
+            task_name: Name of the task/plugin
+
+        Returns:
+            Dictionary of plugin metadata, or None if not found
+        """
+        return self.plugin_registry.get_plugin_metadata(task_name)
+
+    def list_plugins(self) -> List[str]:
+        """Get list of all available plugin names."""
+        return self.plugin_registry.list_plugins()
 
     def locate_def_xml(self, task_name: str, version: Optional[str] = None) -> Optional[Path]:
         """

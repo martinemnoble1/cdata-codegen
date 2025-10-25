@@ -1023,20 +1023,10 @@ class CList(CData):
         return f"CList({len(self._items)} items)"
 
 
-# Alias for COneWord used in CCP4ModelData
-COneWord = CString
-
-# Type aliases for commonly used types
-#CCellLength = CFloat
-#CWavelength = CFloat
-#CCellAngle = CFloat
-#CAngle = CFloat
-#CTime = CInt
-#CSpaceGroup = CString
-#CUUID = CString
-#CProjectId = CUUID
-#CUserId = CString
-#CVersion = CString
+# NOTE: Type aliases removed - all custom types now have proper stub classes
+# in core/cdata_stubs/ and implementation classes in core/
+# (COneWord, CUUID, CProjectId, CCellLength, CWavelength, etc. are all
+# regular custom classes derived from fundamental types)
 #CProjectName = CString
 #CDatasetName = CString
 #CFilePath = CString

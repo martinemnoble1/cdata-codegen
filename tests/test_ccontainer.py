@@ -2,8 +2,7 @@ import pytest
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.generated.CCP4File import CDataFile
-from core.base_object.base_classes import CContainer
+from core.base_object.base_classes import CContainer, CDataFile
 from core.base_object.fundamental_types import CInt, CList
 
 class TestExample:

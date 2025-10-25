@@ -1,7 +1,7 @@
 import pytest
 
 # Try to import CPdbDataFile from the generated core module
-from core.generated.CCP4ModelData import CPdbDataFile
+from core.CCP4ModelData import CPdbDataFile
 
 def test_cpdbdatafile_instantiation():
     # Attempt to instantiate CPdbDataFile

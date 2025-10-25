@@ -1,6 +1,6 @@
 {
   "chainsaw": {
-    "module": "ccp4i2.wrappers.chainsaw.script.chainsaw",
+    "module": "wrappers.chainsaw.script.chainsaw",
     "class": "chainsaw",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -199,7 +199,7 @@
     }
   },
   "mtzheader": {
-    "module": "ccp4i2.wrappers.mtzheader.script.mtzheader",
+    "module": "wrappers.mtzheader.script.mtzheader",
     "class": "mtzheader",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -398,7 +398,7 @@
     }
   },
   "cif2mtz": {
-    "module": "ccp4i2.wrappers.cif2mtz.script.cif2mtz",
+    "module": "wrappers.cif2mtz.script.cif2mtz",
     "class": "cif2mtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -420,7 +420,7 @@
     }
   },
   "AUSPEX": {
-    "module": "ccp4i2.wrappers.AUSPEX.script.auspex_wrapper",
+    "module": "wrappers.AUSPEX.script.auspex_wrapper",
     "class": "AUSPEX",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -619,7 +619,7 @@
     }
   },
   "phaser_phil": {
-    "module": "ccp4i2.wrappers.phaser_phil.script.phaser_phil",
+    "module": "wrappers.phaser_phil.script.phaser_phil",
     "class": "phaser_phil",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -650,7 +650,7 @@
     }
   },
   "unique": {
-    "module": "ccp4i2.wrappers.unique.script.unique",
+    "module": "wrappers.unique.script.unique",
     "class": "unique",
     "COMTEMPLATE": "1 SYMM $SPACEGROUPCELL.spaceGroup.quote\n1 CELL $SPACEGROUPCELL.cell.a $SPACEGROUPCELL.cell.b $SPACEGROUPCELL.cell.c $SPACEGROUPCELL.cell.alpha $SPACEGROUPCELL.cell.beta $SPACEGROUPCELL.cell.gamma  \n1 RESO $RESOLUTION\n$TITLE TITLE $TITLE\n1 END",
     "COMTEMPLATEFILE": null,
@@ -849,7 +849,7 @@
     }
   },
   "comit": {
-    "module": "ccp4i2.wrappers.comit.script.comit",
+    "module": "wrappers.comit.script.comit",
     "class": "comit",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1057,7 +1057,7 @@
     }
   },
   "arcimboldo": {
-    "module": "ccp4i2.wrappers.arcimboldo.script.arcimboldo",
+    "module": "wrappers.arcimboldo.script.arcimboldo",
     "class": "arcimboldo",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1265,7 +1265,7 @@
     }
   },
   "xia2_dials": {
-    "module": "ccp4i2.wrappers.xia2_dials.script.xia2_dials",
+    "module": "wrappers.xia2_dials.script.xia2_dials",
     "class": "Cxia2_dials",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1306,7 +1306,7 @@
     }
   },
   "pointless": {
-    "module": "ccp4i2.wrappers.pointless.script.pointless",
+    "module": "wrappers.pointless.script.pointless",
     "class": "pointless",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1505,7 +1505,7 @@
     }
   },
   "editbfac": {
-    "module": "ccp4i2.wrappers.editbfac.script.editbfac",
+    "module": "wrappers.editbfac.script.editbfac",
     "class": "editbfac",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1707,8 +1707,9 @@
     }
   },
   "x2mtz": {
-    "module": "ccp4i2.wrappers.x2mtz.script.x2mtz",
+    "module": "wrappers.x2mtz.script.x2mtz",
     "class": "x2mtz",
+    "module_file": "../../../ccp4i2/wrappers/x2mtz/script/x2mtz.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": "test",
@@ -1728,7 +1729,7 @@
     }
   },
   "TestObsConversions": {
-    "module": "ccp4i2.wrappers.TestObsConversions.script.TestObsConversions",
+    "module": "wrappers.TestObsConversions.script.TestObsConversions",
     "class": "TestObsConversions",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1747,7 +1748,7 @@
     }
   },
   "pdbview_edit": {
-    "module": "ccp4i2.wrappers.pdbview_edit.script.pdbview_edit",
+    "module": "wrappers.pdbview_edit.script.pdbview_edit",
     "class": "pdbview_edit",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1773,7 +1774,7 @@
     }
   },
   "ProvideSequence": {
-    "module": "ccp4i2.wrappers.ProvideSequence.script.ProvideSequence",
+    "module": "wrappers.ProvideSequence.script.ProvideSequence",
     "class": "ProvideSequence",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -1971,7 +1972,7 @@
     }
   },
   "phaser_mr": {
-    "module": "ccp4i2.wrappers.phaser_mr.script.phaser_mr",
+    "module": "wrappers.phaser_mr.script.phaser_mr",
     "class": "phaser_mr",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2005,7 +2006,7 @@
     }
   },
   "phaser_ensembler": {
-    "module": "ccp4i2.wrappers.phaser_ensembler.script.phaser_ensembler",
+    "module": "wrappers.phaser_ensembler.script.phaser_ensembler",
     "class": "phaser_ensembler",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2207,7 +2208,7 @@
     }
   },
   "import_mosflm": {
-    "module": "ccp4i2.wrappers.import_mosflm.script.import_mosflm",
+    "module": "wrappers.import_mosflm.script.import_mosflm",
     "class": "import_mosflm",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2405,7 +2406,7 @@
     }
   },
   "Platonyzer": {
-    "module": "ccp4i2.wrappers.Platonyzer.script.Platonyzer",
+    "module": "wrappers.Platonyzer.script.Platonyzer",
     "class": "Platonyzer",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2436,7 +2437,7 @@
     }
   },
   "AlternativeImportXIA2": {
-    "module": "ccp4i2.wrappers.AlternativeImportXIA2.script.AlternativeImportXIA2",
+    "module": "wrappers.AlternativeImportXIA2.script.AlternativeImportXIA2",
     "class": "AlternativeImportXIA2",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2634,7 +2635,7 @@
     }
   },
   "prosmart": {
-    "module": "ccp4i2.wrappers.prosmart.script.prosmart",
+    "module": "wrappers.prosmart.script.prosmart",
     "class": "prosmart",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2662,7 +2663,7 @@
     }
   },
   "cphasematch": {
-    "module": "ccp4i2.wrappers.cphasematch.script.cphasematch",
+    "module": "wrappers.cphasematch.script.cphasematch",
     "class": "cphasematch",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -2861,7 +2862,7 @@
     }
   },
   "mergeMtz": {
-    "module": "ccp4i2.wrappers.mergeMtz.script.mergeMtz",
+    "module": "wrappers.mergeMtz.script.mergeMtz",
     "class": "mergeMtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3060,7 +3061,7 @@
     }
   },
   "buccaneer_mr": {
-    "module": "ccp4i2.wrappers.buccaneer_mr.script.buccaneer_mr",
+    "module": "wrappers.buccaneer_mr.script.buccaneer_mr",
     "class": "buccaneer_mr",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3259,7 +3260,7 @@
     }
   },
   "freerflag": {
-    "module": "ccp4i2.wrappers.freerflag.script.freerflag",
+    "module": "wrappers.freerflag.script.freerflag",
     "class": "freerflag",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3458,7 +3459,7 @@
     }
   },
   "arp_warp_classic": {
-    "module": "ccp4i2.wrappers.arp_warp_classic.script.arp_warp_classic",
+    "module": "wrappers.arp_warp_classic.script.arp_warp_classic",
     "class": "arp_warp_classic",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3657,7 +3658,7 @@
     }
   },
   "csymmatch": {
-    "module": "ccp4i2.wrappers.csymmatch.script.csymmatch",
+    "module": "wrappers.csymmatch.script.csymmatch",
     "class": "csymmatch",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3856,7 +3857,7 @@
     }
   },
   "scalepack2mtz": {
-    "module": "ccp4i2.wrappers.scalepack2mtz.script.scalepack2mtz",
+    "module": "wrappers.scalepack2mtz.script.scalepack2mtz",
     "class": "scalepack2mtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -3878,7 +3879,7 @@
     }
   },
   "mrbump_basic": {
-    "module": "ccp4i2.wrappers.mrbump_basic.script.mrbump_basic",
+    "module": "wrappers.mrbump_basic.script.mrbump_basic",
     "class": "mrbump_basic",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4077,7 +4078,7 @@
     }
   },
   "nautilus": {
-    "module": "ccp4i2.wrappers.nautilus.script.nautilus",
+    "module": "wrappers.nautilus.script.nautilus",
     "class": "nautilus",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4105,7 +4106,7 @@
     }
   },
   "pairef": {
-    "module": "ccp4i2.wrappers.pairef.script.pairef",
+    "module": "wrappers.pairef.script.pairef",
     "class": "pairef",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4125,7 +4126,7 @@
     }
   },
   "ProvideAlignment": {
-    "module": "ccp4i2.wrappers.ProvideAlignment.script.ProvideAlignment",
+    "module": "wrappers.ProvideAlignment.script.ProvideAlignment",
     "class": "ProvideAlignment",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4149,7 +4150,7 @@
     }
   },
   "dials_rlattice": {
-    "module": "ccp4i2.wrappers.dials_rlattice.script.dials_rlattice",
+    "module": "wrappers.dials_rlattice.script.dials_rlattice",
     "class": "dials_rlattice",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4348,7 +4349,7 @@
     }
   },
   "xia2_xds": {
-    "module": "ccp4i2.wrappers.xia2_xds.script.xia2_xds",
+    "module": "wrappers.xia2_xds.script.xia2_xds",
     "class": "Cxia2_xds",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4389,7 +4390,7 @@
     }
   },
   "zanuda": {
-    "module": "ccp4i2.wrappers.zanuda.script.zanuda",
+    "module": "wrappers.zanuda.script.zanuda",
     "class": "zanuda",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4421,7 +4422,7 @@
     }
   },
   "lorestr_i2": {
-    "module": "ccp4i2.wrappers.lorestr_i2.script.lorestr_i2",
+    "module": "wrappers.lorestr_i2.script.lorestr_i2",
     "class": "lorestr_i2",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4452,7 +4453,7 @@
     }
   },
   "cpatterson": {
-    "module": "ccp4i2.wrappers.cpatterson.script.cpatterson",
+    "module": "wrappers.cpatterson.script.cpatterson",
     "class": "cpatterson",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4651,7 +4652,7 @@
     }
   },
   "i2Dimple": {
-    "module": "ccp4i2.wrappers.i2Dimple.script.i2Dimple",
+    "module": "wrappers.i2Dimple.script.i2Dimple",
     "class": "i2Dimple",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4682,7 +4683,7 @@
     }
   },
   "add_fractional_coords": {
-    "module": "ccp4i2.wrappers.add_fractional_coords.script.add_fractional_coords",
+    "module": "wrappers.add_fractional_coords.script.add_fractional_coords",
     "class": "add_fractional_coords",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4714,7 +4715,7 @@
     }
   },
   "cad_copy_column": {
-    "module": "ccp4i2.wrappers.cad_copy_column.script.cad_copy_column",
+    "module": "wrappers.cad_copy_column.script.cad_copy_column",
     "class": "cad_copy_column",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -4913,7 +4914,7 @@
     }
   },
   "gesamt": {
-    "module": "ccp4i2.wrappers.gesamt.script.gesamt",
+    "module": "wrappers.gesamt.script.gesamt",
     "class": "gesamt",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5112,7 +5113,7 @@
     }
   },
   "clustalw": {
-    "module": "ccp4i2.wrappers.clustalw.script.clustalw",
+    "module": "wrappers.clustalw.script.clustalw",
     "class": "clustalw",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5135,7 +5136,7 @@
     }
   },
   "pointless_reindexToMatch": {
-    "module": "ccp4i2.wrappers.pointless_reindexToMatch.script.pointless_reindexToMatch",
+    "module": "wrappers.pointless_reindexToMatch.script.pointless_reindexToMatch",
     "class": "pointless_reindexToMatch",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5159,7 +5160,7 @@
     }
   },
   "buster": {
-    "module": "ccp4i2.wrappers.buster.script.buster",
+    "module": "wrappers.buster.script.buster",
     "class": "buster",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5184,7 +5185,7 @@
     }
   },
   "ProvideAsuContents": {
-    "module": "ccp4i2.wrappers.ProvideAsuContents.script.ProvideAsuContents",
+    "module": "wrappers.ProvideAsuContents.script.ProvideAsuContents",
     "class": "ProvideAsuContents",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5382,7 +5383,7 @@
     }
   },
   "Lidia": {
-    "module": "ccp4i2.wrappers.Lidia.script.Lidia",
+    "module": "wrappers.Lidia.script.Lidia",
     "class": "lidia",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5405,7 +5406,7 @@
     }
   },
   "sheetbend": {
-    "module": "ccp4i2.wrappers.sheetbend.script.sheetbend",
+    "module": "wrappers.sheetbend.script.sheetbend",
     "class": "sheetbend",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5436,7 +5437,7 @@
     }
   },
   "ccp4mg_edit_model": {
-    "module": "ccp4i2.wrappers.ccp4mg_edit_model.script.ccp4mg_edit_model",
+    "module": "wrappers.ccp4mg_edit_model.script.ccp4mg_edit_model",
     "class": "ccp4mg_edit_model",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5462,7 +5463,7 @@
     }
   },
   "qtpisa": {
-    "module": "ccp4i2.wrappers.qtpisa.script.qtpisa",
+    "module": "wrappers.qtpisa.script.qtpisa",
     "class": "qtpisa",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5488,7 +5489,7 @@
     }
   },
   "cmapcoeff": {
-    "module": "ccp4i2.wrappers.cmapcoeff.script.cmapcoeff",
+    "module": "wrappers.cmapcoeff.script.cmapcoeff",
     "class": "cmapcoeff",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5690,7 +5691,7 @@
     }
   },
   "phaser_singleMR": {
-    "module": "ccp4i2.wrappers.phaser_singleMR.script.phaser_singleMR",
+    "module": "wrappers.phaser_singleMR.script.phaser_singleMR",
     "class": "phaser_singleMR",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5888,8 +5889,37 @@
       }
     }
   },
+  "servalcat": {
+    "module": "wrappers.servalcat.script.servalcat",
+    "class": "servalcat",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "wrappers",
+    "TASKTITLE": "Refinement (servalcat)",
+    "TASKNAME": "servalcat",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CServalcatPerformance",
+    "SUBTASKS": [],
+    "RUNEXTERNALPROCESS": true,
+    "ERROR_CODES": {
+      "201": {
+        "description": "Refmac returned with non zero status"
+      },
+      "202": {
+        "description": "New library created but strictly required"
+      },
+      "203": {
+        "description": "New library created",
+        "severity": 2
+      },
+      "204": {
+        "description": "Program completed without generating XMLOUT."
+      }
+    }
+  },
   "aimless": {
-    "module": "ccp4i2.wrappers.aimless.script.aimless",
+    "module": "wrappers.aimless.script.aimless",
     "class": "aimless",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5908,7 +5938,7 @@
     }
   },
   "molrep_mr": {
-    "module": "ccp4i2.wrappers.molrep_mr.script.molrep_mr",
+    "module": "wrappers.molrep_mr.script.molrep_mr",
     "class": "molrep_mr",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5945,7 +5975,7 @@
     }
   },
   "findmyseq": {
-    "module": "ccp4i2.wrappers.findmyseq.script.findmyseq",
+    "module": "wrappers.findmyseq.script.findmyseq",
     "class": "findmyseq",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -5968,7 +5998,7 @@
     }
   },
   "molrep_den": {
-    "module": "ccp4i2.wrappers.molrep_den.script.molrep_den",
+    "module": "wrappers.molrep_den.script.molrep_den",
     "class": "molrep_den",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6005,7 +6035,7 @@
     }
   },
   "baverage": {
-    "module": "ccp4i2.wrappers.baverage.script.baverage",
+    "module": "wrappers.baverage.script.baverage",
     "class": "baverage",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6204,7 +6234,7 @@
     }
   },
   "sculptor": {
-    "module": "ccp4i2.wrappers.sculptor.script.sculptor",
+    "module": "wrappers.sculptor.script.sculptor",
     "class": "sculptor",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6226,7 +6256,7 @@
     }
   },
   "slicendice": {
-    "module": "ccp4i2.wrappers.slicendice.script.slicendice",
+    "module": "wrappers.slicendice.script.slicendice",
     "class": "slicendice",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6250,7 +6280,7 @@
     }
   },
   "pdbset_ui": {
-    "module": "ccp4i2.wrappers.pdbset_ui.script.pdbset_ui",
+    "module": "wrappers.pdbset_ui.script.pdbset_ui",
     "class": "pdbset_ui",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6449,7 +6479,7 @@
     }
   },
   "coot_rebuild": {
-    "module": "ccp4i2.wrappers.coot_rebuild.script.coot_rebuild",
+    "module": "wrappers.coot_rebuild.script.coot_rebuild",
     "class": "coot_rebuild",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6475,7 +6505,7 @@
     }
   },
   "ZZPluginNameZZ": {
-    "module": "ccp4i2.wrappers.boilerplate.script.boilerplate",
+    "module": "wrappers.boilerplate.script.boilerplate",
     "class": "ZZPluginNameZZ",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6506,7 +6536,7 @@
     }
   },
   "parrot": {
-    "module": "ccp4i2.wrappers.parrot.script.parrot",
+    "module": "wrappers.parrot.script.parrot",
     "class": "parrot",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6705,7 +6735,7 @@
     }
   },
   "coot_rsr_morph": {
-    "module": "ccp4i2.wrappers.coot_rsr_morph.script.coot_rsr_morph",
+    "module": "wrappers.coot_rsr_morph.script.coot_rsr_morph",
     "class": "coot_rsr_morph",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6908,7 +6938,7 @@
     }
   },
   "ctruncate": {
-    "module": "ccp4i2.wrappers.ctruncate.script.ctruncate",
+    "module": "wrappers.ctruncate.script.ctruncate",
     "class": "ctruncate",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -6928,7 +6958,7 @@
     }
   },
   "shelxeMR": {
-    "module": "ccp4i2.wrappers.shelxeMR.script.shelxeMR",
+    "module": "wrappers.shelxeMR.script.shelxeMR",
     "class": "shelxeMR",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7127,7 +7157,7 @@
     }
   },
   "pyphaser_mr": {
-    "module": "ccp4i2.wrappers.pyphaser_mr.script.pyphaser_mr",
+    "module": "wrappers.pyphaser_mr.script.pyphaser_mr",
     "class": "pyphaser_mr",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7326,7 +7356,7 @@
     }
   },
   "refmac": {
-    "module": "ccp4i2.wrappers.refmac_i2.script.refmac_i2",
+    "module": "wrappers.refmac_i2.script.refmac_i2",
     "class": "refmac_i2",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7358,8 +7388,207 @@
       }
     }
   },
+  "pdb_redo_api": {
+    "module": "wrappers.pdb_redo_api.script.pdb_redo_api",
+    "class": "pdb_redo_api",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "refinement",
+    "TASKTITLE": "PDB-REDO Web services",
+    "TASKNAME": "pdb_redo_api",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "SUBTASKS": [],
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "1": {
+        "description": "Data definition file not found"
+      },
+      "2": {
+        "description": "Invalid data for command line"
+      },
+      "3": {
+        "description": "No command to run external process has been provided"
+      },
+      "4": {
+        "description": "Error reading log file"
+      },
+      "5": {
+        "description": "Invalid data for command file"
+      },
+      "6": {
+        "description": "Could not load data file"
+      },
+      "7": {
+        "description": "Error writing command file"
+      },
+      "8": {
+        "description": "Attempting to set invalid working directory"
+      },
+      "9": {
+        "description": "Failed starting external process - this can be due to a number of things, butusually is due to the command used by subprocess/QProcess not working for some reason. Missing inputfiles, bad commands, non-functional programs etc. Check log files and stdout."
+      },
+      "10": {
+        "description": "Failed starting external process - no process id returned"
+      },
+      "11": {
+        "description": "Error running external process"
+      },
+      "12": {
+        "description": "Attempting to set invalid waitForFinish"
+      },
+      "13": {
+        "description": "Wrapper class has not reimplemented MakeCommandAndScript() method"
+      },
+      "14": {
+        "description": "Can not find specified command template"
+      },
+      "15": {
+        "severity": 2,
+        "description": "No command line defined in MakeCommandAndScript()"
+      },
+      "16": {
+        "description": "Script file does not exist"
+      },
+      "17": {
+        "severity": 2,
+        "description": "Error attempting to set output file name"
+      },
+      "18": {
+        "description": "Failed importing plugin module"
+      },
+      "19": {
+        "description": "Failed instantiating plugin object"
+      },
+      "20": {
+        "severity": 2,
+        "description": "Failed finding output data to check"
+      },
+      "21": {
+        "severity": 2,
+        "description": "Failed to register new job with database"
+      },
+      "22": {
+        "description": "Failed to pass database info to new job"
+      },
+      "23": {
+        "description": "Error saving outputData file"
+      },
+      "24": {
+        "description": "Failed to create job sub-directory"
+      },
+      "25": {
+        "severity": 2,
+        "description": "External process return code"
+      },
+      "26": {
+        "severity": 2,
+        "description": "Error saving status to param file"
+      },
+      "27": {
+        "description": "Error interpreting output data for split MTZ"
+      },
+      "28": {
+        "description": "Error interpreting input data for join MTZ"
+      },
+      "30": {
+        "severity": 2,
+        "description": "Warning converting miniMTZ to HKLIN - data not set"
+      },
+      "31": {
+        "description": "Error converting miniMTZ to HKLIN - data name not recognised"
+      },
+      "32": {
+        "description": "Error converting miniMTZ to HKLIN - failed running mtzjoin"
+      },
+      "33": {
+        "description": "Error converting HKLOUT to miniMTZ - data name not recognised"
+      },
+      "34": {
+        "description": "Error converting HKLOUT to miniMTZ - failed running mtzsplit"
+      },
+      "35": {
+        "description": "Error converting miniMTZ to HKLIN - data type conversion not possible"
+      },
+      "36": {
+        "description": "Error merging in FreeR flags - insufficient data"
+      },
+      "39": {
+        "description": "Unknown error in script"
+      },
+      "40": {
+        "description": "Process timed out after (secs)"
+      },
+      "41": {
+        "description": "Error checking input data"
+      },
+      "42": {
+        "description": "Error checking output data"
+      },
+      "43": {
+        "description": "Error processing input data"
+      },
+      "44": {
+        "description": "Error creating command line and script"
+      },
+      "45": {
+        "description": "Error in processing output files"
+      },
+      "46": {
+        "description": "Error in finish handler"
+      },
+      "47": {
+        "description": "Error in checking external process after completion"
+      },
+      "48": {
+        "description": "Error in the plugin script startProcess"
+      },
+      "49": {
+        "severity": 2,
+        "description": "Error reading sub-process log file"
+      },
+      "50": {
+        "severity": 2,
+        "description": "Failure while looking for project defaults file"
+      },
+      "51": {
+        "severity": 2,
+        "description": "Failure loading project defaults file"
+      },
+      "52": {
+        "description": "Failure creating project defaults file - no definition for parameter"
+      },
+      "53": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - parameter already in file"
+      },
+      "54": {
+        "severity": 2,
+        "description": "Warning creating project defaults file - failed reading existing file"
+      },
+      "55": {
+        "description": "Error inserting information on hklin content into log file"
+      },
+      "56": {
+        "description": "External process exited with exit code != 0"
+      },
+      "57": {
+        "description": "Failed to find the command to run this program.Either it set incorrectly for the script or is not setup at all (ie. missing exe file or script)"
+      },
+      "310": {
+        "description": "Output object contains different number of sub-objects"
+      },
+      "311": {
+        "description": "Failure in running comparison code"
+      },
+      "312": {
+        "description": "No evaluation possible with a 'dummy' task"
+      }
+    }
+  },
   "dials_image": {
-    "module": "ccp4i2.wrappers.dials_image.script.dials_image",
+    "module": "wrappers.dials_image.script.dials_image",
     "class": "dials_image",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7558,7 +7787,7 @@
     }
   },
   "morda_i2": {
-    "module": "ccp4i2.wrappers.morda_i2.script.morda_i2",
+    "module": "wrappers.morda_i2.script.morda_i2",
     "class": "morda_i2",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7756,7 +7985,7 @@
     }
   },
   "splitMtz": {
-    "module": "ccp4i2.wrappers.splitMtz.script.splitMtz",
+    "module": "wrappers.splitMtz.script.splitMtz",
     "class": "splitMtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -7955,7 +8184,7 @@
     }
   },
   "mrparse": {
-    "module": "ccp4i2.wrappers.mrparse.script.mrparse_wrapper",
+    "module": "wrappers.mrparse.script.mrparse_wrapper",
     "class": "mrparse",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8159,7 +8388,7 @@
     }
   },
   "ShelxCD": {
-    "module": "ccp4i2.wrappers.ShelxCDE.script.ShelxCD",
+    "module": "wrappers.ShelxCDE.script.ShelxCD",
     "class": "ShelxCD",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8214,7 +8443,7 @@
     }
   },
   "ShelxCE": {
-    "module": "ccp4i2.wrappers.ShelxCDE.script.ShelxCE",
+    "module": "wrappers.ShelxCDE.script.ShelxCE",
     "class": "ShelxCE",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8242,7 +8471,7 @@
     }
   },
   "ShelxCECompareHands": {
-    "module": "ccp4i2.wrappers.ShelxCDE.script.ShelxCECompareHands",
+    "module": "wrappers.ShelxCDE.script.ShelxCECompareHands",
     "class": "ShelxCECompareHands",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8276,7 +8505,7 @@
     }
   },
   "density_calculator": {
-    "module": "ccp4i2.wrappers.density_calculator.script.density_calculator",
+    "module": "wrappers.density_calculator.script.density_calculator",
     "class": "density_calculator",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8478,7 +8707,7 @@
     }
   },
   "imosflm": {
-    "module": "ccp4i2.wrappers.imosflm.script.imosflm",
+    "module": "wrappers.imosflm.script.imosflm",
     "class": "imosflm",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8504,7 +8733,7 @@
     }
   },
   "fft": {
-    "module": "ccp4i2.wrappers.fft.script.fft",
+    "module": "wrappers.fft.script.fft",
     "class": "fft",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8703,7 +8932,7 @@
     }
   },
   "convert2mtz": {
-    "module": "ccp4i2.wrappers.convert2mtz.script.convert2mtz",
+    "module": "wrappers.convert2mtz.script.convert2mtz",
     "class": "convert2mtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -8725,7 +8954,7 @@
     }
   },
   "pdbset": {
-    "module": "ccp4i2.wrappers.pdbset.script.pdbset",
+    "module": "wrappers.pdbset.script.pdbset",
     "class": "pdbset",
     "COMTEMPLATE": "1 CELL $CELL.a $CELL.b $CELL.c $CELL.alpha $CELL.beta $CELL.gamma\n1 END",
     "COMTEMPLATEFILE": null,
@@ -8924,7 +9153,7 @@
     }
   },
   "mosflm": {
-    "module": "ccp4i2.wrappers.mosflm.script.mosflm",
+    "module": "wrappers.mosflm.script.mosflm",
     "class": "mosflm",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9123,7 +9352,7 @@
     }
   },
   "libcheck": {
-    "module": "ccp4i2.wrappers.libcheck.script.libcheck",
+    "module": "wrappers.libcheck.script.libcheck",
     "class": "libcheck",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9322,7 +9551,7 @@
     }
   },
   "SubtractNative": {
-    "module": "ccp4i2.wrappers.SubtractNative.script.SubtractNative",
+    "module": "wrappers.SubtractNative.script.SubtractNative",
     "class": "SubtractNative",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9353,7 +9582,7 @@
     }
   },
   "molrep_selfrot": {
-    "module": "ccp4i2.wrappers.molrep_selfrot.script.molrep_selfrot",
+    "module": "wrappers.molrep_selfrot.script.molrep_selfrot",
     "class": "molrep_selfrot",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9390,7 +9619,7 @@
     }
   },
   "ccp4mg_edit_nomrbump": {
-    "module": "ccp4i2.wrappers.ccp4mg_edit_nomrbump.script.ccp4mg_edit_nomrbump",
+    "module": "wrappers.ccp4mg_edit_nomrbump.script.ccp4mg_edit_nomrbump",
     "class": "ccp4mg_edit_nomrbump",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9415,8 +9644,30 @@
       }
     }
   },
+  "metalCoord": {
+    "module": "wrappers.metalCoord.script.metalCoord",
+    "class": "metalCoord",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "wrappers",
+    "TASKNAME": "metalCoord",
+    "TASKVERSION": 0.2,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": null,
+    "SUBTASKS": [],
+    "RUNEXTERNALPROCESS": true,
+    "ERROR_CODES": {
+      "201": {
+        "description": "No output JSON file from metalCoord"
+      },
+      "202": {
+        "description": "Log file does not report successful job completion",
+        "severity": 2
+      }
+    }
+  },
   "chltofom": {
-    "module": "ccp4i2.wrappers.chltofom.script.chltofom",
+    "module": "wrappers.chltofom.script.chltofom",
     "class": "chltofom",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9624,7 +9875,7 @@
     }
   },
   "MakeMonster": {
-    "module": "ccp4i2.wrappers.MakeMonster.script.MakeMonster",
+    "module": "wrappers.MakeMonster.script.MakeMonster",
     "class": "MakeMonster",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -9823,7 +10074,7 @@
     }
   },
   "mtzutils": {
-    "module": "ccp4i2.wrappers.mtzutils.script.mtzutils",
+    "module": "wrappers.mtzutils.script.mtzutils",
     "class": "mtzutils",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10022,7 +10273,7 @@
     }
   },
   "coordinate_selector": {
-    "module": "ccp4i2.wrappers.coordinate_selector.script.coordinate_selector",
+    "module": "wrappers.coordinate_selector.script.coordinate_selector",
     "class": "coordinate_selector",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10044,7 +10295,7 @@
     }
   },
   "modelcraft": {
-    "module": "ccp4i2.wrappers.modelcraft.script.modelcraft",
+    "module": "wrappers.modelcraft.script.modelcraft",
     "class": "modelcraft",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10079,7 +10330,7 @@
     }
   },
   "acedrg": {
-    "module": "ccp4i2.wrappers.acedrg.script.acedrg",
+    "module": "wrappers.acedrg.script.acedrg",
     "class": "acedrg",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10108,7 +10359,7 @@
     }
   },
   "dui": {
-    "module": "ccp4i2.wrappers.dui.script.dui",
+    "module": "wrappers.dui.script.dui",
     "class": "dui",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10308,7 +10559,7 @@
     }
   },
   "ProvideTLS": {
-    "module": "ccp4i2.wrappers.ProvideTLS.script.ProvideTLS",
+    "module": "wrappers.ProvideTLS.script.ProvideTLS",
     "class": "ProvideTLS",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10506,7 +10757,7 @@
     }
   },
   "AcedrgLink": {
-    "module": "ccp4i2.wrappers.AcedrgLink.script.AcedrgLink",
+    "module": "wrappers.AcedrgLink.script.AcedrgLink",
     "class": "AcedrgLink",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10537,7 +10788,7 @@
     }
   },
   "mtzdump": {
-    "module": "ccp4i2.wrappers.mtzdump.script.mtzdump",
+    "module": "wrappers.mtzdump.script.mtzdump",
     "class": "mtzdump",
     "COMTEMPLATE": "$HEADER HEADER\n1 NREF -1\n1 END\n",
     "COMTEMPLATEFILE": null,
@@ -10556,7 +10807,7 @@
     }
   },
   "ccp4mg_general": {
-    "module": "ccp4i2.wrappers.ccp4mg_general.script.ccp4mg_general",
+    "module": "wrappers.ccp4mg_general.script.ccp4mg_general",
     "class": "ccp4mg_general",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10582,7 +10833,7 @@
     }
   },
   "demo_copycell": {
-    "module": "ccp4i2.wrappers2.demo_copycell.script.demo_copycell",
+    "module": "wrappers2.demo_copycell.script.demo_copycell",
     "class": "demo_copycell",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10781,7 +11032,7 @@
     }
   },
   "demo_multi_mtzdump": {
-    "module": "ccp4i2.wrappers2.demo_multi_mtzdump.script.demo_multi_mtzdump",
+    "module": "wrappers2.demo_multi_mtzdump.script.demo_multi_mtzdump",
     "class": "demo_multi_mtzdump",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -10981,7 +11232,7 @@
     }
   },
   "molrep_pipe": {
-    "module": "ccp4i2.pipelines.molrep_pipe.script.molrep_pipe",
+    "module": "pipelines.molrep_pipe.script.molrep_pipe",
     "class": "molrep_pipe",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -11023,7 +11274,7 @@
     }
   },
   "coot_find_waters": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.coot_find_waters.script.coot_find_waters",
+    "module": "pipelines.prosmart_refmac.wrappers.coot_find_waters.script.coot_find_waters",
     "class": "coot_find_waters",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -11226,7 +11477,7 @@
     }
   },
   "coot_script_lines": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.coot_script_lines.script.coot_script_lines",
+    "module": "pipelines.prosmart_refmac.wrappers.coot_script_lines.script.coot_script_lines",
     "class": "coot_script_lines",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -11429,7 +11680,7 @@
     }
   },
   "reindex_minimtz": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.reindex_minimtz.script.reindex_minimtz",
+    "module": "pipelines.prosmart_refmac.wrappers.reindex_minimtz.script.reindex_minimtz",
     "class": "reindex_minimtz",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -11629,7 +11880,7 @@
     }
   },
   "coot_fit_residues": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.coot_fit_residues.script.coot_fit_residues",
+    "module": "pipelines.prosmart_refmac.wrappers.coot_fit_residues.script.coot_fit_residues",
     "class": "coot_fit_residues",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -11832,7 +12083,7 @@
     }
   },
   "coot_stepped_refine": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.coot_stepped_refine.script.coot_stepped_refine",
+    "module": "pipelines.prosmart_refmac.wrappers.coot_stepped_refine.script.coot_stepped_refine",
     "class": "coot_stepped_refine",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12035,7 +12286,7 @@
     }
   },
   "reindex_processed_data": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.wrappers.reindex_processed_data.script.reindex_processed_data",
+    "module": "pipelines.prosmart_refmac.wrappers.reindex_processed_data.script.reindex_processed_data",
     "class": "reindex_processed_data",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12055,7 +12306,7 @@
     }
   },
   "prosmart_refmac": {
-    "module": "ccp4i2.pipelines.prosmart_refmac.script.prosmart_refmac",
+    "module": "pipelines.prosmart_refmac.script.prosmart_refmac",
     "class": "prosmart_refmac",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12107,7 +12358,7 @@
     }
   },
   "import_merged": {
-    "module": "ccp4i2.pipelines.import_merged.script.import_merged",
+    "module": "pipelines.import_merged.script.import_merged",
     "class": "import_merged",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12147,7 +12398,7 @@
     }
   },
   "nautilus_build_refine": {
-    "module": "ccp4i2.pipelines.nautilus_build_refine.script.nautilus_build_refine",
+    "module": "pipelines.nautilus_build_refine.script.nautilus_build_refine",
     "class": "nautilus_build_refine",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12172,7 +12423,7 @@
     }
   },
   "LidiaAcedrg": {
-    "module": "ccp4i2.pipelines.LidiaAcedrg.script.lidiaAcedrg",
+    "module": "pipelines.LidiaAcedrg.script.lidiaAcedrg",
     "class": "lidiaAcedrg",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12195,7 +12446,7 @@
     }
   },
   "SubstituteLigand": {
-    "module": "ccp4i2.pipelines.SubstituteLigand.script.SubstituteLigand",
+    "module": "pipelines.SubstituteLigand.script.SubstituteLigand",
     "class": "SubstituteLigand",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12217,7 +12468,7 @@
     }
   },
   "xia2_integration": {
-    "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_integration.script.xia2_integration",
+    "module": "pipelines.import_xia2.wrappers.xia2_integration.script.xia2_integration",
     "class": "xia2_integration",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12236,7 +12487,7 @@
     }
   },
   "xia2_aimless": {
-    "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_aimless.script.xia2_aimless",
+    "module": "pipelines.import_xia2.wrappers.xia2_aimless.script.xia2_aimless",
     "class": "xia2_aimless",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12264,8 +12515,9 @@
     }
   },
   "xia2_run": {
-    "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_run.script.xia2_run",
+    "module": "pipelines.import_xia2.wrappers.xia2_run.script.xia2_run",
     "class": "xia2_run",
+    "module_file": "../../../ccp4i2/pipelines/import_xia2/wrappers/xia2_run/script/xia2_run.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -12303,7 +12555,7 @@
     }
   },
   "xia2_ctruncate": {
-    "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_ctruncate.script.xia2_ctruncate",
+    "module": "pipelines.import_xia2.wrappers.xia2_ctruncate.script.xia2_ctruncate",
     "class": "xia2_ctruncate",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12331,7 +12583,7 @@
     }
   },
   "xia2_pointless": {
-    "module": "ccp4i2.pipelines.import_xia2.wrappers.xia2_pointless.script.xia2_pointless",
+    "module": "pipelines.import_xia2.wrappers.xia2_pointless.script.xia2_pointless",
     "class": "xia2_pointless",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12359,7 +12611,7 @@
     }
   },
   "import_xia2": {
-    "module": "ccp4i2.pipelines.import_xia2.script.import_xia2",
+    "module": "pipelines.import_xia2.script.import_xia2",
     "class": "import_xia2",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12389,7 +12641,7 @@
     }
   },
   "MakeProjectsAndDoLigandPipeline": {
-    "module": "ccp4i2.pipelines.MakeProjectsAndDoLigandPipeline.script.MakeProjectsAndDoLigandPipeline",
+    "module": "pipelines.MakeProjectsAndDoLigandPipeline.script.MakeProjectsAndDoLigandPipeline",
     "class": "MakeProjectsAndDoLigandPipeline",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12462,7 +12714,7 @@
     }
   },
   "phaser_MR_FRF": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",
     "class": "phaser_MR_FRF",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12484,7 +12736,7 @@
     }
   },
   "phaser_EP_LLG": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_EP_LLG.script.phaser_EP_LLG",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_EP_LLG.script.phaser_EP_LLG",
     "class": "phaser_EP_LLG",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12512,8 +12764,9 @@
     }
   },
   "phaser_MR": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR.script.phaser_MR",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR.script.phaser_MR",
     "class": "phaser_MR",
+    "module_file": "../../../ccp4i2/pipelines/phaser_pipeline/wrappers/phaser_MR/script/phaser_MR.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -12551,7 +12804,7 @@
     }
   },
   "phaser_MR_PAK": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR_PAK.script.phaser_MR_PAK",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_PAK.script.phaser_MR_PAK",
     "class": "phaser_MR_PAK",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12573,7 +12826,7 @@
     }
   },
   "phaser_MR_RNP": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR_RNP.script.phaser_MR_RNP",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_RNP.script.phaser_MR_RNP",
     "class": "phaser_MR_RNP",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12596,7 +12849,7 @@
     }
   },
   "phaser_MR_FTF": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR_FTF.script.phaser_MR_FTF",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FTF.script.phaser_MR_FTF",
     "class": "phaser_MR_FTF",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12618,8 +12871,9 @@
     }
   },
   "phaser_EP_AUTO": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_EP_AUTO.script.phaser_EP_AUTO",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_EP_AUTO.script.phaser_EP_AUTO",
     "class": "phaser_EP_AUTO",
+    "module_file": "../../../ccp4i2/pipelines/phaser_pipeline/wrappers/phaser_EP_AUTO/script/phaser_EP_AUTO.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -12639,8 +12893,9 @@
     }
   },
   "phaser_MR_AUTO": {
-    "module": "ccp4i2.pipelines.phaser_pipeline.wrappers.phaser_MR_AUTO.script.phaser_MR_AUTO",
+    "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_AUTO.script.phaser_MR_AUTO",
     "class": "phaser_MR_AUTO",
+    "module_file": "../../../ccp4i2/pipelines/phaser_pipeline/wrappers/phaser_MR_AUTO/script/phaser_MR_AUTO.py",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
     "TASKMODULE": null,
@@ -12665,7 +12920,7 @@
     }
   },
   "phaser_EP": {
-    "module": "ccp4i2.pipelines.phaser_ep.script.phaser_EP",
+    "module": "pipelines.phaser_ep.script.phaser_EP",
     "class": "phaser_EP",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12683,7 +12938,7 @@
     }
   },
   "crank2_createfree": {
-    "module": "ccp4i2.pipelines.crank2.wrappers.crank2_createfree.script.crank2_createfree",
+    "module": "pipelines.crank2.wrappers.crank2_createfree.script.crank2_createfree",
     "class": "crank2_createfree",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -12881,7 +13136,7 @@
     }
   },
   "pisa_analyse": {
-    "module": "ccp4i2.pipelines.pisapipe.wrappers.pisa_analyse.script.pisa_analyse",
+    "module": "pipelines.pisapipe.wrappers.pisa_analyse.script.pisa_analyse",
     "class": "pisa_analyse",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13080,7 +13335,7 @@
     }
   },
   "pisa_list": {
-    "module": "ccp4i2.pipelines.pisapipe.wrappers.pisa_list.script.pisa_list",
+    "module": "pipelines.pisapipe.wrappers.pisa_list.script.pisa_list",
     "class": "pisa_list",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13279,7 +13534,7 @@
     }
   },
   "pisa_xml": {
-    "module": "ccp4i2.pipelines.pisapipe.wrappers.pisa_xml.script.pisa_xml",
+    "module": "pipelines.pisapipe.wrappers.pisa_xml.script.pisa_xml",
     "class": "pisa_xml",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13478,7 +13733,7 @@
     }
   },
   "pisapipe": {
-    "module": "ccp4i2.pipelines.pisapipe.script.pisapipe",
+    "module": "pipelines.pisapipe.script.pisapipe",
     "class": "pisapipe",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13677,7 +13932,7 @@
     }
   },
   "aimless_pipe": {
-    "module": "ccp4i2.pipelines.aimless_pipe.script.aimless_pipe",
+    "module": "pipelines.aimless_pipe.script.aimless_pipe",
     "class": "aimless_pipe",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13718,7 +13973,7 @@
     }
   },
   "LidiaAcedrgNew": {
-    "module": "ccp4i2.pipelines.LidiaAcedrgNew.script.lidiaAcedrgNew",
+    "module": "pipelines.LidiaAcedrgNew.script.lidiaAcedrgNew",
     "class": "lidiaAcedrgNew",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13741,7 +13996,7 @@
     }
   },
   "ZZPipelineNameZZ": {
-    "module": "ccp4i2.pipelines.boilerplate.script.boilerplate",
+    "module": "pipelines.boilerplate.script.boilerplate",
     "class": "ZZPipelineNameZZ",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13772,7 +14027,7 @@
     }
   },
   "buccaneer_build_refine_mr": {
-    "module": "ccp4i2.pipelines.buccaneer_build_refine_mr.script.buccaneer_build_refine_mr",
+    "module": "pipelines.buccaneer_build_refine_mr.script.buccaneer_build_refine_mr",
     "class": "buccaneer_build_refine_mr",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13893,7 +14148,7 @@
     }
   },
   "mrbump_model_prep": {
-    "module": "ccp4i2.pipelines.dr_mr_modelbuild_pipeline.wrappers.mrbump_model_prep.script.mrbump_model_prep",
+    "module": "pipelines.dr_mr_modelbuild_pipeline.wrappers.mrbump_model_prep.script.mrbump_model_prep",
     "class": "mrbump_model_prep",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -13913,7 +14168,7 @@
     }
   },
   "mrparse_simple": {
-    "module": "ccp4i2.pipelines.dr_mr_modelbuild_pipeline.wrappers.mrparse_simple.script.mrparse_simple_wrapper",
+    "module": "pipelines.dr_mr_modelbuild_pipeline.wrappers.mrparse_simple.script.mrparse_simple_wrapper",
     "class": "mrparse_simple",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14117,7 +14372,7 @@
     }
   },
   "uniqueify": {
-    "module": "ccp4i2.pipelines.uniqueify.script.uniqueify",
+    "module": "pipelines.uniqueify.script.uniqueify",
     "class": "uniqueify",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14316,7 +14571,7 @@
     }
   },
   "pdb_extract_wrapper": {
-    "module": "ccp4i2.pipelines.PrepareDeposit.wrappers.pdb_extract_wrapper.script.pdb_extract_wrapper",
+    "module": "pipelines.PrepareDeposit.wrappers.pdb_extract_wrapper.script.pdb_extract_wrapper",
     "class": "pdb_extract_wrapper",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14339,7 +14594,7 @@
     }
   },
   "hklin2cif": {
-    "module": "ccp4i2.pipelines.PrepareDeposit.wrappers.hklin2cif.script.hklin2cif",
+    "module": "pipelines.PrepareDeposit.wrappers.hklin2cif.script.hklin2cif",
     "class": "hklin2cif",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14361,7 +14616,7 @@
     }
   },
   "PrepareDeposit": {
-    "module": "ccp4i2.pipelines.PrepareDeposit.script.PrepareDeposit",
+    "module": "pipelines.PrepareDeposit.script.PrepareDeposit",
     "class": "PrepareDeposit",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14386,7 +14641,7 @@
     }
   },
   "import_serial_pipe": {
-    "module": "ccp4i2.pipelines.import_serial_pipe.script.import_serial_pipe",
+    "module": "pipelines.import_serial_pipe.script.import_serial_pipe",
     "class": "import_serial_pipe",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14585,7 +14840,7 @@
     }
   },
   "MakeLink": {
-    "module": "ccp4i2.pipelines.MakeLink.script.MakeLink",
+    "module": "pipelines.MakeLink.script.MakeLink",
     "class": "MakeLink",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14619,7 +14874,7 @@
     }
   },
   "refmac_martin": {
-    "module": "ccp4i2.deprecated.refmac_martin.refmac_martin",
+    "module": "deprecated.refmac_martin.refmac_martin",
     "class": "refmac_martin",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14652,7 +14907,7 @@
     }
   },
   "prosmart_martin": {
-    "module": "ccp4i2.deprecated.prosmart_martin.prosmart_martin",
+    "module": "deprecated.prosmart_martin.prosmart_martin",
     "class": "prosmart_martin",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,
@@ -14851,7 +15106,7 @@
     }
   },
   "refmac_wrk": {
-    "module": "ccp4i2.deprecated.refmac_wrk.script.refmac_wrk",
+    "module": "deprecated.refmac_wrk.script.refmac_wrk",
     "class": "refmac_wrk",
     "COMTEMPLATE": null,
     "COMTEMPLATEFILE": null,

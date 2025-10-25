@@ -26,12 +26,10 @@ class TypeResolver:
             'CInt', 'CFloat', 'CString', 'CBoolean', 'CList'
         }
 
-        # Type aliases from fundamental_types.py
-        self.type_aliases = {
-            'COneWord': 'CString',
-            'CUUID': 'CString',
-            'CProjectId': 'CUUID',
-        }
+        # Type aliases - NOTE: This is now empty because all custom types
+        # (COneWord, CUUID, CProjectId, etc.) are proper classes in cdata.json
+        # with their own stubs/implementations. They're not aliases anymore.
+        self.type_aliases = {}
 
         # Base classes from base_classes.py (only the hand-written ones)
         self.base_classes = {
