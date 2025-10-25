@@ -1017,6 +1017,11 @@ class CDataFile(CData):
     - dbFileId: CUUID - Database file identifier
     - subType: CInt - File subtype (optional)
     - contentFlag: CInt - Content flag (min=0, optional)
+
+    CDataFile has special behavior for file path handling:
+    - Assigning a string to a CDataFile sets the baseName attribute
+    - __str__() returns the file path (baseName when not database-connected)
+    - fullPath property and getFullPath() method return the full path
     """
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
@@ -1026,14 +1031,93 @@ class CDataFile(CData):
         # Legacy compatibility
         self.file_path = file_path
 
+        # Set baseName if file_path provided
+        if file_path is not None:
+            self.setFullPath(file_path)
+
+    def __setattr__(self, name, value):
+        """Override setattr to handle string assignment to CDataFile.
+
+        When a string (or CFilePath) is assigned to this CDataFile,
+        set the baseName attribute instead.
+        """
+        # Handle special case: assigning a string/path directly to the file
+        # This happens in code like: cdata_file = "some/path.pdb"
+        # But only if the attribute being set is 'value' (the default for CData assignments)
+        if name == 'value' and isinstance(value, str):
+            # Set baseName instead
+            self.setFullPath(value)
+        else:
+            # Normal attribute assignment
+            super().__setattr__(name, value)
+
+    def setFullPath(self, path: str):
+        """Set the full path of the file.
+
+        In non-database-connected mode, this sets the baseName attribute.
+        In database-connected mode (future), this would parse the path
+        and set project, relPath, and baseName appropriately.
+
+        Args:
+            path: Full file path as a string
+        """
+        # For now (non-database mode), just set baseName
+        if hasattr(self, 'baseName'):
+            # If baseName is a CFilePath or similar, set its value
+            if hasattr(self.baseName, 'value'):
+                self.baseName.value = path
+            else:
+                # Otherwise set it directly
+                self.baseName = path
+        else:
+            # baseName doesn't exist yet - store in file_path for now
+            object.__setattr__(self, 'file_path', path)
+
+    def getFullPath(self) -> str:
+        """Get the full file path as a string.
+
+        Returns:
+            Full path to the file, or empty string if not set
+        """
+        # Non-database mode: return baseName
+        if hasattr(self, 'baseName') and self.baseName is not None:
+            # If baseName has a value attribute, return that
+            if hasattr(self.baseName, 'value'):
+                return str(self.baseName.value) if self.baseName.value is not None else ""
+            # Otherwise convert baseName directly
+            return str(self.baseName)
+
+        # Fallback to legacy file_path
+        if hasattr(self, 'file_path') and self.file_path is not None:
+            return str(self.file_path)
+
+        return ""
+
+    @property
+    def fullPath(self) -> str:
+        """Property to access the full file path as a string.
+
+        Returns:
+            Full path to the file, or empty string if not set
+        """
+        return self.getFullPath()
+
+    def __str__(self) -> str:
+        """Return string representation of the file (its path).
+
+        Returns:
+            Full path to the file, or empty string if not set
+        """
+        return self.getFullPath()
+
     def load_from_file(self, file_path: str):
         """Load data from file."""
-        self.file_path = file_path
+        self.setFullPath(file_path)
         # TODO: Implement file loading logic
 
     def save_to_file(self, file_path: str = None):
         """Save data to file."""
-        path = file_path or self.file_path
+        path = file_path or self.getFullPath()
         if not path:
             raise ValueError("No file path specified")
         # TODO: Implement file saving logic
