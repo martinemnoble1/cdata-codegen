@@ -449,13 +449,28 @@ class CImportUnmergedList(CImportUnmergedListStub):
 class CMapCoeffsDataFile(CMapCoeffsDataFileStub):
     """
     An MTZ experimental data file
-    
+
     Extends CMapCoeffsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def as_FPHI(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Return path to this file as FPHI format.
+
+        Since CMapCoeffsDataFile only has one content type (FPHI),
+        this method simply returns the current file path without conversion.
+
+        FPHI format: F, PHI
+
+        Args:
+            work_directory: Ignored for this class
+
+        Returns:
+            Full path to this file (no conversion needed)
+        """
+        # No conversion needed - already in FPHI format
+        return self.getFullPath()
 
 
 class CMapColumnGroup(CMapColumnGroupStub):
@@ -631,13 +646,152 @@ class CMtzDataset(CMtzDatasetStub):
 class CObsDataFile(CObsDataFileStub):
     """
     An MTZ experimental data file
-    
+
     Extends CObsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def _get_conversion_output_path(self, target_content_type: str, work_directory: Optional[Any] = None) -> str:
+        """
+        Calculate output path for converted MTZ file.
+
+        Naming pattern: {inputroot}_as_{CONTENT_TYPE}.mtz
+        Location: Input file's directory (if writable), else work_directory
+
+        Args:
+            target_content_type: Name of target content type (e.g., 'IPAIR', 'FMEAN')
+            work_directory: Fallback directory if input dir not writable
+
+        Returns:
+            Full path to output file
+        """
+        from pathlib import Path
+
+        input_path = Path(self.getFullPath())
+        input_dir = input_path.parent
+        input_stem = input_path.stem  # Filename without extension
+        input_suffix = input_path.suffix  # .mtz
+
+        # Calculate output filename
+        output_name = f"{input_stem}_as_{target_content_type}{input_suffix}"
+
+        # Try input directory first
+        if input_dir.exists() and input_dir.is_dir():
+            output_path = input_dir / output_name
+            # Check if we can write there (basic check)
+            try:
+                # Try to create a test file
+                test_file = input_dir / f".write_test_{id(self)}"
+                test_file.touch()
+                test_file.unlink()
+                return str(output_path)
+            except (PermissionError, OSError):
+                pass
+
+        # Fall back to work directory
+        if work_directory:
+            work_dir = Path(work_directory)
+            return str(work_dir / output_name)
+
+        # Last resort: same as input (may fail at write time)
+        return str(input_dir / output_name)
+
+    def as_IPAIR(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to IPAIR format (Anomalous Intensities).
+
+        IPAIR format: Iplus, SIGIplus, Iminus, SIGIminus
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('IPAIR', work_directory)
+
+        # TODO: Implement actual conversion logic using gemmi
+        # This will involve:
+        # 1. Reading current MTZ file
+        # 2. Converting data to IPAIR format
+        # 3. Writing to output_path
+
+        raise NotImplementedError(
+            f"Conversion to IPAIR format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
+
+    def as_FPAIR(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to FPAIR format (Anomalous Structure Factors).
+
+        FPAIR format: Fplus, SIGFplus, Fminus, SIGFminus
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('FPAIR', work_directory)
+
+        # TODO: Implement conversion logic
+        raise NotImplementedError(
+            f"Conversion to FPAIR format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
+
+    def as_IMEAN(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to IMEAN format (Mean Intensities).
+
+        IMEAN format: I, SIGI
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('IMEAN', work_directory)
+
+        # TODO: Implement conversion logic
+        raise NotImplementedError(
+            f"Conversion to IMEAN format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
+
+    def as_FMEAN(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to FMEAN format (Mean Structure Factors).
+
+        FMEAN format: F, SIGF
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('FMEAN', work_directory)
+
+        # TODO: Implement conversion logic
+        raise NotImplementedError(
+            f"Conversion to FMEAN format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
 
 
 class CPhaserRFileDataFile(CPhaserRFileDataFileStub):
@@ -679,13 +833,97 @@ class CPhiFomColumnGroup(CPhiFomColumnGroupStub):
 class CPhsDataFile(CPhsDataFileStub):
     """
     An MTZ experimental data file
-    
+
     Extends CPhsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def _get_conversion_output_path(self, target_content_type: str, work_directory: Optional[Any] = None) -> str:
+        """
+        Calculate output path for converted MTZ file.
+
+        Naming pattern: {inputroot}_as_{CONTENT_TYPE}.mtz
+        Location: Input file's directory (if writable), else work_directory
+
+        Args:
+            target_content_type: Name of target content type (e.g., 'HL', 'PHIFOM')
+            work_directory: Fallback directory if input dir not writable
+
+        Returns:
+            Full path to output file
+        """
+        from pathlib import Path
+
+        input_path = Path(self.getFullPath())
+        input_dir = input_path.parent
+        input_stem = input_path.stem
+        input_suffix = input_path.suffix
+
+        output_name = f"{input_stem}_as_{target_content_type}{input_suffix}"
+
+        # Try input directory first
+        if input_dir.exists() and input_dir.is_dir():
+            output_path = input_dir / output_name
+            try:
+                test_file = input_dir / f".write_test_{id(self)}"
+                test_file.touch()
+                test_file.unlink()
+                return str(output_path)
+            except (PermissionError, OSError):
+                pass
+
+        # Fall back to work directory
+        if work_directory:
+            work_dir = Path(work_directory)
+            return str(work_dir / output_name)
+
+        return str(input_dir / output_name)
+
+    def as_HL(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to HL format (Hendrickson-Lattman coefficients).
+
+        HL format: HLA, HLB, HLC, HLD
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('HL', work_directory)
+
+        # TODO: Implement conversion logic
+        raise NotImplementedError(
+            f"Conversion to HL format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
+
+    def as_PHIFOM(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to PHIFOM format (Phase + Figure of Merit).
+
+        PHIFOM format: PHI, FOM
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            NotImplementedError: Conversion logic not yet implemented
+        """
+        output_path = self._get_conversion_output_path('PHIFOM', work_directory)
+
+        # TODO: Implement conversion logic
+        raise NotImplementedError(
+            f"Conversion to PHIFOM format not yet implemented. "
+            f"Would output to: {output_path}"
+        )
 
 
 class CProgramColumnGroup(CProgramColumnGroupStub):

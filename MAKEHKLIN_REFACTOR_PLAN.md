@@ -373,74 +373,72 @@ CONTENT_FLAG_COLUMNS_BY_CLASS = {
    - If not, should normalizer be implemented before makeHklin?
    - User mentioned: "These files will have been normalised (maybe something we need to do soon)"
 
-### Phase 1: Core Utility (merge_mtz_files)
+### Phase 1: Core Utility (merge_mtz_files) ✅ COMPLETED
 
 Location: `core/CCP4Utils.py`
 
-1. **Input Processing**
-   ```python
-   - Parse input_specs list
-   - Validate all required keys present
-   - Resolve paths (already absolute from CDataFile)
-   - Validate files exist
-   ```
+**Status**: ✅ Implemented and tested (10/10 tests passing)
 
-2. **MTZ Reading**
-   ```python
-   - Use gemmi.read_mtz_file() for each input
-   - Extract first file's metadata (cell, spacegroup, datasets)
-   - Validate all files compatible (same cell, spacegroup)
-   - Raise clear errors for incompatibilities
-   ```
+**API Design**:
+```python
+def merge_mtz_files(
+    input_specs: List[dict],  # [{'path': str, 'column_mapping': {in: out}}]
+    output_path: Union[str, Path],
+    merge_strategy: str = 'first'
+) -> Path
+```
 
-3. **Column Merging**
-   ```python
-   - Create output MTZ with base dataset (H, K, L)
-   - Copy cell, spacegroup from first file
-   - For each input file:
-       * Select requested columns
-       * Apply renaming if specified
-       * Handle conflicts per merge_strategy
-       * Use mtz.copy_column() with trailing_cols=['SIGF', ...]
-   ```
+**Key Features**:
+1. ✅ **Completely CData-agnostic** - No knowledge of CMiniMtzDataFile
+2. ✅ **Column mapping** - Explicit input_label -> output_label mapping
+3. ✅ **Conflict resolution** - Strategies: first, last, error, rename
+4. ✅ **Validation** - Space group and cell compatibility checks
+5. ✅ **H,K,L matching** - Gemmi handles reflection matching across files
+6. ✅ **Comprehensive error handling** - FileNotFoundError, ValueError, MtzMergeError
 
-4. **Output Generation**
-   ```python
-   - Set cell, spacegroup, history
-   - Update resolution limits (mtz.update_reso())
-   - Write to output_path
-   - Return Path object
-   ```
+**Implementation Details**:
+1. ✅ **Input Processing** - Validates required keys, checks file existence
+2. ✅ **MTZ Reading** - Uses gemmi.read_mtz_file(), extracts metadata from first file
+3. ✅ **Column Merging** - Creates output with H,K,L, copies columns with gemmi.copy_column()
+4. ✅ **Output Generation** - Updates resolution, adds history, writes to file
+
+**Tests**: `tests/test_merge_mtz_files.py` (10 tests, all passing)
 
 ### Phase 2: CPluginScript Integration (makeHklinGemmi)
 
 Location: `core/CCP4PluginScript.py`
 
+**Status**: ⏭️ NEXT TO IMPLEMENT
+
+**API Design**:
+```python
+def makeHklinGemmi(
+    self,
+    file_objects: List[Union[str, dict]],
+    output_name: str = 'hklin',
+    merge_strategy: str = 'first'
+) -> Path:
+    """Merge normalized mini-MTZ files (new Pythonic API)."""
+```
+
+**Implementation Steps**:
+
 1. **Container Lookup Helper**
    ```python
    def _lookup_file_object(self, name: str) -> CDataFile:
        """Look up file object in inputData or outputData."""
+       # Use existing container.child_name attribute access
        if hasattr(self.inputData, name):
            return getattr(self.inputData, name)
        elif hasattr(self.outputData, name):
            return getattr(self.outputData, name)
        else:
-           raise AttributeError(
-               f"No file object '{name}' in inputData or outputData"
-           )
+           raise AttributeError(f"No file '{name}' in inputData/outputData")
    ```
 
-2. **Spec Resolution**
+2. **Column Resolution from contentFlag** ⭐ KEY CHANGE
    ```python
    for spec in file_objects:
-       # Parse string vs dict
-       if isinstance(spec, str):
-           name, columns, rename = spec, None, None
-       else:
-           name = spec['name']
-           columns = spec.get('columns')
-           rename = spec.get('rename')
-
        # Lookup container object
        file_obj = self._lookup_file_object(name)
 
@@ -449,19 +447,20 @@ Location: `core/CCP4PluginScript.py`
        if not path:
            raise ValueError(f"{name} has no path set")
 
-       # Determine columns
-       if columns is None:
-           # Use contentFlag
-           content_flag = file_obj.contentFlag
-           columns = CONTENT_FLAG_COLUMNS.get(content_flag)
-           if columns is None:
-               raise ValueError(f"Unknown contentFlag: {content_flag}")
+       # Determine columns from CONTENT_SIGNATURE_LIST ⭐
+       content_flag = int(file_obj.contentFlag)
+       columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
 
-       # Build spec
+       # Build column_mapping (identity by default, or with renaming)
+       if 'rename' in spec:
+           column_mapping = {col: spec['rename'].get(col, col) for col in columns}
+       else:
+           column_mapping = {col: col for col in columns}
+
+       # Build spec for merge_mtz_files
        input_specs.append({
            'path': path,
-           'columns': columns,
-           'rename': rename or {}
+           'column_mapping': column_mapping
        })
    ```
 
@@ -686,15 +685,16 @@ def test_makehklin_with_content_flag_override():
 
 1. ✅ ~~RESEARCH~~ - Extract CONTENT_FLAG info from old ccp4i2 (DONE)
 2. ✅ ~~DOCUMENT~~ - Create complete reference table (DONE)
-3. 🎯 **READY: Implement Phase 1** (merge_mtz_files in core/CCP4Utils.py)
-4. ⏳ Implement Phase 2 (makeHklinGemmi in CPluginScript)
-5. ⏳ Implement Phase 3 (makeHklin wrapper in CPluginScript)
-6. ⏳ Write comprehensive tests
-7. ⏳ Document and create examples
+3. ✅ ~~Implement Phase 1~~ - merge_mtz_files utility (DONE - 10/10 tests passing)
+4. ✅ ~~Refactor API~~ - Change to column_mapping for CData-agnosticism (DONE)
+5. 🎯 **NEXT: Implement Phase 2** (makeHklinGemmi in CPluginScript)
+6. ⏳ Implement Phase 3 (makeHklin wrapper in CPluginScript)
+7. ⏳ Write integration tests
+8. ⏳ Document and create examples
 
 ---
 
 **Author**: Claude Code
 **Date**: 2025-10-27
-**Status**: Research Complete - Ready for Implementation
-**Last Updated**: 2025-10-27 (contentFlag metadata extracted and added to cdata.json)
+**Status**: Phase 1 Complete - Ready for Phase 2 (makeHklinGemmi)
+**Last Updated**: 2025-10-27 (merge_mtz_files implemented, tested, and refactored for CData-agnosticism)

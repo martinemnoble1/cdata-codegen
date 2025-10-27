@@ -602,3 +602,324 @@ class CPluginScript(CData):
     def getContainer(self) -> CContainer:
         """Get the main container."""
         return self.container
+
+    # =========================================================================
+    # MTZ File Merging Methods (makeHklin family)
+    # =========================================================================
+
+    def makeHklinGemmi(
+        self,
+        file_objects: list,
+        output_name: str = 'hklin',
+        merge_strategy: str = 'first'
+    ) -> Path:
+        """
+        Merge normalized mini-MTZ files into a single HKLIN file (new Pythonic API).
+
+        This is the modern, Pythonic replacement for makeHklin. It works with
+        container attribute names and uses gemmi for MTZ operations.
+
+        Args:
+            file_objects: List of file specifications. Each can be either:
+                - str: Attribute name in inputData/outputData (e.g., 'HKLIN1')
+                       Uses the file's contentFlag to determine columns automatically.
+                - dict: Explicit specification with keys:
+                    {
+                        'name': str,              # Attribute name (required)
+                        'rename': Dict[str, str]  # Optional column renaming
+                    }
+
+            output_name: Base name for output file (default: 'hklin')
+                        Output written to: self.workDirectory / f"{output_name}.mtz"
+
+            merge_strategy: How to handle column conflicts (default: 'first')
+                - 'first': Keep column from first file
+                - 'last': Keep column from last file
+                - 'error': Raise error on conflicts
+                - 'rename': Auto-rename conflicts (F, F_1, F_2, ...)
+
+        Returns:
+            Path: Full path to created HKLIN file
+
+        Raises:
+            AttributeError: If file object not found in inputData/outputData
+            ValueError: If contentFlag unknown or file has no path set
+            FileNotFoundError: If MTZ file doesn't exist at specified path
+
+        Example:
+            >>> # Simple merge using contentFlags
+            >>> hklin = self.makeHklinGemmi(['HKLIN1', 'FREERFLAG'])
+            >>> # Result: merged.mtz with columns from both files
+
+            >>> # With explicit column renaming
+            >>> hklin = self.makeHklinGemmi([
+            ...     'HKLIN1',  # Uses contentFlag automatically
+            ...     {
+            ...         'name': 'HKLIN2',
+            ...         'rename': {'F': 'F_deriv', 'SIGF': 'SIGF_deriv'}
+            ...     }
+            ... ])
+        """
+        from core.CCP4Utils import merge_mtz_files
+
+        input_specs = []
+
+        for file_spec in file_objects:
+            # Parse spec to get name and optional rename
+            if isinstance(file_spec, str):
+                name = file_spec
+                rename_map = {}
+            elif isinstance(file_spec, dict):
+                name = file_spec['name']
+                rename_map = file_spec.get('rename', {})
+            else:
+                raise ValueError(
+                    f"Invalid file_spec type: {type(file_spec)}. "
+                    f"Expected str or dict."
+                )
+
+            # Lookup file object in containers
+            file_obj = None
+            if hasattr(self.inputData, name):
+                file_obj = getattr(self.inputData, name)
+            elif hasattr(self.outputData, name):
+                file_obj = getattr(self.outputData, name)
+            else:
+                raise AttributeError(
+                    f"File object '{name}' not found in inputData or outputData"
+                )
+
+            # Get filesystem path
+            path = file_obj.getFullPath()
+            if not path:
+                raise ValueError(f"File object '{name}' has no path set")
+
+            # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
+            # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
+            content_flag = int(file_obj.contentFlag)
+            if not hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
+                raise ValueError(
+                    f"File object '{name}' (class {file_obj.__class__.__name__}) "
+                    f"has no CONTENT_SIGNATURE_LIST. Is it a CMiniMtzDataFile?"
+                )
+
+            if content_flag < 1 or content_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
+                raise ValueError(
+                    f"Invalid contentFlag {content_flag} for '{name}'. "
+                    f"Valid range: 1-{len(file_obj.CONTENT_SIGNATURE_LIST)}"
+                )
+
+            columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
+
+            # Build column_mapping (input_label -> output_label)
+            column_mapping = {}
+            for col in columns:
+                output_col = rename_map.get(col, col)
+                column_mapping[col] = output_col
+
+            # Build spec for merge_mtz_files
+            input_specs.append({
+                'path': path,
+                'column_mapping': column_mapping
+            })
+
+        # Call low-level gemmi utility
+        output_path = self.workDirectory / f"{output_name}.mtz"
+        result = merge_mtz_files(
+            input_specs=input_specs,
+            output_path=output_path,
+            merge_strategy=merge_strategy
+        )
+
+        return result
+
+    def _get_content_flag_name(self, file_obj, content_flag: int) -> str:
+        """
+        Get the name of a content flag from its integer value.
+
+        Args:
+            file_obj: File object with CONTENT_FLAG_* class constants
+            content_flag: Integer content flag value
+
+        Returns:
+            Name of the content flag (e.g., 'IPAIR', 'FMEAN')
+
+        Raises:
+            ValueError: If content flag not found
+        """
+        # Search class constants for matching content flag
+        for attr_name in dir(file_obj.__class__):
+            if attr_name.startswith('CONTENT_FLAG_'):
+                flag_value = getattr(file_obj.__class__, attr_name)
+                if flag_value == content_flag:
+                    # Extract name after CONTENT_FLAG_
+                    return attr_name.replace('CONTENT_FLAG_', '')
+
+        raise ValueError(f"No content flag name found for value {content_flag}")
+
+    def makeHklin(self, miniMtzsIn: list, hklin: str = 'hklin') -> CErrorReport:
+        """
+        Merge mini-MTZ files into HKLIN (backward-compatible legacy API).
+
+        This method provides backward compatibility with the old CCP4i2 API.
+        When a [name, contentFlag] tuple is provided, if the file's current
+        contentFlag differs from the requested flag, the file is automatically
+        converted to the requested format.
+
+        Args:
+            miniMtzsIn: List of file specifications. Each can be either:
+                - str: Attribute name in inputData (e.g., 'HKLIN1')
+                       Uses the file object's own contentFlag
+                - [str, int]: [attribute_name, target_contentFlag]
+                       If file's contentFlag != target_contentFlag,
+                       converts file to target format first
+
+            hklin: Base name for output file (default: 'hklin')
+
+        Returns:
+            CErrorReport: Error report (empty if successful)
+
+        Example (old API):
+            >>> # Simple merge (uses objects' contentFlags)
+            >>> error = self.makeHklin(['HKLIN1', 'FREERFLAG'])
+
+            >>> # Request HKLIN2 in FPAIR format (converts if needed)
+            >>> error = self.makeHklin([
+            ...     'HKLIN1',
+            ...     ['HKLIN2', CObsDataFile.CONTENT_FLAG_FPAIR]
+            ... ])
+        """
+        from pathlib import Path
+        from core.base_object.fundamental_types import CInt
+
+        error = CErrorReport()
+        converted_files = []  # Track temporary files created by conversions
+
+        try:
+            # Convert old API to new API
+            file_objects = []
+
+            for item_idx, item in enumerate(miniMtzsIn):
+                if isinstance(item, str):
+                    # Simple name - use object's own contentFlag
+                    file_objects.append(item)
+
+                elif isinstance(item, (list, tuple)) and len(item) == 2:
+                    # [name, target_contentFlag] - may need conversion
+                    name, target_flag = item
+
+                    # Lookup file object
+                    file_obj = None
+                    if hasattr(self.inputData, name):
+                        file_obj = getattr(self.inputData, name)
+                    elif hasattr(self.outputData, name):
+                        file_obj = getattr(self.outputData, name)
+                    else:
+                        error.append(
+                            klass=self.__class__.__name__,
+                            code=205,
+                            details=f"File object '{name}' not found",
+                            name=name
+                        )
+                        return error
+
+                    # Validate target contentFlag
+                    if target_flag < 1 or target_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
+                        error.append(
+                            klass=self.__class__.__name__,
+                            code=206,
+                            details=f"Invalid contentFlag {target_flag} for '{name}'",
+                            name=name
+                        )
+                        return error
+
+                    # Check if conversion is needed
+                    current_flag = int(file_obj.contentFlag)
+                    if current_flag != target_flag:
+                        # Conversion needed!
+                        try:
+                            # Get target content flag name (e.g., 'IPAIR', 'FMEAN')
+                            target_name = self._get_content_flag_name(file_obj, target_flag)
+
+                            # Call conversion method (e.g., as_IPAIR(), as_FMEAN())
+                            method_name = f'as_{target_name}'
+                            if not hasattr(file_obj, method_name):
+                                error.append(
+                                    klass=self.__class__.__name__,
+                                    code=208,
+                                    details=f"Conversion method '{method_name}' not found on {file_obj.__class__.__name__}",
+                                    name=name
+                                )
+                                return error
+
+                            conversion_method = getattr(file_obj, method_name)
+                            converted_path = conversion_method(self.workDirectory)
+
+                            # Create a temporary file object pointing to converted file
+                            # We need to create an instance of the same class
+                            temp_name = f"_converted_{name}_{item_idx}"
+                            temp_file_obj = file_obj.__class__(parent=self.inputData, name=temp_name)
+
+                            # Set the path to the converted file
+                            # Assuming the file object has baseName attribute for the path
+                            temp_file_obj.baseName = Path(converted_path).name
+                            temp_file_obj.relPath = str(Path(converted_path).parent)
+                            temp_file_obj.contentFlag = CInt(target_flag)
+
+                            # Add to inputData temporarily
+                            setattr(self.inputData, temp_name, temp_file_obj)
+                            converted_files.append(temp_name)
+
+                            # Use the temp name for merging
+                            file_objects.append(temp_name)
+
+                        except NotImplementedError as e:
+                            error.append(
+                                klass=self.__class__.__name__,
+                                code=209,
+                                details=str(e),
+                                name=name
+                            )
+                            return error
+                        except Exception as e:
+                            error.append(
+                                klass=self.__class__.__name__,
+                                code=210,
+                                details=f"Error converting file: {e}",
+                                name=name
+                            )
+                            return error
+                    else:
+                        # No conversion needed - flags match
+                        file_objects.append(name)
+
+                else:
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=207,
+                        details=f"Invalid miniMtzsIn item: {item}",
+                        name=str(item)
+                    )
+                    return error
+
+            # Call new API with all files (original or converted)
+            self.makeHklinGemmi(
+                file_objects=file_objects,
+                output_name=hklin,
+                merge_strategy='first'
+            )
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=200,
+                details=f"Error merging MTZ files: {e}",
+                name=hklin
+            )
+        finally:
+            # Clean up temporary converted file objects from inputData
+            for temp_name in converted_files:
+                if hasattr(self.inputData, temp_name):
+                    delattr(self.inputData, temp_name)
+
+        return error
