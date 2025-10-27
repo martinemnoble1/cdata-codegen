@@ -16,6 +16,42 @@ In the legacy CCP4i2 API, the syntax `['HKLIN2', target_flag]` has two meanings:
 
 This is fundamentally different from just "reading different columns" - it's actual **data transformation**.
 
+## Base Class Helper Method
+
+All file conversion methods use a shared helper in the **CDataFile base class**:
+
+```python
+class CDataFile(CData):
+    def _get_conversion_output_path(
+        self,
+        target_content_type: str,
+        target_extension: Optional[str] = None,
+        work_directory: Optional[Any] = None
+    ) -> str:
+        """Calculate output path for converted file (generic for all file types).
+
+        Args:
+            target_content_type: Name of target format (e.g., 'FMEAN', 'MMCIF')
+            target_extension: Optional extension override (e.g., '.cif').
+                            If None, uses input file's extension.
+            work_directory: Fallback directory if input dir not writable
+
+        Examples:
+            # MTZ conversion (preserves .mtz extension)
+            obs_file._get_conversion_output_path('FMEAN')
+            # → '/data/input_as_FMEAN.mtz'
+
+            # PDB to mmCIF (changes extension)
+            pdb_file._get_conversion_output_path('MMCIF', target_extension='.cif')
+            # → '/data/model_as_MMCIF.cif'
+        """
+```
+
+This generic helper is available to **all CDataFile descendants**, including:
+- MTZ files (CObsDataFile, CPhsDataFile, etc.)
+- Coordinate files (CPdbDataFile for PDB↔mmCIF)
+- Any future file conversion needs
+
 ## Conversion Methods
 
 Each `CMiniMtzDataFile` subclass that supports multiple content types now has `as_CONTENTTYPE()` methods:
@@ -336,19 +372,24 @@ def test_no_conversion_when_flags_match(plugin_script):
 ## Files Modified
 
 ### Created/Modified:
-1. ✅ `core/CCP4XtalData.py`
+1. ✅ `core/base_object/base_classes.py`
+   - Added `_get_conversion_output_path()` helper method to **CDataFile base class**
+   - Generic implementation supports all file types with optional `target_extension` parameter
+   - Enables future conversions for CPdbDataFile (PDB↔mmCIF) and other file types
+
+2. ✅ `core/CCP4XtalData.py`
    - Added `as_IPAIR()`, `as_FPAIR()`, `as_IMEAN()`, `as_FMEAN()` to `CObsDataFile`
    - Added `as_HL()`, `as_PHIFOM()` to `CPhsDataFile`
    - Added `as_FPHI()` to `CMapCoeffsDataFile`
-   - Added `_get_conversion_output_path()` helper method
+   - All methods use `_get_conversion_output_path(work_directory=work_directory)` from base class
 
-2. ✅ `core/CCP4PluginScript.py`
+3. ✅ `core/CCP4PluginScript.py`
    - Updated `makeHklin()` to detect and handle conversions
    - Added `_get_content_flag_name()` helper method
    - Added temporary file object creation for converted files
    - Added cleanup in finally block
 
-3. ✅ `tests/test_cpluginscript_makehklin.py`
+4. ✅ `tests/test_cpluginscript_makehklin.py`
    - Updated `test_override_content_flag` → `test_override_content_flag_triggers_conversion`
    - Updated `test_contentflag_restoration` → `test_no_conversion_when_flags_match`
    - Both tests now reflect conversion behavior

@@ -95,12 +95,8 @@ class CPerformanceIndicator(CPerformanceIndicatorStub):
     pass
 
 
-class CPhaseErrorPerformance(CPhaseErrorPerformanceStub, CPerformanceIndicator):
+class CPhaseErrorPerformance(CPhaseErrorPerformanceStub):
     """
-    
-    Inherits from:
-    - CPhaseErrorPerformanceStub: Metadata and structure
-    - CPerformanceIndicator: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CPhaseErrorPerformanceStub with implementation-specific methods.
@@ -111,12 +107,8 @@ class CPhaseErrorPerformance(CPhaseErrorPerformanceStub, CPerformanceIndicator):
     pass
 
 
-class CRefinementPerformance(CRefinementPerformanceStub, CPerformanceIndicator):
+class CRefinementPerformance(CRefinementPerformanceStub):
     """
-    
-    Inherits from:
-    - CRefinementPerformanceStub: Metadata and structure
-    - CPerformanceIndicator: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CRefinementPerformanceStub with implementation-specific methods.
@@ -127,12 +119,8 @@ class CRefinementPerformance(CRefinementPerformanceStub, CPerformanceIndicator):
     pass
 
 
-class CServalcatPerformance(CServalcatPerformanceStub, CPerformanceIndicator):
+class CServalcatPerformance(CServalcatPerformanceStub):
     """
-    
-    Inherits from:
-    - CServalcatPerformanceStub: Metadata and structure
-    - CPerformanceIndicator: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CServalcatPerformanceStub with implementation-specific methods.
@@ -143,12 +131,8 @@ class CServalcatPerformance(CServalcatPerformanceStub, CPerformanceIndicator):
     pass
 
 
-class CSuperposePerformance(CSuperposePerformanceStub, CPerformanceIndicator):
+class CSuperposePerformance(CSuperposePerformanceStub):
     """
-    
-    Inherits from:
-    - CSuperposePerformanceStub: Metadata and structure
-    - CPerformanceIndicator: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CSuperposePerformanceStub with implementation-specific methods.
@@ -159,12 +143,8 @@ class CSuperposePerformance(CSuperposePerformanceStub, CPerformanceIndicator):
     pass
 
 
-class CTestObsConversionsPerformance(CTestObsConversionsPerformanceStub, CPerformanceIndicator):
+class CTestObsConversionsPerformance(CTestObsConversionsPerformanceStub):
     """
-    
-    Inherits from:
-    - CTestObsConversionsPerformanceStub: Metadata and structure
-    - CPerformanceIndicator: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CTestObsConversionsPerformanceStub with implementation-specific methods.

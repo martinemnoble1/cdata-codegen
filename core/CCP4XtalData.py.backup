@@ -337,57 +337,8 @@ class CFreeRDataFile(CFreeRDataFileStub):
     Add file I/O, validation, and business logic here.
     """
 
-    def _introspect_content_flag(self) -> Optional[int]:
-        """
-        Auto-detect content flag by reading MTZ columns and matching against
-        CONTENT_SIGNATURE_LIST.
-
-        This method uses gemmi to read the MTZ file and extract column labels,
-        then compares them against the class's CONTENT_SIGNATURE_LIST to
-        determine the appropriate contentFlag value.
-
-        Returns:
-            Detected content flag (1-indexed), or None if file cannot be read
-            or no signature matches.
-        """
-        from pathlib import Path
-
-        # Check if file exists
-        file_path = self.getFullPath()
-        if not file_path or not Path(file_path).exists():
-            return None
-
-        # Check if class has CONTENT_SIGNATURE_LIST
-        if not hasattr(self.__class__, 'CONTENT_SIGNATURE_LIST'):
-            return None
-
-        signature_list = self.__class__.CONTENT_SIGNATURE_LIST
-
-        try:
-            import gemmi
-
-            # Read MTZ file
-            mtz = gemmi.read_mtz_file(file_path)
-
-            # Extract column labels (just the names, not types)
-            column_labels = [col.label for col in mtz.columns]
-            column_set = set(column_labels)
-
-            # Match against signatures
-            for idx, required_columns in enumerate(signature_list):
-                required_set = set(required_columns)
-
-                # Check if all required columns are present
-                if required_set.issubset(column_set):
-                    # Match found: return contentFlag (1-indexed)
-                    return idx + 1
-
-            # No match found
-            return None
-
-        except Exception:
-            # File reading error or gemmi not available
-            return None
+    # Add your methods here
+    pass
 
 
 class CGenericReflDataFile(CGenericReflDataFileStub):
@@ -586,67 +537,6 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
 
     # Note: _get_conversion_output_path() is now in CDataFile base class
 
-    def _introspect_content_flag(self) -> Optional[int]:
-        """
-        Auto-detect content flag by reading MTZ columns and matching against
-        CONTENT_SIGNATURE_LIST.
-
-        This method uses gemmi to read the MTZ file and extract column labels,
-        then compares them against the class's CONTENT_SIGNATURE_LIST to
-        determine the appropriate contentFlag value.
-
-        Returns:
-            Detected content flag (1-indexed), or None if:
-            - File doesn't exist
-            - File cannot be read
-            - No signature matches the columns
-            - Class has no CONTENT_SIGNATURE_LIST
-
-        Example:
-            >>> obs_file = CObsDataFile('/path/to/file.mtz')
-            >>> obs_file.setContentFlag()  # Auto-detects from file
-            >>> print(obs_file.contentFlag)  # 4 (if columns are F, SIGF)
-        """
-        from pathlib import Path
-
-        # Check if file exists
-        file_path = self.getFullPath()
-        if not file_path or not Path(file_path).exists():
-            return None
-
-        # Check if class has CONTENT_SIGNATURE_LIST
-        if not hasattr(self.__class__, 'CONTENT_SIGNATURE_LIST'):
-            return None
-
-        signature_list = self.__class__.CONTENT_SIGNATURE_LIST
-
-        try:
-            import gemmi
-
-            # Read MTZ file
-            mtz = gemmi.read_mtz_file(file_path)
-
-            # Extract column labels (just the names, not types)
-            column_labels = [col.label for col in mtz.columns]
-            column_set = set(column_labels)
-
-            # Match against signatures
-            for idx, required_columns in enumerate(signature_list):
-                required_set = set(required_columns)
-
-                # Check if all required columns are present
-                if required_set.issubset(column_set):
-                    # Match found: return contentFlag (1-indexed)
-                    return idx + 1
-
-            # No match found
-            return None
-
-        except Exception as e:
-            # File reading error or gemmi not available
-            # Could log this in the future
-            return None
-
 
 class CMiniMtzDataFileList(CMiniMtzDataFileListStub):
     """
@@ -710,12 +600,8 @@ class CMtzColumnGroup(CMtzColumnGroupStub):
     pass
 
 
-class CMtzColumnGroupType(CMtzColumnGroupTypeStub, CColumnType):
+class CMtzColumnGroupType(CMtzColumnGroupTypeStub):
     """
-    
-    Inherits from:
-    - CMtzColumnGroupTypeStub: Metadata and structure
-    - CColumnType: Shared full-fat methods
     A list of recognised MTZ column types
     
     Extends CMtzColumnGroupTypeStub with implementation-specific methods.
@@ -1135,12 +1021,8 @@ class CUnmergedDataFileList(CUnmergedDataFileListStub):
     pass
 
 
-class CUnmergedMtzDataFile(CUnmergedMtzDataFileStub, CMtzDataFile):
+class CUnmergedMtzDataFile(CUnmergedMtzDataFileStub):
     """
-    
-    Inherits from:
-    - CUnmergedMtzDataFileStub: Metadata and structure
-    - CMtzDataFile: Shared full-fat methods
     An MTZ experimental data file
     
     Extends CUnmergedMtzDataFileStub with implementation-specific methods.

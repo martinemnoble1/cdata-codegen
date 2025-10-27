@@ -107,12 +107,8 @@ class CHostName(CHostNameStub):
     pass
 
 
-class CHostname(CHostnameStub, CHostName):
+class CHostname(CHostnameStub):
     """
-    
-    Inherits from:
-    - CHostnameStub: Metadata and structure
-    - CHostName: Shared full-fat methods
     Computer name
     
     Extends CHostnameStub with implementation-specific methods.

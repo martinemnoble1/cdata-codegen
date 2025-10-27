@@ -35,12 +35,8 @@ class CCollection(CCollectionStub):
     pass
 
 
-class CDict(CDictStub, CCollection):
+class CDict(CDictStub):
     """
-    
-    Inherits from:
-    - CDictStub: Metadata and structure
-    - CCollection: Shared full-fat methods
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
     
     Extends CDictStub with implementation-specific methods.
