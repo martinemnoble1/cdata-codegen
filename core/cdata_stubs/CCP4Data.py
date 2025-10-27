@@ -18,6 +18,113 @@ from core.base_object.fundamental_types import CFloat, CInt, CList, CString
 
 @cdata_class(
     error_codes={
+        "201": {
+            "description": "Word contains white space item"
+        }
+    },
+    qualifiers={
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0,
+    },
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
+    qualifiers_definition={
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+    },
+)
+class COneWordStub(CString):
+    """
+    A single word string - no white space
+
+    This is a pure data class stub. Extend it in core/COneWord.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize COneWordStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "201": {
+            "description": "Range selection contains invalid character"
+        },
+        "202": {
+            "description": "Range selection contains bad syntax"
+        }
+    },
+    qualifiers={
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0,
+    },
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
+    qualifiers_definition={
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+    },
+)
+class CRangeSelectionStub(CString):
+    """
+    A string
+
+    This is a pure data class stub. Extend it in core/CRangeSelection.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRangeSelectionStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
         "101": {
             "description": "String too short"
         },
@@ -68,131 +175,6 @@ class CJobTitleStub(CString):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CJobTitleStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "List shorter than required minimum length"
-        },
-        "102": {
-            "description": "List longer than required maximum length"
-        },
-        "103": {
-            "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-            "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-            "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-            "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-            "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-            "description": "Invalid item class"
-        },
-        "110": {
-            "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-            "description": "No list item object set for list"
-        }
-    },
-    qualifiers={
-        "listMinLength": 0,
-        "listMaxLength": 250,
-    },
-    qualifiers_order=[
-        'listMinLength',
-        'listMaxLength',
-        'listCompare',
-        'nameRoot'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-        "nameRoot": {'type': 'str', 'description': 'Name hint for the base name of output files'},
-    },
-)
-class COutputFileListStub(CList):
-    """
-    A list with all items of one CData sub-class
-
-    This is a pure data class stub. Extend it in core/COutputFileList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize COutputFileListStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "201": {
-            "description": "Word contains white space item"
-        }
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0,
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
-    qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
-    },
-)
-class COneWordStub(CString):
-    """
-    A single word string - no white space
-
-    This is a pure data class stub. Extend it in core/COneWord.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize COneWordStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -425,6 +407,41 @@ class CPatchSelectionStub(CData):
 
 @cdata_class(
     error_codes={
+        "101": {
+            "description": "End of range less than start"
+        },
+        "102": {
+            "description": "End of range greater than start"
+        }
+    },
+    qualifiers_order=['compare'],
+    qualifiers_definition={
+        "compare": {'type': 'int', 'description': 'If value is  1/-1 the end value must be greater/less than start.'},
+    },
+    contents_order=['start', 'end'],
+)
+class CRangeStub(CData):
+    """
+    Base class for CIntRange and CFloatRange
+
+    This is a pure data class stub. Extend it in core/CRange.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRangeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
         "0": {
             "severity": 0,
             "description": "OK"
@@ -633,6 +650,133 @@ class CI2DataTypeStub(CString):
 
 @cdata_class(
     error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 0,
+        "listMaxLength": 250,
+    },
+    qualifiers_order=[
+        'listMinLength',
+        'listMaxLength',
+        'listCompare',
+        'nameRoot'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+        "nameRoot": {'type': 'str', 'description': 'Name hint for the base name of output files'},
+    },
+)
+class COutputFileListStub(CList):
+    """
+    A list with all items of one CData sub-class
+
+    This is a pure data class stub. Extend it in core/COutputFileList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize COutputFileListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "below minimum"
+        },
+        "102": {
+            "description": "above maximum"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        }
+    },
+    qualifiers={
+        "max": None,
+        "min": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+    },
+    qualifiers_order=[
+        'min',
+        'max',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText'],
+    qualifiers_definition={
+        "default": {'type': 'int'},
+        "max": {'type': 'int', 'description': 'The inclusive minimum allowed value'},
+        "min": {'type': 'int', 'description': 'The inclusive maximum allowed value'},
+        "enumerators": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A Python list of allowed or recommended values - see onlyEnumerators'},
+        "menuText": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A Python list of strings, matching items in enumerators list, to appear on GUI menu'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+    },
+)
+class CJobStatusStub(CInt):
+    """
+    An integer
+
+    This is a pure data class stub. Extend it in core/CJobStatus.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CJobStatusStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
         "0": {
             "severity": 0,
             "description": "OK"
@@ -771,150 +915,6 @@ class CBaseDataStub(CData):
 @cdata_class(
     error_codes={
         "101": {
-            "description": "below minimum"
-        },
-        "102": {
-            "description": "above maximum"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        }
-    },
-    qualifiers={
-        "max": None,
-        "min": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-    },
-    qualifiers_order=[
-        'min',
-        'max',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText'],
-    qualifiers_definition={
-        "default": {'type': 'int'},
-        "max": {'type': 'int', 'description': 'The inclusive minimum allowed value'},
-        "min": {'type': 'int', 'description': 'The inclusive maximum allowed value'},
-        "enumerators": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A Python list of allowed or recommended values - see onlyEnumerators'},
-        "menuText": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A Python list of strings, matching items in enumerators list, to appear on GUI menu'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-    },
-)
-class CJobStatusStub(CInt):
-    """
-    An integer
-
-    This is a pure data class stub. Extend it in core/CJobStatus.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CJobStatusStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "201": {
-            "description": "Range selection contains invalid character"
-        },
-        "202": {
-            "description": "Range selection contains bad syntax"
-        }
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0,
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
-    qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
-    },
-)
-class CRangeSelectionStub(CString):
-    """
-    A string
-
-    This is a pure data class stub. Extend it in core/CRangeSelection.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRangeSelectionStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "End of range less than start"
-        },
-        "102": {
-            "description": "End of range greater than start"
-        }
-    },
-    qualifiers_order=['compare'],
-    qualifiers_definition={
-        "compare": {'type': 'int', 'description': 'If value is  1/-1 the end value must be greater/less than start.'},
-    },
-    contents_order=['start', 'end'],
-)
-class CRangeStub(CData):
-    """
-    Base class for CIntRange and CFloatRange
-
-    This is a pure data class stub. Extend it in core/CRange.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRangeStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
             "description": "String too short"
         },
         "102": {
@@ -964,59 +964,6 @@ class CFollowFromJobStub(CUUIDStub):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CFollowFromJobStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "Attempting to access unknown item"
-        },
-        "102": {
-            "description": "Unknown error trying to create new item"
-        },
-        "103": {
-            "description": "Attempting to add item which is not appropriate class"
-        }
-    },
-    qualifiers={
-        "default": {},
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CDictStub(CCollectionStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CDict.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CDictStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -1101,6 +1048,59 @@ class CIntRangeStub(CRangeStub):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CIntRangeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "Attempting to access unknown item"
+        },
+        "102": {
+            "description": "Unknown error trying to create new item"
+        },
+        "103": {
+            "description": "Attempting to add item which is not appropriate class"
+        }
+    },
+    qualifiers={
+        "default": {},
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+)
+class CDictStub(CCollectionStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CDict.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CDictStub.
 
         Args:
             parent: Parent object in hierarchy

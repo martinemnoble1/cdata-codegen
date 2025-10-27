@@ -21,63 +21,155 @@ from core.cdata_stubs.CCP4File import CFilePathStub, CProjectIdStub
 
 
 @cdata_class(
+    attributes={
+        "rigid_group_id": attribute(AttributeType.STRING),
+        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+    },
     error_codes={
-        "101": {
-            "description": "List shorter than required minimum length"
+        "0": {
+            "severity": 0,
+            "description": "OK"
         },
-        "102": {
-            "description": "List longer than required maximum length"
+        "1": {
+            "severity": 1,
+            "description": "Data has undefined value"
         },
-        "103": {
-            "description": "Consecutive values in list fail comparison test"
+        "2": {
+            "severity": 3,
+            "description": "Data has undefined value"
         },
-        "104": {
-            "description": "Attempting to add object of wrong type"
+        "3": {
+            "severity": 2,
+            "description": "Missing data"
         },
-        "105": {
-            "description": "Attempting to add object of correct type but wrong qualifiers"
+        "4": {
+            "description": "Missing data"
         },
-        "106": {
-            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        "5": {
+            "description": "Attempting to set data of wrong type"
         },
-        "107": {
-            "description": "Deleting item will reduce list below minimum length"
+        "6": {
+            "description": "Default value does not satisfy validity check"
         },
-        "108": {
-            "description": "Adding item will extend list beyond maximum length"
+        "7": {
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
         },
-        "109": {
-            "description": "Invalid item class"
+        "8": {
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
         },
-        "110": {
-            "description": "etree (XML) list item of wrong type"
+        "9": {
+            "description": "Failed to get property"
         },
-        "112": {
-            "description": "No list item object set for list"
+        "10": {
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
+        },
+        "11": {
+            "description": "Failed to set property:"
+        },
+        "12": {
+            "description": "Undetermined error setting value from XML"
+        },
+        "13": {
+            "description": "Unrecognised class name in qualifier"
+        },
+        "14": {
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
+        },
+        "15": {
+            "description": "Error saving qualifier to XML"
+        },
+        "16": {
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
+        },
+        "17": {
+            "description": "Attempting to set unrecognised qualifier"
+        },
+        "18": {
+            "description": "Attempting to set qualifier with wrong type"
+        },
+        "19": {
+            "description": "Attempting to set qualifier with wrong list item type"
+        },
+        "20": {
+            "description": "Error creating a list/dict item object"
+        },
+        "21": {
+            "description": "Unknown error setting qualifiers from Xml file"
+        },
+        "22": {
+            "description": "Unknown error testing validity"
+        },
+        "23": {
+            "description": "Error saving data object to XML"
+        },
+        "24": {
+            "description": "Unable to test validity of default",
+            "severity": 2
+        },
+        "300": {
+            "description": "Compared objects are the same",
+            "severity": 0
+        },
+        "315": {
+            "description": "Both compared objects are null",
+            "severity": 0
+        },
+        "301": {
+            "description": "Unable to compare this class of data",
+            "severity": 2
+        },
+        "302": {
+            "description": "Other data has null value"
+        },
+        "303": {
+            "description": "My data has null value"
+        },
+        "304": {
+            "description": "Data has different values"
         }
     },
     qualifiers={
-        "listMinLength": 0,
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
     },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
 )
-class CRefmacRigidGroupListStub(CList):
+class CRefmacRigidGroupItemStub(CData):
     """
-    A list with all items of one CData sub-class
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
 
-    This is a pure data class stub. Extend it in core/CRefmacRigidGroupList.py
+    This is a pure data class stub. Extend it in core/CRefmacRigidGroupItem.py
     to add methods and implementation-specific functionality.
     """
 
+    rigid_group_id: Optional[CString] = None
+    segmentList: Optional[CList] = None
+
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CRefmacRigidGroupListStub.
+        Initialize CRefmacRigidGroupItemStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -249,214 +341,63 @@ class CRefmacAnomalousAtomStub(CData):
 
 
 @cdata_class(
-    attributes={
-        "chain_id": attribute(AttributeType.STRING),
-        "residue_1": attribute(AttributeType.INT),
-        "residue_2": attribute(AttributeType.INT),
-    },
     error_codes={
         "101": {
-            "description": "No sequence identity or structure RMS to target set"
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
         }
     },
     qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
+        "listMinLength": 0,
     },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
     qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
     },
-    contents_order=['chain_id', 'residue_1', 'residue_2'],
 )
-class CRefmacRigidGroupSegmentStub(CData):
+class CRefmacRigidGroupListStub(CList):
     """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+    A list with all items of one CData sub-class
 
-    This is a pure data class stub. Extend it in core/CRefmacRigidGroupSegment.py
+    This is a pure data class stub. Extend it in core/CRefmacRigidGroupList.py
     to add methods and implementation-specific functionality.
     """
 
-    chain_id: Optional[CString] = None
-    residue_1: Optional[CInt] = None
-    residue_2: Optional[CInt] = None
-
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CRefmacRigidGroupSegmentStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "rigid_group_id": attribute(AttributeType.STRING),
-        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
-    },
-    error_codes={
-        "0": {
-            "severity": 0,
-            "description": "OK"
-        },
-        "1": {
-            "severity": 1,
-            "description": "Data has undefined value"
-        },
-        "2": {
-            "severity": 3,
-            "description": "Data has undefined value"
-        },
-        "3": {
-            "severity": 2,
-            "description": "Missing data"
-        },
-        "4": {
-            "description": "Missing data"
-        },
-        "5": {
-            "description": "Attempting to set data of wrong type"
-        },
-        "6": {
-            "description": "Default value does not satisfy validity check"
-        },
-        "7": {
-            "severity": 2,
-            "description": "Unrecognised qualifier in data input"
-        },
-        "8": {
-            "severity": 2,
-            "description": "Attempting to get inaccessible attribute:"
-        },
-        "9": {
-            "description": "Failed to get property"
-        },
-        "10": {
-            "severity": 2,
-            "description": "Attempting to set inaccessible attribute:"
-        },
-        "11": {
-            "description": "Failed to set property:"
-        },
-        "12": {
-            "description": "Undetermined error setting value from XML"
-        },
-        "13": {
-            "description": "Unrecognised class name in qualifier"
-        },
-        "14": {
-            "severity": 2,
-            "description": "No object name when saving qualifiers to XML"
-        },
-        "15": {
-            "description": "Error saving qualifier to XML"
-        },
-        "16": {
-            "severity": 2,
-            "description": "Unrecognised item in XML data file"
-        },
-        "17": {
-            "description": "Attempting to set unrecognised qualifier"
-        },
-        "18": {
-            "description": "Attempting to set qualifier with wrong type"
-        },
-        "19": {
-            "description": "Attempting to set qualifier with wrong list item type"
-        },
-        "20": {
-            "description": "Error creating a list/dict item object"
-        },
-        "21": {
-            "description": "Unknown error setting qualifiers from Xml file"
-        },
-        "22": {
-            "description": "Unknown error testing validity"
-        },
-        "23": {
-            "description": "Error saving data object to XML"
-        },
-        "24": {
-            "description": "Unable to test validity of default",
-            "severity": 2
-        },
-        "300": {
-            "description": "Compared objects are the same",
-            "severity": 0
-        },
-        "315": {
-            "description": "Both compared objects are null",
-            "severity": 0
-        },
-        "301": {
-            "description": "Unable to compare this class of data",
-            "severity": 2
-        },
-        "302": {
-            "description": "Other data has null value"
-        },
-        "303": {
-            "description": "My data has null value"
-        },
-        "304": {
-            "description": "Data has different values"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CRefmacRigidGroupItemStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CRefmacRigidGroupItem.py
-    to add methods and implementation-specific functionality.
-    """
-
-    rigid_group_id: Optional[CString] = None
-    segmentList: Optional[CList] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRefmacRigidGroupItemStub.
+        Initialize CRefmacRigidGroupListStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -586,6 +527,65 @@ class CRefmacRestraintsDataFileStub(CDataFile):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRefmacRestraintsDataFileStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "chain_id": attribute(AttributeType.STRING),
+        "residue_1": attribute(AttributeType.INT),
+        "residue_2": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "101": {
+            "description": "No sequence identity or structure RMS to target set"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['chain_id', 'residue_1', 'residue_2'],
+)
+class CRefmacRigidGroupSegmentStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CRefmacRigidGroupSegment.py
+    to add methods and implementation-specific functionality.
+    """
+
+    chain_id: Optional[CString] = None
+    residue_1: Optional[CInt] = None
+    residue_2: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRefmacRigidGroupSegmentStub.
 
         Args:
             parent: Parent object in hierarchy

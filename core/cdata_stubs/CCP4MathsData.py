@@ -17,188 +17,6 @@ from core.base_object.fundamental_types import CFloat
 
 
 @cdata_class(
-    attributes={
-        "x": attribute(AttributeType.FLOAT),
-        "y": attribute(AttributeType.FLOAT),
-        "z": attribute(AttributeType.FLOAT),
-    },
-    error_codes={
-        "201": {
-            "description": "Attempting arithmetic with inappropriate data type"
-        },
-        "202": {
-            "description": "Attempting arithmetic in unset data object"
-        },
-        "203": {
-            "description": "Attempting arithmetic with unset data object as argument"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CXyzStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CXyz.py
-    to add methods and implementation-specific functionality.
-    """
-
-    x: Optional[CFloat] = None
-    y: Optional[CFloat] = None
-    z: Optional[CFloat] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CXyzStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "below minimum"
-        },
-        "102": {
-            "description": "above maximum"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        }
-    },
-    qualifiers={
-        "max": None,
-        "min": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-    },
-    qualifiers_order=[
-        'min',
-        'max',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText'],
-    qualifiers_definition={
-        "default": {'type': 'float'},
-        "max": {'description': 'The inclusive maximum value'},
-        "min": {'description': 'The inclusive minimum value'},
-        "enumerators": {'type': 'list', 'description': 'A Python list of allowed or recommended values - see onlyEnumerators'},
-        "menuText": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A Python list of strings, matching items in enumerators list, to appear on GUI menu'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-    },
-)
-class CAngleStub(CFloat):
-    """
-    An angle
-
-    This is a pure data class stub. Extend it in core/CAngle.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CAngleStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "xMin": attribute(AttributeType.FLOAT),
-        "yMin": attribute(AttributeType.FLOAT),
-        "zMin": attribute(AttributeType.FLOAT),
-        "xMax": attribute(AttributeType.FLOAT),
-        "yMax": attribute(AttributeType.FLOAT),
-        "zMax": attribute(AttributeType.FLOAT),
-    },
-    error_codes={
-        "201": {
-            "description": "Maximum x,y or z value less than minimum"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CXyzBoxStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CXyzBox.py
-    to add methods and implementation-specific functionality.
-    """
-
-    xMin: Optional[CFloat] = None
-    yMin: Optional[CFloat] = None
-    zMin: Optional[CFloat] = None
-    xMax: Optional[CFloat] = None
-    yMax: Optional[CFloat] = None
-    zMax: Optional[CFloat] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CXyzBoxStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
     error_codes={
         "0": {
             "severity": 0,
@@ -341,6 +159,188 @@ class CMatrix33Stub(CData):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CMatrix33Stub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "xMin": attribute(AttributeType.FLOAT),
+        "yMin": attribute(AttributeType.FLOAT),
+        "zMin": attribute(AttributeType.FLOAT),
+        "xMax": attribute(AttributeType.FLOAT),
+        "yMax": attribute(AttributeType.FLOAT),
+        "zMax": attribute(AttributeType.FLOAT),
+    },
+    error_codes={
+        "201": {
+            "description": "Maximum x,y or z value less than minimum"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+)
+class CXyzBoxStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CXyzBox.py
+    to add methods and implementation-specific functionality.
+    """
+
+    xMin: Optional[CFloat] = None
+    yMin: Optional[CFloat] = None
+    zMin: Optional[CFloat] = None
+    xMax: Optional[CFloat] = None
+    yMax: Optional[CFloat] = None
+    zMax: Optional[CFloat] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CXyzBoxStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "below minimum"
+        },
+        "102": {
+            "description": "above maximum"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        }
+    },
+    qualifiers={
+        "max": None,
+        "min": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+    },
+    qualifiers_order=[
+        'min',
+        'max',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText'],
+    qualifiers_definition={
+        "default": {'type': 'float'},
+        "max": {'description': 'The inclusive maximum value'},
+        "min": {'description': 'The inclusive minimum value'},
+        "enumerators": {'type': 'list', 'description': 'A Python list of allowed or recommended values - see onlyEnumerators'},
+        "menuText": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A Python list of strings, matching items in enumerators list, to appear on GUI menu'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+    },
+)
+class CAngleStub(CFloat):
+    """
+    An angle
+
+    This is a pure data class stub. Extend it in core/CAngle.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CAngleStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "x": attribute(AttributeType.FLOAT),
+        "y": attribute(AttributeType.FLOAT),
+        "z": attribute(AttributeType.FLOAT),
+    },
+    error_codes={
+        "201": {
+            "description": "Attempting arithmetic with inappropriate data type"
+        },
+        "202": {
+            "description": "Attempting arithmetic in unset data object"
+        },
+        "203": {
+            "description": "Attempting arithmetic with unset data object as argument"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+)
+class CXyzStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CXyz.py
+    to add methods and implementation-specific functionality.
+    """
+
+    x: Optional[CFloat] = None
+    y: Optional[CFloat] = None
+    z: Optional[CFloat] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CXyzStub.
 
         Args:
             parent: Parent object in hierarchy

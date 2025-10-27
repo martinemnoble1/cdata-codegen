@@ -87,6 +87,169 @@ class CImportedJobDataListStub(CList):
 
 
 @cdata_class(
+    attributes={
+        "name": attribute(AttributeType.CUSTOM, custom_class="COneWordStub"),
+        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataTypeStub"),
+        "label": attribute(AttributeType.STRING),
+        "fileName": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
+    },
+    error_codes={
+        "0": {
+            "severity": 0,
+            "description": "OK"
+        },
+        "1": {
+            "severity": 1,
+            "description": "Data has undefined value"
+        },
+        "2": {
+            "severity": 3,
+            "description": "Data has undefined value"
+        },
+        "3": {
+            "severity": 2,
+            "description": "Missing data"
+        },
+        "4": {
+            "description": "Missing data"
+        },
+        "5": {
+            "description": "Attempting to set data of wrong type"
+        },
+        "6": {
+            "description": "Default value does not satisfy validity check"
+        },
+        "7": {
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
+        },
+        "8": {
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
+        },
+        "9": {
+            "description": "Failed to get property"
+        },
+        "10": {
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
+        },
+        "11": {
+            "description": "Failed to set property:"
+        },
+        "12": {
+            "description": "Undetermined error setting value from XML"
+        },
+        "13": {
+            "description": "Unrecognised class name in qualifier"
+        },
+        "14": {
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
+        },
+        "15": {
+            "description": "Error saving qualifier to XML"
+        },
+        "16": {
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
+        },
+        "17": {
+            "description": "Attempting to set unrecognised qualifier"
+        },
+        "18": {
+            "description": "Attempting to set qualifier with wrong type"
+        },
+        "19": {
+            "description": "Attempting to set qualifier with wrong list item type"
+        },
+        "20": {
+            "description": "Error creating a list/dict item object"
+        },
+        "21": {
+            "description": "Unknown error setting qualifiers from Xml file"
+        },
+        "22": {
+            "description": "Unknown error testing validity"
+        },
+        "23": {
+            "description": "Error saving data object to XML"
+        },
+        "24": {
+            "description": "Unable to test validity of default",
+            "severity": 2
+        },
+        "300": {
+            "description": "Compared objects are the same",
+            "severity": 0
+        },
+        "315": {
+            "description": "Both compared objects are null",
+            "severity": 0
+        },
+        "301": {
+            "description": "Unable to compare this class of data",
+            "severity": 2
+        },
+        "302": {
+            "description": "Other data has null value"
+        },
+        "303": {
+            "description": "My data has null value"
+        },
+        "304": {
+            "description": "Data has different values"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+)
+class CImportedJobDataStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CImportedJobData.py
+    to add methods and implementation-specific functionality.
+    """
+
+    name: Optional[COneWordStub] = None
+    dataType: Optional[CI2DataTypeStub] = None
+    label: Optional[CString] = None
+    fileName: Optional[CDataFile] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CImportedJobDataStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
     error_codes={
         "101": {
             "description": "Error parsing XML"
@@ -298,169 +461,6 @@ class CImportedJobDefinitionStub(CContainer):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CImportedJobDefinitionStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "name": attribute(AttributeType.CUSTOM, custom_class="COneWordStub"),
-        "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataTypeStub"),
-        "label": attribute(AttributeType.STRING),
-        "fileName": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
-    },
-    error_codes={
-        "0": {
-            "severity": 0,
-            "description": "OK"
-        },
-        "1": {
-            "severity": 1,
-            "description": "Data has undefined value"
-        },
-        "2": {
-            "severity": 3,
-            "description": "Data has undefined value"
-        },
-        "3": {
-            "severity": 2,
-            "description": "Missing data"
-        },
-        "4": {
-            "description": "Missing data"
-        },
-        "5": {
-            "description": "Attempting to set data of wrong type"
-        },
-        "6": {
-            "description": "Default value does not satisfy validity check"
-        },
-        "7": {
-            "severity": 2,
-            "description": "Unrecognised qualifier in data input"
-        },
-        "8": {
-            "severity": 2,
-            "description": "Attempting to get inaccessible attribute:"
-        },
-        "9": {
-            "description": "Failed to get property"
-        },
-        "10": {
-            "severity": 2,
-            "description": "Attempting to set inaccessible attribute:"
-        },
-        "11": {
-            "description": "Failed to set property:"
-        },
-        "12": {
-            "description": "Undetermined error setting value from XML"
-        },
-        "13": {
-            "description": "Unrecognised class name in qualifier"
-        },
-        "14": {
-            "severity": 2,
-            "description": "No object name when saving qualifiers to XML"
-        },
-        "15": {
-            "description": "Error saving qualifier to XML"
-        },
-        "16": {
-            "severity": 2,
-            "description": "Unrecognised item in XML data file"
-        },
-        "17": {
-            "description": "Attempting to set unrecognised qualifier"
-        },
-        "18": {
-            "description": "Attempting to set qualifier with wrong type"
-        },
-        "19": {
-            "description": "Attempting to set qualifier with wrong list item type"
-        },
-        "20": {
-            "description": "Error creating a list/dict item object"
-        },
-        "21": {
-            "description": "Unknown error setting qualifiers from Xml file"
-        },
-        "22": {
-            "description": "Unknown error testing validity"
-        },
-        "23": {
-            "description": "Error saving data object to XML"
-        },
-        "24": {
-            "description": "Unable to test validity of default",
-            "severity": 2
-        },
-        "300": {
-            "description": "Compared objects are the same",
-            "severity": 0
-        },
-        "315": {
-            "description": "Both compared objects are null",
-            "severity": 0
-        },
-        "301": {
-            "description": "Unable to compare this class of data",
-            "severity": 2
-        },
-        "302": {
-            "description": "Other data has null value"
-        },
-        "303": {
-            "description": "My data has null value"
-        },
-        "304": {
-            "description": "Data has different values"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CImportedJobDataStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CImportedJobData.py
-    to add methods and implementation-specific functionality.
-    """
-
-    name: Optional[COneWordStub] = None
-    dataType: Optional[CI2DataTypeStub] = None
-    label: Optional[CString] = None
-    fileName: Optional[CDataFile] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CImportedJobDataStub.
 
         Args:
             parent: Parent object in hierarchy

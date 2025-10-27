@@ -131,6 +131,10 @@ class CCootHistoryDataFileStub(CDataFile):
     to add methods and implementation-specific functionality.
     """
 
+    # Subtype constants
+    SUBTYPE_INITIAL = 1  # Coot 0-state.scm
+    SUBTYPE_HISTORY = 2  # Coot history.scm
+
     project: Optional[CProjectIdStub] = None
     baseName: Optional[CFilePathStub] = None
     relPath: Optional[CFilePathStub] = None

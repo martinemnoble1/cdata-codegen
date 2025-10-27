@@ -524,13 +524,66 @@ class CMergeMiniMtzList(CMergeMiniMtzListStub):
 class CMiniMtzDataFile(CMiniMtzDataFileStub):
     """
     An MTZ experimental data file
-    
+
     Extends CMiniMtzDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def _get_conversion_output_path(
+        self,
+        target_content_type: str,
+        work_directory: Optional[Any] = None
+    ) -> str:
+        """
+        Calculate output path for converted MTZ file.
+
+        This is a base class method used by all as_CONTENTTYPE() conversion methods.
+
+        Naming pattern: {inputroot}_as_{CONTENT_TYPE}.mtz
+        Location: Input file's directory (if writable), else work_directory
+
+        Args:
+            target_content_type: Name of target content type (e.g., 'IPAIR', 'FMEAN')
+            work_directory: Fallback directory if input dir not writable
+
+        Returns:
+            Full path to output file
+
+        Example:
+            >>> # In CObsDataFile.as_IPAIR()
+            >>> output_path = self._get_conversion_output_path('IPAIR', work_dir)
+            >>> # Returns: /data/input_as_IPAIR.mtz
+        """
+        from pathlib import Path
+
+        input_path = Path(self.getFullPath())
+        input_dir = input_path.parent
+        input_stem = input_path.stem  # Filename without extension
+        input_suffix = input_path.suffix  # .mtz
+
+        # Calculate output filename
+        output_name = f"{input_stem}_as_{target_content_type}{input_suffix}"
+
+        # Try input directory first
+        if input_dir.exists() and input_dir.is_dir():
+            output_path = input_dir / output_name
+            # Check if we can write there (basic check)
+            try:
+                # Try to create a test file
+                test_file = input_dir / f".write_test_{id(self)}"
+                test_file.touch()
+                test_file.unlink()
+                return str(output_path)
+            except (PermissionError, OSError):
+                pass
+
+        # Fall back to work directory
+        if work_directory:
+            work_dir = Path(work_directory)
+            return str(work_dir / output_name)
+
+        # Last resort: same as input (may fail at write time)
+        return str(input_dir / output_name)
 
 
 class CMiniMtzDataFileList(CMiniMtzDataFileListStub):
@@ -650,51 +703,6 @@ class CObsDataFile(CObsDataFileStub):
     Extends CObsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
-
-    def _get_conversion_output_path(self, target_content_type: str, work_directory: Optional[Any] = None) -> str:
-        """
-        Calculate output path for converted MTZ file.
-
-        Naming pattern: {inputroot}_as_{CONTENT_TYPE}.mtz
-        Location: Input file's directory (if writable), else work_directory
-
-        Args:
-            target_content_type: Name of target content type (e.g., 'IPAIR', 'FMEAN')
-            work_directory: Fallback directory if input dir not writable
-
-        Returns:
-            Full path to output file
-        """
-        from pathlib import Path
-
-        input_path = Path(self.getFullPath())
-        input_dir = input_path.parent
-        input_stem = input_path.stem  # Filename without extension
-        input_suffix = input_path.suffix  # .mtz
-
-        # Calculate output filename
-        output_name = f"{input_stem}_as_{target_content_type}{input_suffix}"
-
-        # Try input directory first
-        if input_dir.exists() and input_dir.is_dir():
-            output_path = input_dir / output_name
-            # Check if we can write there (basic check)
-            try:
-                # Try to create a test file
-                test_file = input_dir / f".write_test_{id(self)}"
-                test_file.touch()
-                test_file.unlink()
-                return str(output_path)
-            except (PermissionError, OSError):
-                pass
-
-        # Fall back to work directory
-        if work_directory:
-            work_dir = Path(work_directory)
-            return str(work_dir / output_name)
-
-        # Last resort: same as input (may fail at write time)
-        return str(input_dir / output_name)
 
     def as_IPAIR(self, work_directory: Optional[Any] = None) -> str:
         """
@@ -837,47 +845,6 @@ class CPhsDataFile(CPhsDataFileStub):
     Extends CPhsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
-
-    def _get_conversion_output_path(self, target_content_type: str, work_directory: Optional[Any] = None) -> str:
-        """
-        Calculate output path for converted MTZ file.
-
-        Naming pattern: {inputroot}_as_{CONTENT_TYPE}.mtz
-        Location: Input file's directory (if writable), else work_directory
-
-        Args:
-            target_content_type: Name of target content type (e.g., 'HL', 'PHIFOM')
-            work_directory: Fallback directory if input dir not writable
-
-        Returns:
-            Full path to output file
-        """
-        from pathlib import Path
-
-        input_path = Path(self.getFullPath())
-        input_dir = input_path.parent
-        input_stem = input_path.stem
-        input_suffix = input_path.suffix
-
-        output_name = f"{input_stem}_as_{target_content_type}{input_suffix}"
-
-        # Try input directory first
-        if input_dir.exists() and input_dir.is_dir():
-            output_path = input_dir / output_name
-            try:
-                test_file = input_dir / f".write_test_{id(self)}"
-                test_file.touch()
-                test_file.unlink()
-                return str(output_path)
-            except (PermissionError, OSError):
-                pass
-
-        # Fall back to work directory
-        if work_directory:
-            work_dir = Path(work_directory)
-            return str(work_dir / output_name)
-
-        return str(input_dir / output_name)
 
     def as_HL(self, work_directory: Optional[Any] = None) -> str:
         """

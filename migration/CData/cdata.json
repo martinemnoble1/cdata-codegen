@@ -4175,6 +4175,40 @@
         "414": {
           "description": "Failed to identify coordinate file format"
         }
+      },
+      "SUBTYPES": {
+        "SUBTYPE_UNKNOWN": {
+          "value": 0,
+          "description": "unknown"
+        },
+        "SUBTYPE_MODEL": {
+          "value": 1,
+          "description": "model"
+        },
+        "SUBTYPE_HOMOLOG": {
+          "value": 2,
+          "description": "homolog"
+        },
+        "SUBTYPE_FRAGMENT": {
+          "value": 3,
+          "description": "fragment"
+        },
+        "SUBTYPE_HEAVY_ATOMS": {
+          "value": 4,
+          "description": "heavy atoms"
+        }
+      },
+      "CONTENT_FLAGS": {
+        "CONTENT_FLAG_PDB": {
+          "value": 1,
+          "annotation": "PDB format",
+          "columns": null
+        },
+        "CONTENT_FLAG_MMCIF": {
+          "value": 2,
+          "annotation": "mmCIF format",
+          "columns": null
+        }
       }
     },
     "CPdbDataFileList": {
@@ -8514,6 +8548,16 @@
         },
         "320": {
           "description": "Unrecognised error attempting to load file"
+        }
+      },
+      "SUBTYPES": {
+        "SUBTYPE_INITIAL": {
+          "value": 1,
+          "description": "Coot 0-state.scm"
+        },
+        "SUBTYPE_HISTORY": {
+          "value": 2,
+          "description": "Coot history.scm"
         }
       }
     },
