@@ -68,14 +68,18 @@ def test_as_fmean_conversion(tmp_path):
     assert Path(output_path).exists(), f"Output file not created: {output_path}"
     print(f"✅ Conversion output created: {output_path}")
 
-    # Verify output has F, SIGF columns
+    # Verify output has structure factor columns
     columns = get_mtz_columns(output_path)
     print(f"Output columns: {columns}")
 
-    assert 'F' in columns, f"F column not found in output. Columns: {columns}"
-    assert 'SIGF' in columns, f"SIGF column not found in output. Columns: {columns}"
+    # ctruncate outputs FMEAN/SIGFMEAN (or sometimes F/SIGF)
+    has_f = 'F' in columns or 'FMEAN' in columns
+    has_sigf = 'SIGF' in columns or 'SIGFMEAN' in columns
 
-    print("✅ Output file contains F, SIGF columns")
+    assert has_f, f"F or FMEAN column not found. Columns: {columns}"
+    assert has_sigf, f"SIGF or SIGFMEAN column not found. Columns: {columns}"
+
+    print("✅ Output file contains structure factor columns")
 
 
 @pytest.mark.skipif(
@@ -110,7 +114,16 @@ def test_parrot_makehklin(tmp_path):
 
     # Call makeHklInput to create the merged hklin.mtz
     # This should trigger conversion of intensities to F, SIGF if needed
-    hklin_path = task.makeHklInput()
+    # makeHklInput returns (outfile, colnames, error) tuple
+    # Use [name, contentFlag] syntax to request FMEAN (4) conversion
+    from core.CCP4XtalData import CObsDataFile
+    hklin_path, colnames, error = task.makeHklInput(
+        miniMtzsIn=[['F_SIGF', CObsDataFile.CONTENT_FLAG_FMEAN], 'ABCD']
+    )
+
+    # Check for errors
+    if error and error.count() > 0:
+        print(f"Errors during makeHklInput: {error.report()}")
 
     # Verify hklin.mtz was created
     assert hklin_path is not None, "makeHklInput returned None"

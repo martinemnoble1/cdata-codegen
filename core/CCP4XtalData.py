@@ -892,9 +892,6 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         if wrapper_class is None:
             raise RuntimeError("ctruncate plugin not available")
 
-        # Create output path
-        output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
-
         # Create ctruncate instance with working directory
         ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
         wrapper = wrapper_class(parent=self, workDirectory=ctruncate_work)
@@ -912,26 +909,41 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         column_names = self.CONTENT_SIGNATURE_LIST[current_flag - 1]
 
         # Set column names based on current content flag
+        # IMPORTANT: Use .set() to mark the container as set (needed for isSet() check)
         if current_flag == self.CONTENT_FLAG_IPAIR:
             # Anomalous intensities: ['Iplus', 'SIGIplus', 'Iminus', 'SIGIminus']
-            inp.ISIGIanom.Ip = column_names[0]
-            inp.ISIGIanom.SIGIp = column_names[1]
-            inp.ISIGIanom.Im = column_names[2]
-            inp.ISIGIanom.SIGIm = column_names[3]
+            inp.ISIGIanom.set({
+                'Ip': column_names[0],
+                'SIGIp': column_names[1],
+                'Im': column_names[2],
+                'SIGIm': column_names[3]
+            })
         elif current_flag == self.CONTENT_FLAG_IMEAN:
             # Mean intensities: ['I', 'SIGI']
-            inp.ISIGI.I = column_names[0]
-            inp.ISIGI.SIGI = column_names[1]
+            inp.ISIGI.set({
+                'I': column_names[0],
+                'SIGI': column_names[1]
+            })
         elif current_flag == self.CONTENT_FLAG_FPAIR:
             # Anomalous structure factors: ['Fplus', 'SIGFplus', 'Fminus', 'SIGFminus']
             wrapper.container.controlParameters.AMPLITUDES.set(True)
-            inp.FSIGFanom.Fp = column_names[0]
-            inp.FSIGFanom.SIGFp = column_names[1]
-            inp.FSIGFanom.Fm = column_names[2]
-            inp.FSIGFanom.SIGFm = column_names[3]
+            inp.FSIGFanom.set({
+                'Fp': column_names[0],
+                'SIGFp': column_names[1],
+                'Fm': column_names[2],
+                'SIGFm': column_names[3]
+            })
 
         # Set output file path
-        wrapper.container.outputData.OBSOUT.setFullPath(output_path)
+        # Important: Output must go to work_directory (not input directory) to ensure writability
+        if work_directory:
+            from pathlib import Path
+            input_path = Path(self.getFullPath())
+            output_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
+            output_path = str(Path(work_directory) / output_name)
+        else:
+            output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
+        wrapper.container.outputData.HKLOUT.setFullPath(output_path)
 
         # Run ctruncate
         status = wrapper.process()
