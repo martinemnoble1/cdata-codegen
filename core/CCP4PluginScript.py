@@ -12,12 +12,28 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from core.base_object.base_classes import CData, CContainer
-from core.base_object.error_reporting import CErrorReport
+from core.base_object.error_reporting import CErrorReport, SEVERITY_ERROR, SEVERITY_WARNING
 from core.task_manager.def_xml_handler import DefXmlParser
 from core.task_manager.params_xml_handler import ParamsXmlHandler
 from core.CCP4TaskManager import TASKMANAGER
+from core.base_object.class_metadata import cdata_class
 
 
+@cdata_class(
+    error_codes={
+        '200': {'description': 'Error merging MTZ files'},
+        '201': {'description': 'Invalid miniMtzsIn specification'},
+        '202': {'description': 'File object has no CONTENT_SIGNATURE_LIST'},
+        '203': {'description': 'File object has no path set'},
+        '204': {'description': 'MTZ file not found'},
+        '205': {'description': 'File object not found in inputData or outputData'},
+        '206': {'description': 'Invalid contentFlag for file type'},
+        '207': {'description': 'Invalid item format in miniMtzsIn'},
+        '208': {'description': 'Conversion method not found on file object'},
+        '209': {'description': 'Conversion to requested format not yet implemented'},
+        '210': {'description': 'Error during MTZ file conversion'},
+    }
+)
 class CPluginScript(CData):
     """
     Base class for CCP4i2 wrappers and pipelines.
@@ -76,20 +92,9 @@ class CPluginScript(CData):
         self._def_parser = DefXmlParser()
         self._params_handler = ParamsXmlHandler()
 
-        # Create main container with standard sub-containers
+        # Create main container
         # CPluginScript is now the parent of the container
         self.container = CContainer(parent=self, name="container")
-
-        # Standard sub-containers will be created by loadDefFile() when loading from XML
-        # OR we create them here only if not loading from XML (i.e., xmlFile is None)
-        # This ensures backward compatibility while respecting XML-defined structure
-        if xmlFile is None:
-            # No XML file - create default empty containers
-            # Store them in container.__dict__ to avoid __setattr__ while keeping references
-            self.container.__dict__['inputData'] = CContainer(parent=self.container, name="inputData")
-            self.container.__dict__['outputData'] = CContainer(parent=self.container, name="outputData")
-            self.container.__dict__['controlParameters'] = CContainer(parent=self.container, name="controlParameters")
-            self.container.__dict__['guiAdmin'] = CContainer(parent=self.container, name="guiAdmin")
 
         # Error report for tracking issues during execution
         self.errorReport = CErrorReport()
@@ -97,6 +102,9 @@ class CPluginScript(CData):
         # Process management
         self._process = None
         self._status = None
+
+        # Command line for external program
+        self.commandLine = []
 
         # Working directory and file paths
         if workDirectory is not None:
@@ -107,12 +115,41 @@ class CPluginScript(CData):
         self.paramsFile = None
 
         # Load DEF file if available (defines container structure)
+        # This will create inputData, outputData, controlParameters, guiAdmin
+        # as children of self.container
         if self.TASKNAME:
             self._loadDefFile()
+
+        # Create default empty sub-containers ONLY if they don't exist after .def.xml loading
+        # This ensures backward compatibility for plugins without .def.xml files
+        self._ensure_standard_containers()
 
         # Load PARAMS file if provided (actual parameter values)
         if xmlFile:
             self.loadDataFromXml(xmlFile)
+
+    def _ensure_standard_containers(self):
+        """
+        Ensure standard sub-containers exist.
+
+        Creates inputData, outputData, controlParameters, and guiAdmin
+        as children of self.container only if they don't already exist.
+        This ensures backward compatibility for plugins without .def.xml files.
+        """
+        standard_containers = ['inputData', 'outputData', 'controlParameters', 'guiAdmin']
+
+        for container_name in standard_containers:
+            # Check if container exists as a child
+            try:
+                # Try to access via __getattr__ (which searches children)
+                getattr(self.container, container_name)
+            except AttributeError:
+                # Container doesn't exist - create it
+                # Store in __dict__ to avoid __setattr__ while keeping references
+                self.container.__dict__[container_name] = CContainer(
+                    parent=self.container,
+                    name=container_name
+                )
 
     def _loadDefFile(self):
         """
@@ -142,10 +179,16 @@ class CPluginScript(CData):
 
         task_manager = TASKMANAGER()
 
+        # Treat '0.0' (string or float) and empty string as "no version"
+        # for compatibility with defxml_lookup.json which uses empty strings
+        version = self.TASKVERSION
+        if version in ('0.0', '0', '', None, 0.0, 0):
+            version = None
+
         # Use CTaskManager's locate_def_xml method
         return task_manager.locate_def_xml(
             task_name=self.TASKNAME,
-            version=self.TASKVERSION
+            version=version
         )
 
     def loadContentsFromXml(self, fileName: str) -> CErrorReport:
@@ -378,9 +421,15 @@ class CPluginScript(CData):
             # Don't fail - checkOutputData should fix issues
 
         # Pre-process input files if needed
-        error = self.processInputFiles()
-        if error:
-            self.errorReport.extend(error)
+        result = self.processInputFiles()
+        # Handle both modern API (CErrorReport) and legacy API (int)
+        if isinstance(result, int):
+            # Legacy API: returns SUCCEEDED (0) or FAILED (1)
+            if result != self.SUCCEEDED:
+                return result
+        elif result:
+            # Modern API: returns CErrorReport (truthy if has errors)
+            self.errorReport.extend(result)
             return self.FAILED
 
         # Generate command and script
@@ -397,20 +446,63 @@ class CPluginScript(CData):
 
         return self.RUNNING
 
+    def _find_datafile_descendants(self, container) -> list:
+        """
+        Recursively find all CDataFile descendants in a container hierarchy.
+
+        Handles both CContainer children and CList elements.
+
+        Args:
+            container: Container to search
+
+        Returns:
+            List of (name, file_obj) tuples for all CDataFile descendants
+        """
+        from core.base_object.base_classes import CDataFile
+        from core.base_object.fundamental_types import CList
+
+        results = []
+
+        # Check all children of this container
+        for child in container.children():
+            # If it's a CDataFile, add it
+            if isinstance(child, CDataFile):
+                results.append((child.name, child))
+            # If it's a CList, check its elements
+            elif isinstance(child, CList):
+                for i, item in enumerate(child):
+                    # If the list item is a CDataFile, add it
+                    if isinstance(item, CDataFile):
+                        # Use list element name if available, otherwise use index
+                        item_name = item.name if hasattr(item, 'name') and item.name else f"{child.name}[{i}]"
+                        results.append((item_name, item))
+                    # If the list item is a container, recurse into it
+                    elif hasattr(item, 'children'):
+                        results.extend(self._find_datafile_descendants(item))
+            # If it's a container, recurse into it
+            elif hasattr(child, 'children'):
+                results.extend(self._find_datafile_descendants(child))
+
+        return results
+
     def checkInputData(self) -> CErrorReport:
         """
         Validate that input data is correct and files exist.
 
-        This method checks all items in the inputData container and
-        verifies that files marked with mustExist actually exist.
+        This method recursively checks all CDataFile descendants in the
+        entire container hierarchy and verifies that files marked with
+        mustExist actually exist.
 
         Returns:
             CErrorReport with any validation errors
         """
         error = CErrorReport()
 
-        # Validate all input data items
-        for name, obj in self.container.inputData.items():
+        # Find all CDataFile descendants recursively in the entire container
+        file_items = self._find_datafile_descendants(self.container)
+
+        # Validate each file
+        for name, obj in file_items:
             obj_error = obj.validity()
             if obj_error:
                 error.extend(obj_error)
@@ -463,20 +555,185 @@ class CPluginScript(CData):
 
         return error
 
-    def startProcess(self) -> CErrorReport:
+    def appendCommandLine(self, wordList=[], clear=False) -> CErrorReport:
         """
-        Start the external program process.
+        Add text strings or list of strings to the command line.
 
-        Uses PROCESSMANAGER to start the program specified by TASKCOMMAND
-        with the command line and file created by makeCommandAndScript().
+        Args:
+            wordList: String or list of strings to add to command line
+            clear: If True, clear command line before appending
 
         Returns:
             CErrorReport with any errors
         """
+        import re
+        from core.base_object.fundamental_types import CList
+
         error = CErrorReport()
 
-        # This would use PROCESSMANAGER to start the process
-        # For now, placeholder implementation
+        if clear:
+            self.clearCommandLine()
+
+        if not isinstance(wordList, list):
+            wordList = [wordList]
+
+        for item in wordList:
+            if isinstance(item, (list, CList)):
+                for subItem in item:
+                    try:
+                        myText = str(subItem)
+                        self.commandLine.append(myText)
+                    except Exception:
+                        error.append(
+                            klass=self.__class__.__name__,
+                            code=2,
+                            details="Error converting command line item to string"
+                        )
+            else:
+                try:
+                    myText = str(item)
+                    # Remove newlines from command line arguments
+                    myText = re.sub(r'\n', ' ', myText)
+                    self.commandLine.append(myText)
+                except Exception:
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=2,
+                        details="Error converting command line item to string"
+                    )
+
+        if error:
+            self.errorReport.extend(error)
+
+        return error
+
+    def clearCommandLine(self):
+        """Clear the command line list."""
+        self.commandLine = []
+
+    def makeFileName(self, format='COM', ext='', qualifier=None):
+        """
+        Generate consistent names for output files.
+
+        Args:
+            format: File type format (e.g., 'PROGRAMXML', 'LOG', 'REPORT')
+            ext: File extension (unused, kept for compatibility)
+            qualifier: Optional qualifier to modify the filename
+
+        Returns:
+            Full path to the file in the work directory
+        """
+        import os
+
+        defNames = {
+            'ROOT': '',
+            'PARAMS': 'params.xml',
+            'JOB_INPUT': 'input_params.xml',
+            'PROGRAMXML': 'program.xml',
+            'LOG': 'log.txt',
+            'STDOUT': 'stdout.txt',
+            'STDERR': 'stderr.txt',
+            'INTERRUPT': 'interrupt_status.xml',
+            'DIAGNOSTIC': 'diagnostic.xml',
+            'REPORT': 'report.html',
+            'COM': 'com.txt',
+            'MGPICDEF': 'report.mgpic.py',
+            'PIC': 'report.png',
+            'RVAPIXML': 'i2.xml'
+        }
+
+        fileName = defNames.get(format, 'unknown.unk')
+        if qualifier is not None:
+            base, ext = fileName.split('.', 1)
+            fileName = base + '_' + str(qualifier) + '.' + ext
+        return os.path.join(self.workDirectory, fileName)
+
+    def startProcess(self) -> CErrorReport:
+        """
+        Start the external program process.
+
+        Runs the program specified by TASKCOMMAND with the command line
+        arguments built by makeCommandAndScript(), capturing output to log files.
+
+        Returns:
+            CErrorReport with any errors
+        """
+        import subprocess
+        import os
+
+        error = CErrorReport()
+
+        if not self.TASKCOMMAND:
+            error.append(
+                klass=self.__class__.__name__,
+                code=100,
+                details="No TASKCOMMAND specified for this plugin"
+            )
+            return error
+
+        # Build full command
+        command = [self.TASKCOMMAND] + self.commandLine
+
+        # Prepare log file paths
+        stdout_path = self.makeFileName('STDOUT')
+        stderr_path = self.makeFileName('STDERR')
+
+        print(f"\n{'='*60}")
+        print(f"Running: {' '.join(command)}")
+        print(f"Working directory: {self.workDirectory}")
+        print(f"Stdout log: {stdout_path}")
+        print(f"Stderr log: {stderr_path}")
+        print(f"{'='*60}\n")
+
+        try:
+            # Run the process
+            with open(stdout_path, 'w') as stdout_file, open(stderr_path, 'w') as stderr_file:
+                result = subprocess.run(
+                    command,
+                    cwd=self.workDirectory,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    text=True,
+                    timeout=300  # 5 minute timeout
+                )
+
+            # Check return code
+            if result.returncode != 0:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=101,
+                    details=f"Process {self.TASKCOMMAND} exited with code {result.returncode}"
+                )
+
+                # Read stderr for error details
+                if os.path.exists(stderr_path):
+                    with open(stderr_path, 'r') as f:
+                        stderr_content = f.read()
+                        if stderr_content:
+                            print(f"STDERR:\n{stderr_content}")
+
+            else:
+                print(f"✅ Process completed successfully (exit code 0)")
+
+        except FileNotFoundError:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Executable '{self.TASKCOMMAND}' not found. "
+                        f"Make sure CCP4 is set up (source ccp4.setup-sh)"
+            )
+        except subprocess.TimeoutExpired:
+            error.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details=f"Process {self.TASKCOMMAND} timed out after 300 seconds"
+            )
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=104,
+                details=f"Error running {self.TASKCOMMAND}: {str(e)}"
+            )
 
         return error
 
@@ -829,6 +1086,7 @@ class CPluginScript(CData):
                             details=f"File object '{name}' not found",
                             name=name
                         )
+                        self.errorReport.extend(error)
                         return error
 
                     # Validate target contentFlag
@@ -839,7 +1097,12 @@ class CPluginScript(CData):
                             details=f"Invalid contentFlag {target_flag} for '{name}'",
                             name=name
                         )
+                        self.errorReport.extend(error)
                         return error
+
+                    # Auto-detect contentFlag from file content if not already set
+                    if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
+                        file_obj.setContentFlag()
 
                     # Check if conversion is needed
                     current_flag = int(file_obj.contentFlag)
@@ -858,6 +1121,7 @@ class CPluginScript(CData):
                                     details=f"Conversion method '{method_name}' not found on {file_obj.__class__.__name__}",
                                     name=name
                                 )
+                                self.errorReport.extend(error)
                                 return error
 
                             conversion_method = getattr(file_obj, method_name)
@@ -888,6 +1152,15 @@ class CPluginScript(CData):
                                 details=str(e),
                                 name=name
                             )
+                            # Add to self.errorReport before returning
+                            self.errorReport.extend(error)
+                            # Print ERROR-level messages
+                            if error.maxSeverity() >= SEVERITY_ERROR:
+                                print(f"\n{'='*60}")
+                                print(f"ERROR in {self.__class__.__name__}.makeHklin():")
+                                print(f"{'='*60}")
+                                print(error.report())
+                                print(f"{'='*60}\n")
                             return error
                         except Exception as e:
                             error.append(
@@ -896,6 +1169,15 @@ class CPluginScript(CData):
                                 details=f"Error converting file: {e}",
                                 name=name
                             )
+                            # Add to self.errorReport before returning
+                            self.errorReport.extend(error)
+                            # Print ERROR-level messages
+                            if error.maxSeverity() >= SEVERITY_ERROR:
+                                print(f"\n{'='*60}")
+                                print(f"ERROR in {self.__class__.__name__}.makeHklin():")
+                                print(f"{'='*60}")
+                                print(error.report())
+                                print(f"{'='*60}\n")
                             return error
                     else:
                         # No conversion needed - flags match
@@ -908,6 +1190,7 @@ class CPluginScript(CData):
                         details=f"Invalid miniMtzsIn item: {item}",
                         name=str(item)
                     )
+                    self.errorReport.extend(error)
                     return error
 
             # Call new API with all files (original or converted)
@@ -930,4 +1213,51 @@ class CPluginScript(CData):
                 if hasattr(self.container.inputData, temp_name):
                     delattr(self.container.inputData, temp_name)
 
+        # Add errors to plugin's error report
+        self.errorReport.extend(error)
+
+        # Print ERROR-level messages to terminal
+        if error.maxSeverity() >= SEVERITY_ERROR:
+            print(f"\n{'='*60}")
+            print(f"ERROR in {self.__class__.__name__}.makeHklin():")
+            print(f"{'='*60}")
+            print(error.report())
+            print(f"{'='*60}\n")
+
         return error
+
+    def makeHklInput(
+        self,
+        miniMtzsIn: list = [],
+        hklin: str = 'hklin',
+        ignoreErrorCodes: list = [],
+        extendOutputColnames: bool = True,
+        useInputColnames: bool = False
+    ) -> tuple:
+        """
+        Legacy API for makeHklin - returns (outfile, colnames, error).
+
+        This method provides backward compatibility with the old CCP4i2 API.
+        It wraps the modern makeHklin() method and returns the expected tuple.
+
+        Args:
+            miniMtzsIn: List of file names or [name, contentFlag] pairs
+            hklin: Output filename (without extension)
+            ignoreErrorCodes: Error codes to ignore (not currently used)
+            extendOutputColnames: Whether to extend column names (not currently used)
+            useInputColnames: Whether to use input column names (not currently used)
+
+        Returns:
+            Tuple of (outfile_path, column_names, error_report)
+        """
+        # Call the modern API
+        error = self.makeHklin(miniMtzsIn, hklin)
+
+        # Construct the output path
+        outfile = str(self.workDirectory / f"{hklin}.mtz")
+
+        # For now, return empty column names string
+        # (Full column introspection would require reading the merged MTZ)
+        colnames = ""
+
+        return outfile, colnames, error

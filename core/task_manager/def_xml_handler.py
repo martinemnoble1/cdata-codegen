@@ -138,7 +138,23 @@ class DefXmlParser:
             if container_id not in processed:
                 self._parse_container(container, root_container)
 
+        # Re-enable validation after parsing is complete
+        # This allows runtime validation when users set values
+        self._reenable_validation(root_container)
+
         return root_container
+
+    def _reenable_validation(self, obj: CData) -> None:
+        """Recursively re-enable validation on all CData objects after parsing."""
+        # Re-enable validation on this object
+        if hasattr(obj, '_skip_validation'):
+            obj._skip_validation = False
+
+        # Recursively process all children in the hierarchy
+        if hasattr(obj, 'children'):
+            for child in obj.children():
+                if isinstance(child, CData):
+                    self._reenable_validation(child)
 
     def _extract_task_name(self, root: ET.Element, xml_path: Path) -> str:
         """Extract task name from XML structure or filename."""
@@ -294,6 +310,9 @@ class DefXmlParser:
         # Always construct CString for className 'CString'
         if class_name == "CString":
             obj = CString()
+            # Skip validation during .def.xml parsing
+            if hasattr(obj, '_skip_validation'):
+                obj._skip_validation = True
             self._apply_qualifiers(obj, qualifiers, class_name)
             return obj
 
@@ -307,6 +326,11 @@ class DefXmlParser:
         try:
             obj = cls()
 
+            # Skip validation during .def.xml parsing to avoid constraint violations
+            # on default values (e.g., default=0.0 with min=1.0)
+            if hasattr(obj, '_skip_validation'):
+                obj._skip_validation = True
+
             # Apply qualifiers as metadata and initial values
             self._apply_qualifiers(obj, qualifiers, class_name)
 
@@ -316,6 +340,9 @@ class DefXmlParser:
             print(f"Error creating object of class '{class_name}': {e}")
             # Fallback to CString
             obj = CString()
+            # Skip validation during .def.xml parsing
+            if hasattr(obj, '_skip_validation'):
+                obj._skip_validation = True
             self._apply_qualifiers(obj, qualifiers, "CString")
             return obj
 

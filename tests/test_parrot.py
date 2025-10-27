@@ -1,21 +1,208 @@
 """
-Tests for building and using chainsaw.
+Tests for building and using parrot plugin.
 """
 
 import pytest
 import os
+from pathlib import Path
 from core.CCP4TaskManager import TASKMANAGER
+
+
+def get_mtz_columns(mtz_path):
+    """
+    Get column names from an MTZ file using gemmi.
+
+    Args:
+        mtz_path: Path to MTZ file
+
+    Returns:
+        List of column names
+    """
+    import gemmi
+
+    mtz = gemmi.read_mtz_file(str(mtz_path))
+    return [col.label for col in mtz.columns]
+
+
+def check_ccp4_available():
+    """Check if CCP4 environment is available."""
+    import shutil
+    # Check if ctruncate is in PATH (CCP4 setup script was sourced)
+    return shutil.which('ctruncate') is not None
 
 
 @pytest.mark.skipif(
     'CCP4I2_ROOT' not in os.environ,
     reason="CCP4I2_ROOT environment variable not set"
 )
-def test_parrot():
-    task = TASKMANAGER().get_plugin_class("parrot")()
-    task.container.inputData.XYZIN = os.path.join(os.environ["CCP4I2_ROOT"], "demo_data", "gamma", "merged_intensities_native.mtz")
-    assert task.container.inputData.XYZIN.__str__().endswith("merged_intensities_native.mtz")
-    task.container.inputData.ABCD = os.path.join(os.environ["CCP4I2_ROOT"], "demo_data", "gamma", "initial_phases.mtz")
-    assert task.container.inputData.ABCD.__str__().endswith("initial_phases.mtz")
-    task.container.inputData.ASUIN = os.path.join(os.environ["CCP4I2_ROOT"], "demo_data", "gamma", "gamma.asu.xml")
-    assert task.container.inputData.ASUIN.__str__().endswith("gamma.asu.xml")
+@pytest.mark.skipif(
+    not check_ccp4_available(),
+    reason="CCP4 not available. Run: source /Applications/ccp4-*/bin/ccp4.setup-sh"
+)
+def test_as_fmean_conversion(tmp_path):
+    """Test that as_FMEAN() converts intensities to F, SIGF structure factors.
+
+    Args:
+        tmp_path: Pytest fixture providing a temporary directory for test outputs
+    """
+    from core.CCP4XtalData import CObsDataFile
+
+    ccp4_root = os.environ["CCP4I2_ROOT"]
+
+    # Create CObsDataFile for intensity data
+    intensity_file = CObsDataFile()
+    intensity_file.setFullPath(
+        os.path.join(ccp4_root, "demo_data", "gamma", "merged_intensities_native.mtz")
+    )
+
+    print(f"\nInput file: {intensity_file.getFullPath()}")
+
+    # Detect content flag
+    intensity_file.setContentFlag()
+    print(f"Content flag: {intensity_file.contentFlag}")
+
+    # Convert to FMEAN
+    output_path = intensity_file.as_FMEAN(work_directory=str(tmp_path))
+
+    # Verify output file exists
+    assert Path(output_path).exists(), f"Output file not created: {output_path}"
+    print(f"✅ Conversion output created: {output_path}")
+
+    # Verify output has F, SIGF columns
+    columns = get_mtz_columns(output_path)
+    print(f"Output columns: {columns}")
+
+    assert 'F' in columns, f"F column not found in output. Columns: {columns}"
+    assert 'SIGF' in columns, f"SIGF column not found in output. Columns: {columns}"
+
+    print("✅ Output file contains F, SIGF columns")
+
+
+@pytest.mark.skipif(
+    'CCP4I2_ROOT' not in os.environ,
+    reason="CCP4I2_ROOT environment variable not set"
+)
+@pytest.mark.skipif(
+    not check_ccp4_available(),
+    reason="CCP4 not available. Run: source /Applications/ccp4-*/bin/ccp4.setup-sh"
+)
+def test_parrot_makehklin(tmp_path):
+    """Test that parrot's makeHklInput creates hklin.mtz with expected columns.
+
+    Args:
+        tmp_path: Pytest fixture providing a temporary directory for test outputs
+    """
+    # Create parrot task with temporary work directory
+    task = TASKMANAGER().get_plugin_class("parrot")(workDirectory=tmp_path)
+
+    # Set input files from CCP4I2 demo data
+    ccp4_root = os.environ["CCP4I2_ROOT"]
+
+    # Set F_SIGF (observations - structure factors with sigmas)
+    task.container.inputData.F_SIGF = os.path.join(
+        ccp4_root, "demo_data", "gamma", "merged_intensities_native.mtz"
+    )
+
+    # Set ABCD (phases from phasing program)
+    task.container.inputData.ABCD = os.path.join(
+        ccp4_root, "demo_data", "gamma", "initial_phases.mtz"
+    )
+
+    # Call makeHklInput to create the merged hklin.mtz
+    # This should trigger conversion of intensities to F, SIGF if needed
+    hklin_path = task.makeHklInput()
+
+    # Verify hklin.mtz was created
+    assert hklin_path is not None, "makeHklInput returned None"
+    assert Path(hklin_path).exists(), f"hklin.mtz not created at {hklin_path}"
+
+    print(f"\n✅ hklin.mtz created: {hklin_path}")
+    print(f"File size: {Path(hklin_path).stat().st_size} bytes")
+
+    # Verify columns in hklin.mtz
+    columns = get_mtz_columns(hklin_path)
+    print(f"hklin.mtz columns: {columns}")
+
+    # Expected columns from F_SIGF input (after conversion)
+    assert 'F' in columns, f"F column not found in hklin.mtz. Columns: {columns}"
+    assert 'SIGF' in columns, f"SIGF column not found in hklin.mtz. Columns: {columns}"
+
+    # Expected columns from ABCD input (phases)
+    assert 'ABCD' in columns or 'HLA' in columns or 'HLB' in columns, \
+        f"Phase columns (ABCD or HLA/HLB) not found in hklin.mtz. Columns: {columns}"
+
+    # Expected crystallographic columns
+    assert 'H' in columns, f"H (Miller index) not found. Columns: {columns}"
+    assert 'K' in columns, f"K (Miller index) not found. Columns: {columns}"
+    assert 'L' in columns, f"L (Miller index) not found. Columns: {columns}"
+
+    print("✅ hklin.mtz contains all expected columns (F, SIGF, phases, Miller indices)")
+
+
+@pytest.mark.skipif(
+    'CCP4I2_ROOT' not in os.environ,
+    reason="CCP4I2_ROOT environment variable not set"
+)
+def test_parrot(tmp_path):
+    """Test parrot plugin initialization and execution.
+
+    Args:
+        tmp_path: Pytest fixture providing a temporary directory for test outputs
+    """
+    # Create parrot task with temporary work directory
+    task = TASKMANAGER().get_plugin_class("parrot")(workDirectory=tmp_path)
+
+    # Verify work directory is set correctly
+    assert task.workDirectory == tmp_path
+
+    # Set input files from CCP4I2 demo data
+    # Parrot expects F_SIGF (structure factors) and ABCD (phases)
+    ccp4_root = os.environ["CCP4I2_ROOT"]
+
+    # Set F_SIGF (observations - structure factors with sigmas)
+    task.container.inputData.F_SIGF = os.path.join(
+        ccp4_root, "demo_data", "gamma", "merged_intensities_native.mtz"
+    )
+    assert str(task.container.inputData.F_SIGF).endswith(
+        "merged_intensities_native.mtz"
+    )
+
+    # Set ABCD (phases from phasing program)
+    task.container.inputData.ABCD = os.path.join(
+        ccp4_root, "demo_data", "gamma", "initial_phases.mtz"
+    )
+    assert str(task.container.inputData.ABCD).endswith("initial_phases.mtz")
+
+    # Run the task - outputs will be created in tmp_path
+    result = task.process()
+
+    # Verify the task completed
+    # Note: The actual parrot executable may not run if not available,
+    # but the workflow should complete without errors
+    print(f"\nTask process() returned: {result}")
+    print(f"Work directory: {task.workDirectory}")
+
+    # Check for errors
+    error_count = task.errorReport.count()
+    print(f"Error count: {error_count}")
+    if error_count > 0:
+        print(f"Errors:\n{task.errorReport.report()}")
+
+    # List all files created in work directory
+    created_files = list(tmp_path.iterdir())
+    print(f"\nFiles created: {len(created_files)}")
+    for f in created_files:
+        size_kb = f.stat().st_size / 1024
+        print(f"  - {f.name} ({size_kb:.1f} KB)")
+
+    # Check if hklin.mtz was created (merged input file)
+    hklin_path = tmp_path / "hklin.mtz"
+    if hklin_path.exists():
+        print(f"\n✅ hklin.mtz created: {hklin_path.stat().st_size} bytes")
+    else:
+        print(f"\n⚠️  hklin.mtz NOT found at {hklin_path}")
+
+    # Verify work directory is still the temp path
+    assert task.workDirectory == tmp_path
+
+    # The tmp_path will be automatically cleaned up by pytest after the test

@@ -8,8 +8,9 @@ This file is safe to edit - add your implementation code here.
 from __future__ import annotations
 from typing import Optional, Any
 
+from core.base_object.error_reporting import CErrorReport
 from core.cdata_stubs.CCP4XtalData import CAltSpaceGroupStub, CAltSpaceGroupListStub, CAnomalousColumnGroupStub, CAnomalousIntensityColumnGroupStub, CAnomalousScatteringElementStub, CAsuComponentStub, CAsuComponentListStub, CCellStub, CCellAngleStub, CCellLengthStub, CColumnGroupStub, CColumnGroupItemStub, CColumnGroupListStub, CColumnTypeStub, CColumnTypeListStub, CCrystalNameStub, CDatasetStub, CDatasetListStub, CDatasetNameStub, CDialsJsonFileStub, CDialsPickleFileStub, CExperimentalDataTypeStub, CFPairColumnGroupStub, CFSigFColumnGroupStub, CFormFactorStub, CFreeRColumnGroupStub, CFreeRDataFileStub, CGenericReflDataFileStub, CHLColumnGroupStub, CIPairColumnGroupStub, CISigIColumnGroupStub, CImageFileStub, CImageFileListStub, CImosflmXmlDataFileStub, CImportUnmergedStub, CImportUnmergedListStub, CMapCoeffsDataFileStub, CMapColumnGroupStub, CMapDataFileStub, CMergeMiniMtzStub, CMergeMiniMtzListStub, CMiniMtzDataFileStub, CMiniMtzDataFileListStub, CMmcifReflDataStub, CMmcifReflDataFileStub, CMtzColumnStub, CMtzColumnGroupStub, CMtzColumnGroupTypeStub, CMtzDataStub, CMtzDataFileStub, CMtzDatasetStub, CObsDataFileStub, CPhaserRFileDataFileStub, CPhaserSolDataFileStub, CPhiFomColumnGroupStub, CPhsDataFileStub, CProgramColumnGroupStub, CProgramColumnGroup0Stub, CRefmacKeywordFileStub, CReindexOperatorStub, CResolutionRangeStub, CRunBatchRangeStub, CRunBatchRangeListStub, CShelxFADataFileStub, CShelxLabelStub, CSpaceGroupStub, CSpaceGroupCellStub, CUnmergedDataContentStub, CUnmergedDataFileStub, CUnmergedDataFileListStub, CUnmergedMtzDataFileStub, CWavelengthStub, CXia2ImageSelectionStub, CXia2ImageSelectionListStub
-
+from core.CCP4TaskManager import TASKMANAGER
 
 class CAltSpaceGroup(CAltSpaceGroupStub):
     """
@@ -854,22 +855,95 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
 
         FMEAN format: F, SIGF
 
+        Uses the ctruncate plugin to perform French-Wilson conversion
+        from intensities to structure factor amplitudes.
+
         Args:
-            work_directory: Directory for output if input dir not writable
+            work_directory: Directory for ctruncate working files
 
         Returns:
             Full path to converted file
 
         Raises:
-            NotImplementedError: Conversion logic not yet implemented
+            RuntimeError: If ctruncate plugin is not available
+            RuntimeError: If conversion fails
         """
+        import os
+        from core.CCP4PluginScript import CPluginScript
+
+        # Auto-detect content flag from file
+        self.setContentFlag()
+        current_flag = int(self.contentFlag)
+
+        if current_flag == 0:
+            raise ValueError("Cannot convert: contentFlag could not be determined from file")
+
+        # If already FMEAN, just copy the file
+        if current_flag == self.CONTENT_FLAG_FMEAN:
+            import shutil
+            from pathlib import Path
+            output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
+            input_path = Path(self.getFullPath())
+            shutil.copy2(input_path, output_path)
+            return str(output_path)
+
+        # Get ctruncate plugin
+        wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
+        if wrapper_class is None:
+            raise RuntimeError("ctruncate plugin not available")
+
+        # Create output path
         output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
 
-        # TODO: Implement conversion logic
-        raise NotImplementedError(
-            f"Conversion to FMEAN format not yet implemented. "
-            f"Would output to: {output_path}"
-        )
+        # Create ctruncate instance with working directory
+        ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
+        wrapper = wrapper_class(parent=self, workDirectory=ctruncate_work)
+
+        # Set input file
+        inp = wrapper.container.inputData
+        inp.HKLIN.setFullPath(self.getFullPath())
+
+        # Configure to output mini-MTZ with FMEAN format
+        wrapper.container.controlParameters.OUTPUTMINIMTZ.set(True)
+        wrapper.container.controlParameters.OUTPUTMINIMTZCONTENTFLAG.set(self.CONTENT_FLAG_FMEAN)
+
+        # Get expected column names from CONTENT_SIGNATURE_LIST
+        # contentFlag is 1-indexed, so subtract 1 for list index
+        column_names = self.CONTENT_SIGNATURE_LIST[current_flag - 1]
+
+        # Set column names based on current content flag
+        if current_flag == self.CONTENT_FLAG_IPAIR:
+            # Anomalous intensities: ['Iplus', 'SIGIplus', 'Iminus', 'SIGIminus']
+            inp.ISIGIanom.Ip = column_names[0]
+            inp.ISIGIanom.SIGIp = column_names[1]
+            inp.ISIGIanom.Im = column_names[2]
+            inp.ISIGIanom.SIGIm = column_names[3]
+        elif current_flag == self.CONTENT_FLAG_IMEAN:
+            # Mean intensities: ['I', 'SIGI']
+            inp.ISIGI.I = column_names[0]
+            inp.ISIGI.SIGI = column_names[1]
+        elif current_flag == self.CONTENT_FLAG_FPAIR:
+            # Anomalous structure factors: ['Fplus', 'SIGFplus', 'Fminus', 'SIGFminus']
+            wrapper.container.controlParameters.AMPLITUDES.set(True)
+            inp.FSIGFanom.Fp = column_names[0]
+            inp.FSIGFanom.SIGFp = column_names[1]
+            inp.FSIGFanom.Fm = column_names[2]
+            inp.FSIGFanom.SIGFm = column_names[3]
+
+        # Set output file path
+        wrapper.container.outputData.OBSOUT.setFullPath(output_path)
+
+        # Run ctruncate
+        status = wrapper.process()
+
+        if status != CPluginScript.SUCCEEDED:
+            error_msg = f"ctruncate conversion failed with status {status}."
+            if wrapper.errorReport.count() > 0:
+                error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
+            error_msg += f"\nCheck logs in {ctruncate_work}"
+            raise RuntimeError(error_msg)
+
+        return str(output_path)
 
 
 class CPhaserRFileDataFile(CPhaserRFileDataFileStub):

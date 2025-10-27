@@ -217,9 +217,9 @@ class TestDefXmlLoading:
         # The def file should have populated the containers
         # (Note: inputData.items() may not be available depending on
         # how DefXmlParser populates containers)
-        assert plugin.inputData is not None
-        assert plugin.outputData is not None
-        assert plugin.controlParameters is not None
+        assert plugin.container.inputData is not None
+        assert plugin.container.outputData is not None
+        assert plugin.container.controlParameters is not None
 
     def test_pluginscript_loads_refmac_def_xml(self):
         """Test loading refmac plugin definition."""
@@ -237,8 +237,8 @@ class TestDefXmlLoading:
 
         # Should have standard containers
         assert plugin.container is not None
-        assert plugin.inputData is not None
-        assert plugin.outputData is not None
+        assert plugin.container.inputData is not None
+        assert plugin.container.outputData is not None
 
     def test_pluginscript_without_taskname_no_def_load(self):
         """Test that plugin without TASKNAME doesn't try to load .def.xml."""
@@ -253,7 +253,7 @@ class TestDefXmlLoading:
 
         # Should still have basic structure
         assert plugin.container is not None
-        assert plugin.inputData is not None
+        assert plugin.container.inputData is not None
 
     def test_pluginscript_versioned_loading(self):
         """Test loading plugin with specific version."""
@@ -279,8 +279,8 @@ class TestDefXmlLoading:
 
         # Check hierarchy is intact
         assert plugin.container.parent == plugin
-        assert plugin.inputData.parent == plugin.container
-        assert plugin.outputData.parent == plugin.container
+        assert plugin.container.inputData.parent == plugin.container
+        assert plugin.container.outputData.parent == plugin.container
 
         # Check object paths work
         assert plugin.object_path() == 'pointless'

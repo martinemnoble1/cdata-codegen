@@ -57,6 +57,10 @@ class CInt(CData):
 
     def _validate_value(self, val):
         """Validate value against min/max qualifiers."""
+        # Skip validation if flag is set (used during .def.xml parsing)
+        if getattr(self, '_skip_validation', False):
+            return val
+
         min_val = self.get_qualifier("min")
         max_val = self.get_qualifier("max")
 
@@ -377,6 +381,10 @@ class CFloat(CData):
 
     def _validate_value(self, val):
         """Validate value against min/max qualifiers."""
+        # Skip validation if flag is set (used during .def.xml parsing)
+        if getattr(self, '_skip_validation', False):
+            return val
+
         min_val = self.get_qualifier("min")
         max_val = self.get_qualifier("max")
 

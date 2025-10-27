@@ -48,6 +48,8 @@ class CData(HierarchicalObject):
         # Initialize set state tracking
         self._value_states: Dict[str, ValueState] = {}
         self._default_values: Dict[str, Any] = {}
+        # Flag to skip validation (used during .def.xml parsing)
+        self._skip_validation: bool = False
 
         # Mark that hierarchy is initialized - now we can use custom setattr
         self._hierarchy_initialized = True
@@ -147,6 +149,11 @@ class CData(HierarchicalObject):
                     delattr(self, key)
         for key, value in values.items():
             setattr(self, key, value)
+
+        # Mark the object itself as set when values are provided
+        # This is important for legacy code that checks `object.isSet()`
+        if values and hasattr(self, '_value_states'):
+            self._value_states['value'] = ValueState.EXPLICITLY_SET
 
     def update(self, values: dict):
         """Update attributes from dict without unsetting others."""
@@ -543,6 +550,15 @@ class CData(HierarchicalObject):
                 self._value_states[name] = ValueState.EXPLICITLY_SET
             return  # Don't replace the object, just update it
 
+        elif isinstance(existing_attr, CDataFile) and isinstance(value, str):
+            # Special case: Assigning a string path to an existing CDataFile
+            # e.g., task.container.inputData.HKLIN = "/path/to/file.mtz"
+            existing_attr.setFullPath(value)
+            # Mark as explicitly set
+            if hasattr(self, "_value_states"):
+                self._value_states[name] = ValueState.EXPLICITLY_SET
+            return  # Don't replace the object, just update its path
+
         elif (
             existing_attr is not None and isinstance(existing_attr, CData)
             and existing_attr._is_value_type()
@@ -932,6 +948,15 @@ class CDataFileContent(CData):
                 self._value_states[name] = ValueState.EXPLICITLY_SET
             return  # Don't replace the object, just update it
 
+        elif isinstance(existing_attr, CDataFile) and isinstance(value, str):
+            # Special case: Assigning a string path to an existing CDataFile
+            # e.g., task.container.inputData.HKLIN = "/path/to/file.mtz"
+            existing_attr.setFullPath(value)
+            # Mark as explicitly set
+            if hasattr(self, "_value_states"):
+                self._value_states[name] = ValueState.EXPLICITLY_SET
+            return  # Don't replace the object, just update its path
+
         elif (
             existing_attr is not None and isinstance(existing_attr, CData)
             and existing_attr._is_value_type()
@@ -1016,6 +1041,12 @@ class CDataFileContent(CData):
                 self._value_states[k] = ValueState.EXPLICITLY_SET
             else:
                 self.unSet(k)
+
+        # Mark the container itself as set when values are provided
+        # This is important for legacy code that checks `container.isSet()`
+        if values and hasattr(self, '_value_states'):
+            print(f"[SET DEBUG] Marking container {self.__class__.__name__} as set with 'value' key")  # DEBUG
+            self._value_states['value'] = ValueState.EXPLICITLY_SET
 
 
     def update(self, values: dict):
