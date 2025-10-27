@@ -15,10 +15,10 @@ def test_cpluginscript_instantiation():
 
     assert script.name == "test_script"
     assert script.container is not None
-    assert script.container.inputData is not None
-    assert script.container.outputData is not None
-    assert script.container.controlParameters is not None
-    assert script.container.guiAdmin is not None
+    assert script.inputData is not None
+    assert script.outputData is not None
+    assert script.controlParameters is not None
+    assert script.guiAdmin is not None
 
 
 def test_cpluginscript_subcontainers():
@@ -26,14 +26,14 @@ def test_cpluginscript_subcontainers():
     script = CPluginScript(name="test_script")
 
     # Check that sub-containers have correct names (using name attribute)
-    assert script.container.inputData.name == "inputData"
-    assert script.container.outputData.name == "outputData"
-    assert script.container.controlParameters.name == "controlParameters"
-    assert script.container.guiAdmin.name == "guiAdmin"
+    assert script.inputData.name == "inputData"
+    assert script.outputData.name == "outputData"
+    assert script.controlParameters.name == "controlParameters"
+    assert script.guiAdmin.name == "guiAdmin"
 
     # Check that they are children of the main container
-    assert script.container.inputData.parent == script.container
-    assert script.container.outputData.parent == script.container
+    assert script.inputData.parent == script.container
+    assert script.outputData.parent == script.container
 
 
 def test_cpluginscript_error_report():
@@ -94,15 +94,15 @@ def test_cpluginscript_hierarchy():
     assert script.container.parent == script
 
     # Sub-containers should be children of the main container
-    assert script.container.inputData.parent == script.container
-    assert script.container.outputData.parent == script.container
-    assert script.container.controlParameters.parent == script.container
-    assert script.container.guiAdmin.parent == script.container
+    assert script.inputData.parent == script.container
+    assert script.outputData.parent == script.container
+    assert script.controlParameters.parent == script.container
+    assert script.guiAdmin.parent == script.container
 
     # Should support the object_path API
     assert script.object_path() == "test_script"
     assert script.container.object_path() == "test_script.container"
-    assert script.container.inputData.object_path() == "test_script.container.inputData"
+    assert script.inputData.object_path() == "test_script.container.inputData"
 
 
 def test_cpluginscript_events():

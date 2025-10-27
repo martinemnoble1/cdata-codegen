@@ -415,6 +415,178 @@ class CData(HierarchicalObject):
 
             self.set_qualifier(key, value)
 
+    def _setup_hierarchy_for_value(self, key: str, value: Any):
+        """Set up hierarchical relationships for attribute values.
+
+        Only sets parent if not already set, respecting explicit parent assignments.
+        Only sets name if not already set.
+        """
+        if isinstance(value, CData):
+            # Only set parent if not already set (respect explicit parent assignment)
+            if value.parent is None:
+                value.set_parent(self)
+            # Only set name if not already set
+            if not value.name:
+                value.name = key
+        elif isinstance(value, list):
+            # Handle list of CData objects
+            for i, item in enumerate(value):
+                if isinstance(item, CData):
+                    # Only set parent if not already set
+                    if item.parent is None:
+                        item.set_parent(self)
+                    if not item.name:
+                        item.name = f"{key}[{i}]"
+
+    def _is_value_type(self) -> bool:
+        """Check if this is a simple value type (like CString, CInt, etc.)."""
+        # Simple heuristic: if class has only basic Python types as attributes
+        # and no complex CData children, it's likely a value type
+        value_type_patterns = ["String", "Int", "Float", "Bool", "OneWord"]
+        return any(
+            pattern in self.__class__.__name__ for pattern in value_type_patterns
+        )
+
+    def _smart_assign_from_dict(self, source_dict: dict):
+        """Assign values from dictionary to object attributes."""
+        for key, value in source_dict.items():
+            setattr(self, key, value)
+
+    def _smart_assign_from_cdata(self, source: "CData"):
+        """Handle smart assignment from another CData object."""
+        if self._is_value_type() and source._is_value_type():
+            # Value assignment: copy the underlying value
+            # For simple types, copy their primary value attribute
+            primary_attrs = ["value", "text", "string", "content"]
+            for attr in primary_attrs:
+                if hasattr(source, attr):
+                    setattr(self, attr, getattr(source, attr))
+                    return
+
+            # If no primary attribute found, copy all non-internal attributes
+            for key, value in source.__dict__.items():
+                if not key.startswith("_") and key not in [
+                    "parent",
+                    "name",
+                    "children",
+                    "signals",
+                ]:
+                    setattr(self, key, value)
+        else:
+            # Reference assignment for complex types
+            # This would typically involve replacing this object with the source
+            # For now, copy all attributes
+            for key, value in source.__dict__.items():
+                if not key.startswith("_") and key not in [
+                    "parent",
+                    "name",
+                    "children",
+                    "signals",
+                ]:
+                    setattr(self, key, value)
+
+    def __setattr__(self, name: str, value: Any):
+        """Override setattr to handle smart assignment and hierarchical relationships."""
+
+        # Allow setting internal attributes normally during initialization
+        if (
+            name.startswith("_")
+            or name in ["parent", "name", "children", "signals"]
+            or not hasattr(self, "_hierarchy_initialized")
+        ):
+            super().__setattr__(name, value)
+            return
+
+        # Special handling for metadata attributes: assign directly if dict or list
+        if name in ["qualifiers", "qualifiers_order", "qualifiers_definition", "CONTENT_ORDER", "subitem"]:
+            if isinstance(value, (dict, list)):
+                object.__setattr__(self, name, value)
+                return
+
+        # Handle smart assignment patterns
+        existing_attr = getattr(self, name, None)
+
+        # DEBUG: Print all contentFlag assignments
+        if name == 'contentFlag':
+            import traceback
+            print(f"\n[SETATTR] {self.__class__.__name__}.{name} = {value} (type: {type(value).__name__})")
+            print(f"  existing: {existing_attr} (type: {type(existing_attr).__name__})")
+            print(f"  Stack:")
+            for line in traceback.format_stack()[-4:-1]:
+                print(f"    {line.strip()}")
+            print()
+
+        if isinstance(value, dict):
+            # Dictionary assignment: update object attributes from dictionary
+            if existing_attr is None:
+                # Create new CData object and populate from dict
+                new_obj = CData(name=name)
+                new_obj._smart_assign_from_dict(value)
+                self._setup_hierarchy_for_value(name, new_obj)
+                super().__setattr__(name, new_obj)
+                return
+            elif isinstance(existing_attr, CData):
+                # Update existing CData object from dictionary
+                existing_attr._smart_assign_from_dict(value)
+                # Mark as explicitly set since we're assigning new values
+                if hasattr(self, "_value_states"):
+                    self._value_states[name] = ValueState.EXPLICITLY_SET
+                return  # Don't replace the object, just update it
+
+        elif isinstance(value, CData) and isinstance(existing_attr, CData):
+            # CData to CData assignment: use smart assignment logic
+            if name in ['contentFlag', 'subType']:  # DEBUG
+                print(f"[DEBUG] Branch: CData to CData for {name}")  # DEBUG
+            existing_attr._smart_assign_from_cdata(value)
+            # Mark as explicitly set since we're assigning a new value
+            if hasattr(self, "_value_states"):
+                self._value_states[name] = ValueState.EXPLICITLY_SET
+            return  # Don't replace the object, just update it
+
+        elif (
+            existing_attr is not None and isinstance(existing_attr, CData)
+            and existing_attr._is_value_type()
+        ):
+            if name in ['contentFlag', 'subType']:  # DEBUG
+                print(f"[DEBUG] Branch: Value type smart assign for {name}")  # DEBUG
+            # Primitive value assignment to existing CData value type
+            # e.g., ctrl.NCYCLES = 25 where ctrl.NCYCLES is a CInt
+            if isinstance(value, (int, float, str, bool)):
+                # Check type compatibility
+                type_compatible = False
+                if hasattr(existing_attr, "value"):
+                    # Import types locally to avoid circular import
+                    from .fundamental_types import CInt, CFloat, CBoolean
+                    try:
+                        from .fundamental_types import CString
+                    except ImportError:
+                        CString = None
+                    if isinstance(existing_attr, CInt) and isinstance(value, int):
+                        type_compatible = True
+                    elif isinstance(existing_attr, CFloat) and isinstance(value, (int, float)):
+                        type_compatible = True
+                    elif isinstance(existing_attr, CBoolean) and isinstance(value, bool):
+                        type_compatible = True
+                    elif CString is not None and isinstance(existing_attr, CString) and isinstance(value, str):
+                        type_compatible = True
+                if type_compatible:
+                    # Update the value attribute of the existing CData object
+                    if name in ['contentFlag', 'subType']:  # DEBUG
+                        print(f"[SMART ASSIGN] Updating {name}.value = {value}, keeping {type(existing_attr).__name__}")  # DEBUG
+                    existing_attr.value = value
+                    # Mark as explicitly set
+                    if hasattr(self, "_value_states"):
+                        self._value_states[name] = ValueState.EXPLICITLY_SET
+                    return  # Don't replace the object, just update its value
+
+        # For new attributes or non-smart assignment, handle hierarchy and set normally
+        self._setup_hierarchy_for_value(name, value)
+        super().__setattr__(name, value)
+        # Track that this value has been explicitly set (unless it's internal)
+        if (hasattr(self, "_value_states") and not name.startswith("_")
+            and name not in ["parent", "name", "children", "signals"]):
+            self._value_states[name] = ValueState.EXPLICITLY_SET
+
 # --- CDataFileContent migrated from CCP4File.py ---
 @cdata_class(
     error_codes={
@@ -500,17 +672,27 @@ class CDataFileContent(CData):
         self.qualifiers[key] = value
 
     def _setup_hierarchy_for_value(self, key: str, value: Any):
-        """Set up hierarchical relationships for attribute values."""
+        """Set up hierarchical relationships for attribute values.
+
+        Only sets parent if not already set, respecting explicit parent assignments.
+        Only sets name if not already set.
+        """
         if isinstance(value, CData):
-            # Set this object as parent and the attribute name as the child's name
-            value.set_parent(self)
-            value.name = key
+            # Only set parent if not already set (respect explicit parent assignment)
+            if value.parent is None:
+                value.set_parent(self)
+            # Only set name if not already set
+            if not value.name:
+                value.name = key
         elif isinstance(value, list):
             # Handle list of CData objects
             for i, item in enumerate(value):
                 if isinstance(item, CData):
-                    item.set_parent(self)
-                    item.name = f"{key}[{i}]"
+                    # Only set parent if not already set
+                    if item.parent is None:
+                        item.set_parent(self)
+                    if not item.name:
+                        item.name = f"{key}[{i}]"
 
     def _is_value_type(self) -> bool:
         """Check if this is a simple value type (like CString, CInt, etc.)."""
@@ -713,6 +895,16 @@ class CDataFileContent(CData):
         # Handle smart assignment patterns
         existing_attr = getattr(self, name, None)
 
+        # DEBUG: Print all contentFlag assignments
+        if name == 'contentFlag':
+            import traceback
+            print(f"\n[SETATTR] {self.__class__.__name__}.{name} = {value} (type: {type(value).__name__})")
+            print(f"  existing: {existing_attr} (type: {type(existing_attr).__name__})")
+            print(f"  Stack:")
+            for line in traceback.format_stack()[-4:-1]:
+                print(f"    {line.strip()}")
+            print()
+
         if isinstance(value, dict):
             # Dictionary assignment: update object attributes from dictionary
             if existing_attr is None:
@@ -732,6 +924,8 @@ class CDataFileContent(CData):
 
         elif isinstance(value, CData) and isinstance(existing_attr, CData):
             # CData to CData assignment: use smart assignment logic
+            if name in ['contentFlag', 'subType']:  # DEBUG
+                print(f"[DEBUG] Branch: CData to CData for {name}")  # DEBUG
             existing_attr._smart_assign_from_cdata(value)
             # Mark as explicitly set since we're assigning a new value
             if hasattr(self, "_value_states"):
@@ -742,6 +936,8 @@ class CDataFileContent(CData):
             existing_attr is not None and isinstance(existing_attr, CData)
             and existing_attr._is_value_type()
         ):
+            if name in ['contentFlag', 'subType']:  # DEBUG
+                print(f"[DEBUG] Branch: Value type smart assign for {name}")  # DEBUG
             # Primitive value assignment to existing CData value type
             # e.g., ctrl.NCYCLES = 25 where ctrl.NCYCLES is a CInt
             if isinstance(value, (int, float, str, bool)):
@@ -764,6 +960,8 @@ class CDataFileContent(CData):
                         type_compatible = True
                 if type_compatible:
                     # Update the value attribute of the existing CData object
+                    if name in ['contentFlag', 'subType']:  # DEBUG
+                        print(f"[SMART ASSIGN] Updating {name}.value = {value}, keeping {type(existing_attr).__name__}")  # DEBUG
                     existing_attr.value = value
                     # Mark as explicitly set
                     if hasattr(self, "_value_states"):

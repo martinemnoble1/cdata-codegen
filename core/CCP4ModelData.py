@@ -353,13 +353,53 @@ class CPdbData(CPdbDataStub):
 class CPdbDataFile(CPdbDataFileStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     Extends CPdbDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def _introspect_content_flag(self) -> Optional[int]:
+        """Auto-detect contentFlag by determining if file is PDB or mmCIF format.
+
+        Returns:
+            1 (CONTENT_FLAG_PDB) if PDB format
+            2 (CONTENT_FLAG_MMCIF) if mmCIF format
+            None if file cannot be read or format cannot be determined
+        """
+        from pathlib import Path
+
+        file_path = self.getFullPath()
+        if not file_path or not Path(file_path).exists():
+            return None
+
+        try:
+            # Check the file extension first
+            path = Path(file_path)
+            suffix = path.suffix.lower()
+
+            # mmCIF files typically have .cif or .mmcif extensions
+            if suffix in ['.cif', '.mmcif']:
+                return self.__class__.CONTENT_FLAG_MMCIF
+
+            # PDB files typically have .pdb or .ent extensions
+            elif suffix in ['.pdb', '.ent']:
+                return self.__class__.CONTENT_FLAG_PDB
+
+            # If extension is ambiguous, check file content
+            # mmCIF files start with "data_" or have loop structures
+            with open(file_path, 'r') as f:
+                first_line = f.readline().strip()
+                if first_line.startswith('data_') or first_line.startswith('loop_'):
+                    return self.__class__.CONTENT_FLAG_MMCIF
+                # PDB files typically start with record types like HEADER, CRYST1, ATOM, etc.
+                elif first_line.startswith(('HEADER', 'CRYST1', 'ATOM', 'HETATM', 'MODEL')):
+                    return self.__class__.CONTENT_FLAG_PDB
+
+            # Default to PDB if we can't determine
+            return self.__class__.CONTENT_FLAG_PDB
+
+        except Exception:
+            return None
 
 
 class CPdbDataFileList(CPdbDataFileListStub):

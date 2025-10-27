@@ -80,13 +80,16 @@ class CPluginScript(CData):
         # CPluginScript is now the parent of the container
         self.container = CContainer(parent=self, name="container")
 
-        # Standard sub-containers as per CCP4i2 convention
-        # Parent relationship established automatically when parent is set
-        self.inputData = CContainer(parent=self.container, name="inputData")
-        self.outputData = CContainer(parent=self.container, name="outputData")
-        self.controlParameters = CContainer(
-            parent=self.container, name="controlParameters")
-        self.guiAdmin = CContainer(parent=self.container, name="guiAdmin")
+        # Standard sub-containers will be created by loadDefFile() when loading from XML
+        # OR we create them here only if not loading from XML (i.e., xmlFile is None)
+        # This ensures backward compatibility while respecting XML-defined structure
+        if xmlFile is None:
+            # No XML file - create default empty containers
+            # Store them in container.__dict__ to avoid __setattr__ while keeping references
+            self.container.__dict__['inputData'] = CContainer(parent=self.container, name="inputData")
+            self.container.__dict__['outputData'] = CContainer(parent=self.container, name="outputData")
+            self.container.__dict__['controlParameters'] = CContainer(parent=self.container, name="controlParameters")
+            self.container.__dict__['guiAdmin'] = CContainer(parent=self.container, name="guiAdmin")
 
         # Error report for tracking issues during execution
         self.errorReport = CErrorReport()
@@ -164,21 +167,21 @@ class CPluginScript(CData):
             # We need to extract the sub-containers and attach them to our
             # container (which is parented to this CPluginScript instance)
             if hasattr(parsed_container, 'inputData'):
-                self.inputData = parsed_container.inputData
+                self.container.inputData = parsed_container.inputData
                 # Update parent to be our container (which is parented to self)
-                self.inputData.set_parent(self.container)
+                self.container.inputData.set_parent(self.container)
 
             if hasattr(parsed_container, 'outputData'):
-                self.outputData = parsed_container.outputData
-                self.outputData.set_parent(self.container)
+                self.container.outputData = parsed_container.outputData
+                self.container.outputData.set_parent(self.container)
 
             if hasattr(parsed_container, 'controlParameters'):
-                self.controlParameters = parsed_container.controlParameters
-                self.controlParameters.set_parent(self.container)
+                self.container.controlParameters = parsed_container.controlParameters
+                self.container.controlParameters.set_parent(self.container)
 
             if hasattr(parsed_container, 'guiAdmin'):
-                self.guiAdmin = parsed_container.guiAdmin
-                self.guiAdmin.set_parent(self.container)
+                self.container.guiAdmin = parsed_container.guiAdmin
+                self.container.guiAdmin.set_parent(self.container)
 
             self.defFile = fileName
 
@@ -407,7 +410,7 @@ class CPluginScript(CData):
         error = CErrorReport()
 
         # Validate all input data items
-        for name, obj in self.inputData.items():
+        for name, obj in self.container.inputData.items():
             obj_error = obj.validity()
             if obj_error:
                 error.extend(obj_error)
@@ -680,10 +683,10 @@ class CPluginScript(CData):
 
             # Lookup file object in containers
             file_obj = None
-            if hasattr(self.inputData, name):
-                file_obj = getattr(self.inputData, name)
-            elif hasattr(self.outputData, name):
-                file_obj = getattr(self.outputData, name)
+            if hasattr(self.container.inputData, name):
+                file_obj = getattr(self.container.inputData, name)
+            elif hasattr(self.container.outputData, name):
+                file_obj = getattr(self.container.outputData, name)
             else:
                 raise AttributeError(
                     f"File object '{name}' not found in inputData or outputData"
@@ -693,6 +696,11 @@ class CPluginScript(CData):
             path = file_obj.getFullPath()
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
+
+            # Auto-detect contentFlag from file content to ensure accuracy
+            # This ensures the contentFlag reflects the actual file contents
+            if hasattr(file_obj, 'setContentFlag'):
+                file_obj.setContentFlag()
 
             # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
             # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
@@ -810,10 +818,10 @@ class CPluginScript(CData):
 
                     # Lookup file object
                     file_obj = None
-                    if hasattr(self.inputData, name):
-                        file_obj = getattr(self.inputData, name)
-                    elif hasattr(self.outputData, name):
-                        file_obj = getattr(self.outputData, name)
+                    if hasattr(self.container.inputData, name):
+                        file_obj = getattr(self.container.inputData, name)
+                    elif hasattr(self.container.outputData, name):
+                        file_obj = getattr(self.container.outputData, name)
                     else:
                         error.append(
                             klass=self.__class__.__name__,
@@ -858,7 +866,7 @@ class CPluginScript(CData):
                             # Create a temporary file object pointing to converted file
                             # We need to create an instance of the same class
                             temp_name = f"_converted_{name}_{item_idx}"
-                            temp_file_obj = file_obj.__class__(parent=self.inputData, name=temp_name)
+                            temp_file_obj = file_obj.__class__(parent=self.container.inputData, name=temp_name)
 
                             # Set the path to the converted file
                             # Assuming the file object has baseName attribute for the path
@@ -867,7 +875,7 @@ class CPluginScript(CData):
                             temp_file_obj.contentFlag = CInt(target_flag)
 
                             # Add to inputData temporarily
-                            setattr(self.inputData, temp_name, temp_file_obj)
+                            setattr(self.container.inputData, temp_name, temp_file_obj)
                             converted_files.append(temp_name)
 
                             # Use the temp name for merging
@@ -919,7 +927,7 @@ class CPluginScript(CData):
         finally:
             # Clean up temporary converted file objects from inputData
             for temp_name in converted_files:
-                if hasattr(self.inputData, temp_name):
-                    delattr(self.inputData, temp_name)
+                if hasattr(self.container.inputData, temp_name):
+                    delattr(self.container.inputData, temp_name)
 
         return error

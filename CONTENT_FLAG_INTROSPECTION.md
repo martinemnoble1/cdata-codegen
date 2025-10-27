@@ -71,6 +71,8 @@ def _introspect_content_flag(self) -> Optional[int]:
 
 **Location**: `core/CCP4XtalData.py`
 
+MTZ files use **column signature matching** to determine content flags.
+
 #### CMiniMtzDataFile (lines 530-600)
 
 ```python
@@ -103,6 +105,61 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
 
 CFreeRDataFile has the same `_introspect_content_flag()` implementation because it **cannot inherit from CMiniMtzDataFile** due to definition order constraints.
 
+### PDB/mmCIF File Classes
+
+**Location**: `core/CCP4ModelData.py`
+
+PDB and mmCIF files use **file format detection** (extension and content analysis) to determine content flags.
+
+#### CPdbDataFile (lines 353-402)
+
+```python
+class CPdbDataFile(CPdbDataFileStub):
+    def _introspect_content_flag(self) -> Optional[int]:
+        """Auto-detect contentFlag by determining if file is PDB or mmCIF format."""
+        from pathlib import Path
+
+        file_path = self.getFullPath()
+        if not file_path or not Path(file_path).exists():
+            return None
+
+        try:
+            # Check the file extension first
+            path = Path(file_path)
+            suffix = path.suffix.lower()
+
+            # mmCIF files typically have .cif or .mmcif extensions
+            if suffix in ['.cif', '.mmcif']:
+                return self.__class__.CONTENT_FLAG_MMCIF  # 2
+
+            # PDB files typically have .pdb or .ent extensions
+            elif suffix in ['.pdb', '.ent']:
+                return self.__class__.CONTENT_FLAG_PDB  # 1
+
+            # If extension is ambiguous, check file content
+            with open(file_path, 'r') as f:
+                first_line = f.readline().strip()
+                # mmCIF files start with "data_" or "loop_"
+                if first_line.startswith('data_') or first_line.startswith('loop_'):
+                    return self.__class__.CONTENT_FLAG_MMCIF
+                # PDB files start with record types like HEADER, CRYST1, ATOM, etc.
+                elif first_line.startswith(('HEADER', 'CRYST1', 'ATOM', 'HETATM', 'MODEL')):
+                    return self.__class__.CONTENT_FLAG_PDB
+
+            # Default to PDB if we can't determine
+            return self.__class__.CONTENT_FLAG_PDB
+
+        except Exception:
+            return None
+```
+
+**Detection Strategy**:
+1. **Extension-based**: `.pdb`/`.ent` → PDB, `.cif`/`.mmcif` → mmCIF
+2. **Content-based**: If extension ambiguous, read first line:
+   - Starts with `data_` or `loop_` → mmCIF
+   - Starts with `HEADER`, `CRYST1`, `ATOM`, etc. → PDB
+3. **Fallback**: Default to PDB if format cannot be determined
+
 ### Class Hierarchy
 
 ```
@@ -112,17 +169,27 @@ CDataFile (base_classes.py)
 
 CMiniMtzDataFile (CCP4XtalData.py)
   ├─ Inherits: CMiniMtzDataFileStub
-  └─ Overrides: _introspect_content_flag() with MTZ logic
+  └─ Overrides: _introspect_content_flag() with MTZ column matching
 
 CObsDataFile
   ├─ Inherits: CObsDataFileStub, CMiniMtzDataFile
   ├─ CONTENT_SIGNATURE_LIST with 4 signatures
   └─ Inherits _introspect_content_flag() from CMiniMtzDataFile ✓
 
+CPhsDataFile
+  ├─ Inherits: CPhsDataFileStub, CMiniMtzDataFile
+  ├─ CONTENT_SIGNATURE_LIST with 2 signatures (HL, PHIFOM)
+  └─ Inherits _introspect_content_flag() from CMiniMtzDataFile ✓
+
 CFreeRDataFile
   ├─ Inherits: CFreeRDataFileStub (cannot inherit CMiniMtzDataFile)
   ├─ CONTENT_SIGNATURE_LIST with 1 signature
   └─ Implements its own _introspect_content_flag() (duplicated)
+
+CPdbDataFile (CCP4ModelData.py)
+  ├─ Inherits: CPdbDataFileStub
+  ├─ CONTENT_FLAG_PDB (1), CONTENT_FLAG_MMCIF (2)
+  └─ Overrides: _introspect_content_flag() with file format detection
 ```
 
 ## Usage
@@ -141,6 +208,31 @@ obs_file.setContentFlag()
 # Access the detected value
 print(f"Detected contentFlag: {obs_file.contentFlag}")  # Could be int or CData
 ```
+
+### Automatic Detection in makeHklinGemmi
+
+**IMPORTANT**: The `makeHklinGemmi()` method in `CPluginScript` automatically calls `setContentFlag()` on all input files before processing them. This ensures the contentFlag reflects the actual file contents, even if it wasn't explicitly set or is outdated.
+
+```python
+# In CPluginScript.makeHklinGemmi (lines 697-700):
+# Auto-detect contentFlag from file content to ensure accuracy
+# This ensures the contentFlag reflects the actual file contents
+if hasattr(file_obj, 'setContentFlag'):
+    file_obj.setContentFlag()
+```
+
+**Example**:
+```python
+# Create file object without setting contentFlag
+obs = CObsDataFile(file_path="/path/to/data.mtz")
+script.inputData.HKLIN1 = obs
+
+# makeHklinGemmi automatically detects contentFlag from file
+hklin = script.makeHklinGemmi(['HKLIN1'])
+# obs.contentFlag is now correctly set based on file contents!
+```
+
+This automatic detection eliminates the need to manually set contentFlags before merging files.
 
 ### Explicit Assignment
 
@@ -200,20 +292,21 @@ required.issubset(file_cols) → True ✓
 
 ### Implemented ✅
 
-| Class | CONTENT_SIGNATURE_LIST | Introspection Method |
-|-------|------------------------|---------------------|
-| **CObsDataFile** | 4 signatures (IPAIR, FPAIR, IMEAN, FMEAN) | Inherits from CMiniMtzDataFile |
-| **CPhsDataFile** | 2 signatures (HLA/HLB/HLC/HLD, PHI/FOM) | Inherits from CMiniMtzDataFile |
-| **CFreeRDataFile** | 1 signature (FREER) | Own implementation |
-| **CMapCoeffsDataFile** | 1 signature (F, PHI) | Inherits from CMiniMtzDataFile |
+| Class | Detection Method | Content Flags |
+|-------|------------------|---------------|
+| **CObsDataFile** | MTZ column signatures | 4 flags: IPAIR, FPAIR, IMEAN, FMEAN |
+| **CPhsDataFile** | MTZ column signatures | 2 flags: HL, PHIFOM |
+| **CFreeRDataFile** | MTZ column signatures | 1 flag: FREER |
+| **CMapCoeffsDataFile** | MTZ column signatures | 1 flag: F+PHI |
+| **CPdbDataFile** | File format detection | 2 flags: PDB, MMCIF |
 
 ### Future Extensions
 
-To add introspection to other MTZ file classes:
+To add introspection to other file classes:
 
-1. **If already inherits from CMiniMtzDataFile**: ✓ Already has introspection!
-2. **If defined before CMiniMtzDataFile**: Add own `_introspect_content_flag()` method
-3. **For non-MTZ files**: Override `_introspect_content_flag()` with file-type-specific logic
+1. **MTZ files inheriting CMiniMtzDataFile**: ✓ Already have introspection!
+2. **MTZ files defined before CMiniMtzDataFile**: Add own `_introspect_content_flag()` method (duplicate implementation)
+3. **Non-MTZ files**: Override `_introspect_content_flag()` with file-type-specific logic (like CPdbDataFile does)
 
 ## Testing
 
@@ -223,10 +316,13 @@ To add introspection to other MTZ file classes:
 
 ### Test Data
 
-| File | Type | Columns | Expected contentFlag |
-|------|------|---------|---------------------|
+| File | Type | Columns/Format | Expected contentFlag |
+|------|------|----------------|---------------------|
 | `/ccp4i2/demo_data/gamma/merged_intensities_native.mtz` | CObsDataFile | Iplus, SIGIplus, Iminus, SIGIminus | 1 (IPAIR) |
 | `/ccp4i2/demo_data/gamma/freeR.mtz` | CFreeRDataFile | FREER | 1 (FREER) |
+| `/ccp4i2/demo_data/gamma/initial_phases.mtz` | CPhsDataFile | HLA, HLB, HLC, HLD | 1 (HL) |
+| `/ccp4i2/demo_data/mdm2/4hg7.pdb` | CPdbDataFile | PDB format | 1 (PDB) |
+| `/ccp4i2/demo_data/mdm2/4hg7.cif` | CPdbDataFile | mmCIF format | 2 (MMCIF) |
 
 ### Running Tests
 
@@ -234,12 +330,15 @@ To add introspection to other MTZ file classes:
 python -m pytest tests/test_content_flag_introspection.py -v
 ```
 
-**Result**: ✅ 9 tests passed
+**Result**: ✅ 13 tests passed
 
 ### Test Coverage
 
-- ✅ Auto-detection for IPAIR (CObsDataFile)
-- ✅ Auto-detection for FREER (CFreeRDataFile)
+- ✅ Auto-detection for IPAIR (CObsDataFile - MTZ)
+- ✅ Auto-detection for FREER (CFreeRDataFile - MTZ)
+- ✅ Auto-detection for HL (CPhsDataFile - MTZ)
+- ✅ Auto-detection for PDB format (CPdbDataFile)
+- ✅ Auto-detection for mmCIF format (CPdbDataFile)
 - ✅ Explicit contentFlag setting
 - ✅ Graceful handling of non-existent files
 - ✅ Graceful handling of no-match scenarios
@@ -339,10 +438,14 @@ except Exception as e:
 
 ✅ **Complete Implementation** of automatic content flag introspection:
 - Generic `setContentFlag()` method in CDataFile base class
-- MTZ-specific `_introspect_content_flag()` in CMiniMtzDataFile and CFreeRDataFile
+- MTZ-specific `_introspect_content_flag()` in CMiniMtzDataFile and CFreeRDataFile (column signature matching)
+- PDB/mmCIF-specific `_introspect_content_flag()` in CPdbDataFile (file format detection)
+- **Automatic detection in `makeHklinGemmi()`** - contentFlags are auto-detected before file merging
 - Correctly handles 1-indexed content flags vs 0-indexed signature arrays
-- 9 comprehensive tests covering all scenarios
+- 13 comprehensive tests covering all scenarios:
+  - MTZ files: CObsDataFile, CFreeRDataFile, CPhsDataFile
+  - Structure files: CPdbDataFile (PDB and mmCIF formats)
 - Backward compatible with existing code
 - Graceful error handling
 
-The feature enables **intelligent file auto-detection** while maintaining **backward compatibility** and **safety**.
+The feature enables **intelligent file auto-detection** while maintaining **backward compatibility** and **safety**. The integration with `makeHklinGemmi()` ensures contentFlags are always accurate when merging MTZ files.

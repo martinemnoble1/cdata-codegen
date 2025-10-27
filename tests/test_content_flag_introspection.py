@@ -9,7 +9,8 @@ import pytest
 from pathlib import Path
 
 # Import the classes we're testing
-from core.CCP4XtalData import CObsDataFile, CFreeRDataFile
+from core.CCP4XtalData import CObsDataFile, CFreeRDataFile, CPhsDataFile
+from core.CCP4ModelData import CPdbDataFile
 
 
 class TestContentFlagIntrospection:
@@ -27,6 +28,16 @@ class TestContentFlagIntrospection:
     def gamma_demo_data_dir(self):
         """Path to gamma demo data directory in CCP4i2."""
         return Path("/Users/nmemn/Developer/ccp4i2/demo_data/gamma")
+
+    @pytest.fixture
+    def baz2b_demo_data_dir(self):
+        """Path to baz2b demo data directory in CCP4i2."""
+        return Path("/Users/nmemn/Developer/ccp4i2/demo_data/baz2b")
+
+    @pytest.fixture
+    def mdm2_demo_data_dir(self):
+        """Path to mdm2 demo data directory in CCP4i2."""
+        return Path("/Users/nmemn/Developer/ccp4i2/demo_data/mdm2")
 
     def test_obs_ipair_introspection(self, gamma_demo_data_dir):
         """Test CObsDataFile detects IPAIR content flag from merged_intensities_native.mtz."""
@@ -75,6 +86,93 @@ class TestContentFlagIntrospection:
 
         # Verify it matches the constant
         assert flag_value == CFreeRDataFile.CONTENT_FLAG_FREER
+
+    def test_phs_hl_introspection(self, gamma_demo_data_dir):
+        """Test CPhsDataFile detects HL content flag from initial_phases.mtz."""
+        # File has columns: HLA, HLB, HLC, HLD (Hendrickson-Lattman coefficients)
+        # Should match HL signature (index 0 → contentFlag=1)
+
+        mtz_file = gamma_demo_data_dir / "initial_phases.mtz"
+        assert mtz_file.exists(), f"Test file not found: {mtz_file}"
+
+        # Create CPhsDataFile with the file path
+        phs_file = CPhsDataFile(file_path=str(mtz_file))
+
+        # Trigger introspection
+        phs_file.setContentFlag()
+
+        # Get contentFlag value
+        flag_value = self.get_content_flag_value(phs_file)
+
+        # Verify it detected HL (contentFlag=1)
+        assert flag_value == 1, \
+            f"Expected HL (1), got {flag_value}"
+
+        # Verify it matches the constant
+        assert flag_value == CPhsDataFile.CONTENT_FLAG_HL
+
+        # Verify the annotation matches
+        annotation = CPhsDataFile.CONTENT_ANNOTATION[flag_value - 1]
+        assert annotation == "Hendrickson-Lattmann coeffs", \
+            f"Expected 'Hendrickson-Lattmann coeffs', got '{annotation}'"
+
+    def test_pdb_format_introspection(self, mdm2_demo_data_dir):
+        """Test CPdbDataFile detects PDB format from 4hg7.pdb."""
+        # File is in PDB format
+        # Should detect CONTENT_FLAG_PDB (contentFlag=1)
+
+        pdb_file = mdm2_demo_data_dir / "4hg7.pdb"
+        assert pdb_file.exists(), f"Test file not found: {pdb_file}"
+
+        # Create CPdbDataFile with the file path
+        pdb_data_file = CPdbDataFile(file_path=str(pdb_file))
+
+        # Trigger introspection
+        pdb_data_file.setContentFlag()
+
+        # Get contentFlag value
+        flag_value = self.get_content_flag_value(pdb_data_file)
+
+        # Verify it detected PDB format (contentFlag=1)
+        assert flag_value == 1, \
+            f"Expected PDB (1), got {flag_value}"
+
+        # Verify it matches the constant
+        assert flag_value == CPdbDataFile.CONTENT_FLAG_PDB
+
+        # Verify the annotation matches
+        annotation = CPdbDataFile.CONTENT_ANNOTATION[flag_value - 1]
+        assert annotation == "PDB format", \
+            f"Expected 'PDB format', got '{annotation}'"
+
+    def test_mmcif_format_introspection(self, mdm2_demo_data_dir):
+        """Test CPdbDataFile detects mmCIF format from 4hg7.cif."""
+        # File is in mmCIF format
+        # Should detect CONTENT_FLAG_MMCIF (contentFlag=2)
+
+        cif_file = mdm2_demo_data_dir / "4hg7.cif"
+        assert cif_file.exists(), f"Test file not found: {cif_file}"
+
+        # Create CPdbDataFile with the file path
+        cif_data_file = CPdbDataFile(file_path=str(cif_file))
+
+        # Trigger introspection
+        cif_data_file.setContentFlag()
+
+        # Get contentFlag value
+        flag_value = self.get_content_flag_value(cif_data_file)
+
+        # Verify it detected mmCIF format (contentFlag=2)
+        assert flag_value == 2, \
+            f"Expected mmCIF (2), got {flag_value}"
+
+        # Verify it matches the constant
+        assert flag_value == CPdbDataFile.CONTENT_FLAG_MMCIF
+
+        # Verify the annotation matches
+        annotation = CPdbDataFile.CONTENT_ANNOTATION[flag_value - 1]
+        assert annotation == "mmCIF format", \
+            f"Expected 'mmCIF format', got '{annotation}'"
 
     def test_explicit_content_flag_setting(self, gamma_demo_data_dir):
         """Test explicit content flag setting still works."""
@@ -141,12 +239,16 @@ class TestContentFlagIntrospection:
         """Verify that test classes have CONTENT_SIGNATURE_LIST."""
         assert hasattr(CObsDataFile, 'CONTENT_SIGNATURE_LIST')
         assert hasattr(CFreeRDataFile, 'CONTENT_SIGNATURE_LIST')
+        assert hasattr(CPhsDataFile, 'CONTENT_SIGNATURE_LIST')
 
         # CObsDataFile should have 4 signatures (IPAIR, FPAIR, IMEAN, FMEAN)
         assert len(CObsDataFile.CONTENT_SIGNATURE_LIST) == 4
 
         # CFreeRDataFile should have 1 signature (FREER)
         assert len(CFreeRDataFile.CONTENT_SIGNATURE_LIST) == 1
+
+        # CPhsDataFile should have 2 signatures (HL, PHIFOM)
+        assert len(CPhsDataFile.CONTENT_SIGNATURE_LIST) == 2
 
     def test_ipair_signature_content(self):
         """Verify IPAIR signature matches expected columns."""
@@ -163,6 +265,14 @@ class TestContentFlagIntrospection:
 
         assert freer_signature == expected_columns, \
             f"FREER signature mismatch: {freer_signature} != {expected_columns}"
+
+    def test_hl_signature_content(self):
+        """Verify HL signature matches expected columns."""
+        hl_signature = CPhsDataFile.CONTENT_SIGNATURE_LIST[0]
+        expected_columns = ['HLA', 'HLB', 'HLC', 'HLD']
+
+        assert hl_signature == expected_columns, \
+            f"HL signature mismatch: {hl_signature} != {expected_columns}"
 
 
 if __name__ == "__main__":

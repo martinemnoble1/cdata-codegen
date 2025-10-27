@@ -146,17 +146,17 @@ def plugin_script(temp_dir, obs_mtz_file, freer_mtz_file):
     script.workDirectory = temp_dir
 
     # Create input container
-    script.container.inputData = CContainer(name="inputData")
+    script.inputData = CContainer(name="inputData")
 
     # Add mock file objects to inputData
     obs_file = MockCObsDataFile(obs_mtz_file, content_flag=4)  # FMEAN
-    script.container.inputData.HKLIN1 = obs_file
+    script.inputData.HKLIN1 = obs_file
 
     freer_file = MockCFreeRDataFile(freer_mtz_file, content_flag=1)
-    script.container.inputData.FREERFLAG = freer_file
+    script.inputData.FREERFLAG = freer_file
 
     # Create output container
-    script.container.outputData = CContainer(name="outputData")
+    script.outputData = CContainer(name="outputData")
 
     return script
 
@@ -262,7 +262,7 @@ class TestMakeHklinGemmi:
             def getFullPath(self):
                 return temp_dir / "bad.mtz"
 
-        plugin_script.container.inputData.BAD = BadFile()
+        plugin_script.inputData.BAD = BadFile()
 
         with pytest.raises(ValueError, match="no CONTENT_SIGNATURE_LIST"):
             plugin_script.makeHklinGemmi(['BAD'])
@@ -271,7 +271,7 @@ class TestMakeHklinGemmi:
         """Test error with invalid contentFlag."""
         # Create file with invalid contentFlag
         bad_file = MockCObsDataFile(obs_mtz_file, content_flag=999)
-        plugin_script.container.inputData.BAD_FLAG = bad_file
+        plugin_script.inputData.BAD_FLAG = bad_file
 
         with pytest.raises(ValueError, match="Invalid contentFlag"):
             plugin_script.makeHklinGemmi(['BAD_FLAG'])
@@ -283,7 +283,7 @@ class TestMakeHklinGemmi:
             def getFullPath(self):
                 return None
 
-        plugin_script.container.inputData.NO_PATH = NoPathFile(temp_dir / "fake.mtz")
+        plugin_script.inputData.NO_PATH = NoPathFile(temp_dir / "fake.mtz")
 
         with pytest.raises(ValueError, match="has no path set"):
             plugin_script.makeHklinGemmi(['NO_PATH'])
@@ -350,7 +350,7 @@ class TestMakeHklin:
         # Add as HKLIN2 with contentFlag=4 (FMEAN), but file actually has FPAIR data
         # Request contentFlag=2 (FPAIR) - should trigger conversion
         hklin2 = MockCObsDataFile(fpair_mtz_path, content_flag=4)
-        plugin_script.container.inputData.HKLIN2 = hklin2
+        plugin_script.inputData.HKLIN2 = hklin2
 
         # Merge with explicit contentFlag override that differs from file's flag
         error = plugin_script.makeHklin([
@@ -392,7 +392,7 @@ class TestMakeHklin:
     def test_no_conversion_when_flags_match(self, plugin_script, temp_dir):
         """Test that no conversion occurs when contentFlag matches target."""
         # Store original contentFlag (4 = FMEAN)
-        original_flag = plugin_script.container.inputData.HKLIN1.contentFlag
+        original_flag = plugin_script.inputData.HKLIN1.contentFlag
 
         # Request same contentFlag as file has - no conversion needed
         error = plugin_script.makeHklin([
@@ -402,7 +402,7 @@ class TestMakeHklin:
         assert error.maxSeverity() == SEVERITY_OK
 
         # Verify original flag unchanged (no conversion occurred)
-        assert plugin_script.container.inputData.HKLIN1.contentFlag == original_flag
+        assert plugin_script.inputData.HKLIN1.contentFlag == original_flag
 
         # Verify output exists
         output_path = temp_dir / "hklin.mtz"

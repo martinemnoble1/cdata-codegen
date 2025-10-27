@@ -204,44 +204,17 @@ class MetadataAttributeFactory:
     def _create_int_attribute(
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create an integer attribute, sourcing min/max/default from qualifiers."""
-        from .base_classes import CData, ValueState
+        """Create an integer attribute using CInt."""
+        from .fundamental_types import CInt
 
-        attr = CData(parent=parent_obj, name=name)
-
-        # Set default value from qualifiers
+        # Get default value from qualifiers
         default_value = qualifiers.get('default', 0)
-        attr.__dict__["value"] = default_value
 
-        # Create methods
-        def set_value(val):
-            min_value = qualifiers.get('min')
-            max_value = qualifiers.get('max')
-            if min_value is not None and val < min_value:
-                raise ValueError(
-                    f"{name} value {val} is below minimum {min_value}"
-                )
-            if max_value is not None and val > max_value:
-                raise ValueError(
-                    f"{name} value {val} is above maximum {max_value}"
-                )
+        # Create CInt object with default value
+        attr = CInt(default_value, parent=parent_obj, name=name)
 
-            attr.__dict__["value"] = int(val)
-            if hasattr(parent_obj, "_value_states"):
-                parent_obj._value_states[name] = ValueState.EXPLICITLY_SET
-
-        def is_set(field_name: str = None) -> bool:
-            if field_name is None:
-                field_name = name
-            return (
-                parent_obj._value_states.get(field_name, ValueState.NOT_SET)
-                == ValueState.EXPLICITLY_SET
-            )
-
-        attr.set = set_value
-        attr.isSet = is_set
-        attr.__str__ = lambda: str(attr.value)
-        attr.__int__ = lambda: int(attr.value)
+        # CInt already has all necessary methods (_is_value_type, __int__, __str__, etc.)
+        # The min/max validation will be handled by qualifiers at the class level
 
         return attr
 
@@ -249,43 +222,17 @@ class MetadataAttributeFactory:
     def _create_float_attribute(
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a float attribute, sourcing min/max/default from qualifiers."""
-        from .base_classes import CData, ValueState
+        """Create a float attribute using CFloat."""
+        from .fundamental_types import CFloat
 
-        attr = CData(parent=parent_obj, name=name)
-
-        # Set default value from qualifiers
+        # Get default value from qualifiers
         default_value = qualifiers.get('default', 0.0)
-        attr.__dict__["value"] = default_value
 
-        def set_value(val):
-            min_value = qualifiers.get('min')
-            max_value = qualifiers.get('max')
-            if min_value is not None and val < min_value:
-                raise ValueError(
-                    f"{name} value {val} is below minimum {min_value}"
-                )
-            if max_value is not None and val > max_value:
-                raise ValueError(
-                    f"{name} value {val} is above maximum {max_value}"
-                )
+        # Create CFloat object with default value
+        attr = CFloat(default_value, parent=parent_obj, name=name)
 
-            attr.__dict__["value"] = float(val)
-            if hasattr(parent_obj, "_value_states"):
-                parent_obj._value_states[name] = ValueState.EXPLICITLY_SET
-
-        def is_set(field_name: str = None) -> bool:
-            if field_name is None:
-                field_name = name
-            return (
-                parent_obj._value_states.get(field_name, ValueState.NOT_SET)
-                == ValueState.EXPLICITLY_SET
-            )
-
-        attr.set = set_value
-        attr.isSet = is_set
-        attr.__str__ = lambda: str(attr.value)
-        attr.__float__ = lambda: float(attr.value)
+        # CFloat already has all necessary methods (_is_value_type, __float__, __str__, etc.)
+        # The min/max validation will be handled by qualifiers at the class level
 
         return attr
 
@@ -293,32 +240,16 @@ class MetadataAttributeFactory:
     def _create_boolean_attribute(
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
-        """Create a boolean attribute, sourcing default from qualifiers."""
-        from .base_classes import CData, ValueState
+        """Create a boolean attribute using CBoolean."""
+        from .fundamental_types import CBoolean
 
-        attr = CData(parent=parent_obj, name=name)
-
-        # Set default value from qualifiers
+        # Get default value from qualifiers
         default_value = qualifiers.get('default', False)
-        attr.__dict__["value"] = default_value
 
-        def set_value(val):
-            attr.__dict__["value"] = bool(val)
-            if hasattr(parent_obj, "_value_states"):
-                parent_obj._value_states[name] = ValueState.EXPLICITLY_SET
+        # Create CBoolean object with default value
+        attr = CBoolean(default_value, parent=parent_obj, name=name)
 
-        def is_set(field_name: str = None) -> bool:
-            if field_name is None:
-                field_name = name
-            return (
-                parent_obj._value_states.get(field_name, ValueState.NOT_SET)
-                == ValueState.EXPLICITLY_SET
-            )
-
-        attr.set = set_value
-        attr.isSet = is_set
-        attr.__str__ = lambda: str(attr.value)
-        attr.__bool__ = lambda: bool(attr.value)
+        # CBoolean already has all necessary methods (_is_value_type, __bool__, __str__, etc.)
 
         return attr
 
