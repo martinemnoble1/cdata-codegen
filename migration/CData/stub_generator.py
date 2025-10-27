@@ -299,6 +299,9 @@ class StubCodeGenerator:
         lines.append(f'    """')
         lines.append('')
 
+        # Add MTZ metadata class constants (for backward compatibility)
+        self._render_mtz_metadata(class_data, lines)
+
         # Type-annotated attributes
         attributes = class_data.get('CONTENTS', {})
         if attributes:
@@ -328,6 +331,58 @@ class StubCodeGenerator:
         lines.append('')
 
         return lines
+
+    def _render_mtz_metadata(self, class_data: dict, lines: List[str]) -> None:
+        """
+        Render MTZ-specific class constants for CMiniMtzDataFile subclasses.
+
+        Adds CONTENT_FLAG_*, SUBTYPE_*, CONTENT_ANNOTATION, and CONTENT_SIGNATURE_LIST
+        for backward compatibility with old CCP4i2 code.
+
+        Args:
+            class_data: Class metadata dictionary
+            lines: List to append generated lines to
+        """
+        content_flags = class_data.get('CONTENT_FLAGS', {})
+        subtypes = class_data.get('SUBTYPES', {})
+
+        if not content_flags and not subtypes:
+            return  # No MTZ metadata, skip
+
+        # Add subtypes first (if present)
+        if subtypes:
+            lines.append('    # Subtype constants')
+            for name, info in sorted(subtypes.items(), key=lambda x: x[1]['value']):
+                value = info['value']
+                description = info['description']
+                lines.append(f'    {name} = {value}  # {description}')
+            lines.append('')
+
+        # Add content flags
+        if content_flags:
+            lines.append('    # Content flag constants')
+            for name, info in sorted(content_flags.items(), key=lambda x: x[1]['value']):
+                value = info['value']
+                annotation = info['annotation']
+                lines.append(f'    {name} = {value}  # {annotation}')
+            lines.append('')
+
+        # Build CONTENT_ANNOTATION list (indexed by contentFlag - 1)
+        if content_flags:
+            # Sort by value to ensure correct order
+            sorted_flags = sorted(content_flags.items(), key=lambda x: x[1]['value'])
+            annotations = [info['annotation'] for name, info in sorted_flags]
+            lines.append('    # Content annotations (indexed by contentFlag - 1)')
+            lines.append(f'    CONTENT_ANNOTATION = {repr(annotations)}')
+            lines.append('')
+
+        # Build CONTENT_SIGNATURE_LIST (indexed by contentFlag - 1)
+        if content_flags:
+            sorted_flags = sorted(content_flags.items(), key=lambda x: x[1]['value'])
+            signatures = [info['columns'] for name, info in sorted_flags]
+            lines.append('    # Column signatures for each content flag (indexed by contentFlag - 1)')
+            lines.append(f'    CONTENT_SIGNATURE_LIST = {repr(signatures)}')
+            lines.append('')
 
     def generate_file(self, filename: str, classes_in_file: List[Tuple[str, dict]]) -> str:
         """

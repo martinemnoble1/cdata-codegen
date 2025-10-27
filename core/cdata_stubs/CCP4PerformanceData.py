@@ -18,6 +18,7 @@ from core.base_object.fundamental_types import CFloat, CInt, CString
 # Cross-file stub class references
 from core.cdata_stubs.CCP4XtalData import CSpaceGroupStub
 
+
 @cdata_class(
     attributes={
         "value": attribute(AttributeType.FLOAT),
@@ -25,33 +26,40 @@ from core.cdata_stubs.CCP4XtalData import CSpaceGroupStub
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -66,7 +74,7 @@ from core.cdata_stubs.CCP4XtalData import CSpaceGroupStub
 class CPerformanceIndicatorStub(CData):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CPerformanceIndicator.py
     to add methods and implementation-specific functionality.
     """
@@ -92,33 +100,40 @@ class CPerformanceIndicatorStub(CData):
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -133,7 +148,7 @@ class CPerformanceIndicatorStub(CData):
 class CPairefPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CPairefPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -154,76 +169,6 @@ class CPairefPerformanceStub(CPerformanceIndicatorStub):
 
 @cdata_class(
     attributes={
-        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroupStub"),
-        "highResLimit": attribute(AttributeType.FLOAT),
-        "rMeas": attribute(AttributeType.FLOAT),
-    },
-    error_codes={
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "301": {
-                "description": "Data value not set"
-        },
-        "302": {
-                "description": "Performance indicator value difference greater than tolereance"
-        },
-        "303": {
-                "description": "Performance indicator value different"
-        },
-        "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
-        },
-        "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['spaceGroup', 'highResLimit', 'rMeas'],
-)
-class CDataReductionPerformanceStub(CPerformanceIndicatorStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    This is a pure data class stub. Extend it in core/CDataReductionPerformance.py
-    to add methods and implementation-specific functionality.
-    """
-
-    spaceGroup: Optional[CSpaceGroupStub] = None
-    highResLimit: Optional[CFloat] = None
-    rMeas: Optional[CFloat] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CDataReductionPerformanceStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
         "RFactor": attribute(AttributeType.FLOAT),
         "RFree": attribute(AttributeType.FLOAT),
         "RMSBond": attribute(AttributeType.FLOAT),
@@ -233,33 +178,40 @@ class CDataReductionPerformanceStub(CPerformanceIndicatorStub):
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -269,12 +221,18 @@ class CDataReductionPerformanceStub(CPerformanceIndicatorStub):
         "helpFile": {'type': 'str'},
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
-    contents_order=['RFactor', 'RFree', 'RMSBond', 'RMSAngle', 'weightUsed', 'annotation'],
+    contents_order=[
+        'RFactor',
+        'RFree',
+        'RMSBond',
+        'RMSAngle',
+        'weightUsed',
+        'annotation'],
 )
 class CRefinementPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CRefinementPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -289,6 +247,313 @@ class CRefinementPerformanceStub(CPerformanceIndicatorStub):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRefinementPerformanceStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "phaseError": attribute(AttributeType.FLOAT),
+        "weightedPhaseError": attribute(AttributeType.FLOAT),
+        "reflectionCorrelation": attribute(AttributeType.FLOAT),
+    },
+    error_codes={
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "301": {
+            "description": "Data value not set"
+        },
+        "302": {
+            "description": "Performance indicator value difference greater than tolereance"
+        },
+        "303": {
+            "description": "Performance indicator value different"
+        },
+        "304": {
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
+        },
+        "305": {
+            "description": "Performance indicator not used",
+            "severity": 0
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=[
+        'phaseError',
+        'weightedPhaseError',
+        'reflectionCorrelation'],
+)
+class CPhaseErrorPerformanceStub(CPerformanceIndicatorStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CPhaseErrorPerformance.py
+    to add methods and implementation-specific functionality.
+    """
+
+    phaseError: Optional[CFloat] = None
+    weightedPhaseError: Optional[CFloat] = None
+    reflectionCorrelation: Optional[CFloat] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CPhaseErrorPerformanceStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "RMSxyz": attribute(AttributeType.FLOAT),
+        "nResidues": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "301": {
+            "description": "Data value not set"
+        },
+        "302": {
+            "description": "Performance indicator value difference greater than tolereance"
+        },
+        "303": {
+            "description": "Performance indicator value different"
+        },
+        "304": {
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
+        },
+        "305": {
+            "description": "Performance indicator not used",
+            "severity": 0
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['RMSxyz', 'nResidues'],
+)
+class CSuperposePerformanceStub(CPerformanceIndicatorStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CSuperposePerformance.py
+    to add methods and implementation-specific functionality.
+    """
+
+    RMSxyz: Optional[CFloat] = None
+    nResidues: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CSuperposePerformanceStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "RFactor": attribute(AttributeType.FLOAT),
+        "completeness": attribute(AttributeType.FLOAT),
+        "annotation": attribute(AttributeType.STRING),
+    },
+    error_codes={
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "301": {
+            "description": "Data value not set"
+        },
+        "302": {
+            "description": "Performance indicator value difference greater than tolereance"
+        },
+        "303": {
+            "description": "Performance indicator value different"
+        },
+        "304": {
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
+        },
+        "305": {
+            "description": "Performance indicator not used",
+            "severity": 0
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['RFactor', 'completeness', 'annotation'],
+)
+class CModelBuildPerformanceStub(CPerformanceIndicatorStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CModelBuildPerformance.py
+    to add methods and implementation-specific functionality.
+    """
+
+    RFactor: Optional[CFloat] = None
+    completeness: Optional[CFloat] = None
+    annotation: Optional[CString] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CModelBuildPerformanceStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "nAtoms": attribute(AttributeType.INT),
+        "nResidues": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "301": {
+            "description": "Data value not set"
+        },
+        "302": {
+            "description": "Performance indicator value difference greater than tolereance"
+        },
+        "303": {
+            "description": "Performance indicator value different"
+        },
+        "304": {
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
+        },
+        "305": {
+            "description": "Performance indicator not used",
+            "severity": 0
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['nAtoms', 'nResidues'],
+)
+class CAtomCountPerformanceStub(CPerformanceIndicatorStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CAtomCountPerformance.py
+    to add methods and implementation-specific functionality.
+    """
+
+    nAtoms: Optional[CInt] = None
+    nResidues: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CAtomCountPerformanceStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -317,33 +582,40 @@ class CRefinementPerformanceStub(CPerformanceIndicatorStub):
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -353,12 +625,20 @@ class CRefinementPerformanceStub(CPerformanceIndicatorStub):
         "helpFile": {'type': 'str'},
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
-    contents_order=['RFactor', 'RFree', 'R', 'R1Factor', 'R1Free', 'R1', 'FSCaverage', 'annotation'],
+    contents_order=[
+        'RFactor',
+        'RFree',
+        'R',
+        'R1Factor',
+        'R1Free',
+        'R1',
+        'FSCaverage',
+        'annotation'],
 )
 class CServalcatPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CServalcatPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -392,39 +672,46 @@ class CServalcatPerformanceStub(CPerformanceIndicatorStub):
 
 @cdata_class(
     attributes={
-        "phaseError": attribute(AttributeType.FLOAT),
-        "weightedPhaseError": attribute(AttributeType.FLOAT),
-        "reflectionCorrelation": attribute(AttributeType.FLOAT),
+        "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroupStub"),
+        "highResLimit": attribute(AttributeType.FLOAT),
+        "rMeas": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -434,159 +721,23 @@ class CServalcatPerformanceStub(CPerformanceIndicatorStub):
         "helpFile": {'type': 'str'},
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
-    contents_order=['phaseError', 'weightedPhaseError', 'reflectionCorrelation'],
+    contents_order=['spaceGroup', 'highResLimit', 'rMeas'],
 )
-class CPhaseErrorPerformanceStub(CPerformanceIndicatorStub):
+class CDataReductionPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    This is a pure data class stub. Extend it in core/CPhaseErrorPerformance.py
+
+    This is a pure data class stub. Extend it in core/CDataReductionPerformance.py
     to add methods and implementation-specific functionality.
     """
 
-    phaseError: Optional[CFloat] = None
-    weightedPhaseError: Optional[CFloat] = None
-    reflectionCorrelation: Optional[CFloat] = None
+    spaceGroup: Optional[CSpaceGroupStub] = None
+    highResLimit: Optional[CFloat] = None
+    rMeas: Optional[CFloat] = None
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CPhaseErrorPerformanceStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "RMSxyz": attribute(AttributeType.FLOAT),
-        "nResidues": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "301": {
-                "description": "Data value not set"
-        },
-        "302": {
-                "description": "Performance indicator value difference greater than tolereance"
-        },
-        "303": {
-                "description": "Performance indicator value different"
-        },
-        "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
-        },
-        "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['RMSxyz', 'nResidues'],
-)
-class CSuperposePerformanceStub(CPerformanceIndicatorStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    This is a pure data class stub. Extend it in core/CSuperposePerformance.py
-    to add methods and implementation-specific functionality.
-    """
-
-    RMSxyz: Optional[CFloat] = None
-    nResidues: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CSuperposePerformanceStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "nAtoms": attribute(AttributeType.INT),
-        "nResidues": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "301": {
-                "description": "Data value not set"
-        },
-        "302": {
-                "description": "Performance indicator value difference greater than tolereance"
-        },
-        "303": {
-                "description": "Performance indicator value different"
-        },
-        "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
-        },
-        "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['nAtoms', 'nResidues'],
-)
-class CAtomCountPerformanceStub(CPerformanceIndicatorStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    This is a pure data class stub. Extend it in core/CAtomCountPerformance.py
-    to add methods and implementation-specific functionality.
-    """
-
-    nAtoms: Optional[CInt] = None
-    nResidues: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CAtomCountPerformanceStub.
+        Initialize CDataReductionPerformanceStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -609,33 +760,40 @@ class CAtomCountPerformanceStub(CPerformanceIndicatorStub):
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -645,12 +803,20 @@ class CAtomCountPerformanceStub(CPerformanceIndicatorStub):
         "helpFile": {'type': 'str'},
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
-    contents_order=['FOM', 'CFOM', 'Hand1Score', 'Hand2Score', 'CC', 'RFactor', 'RFree', 'annotation'],
+    contents_order=[
+        'FOM',
+        'CFOM',
+        'Hand1Score',
+        'Hand2Score',
+        'CC',
+        'RFactor',
+        'RFree',
+        'annotation'],
 )
 class CExpPhasPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CExpPhasPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -678,109 +844,46 @@ class CExpPhasPerformanceStub(CPerformanceIndicatorStub):
 
 @cdata_class(
     attributes={
-        "RFactor": attribute(AttributeType.FLOAT),
-        "completeness": attribute(AttributeType.FLOAT),
-        "annotation": attribute(AttributeType.STRING),
-    },
-    error_codes={
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "301": {
-                "description": "Data value not set"
-        },
-        "302": {
-                "description": "Performance indicator value difference greater than tolereance"
-        },
-        "303": {
-                "description": "Performance indicator value different"
-        },
-        "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
-        },
-        "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['RFactor', 'completeness', 'annotation'],
-)
-class CModelBuildPerformanceStub(CPerformanceIndicatorStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    This is a pure data class stub. Extend it in core/CModelBuildPerformance.py
-    to add methods and implementation-specific functionality.
-    """
-
-    RFactor: Optional[CFloat] = None
-    completeness: Optional[CFloat] = None
-    annotation: Optional[CString] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CModelBuildPerformanceStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
         "spaceGroup": attribute(AttributeType.CUSTOM, custom_class="CSpaceGroupStub"),
         "highResLimit": attribute(AttributeType.FLOAT),
         "ccHalf": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -795,7 +898,7 @@ class CModelBuildPerformanceStub(CPerformanceIndicatorStub):
 class CDataReductionCCPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CDataReductionCCPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -822,33 +925,40 @@ class CDataReductionCCPerformanceStub(CPerformanceIndicatorStub):
     },
     error_codes={
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "301": {
-                "description": "Data value not set"
+            "description": "Data value not set"
         },
         "302": {
-                "description": "Performance indicator value difference greater than tolereance"
+            "description": "Performance indicator value difference greater than tolereance"
         },
         "303": {
-                "description": "Performance indicator value different"
+            "description": "Performance indicator value different"
         },
         "304": {
-                "description": "Performance indicator value difference greater than tolereance - but improved",
-                "severity": 2
+            "description": "Performance indicator value difference greater than tolereance - but improved",
+            "severity": 2
         },
         "305": {
-                "description": "Performance indicator not used",
-                "severity": 0
+            "description": "Performance indicator not used",
+            "severity": 0
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -863,7 +973,7 @@ class CDataReductionCCPerformanceStub(CPerformanceIndicatorStub):
 class CTestObsConversionsPerformanceStub(CPerformanceIndicatorStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CTestObsConversionsPerformance.py
     to add methods and implementation-specific functionality.
     """
@@ -880,4 +990,3 @@ class CTestObsConversionsPerformanceStub(CPerformanceIndicatorStub):
             **kwargs: Additional keyword arguments
         """
         super().__init__(parent=parent, name=name, **kwargs)
-

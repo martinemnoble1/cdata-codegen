@@ -19,108 +19,36 @@ from core.base_object.fundamental_types import CInt, CList, CString
 from core.cdata_stubs.CCP4Annotation import CHostNameStub, CTimeStub, CUserIdStub
 from core.cdata_stubs.CCP4Data import CUUIDStub
 
+
 @cdata_class(
     error_codes={
         "101": {
-                "description": "Invalid characters in file name"
-        },
-        "102": {
-                "severity": 2,
-                "description": "Invalid characters in file name"
+            "description": "Version is not of form n.m or n.m.i"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
-        "allowedCharacters": '',
-        "allowedCharactersMode": 1,
         "default": None,
+        "charWidth": 10,
     },
-    qualifiers_order=['allowUndefined', 'allowedCharacters', 'allowedCharactersMode', 'default'],
+    qualifiers_order=['allowUndefined', 'default', 'charWidth'],
     qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow undefined value at run time'},
-        "allowedCharacters": {'type': 'str', 'description': 'Set of characters allowed in file name'},
-        "allowedCharactersMode": {'type': 'int', 'description': 'Handling of violation of allowed characters'},
-        "default": {'type': 'str', 'description': 'Default file path'},
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow an unset value at run time'},
+        "default": {'description': 'A default value'},
+        "charWidth": {'type': 'int', 'description': 'Number of characters allowed for widget in GUI'},
     },
 )
-class CFilePathStub(CString):
+class CVersionStub(CString):
     """
-    A file path
-    
-    This is a pure data class stub. Extend it in core/CFilePath.py
+    A (string) version number of the form n.m.i
+
+    This is a pure data class stub. Extend it in core/CVersion.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CFilePathStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-                "description": "List shorter than required minimum length"
-        },
-        "102": {
-                "description": "List longer than required maximum length"
-        },
-        "103": {
-                "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-                "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-                "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-                "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-                "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-                "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-                "description": "Invalid item class"
-        },
-        "110": {
-                "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-                "description": "No list item object set for list"
-        }
-},
-    qualifiers={
-        "listMinLength": 0,
-    },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-    },
-)
-class CExportedFileListStub(CList):
-    """
-    A list with all items of one CData sub-class
-    
-    This is a pure data class stub. Extend it in core/CExportedFileList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CExportedFileListStub.
+        Initialize CVersionStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -136,118 +64,125 @@ class CExportedFileListStub(CList):
     },
     error_codes={
         "0": {
-                "severity": 0,
-                "description": "OK"
+            "severity": 0,
+            "description": "OK"
         },
         "1": {
-                "severity": 1,
-                "description": "Data has undefined value"
+            "severity": 1,
+            "description": "Data has undefined value"
         },
         "2": {
-                "severity": 3,
-                "description": "Data has undefined value"
+            "severity": 3,
+            "description": "Data has undefined value"
         },
         "3": {
-                "severity": 2,
-                "description": "Missing data"
+            "severity": 2,
+            "description": "Missing data"
         },
         "4": {
-                "description": "Missing data"
+            "description": "Missing data"
         },
         "5": {
-                "description": "Attempting to set data of wrong type"
+            "description": "Attempting to set data of wrong type"
         },
         "6": {
-                "description": "Default value does not satisfy validity check"
+            "description": "Default value does not satisfy validity check"
         },
         "7": {
-                "severity": 2,
-                "description": "Unrecognised qualifier in data input"
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
         },
         "8": {
-                "severity": 2,
-                "description": "Attempting to get inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
         },
         "9": {
-                "description": "Failed to get property"
+            "description": "Failed to get property"
         },
         "10": {
-                "severity": 2,
-                "description": "Attempting to set inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
         },
         "11": {
-                "description": "Failed to set property:"
+            "description": "Failed to set property:"
         },
         "12": {
-                "description": "Undetermined error setting value from XML"
+            "description": "Undetermined error setting value from XML"
         },
         "13": {
-                "description": "Unrecognised class name in qualifier"
+            "description": "Unrecognised class name in qualifier"
         },
         "14": {
-                "severity": 2,
-                "description": "No object name when saving qualifiers to XML"
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
         },
         "15": {
-                "description": "Error saving qualifier to XML"
+            "description": "Error saving qualifier to XML"
         },
         "16": {
-                "severity": 2,
-                "description": "Unrecognised item in XML data file"
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
         },
         "17": {
-                "description": "Attempting to set unrecognised qualifier"
+            "description": "Attempting to set unrecognised qualifier"
         },
         "18": {
-                "description": "Attempting to set qualifier with wrong type"
+            "description": "Attempting to set qualifier with wrong type"
         },
         "19": {
-                "description": "Attempting to set qualifier with wrong list item type"
+            "description": "Attempting to set qualifier with wrong list item type"
         },
         "20": {
-                "description": "Error creating a list/dict item object"
+            "description": "Error creating a list/dict item object"
         },
         "21": {
-                "description": "Unknown error setting qualifiers from Xml file"
+            "description": "Unknown error setting qualifiers from Xml file"
         },
         "22": {
-                "description": "Unknown error testing validity"
+            "description": "Unknown error testing validity"
         },
         "23": {
-                "description": "Error saving data object to XML"
+            "description": "Error saving data object to XML"
         },
         "24": {
-                "description": "Unable to test validity of default",
-                "severity": 2
+            "description": "Unable to test validity of default",
+            "severity": 2
         },
         "300": {
-                "description": "Compared objects are the same",
-                "severity": 0
+            "description": "Compared objects are the same",
+            "severity": 0
         },
         "315": {
-                "description": "Both compared objects are null",
-                "severity": 0
+            "description": "Both compared objects are null",
+            "severity": 0
         },
         "301": {
-                "description": "Unable to compare this class of data",
-                "severity": 2
+            "description": "Unable to compare this class of data",
+            "severity": 2
         },
         "302": {
-                "description": "Other data has null value"
+            "description": "Other data has null value"
         },
         "303": {
-                "description": "My data has null value"
+            "description": "My data has null value"
         },
         "304": {
-                "description": "Data has different values"
+            "description": "Data has different values"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -261,7 +196,7 @@ class CExportedFileListStub(CList):
 class CExportedFileStub(CData):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CExportedFile.py
     to add methods and implementation-specific functionality.
     """
@@ -282,177 +217,126 @@ class CExportedFileStub(CData):
 
 @cdata_class(
     error_codes={
-        "101": {
-                "description": "Invalid project name"
-        },
-        "102": {
-                "description": "Project does not have directory set"
-        },
-        "103": {
-                "description": "Project directory does not exist"
-        },
-        "104": {
-                "severity": 2,
-                "description": "Warning - Project name is a directory alias"
-        },
-        "105": {
-                "severity": 2,
-                "description": "Warning - Project does not have directory set"
-        },
-        "106": {
-                "severity": 2,
-                "description": "Warning - Project directory does not exist"
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "allowAlias": True,
-        "allowUnfound": True,
-        "default": None,
-    },
-    qualifiers_order=['allowUndefined', 'allowAlias', 'allowUnfound', 'default'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow undefined value at run time'},
-        "allowAlias": {'type': 'bool', 'description': 'Flag if allow project to be directory alias at run time'},
-        "allowUnfound": {'type': 'bool', 'description': 'Flag if allow unfound project at run time'},
-        "default": {'type': 'str'},
-    },
-)
-class CProjectNameStub(CString):
-    """
-    The name of a CCP4i project or directory alias
-    
-    This is a pure data class stub. Extend it in core/CProjectName.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CProjectNameStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
         "0": {
-                "severity": 0,
-                "description": "OK"
+            "severity": 0,
+            "description": "OK"
         },
         "1": {
-                "severity": 1,
-                "description": "Data has undefined value"
+            "severity": 1,
+            "description": "Data has undefined value"
         },
         "2": {
-                "severity": 3,
-                "description": "Data has undefined value"
+            "severity": 3,
+            "description": "Data has undefined value"
         },
         "3": {
-                "severity": 2,
-                "description": "Missing data"
+            "severity": 2,
+            "description": "Missing data"
         },
         "4": {
-                "description": "Missing data"
+            "description": "Missing data"
         },
         "5": {
-                "description": "Attempting to set data of wrong type"
+            "description": "Attempting to set data of wrong type"
         },
         "6": {
-                "description": "Default value does not satisfy validity check"
+            "description": "Default value does not satisfy validity check"
         },
         "7": {
-                "severity": 2,
-                "description": "Unrecognised qualifier in data input"
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
         },
         "8": {
-                "severity": 2,
-                "description": "Attempting to get inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
         },
         "9": {
-                "description": "Failed to get property"
+            "description": "Failed to get property"
         },
         "10": {
-                "severity": 2,
-                "description": "Attempting to set inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
         },
         "11": {
-                "description": "Failed to set property:"
+            "description": "Failed to set property:"
         },
         "12": {
-                "description": "Undetermined error setting value from XML"
+            "description": "Undetermined error setting value from XML"
         },
         "13": {
-                "description": "Unrecognised class name in qualifier"
+            "description": "Unrecognised class name in qualifier"
         },
         "14": {
-                "severity": 2,
-                "description": "No object name when saving qualifiers to XML"
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
         },
         "15": {
-                "description": "Error saving qualifier to XML"
+            "description": "Error saving qualifier to XML"
         },
         "16": {
-                "severity": 2,
-                "description": "Unrecognised item in XML data file"
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
         },
         "17": {
-                "description": "Attempting to set unrecognised qualifier"
+            "description": "Attempting to set unrecognised qualifier"
         },
         "18": {
-                "description": "Attempting to set qualifier with wrong type"
+            "description": "Attempting to set qualifier with wrong type"
         },
         "19": {
-                "description": "Attempting to set qualifier with wrong list item type"
+            "description": "Attempting to set qualifier with wrong list item type"
         },
         "20": {
-                "description": "Error creating a list/dict item object"
+            "description": "Error creating a list/dict item object"
         },
         "21": {
-                "description": "Unknown error setting qualifiers from Xml file"
+            "description": "Unknown error setting qualifiers from Xml file"
         },
         "22": {
-                "description": "Unknown error testing validity"
+            "description": "Unknown error testing validity"
         },
         "23": {
-                "description": "Error saving data object to XML"
+            "description": "Error saving data object to XML"
         },
         "24": {
-                "description": "Unable to test validity of default",
-                "severity": 2
+            "description": "Unable to test validity of default",
+            "severity": 2
         },
         "300": {
-                "description": "Compared objects are the same",
-                "severity": 0
+            "description": "Compared objects are the same",
+            "severity": 0
         },
         "315": {
-                "description": "Both compared objects are null",
-                "severity": 0
+            "description": "Both compared objects are null",
+            "severity": 0
         },
         "301": {
-                "description": "Unable to compare this class of data",
-                "severity": 2
+            "description": "Unable to compare this class of data",
+            "severity": 2
         },
         "302": {
-                "description": "Other data has null value"
+            "description": "Other data has null value"
         },
         "303": {
-                "description": "My data has null value"
+            "description": "My data has null value"
         },
         "304": {
-                "description": "Data has different values"
+            "description": "Data has different values"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -468,7 +352,7 @@ class CMmcifDataStub(CDataFileContent):
     Generic mmCIF data.
 This is intended to be a base class for other classes
 specific to coordinates, reflections or geometry data.
-    
+
     This is a pure data class stub. Extend it in core/CMmcifData.py
     to add methods and implementation-specific functionality.
     """
@@ -488,41 +372,41 @@ specific to coordinates, reflections or geometry data.
 @cdata_class(
     error_codes={
         "101": {
-                "description": "List shorter than required minimum length"
+            "description": "List shorter than required minimum length"
         },
         "102": {
-                "description": "List longer than required maximum length"
+            "description": "List longer than required maximum length"
         },
         "103": {
-                "description": "Consecutive values in list fail comparison test"
+            "description": "Consecutive values in list fail comparison test"
         },
         "104": {
-                "description": "Attempting to add object of wrong type"
+            "description": "Attempting to add object of wrong type"
         },
         "105": {
-                "description": "Attempting to add object of correct type but wrong qualifiers"
+            "description": "Attempting to add object of correct type but wrong qualifiers"
         },
         "106": {
-                "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
         },
         "107": {
-                "description": "Deleting item will reduce list below minimum length"
+            "description": "Deleting item will reduce list below minimum length"
         },
         "108": {
-                "description": "Adding item will extend list beyond maximum length"
+            "description": "Adding item will extend list beyond maximum length"
         },
         "109": {
-                "description": "Invalid item class"
+            "description": "Invalid item class"
         },
         "110": {
-                "description": "etree (XML) list item of wrong type"
+            "description": "etree (XML) list item of wrong type"
         },
         "112": {
-                "description": "No list item object set for list"
+            "description": "No list item object set for list"
         }
-},
+    },
     qualifiers={
-        "listMinLength": 0,
+        "listMinLength": 1,
     },
     qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
     qualifiers_definition={
@@ -532,17 +416,17 @@ specific to coordinates, reflections or geometry data.
         "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
     },
 )
-class CSearchPathListStub(CList):
+class CExePathListStub(CList):
     """
     A list with all items of one CData sub-class
-    
-    This is a pure data class stub. Extend it in core/CSearchPathList.py
+
+    This is a pure data class stub. Extend it in core/CExePathList.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CSearchPathListStub.
+        Initialize CExePathListStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -559,113 +443,120 @@ class CSearchPathListStub(CList):
     },
     error_codes={
         "0": {
-                "severity": 0,
-                "description": "OK"
+            "severity": 0,
+            "description": "OK"
         },
         "1": {
-                "severity": 1,
-                "description": "Data has undefined value"
+            "severity": 1,
+            "description": "Data has undefined value"
         },
         "2": {
-                "severity": 3,
-                "description": "Data has undefined value"
+            "severity": 3,
+            "description": "Data has undefined value"
         },
         "3": {
-                "severity": 2,
-                "description": "Missing data"
+            "severity": 2,
+            "description": "Missing data"
         },
         "4": {
-                "description": "Missing data"
+            "description": "Missing data"
         },
         "5": {
-                "description": "Attempting to set data of wrong type"
+            "description": "Attempting to set data of wrong type"
         },
         "6": {
-                "description": "Default value does not satisfy validity check"
+            "description": "Default value does not satisfy validity check"
         },
         "7": {
-                "severity": 2,
-                "description": "Unrecognised qualifier in data input"
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
         },
         "8": {
-                "severity": 2,
-                "description": "Attempting to get inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
         },
         "9": {
-                "description": "Failed to get property"
+            "description": "Failed to get property"
         },
         "10": {
-                "severity": 2,
-                "description": "Attempting to set inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
         },
         "11": {
-                "description": "Failed to set property:"
+            "description": "Failed to set property:"
         },
         "12": {
-                "description": "Undetermined error setting value from XML"
+            "description": "Undetermined error setting value from XML"
         },
         "13": {
-                "description": "Unrecognised class name in qualifier"
+            "description": "Unrecognised class name in qualifier"
         },
         "14": {
-                "severity": 2,
-                "description": "No object name when saving qualifiers to XML"
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
         },
         "15": {
-                "description": "Error saving qualifier to XML"
+            "description": "Error saving qualifier to XML"
         },
         "16": {
-                "severity": 2,
-                "description": "Unrecognised item in XML data file"
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
         },
         "17": {
-                "description": "Attempting to set unrecognised qualifier"
+            "description": "Attempting to set unrecognised qualifier"
         },
         "18": {
-                "description": "Attempting to set qualifier with wrong type"
+            "description": "Attempting to set qualifier with wrong type"
         },
         "19": {
-                "description": "Attempting to set qualifier with wrong list item type"
+            "description": "Attempting to set qualifier with wrong list item type"
         },
         "20": {
-                "description": "Error creating a list/dict item object"
+            "description": "Error creating a list/dict item object"
         },
         "21": {
-                "description": "Unknown error setting qualifiers from Xml file"
+            "description": "Unknown error setting qualifiers from Xml file"
         },
         "22": {
-                "description": "Unknown error testing validity"
+            "description": "Unknown error testing validity"
         },
         "23": {
-                "description": "Error saving data object to XML"
+            "description": "Error saving data object to XML"
         },
         "24": {
-                "description": "Unable to test validity of default",
-                "severity": 2
+            "description": "Unable to test validity of default",
+            "severity": 2
         },
         "300": {
-                "description": "Compared objects are the same",
-                "severity": 0
+            "description": "Compared objects are the same",
+            "severity": 0
         },
         "315": {
-                "description": "Both compared objects are null",
-                "severity": 0
+            "description": "Both compared objects are null",
+            "severity": 0
         },
         "301": {
-                "description": "Unable to compare this class of data",
-                "severity": 2
+            "description": "Unable to compare this class of data",
+            "severity": 2
         },
         "302": {
-                "description": "Other data has null value"
+            "description": "Other data has null value"
         },
         "303": {
-                "description": "My data has null value"
+            "description": "My data has null value"
         },
         "304": {
-                "description": "Data has different values"
+            "description": "Data has different values"
         }
-},
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -680,7 +571,7 @@ class CSearchPathListStub(CList):
 class CExePathStub(CData):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CExePath.py
     to add methods and implementation-specific functionality.
     """
@@ -703,23 +594,29 @@ class CExePathStub(CData):
 @cdata_class(
     error_codes={
         "101": {
-                "description": "String too short"
+            "description": "String too short"
         },
         "102": {
-                "description": "String too long"
+            "description": "String too long"
         },
         "103": {
-                "description": "not one of limited allowed values"
+            "description": "not one of limited allowed values"
         },
         "104": {
-                "description": "Contains disallowed characters"
+            "description": "Contains disallowed characters"
         }
-},
+    },
     qualifiers={
         "enumerators": ['DEF', 'PARAMS', 'LOG', 'PROJECTDIRECTORIES', 'COM', 'REFMAC', 'OUTPUT', 'STATUS', 'PROJECTDATABASE', 'MGSCENE', 'JOBSERVERSTATUS', 'WORKFLOW', 'COMFILEPATCH', 'CUSTOMTASK', 'IMPORTEDJOB', 'I1SUPPLEMENT', 'ASUCONTENT', 'UNKNOWN'],
         "onlyEnumerators": True,
     },
-    qualifiers_order=['minLength', 'maxLength', 'onlyEnumerators', 'enumerators', 'menuText', 'allowedCharsCode'],
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
     qualifiers_definition={
         "enumerators": {'type': 'list'},
         "onlyEnumerators": {'type': 'bool', 'editable': False},
@@ -728,7 +625,7 @@ class CExePathStub(CData):
 class CFileFunctionStub(CString):
     """
     List of recognised XML file functions
-    
+
     This is a pure data class stub. Extend it in core/CFileFunction.py
     to add methods and implementation-specific functionality.
     """
@@ -746,124 +643,375 @@ class CFileFunctionStub(CString):
 
 
 @cdata_class(
+    error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 0,
+    },
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+    },
+)
+class CExportedFileListStub(CList):
+    """
+    A list with all items of one CData sub-class
+
+    This is a pure data class stub. Extend it in core/CExportedFileList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CExportedFileListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "Invalid characters in file name"
+        },
+        "102": {
+            "severity": 2,
+            "description": "Invalid characters in file name"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "allowedCharacters": '',
+        "allowedCharactersMode": 1,
+        "default": None,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'allowedCharacters',
+        'allowedCharactersMode',
+        'default'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow undefined value at run time'},
+        "allowedCharacters": {'type': 'str', 'description': 'Set of characters allowed in file name'},
+        "allowedCharactersMode": {'type': 'int', 'description': 'Handling of violation of allowed characters'},
+        "default": {'type': 'str', 'description': 'Default file path'},
+    },
+)
+class CFilePathStub(CString):
+    """
+    A file path
+
+    This is a pure data class stub. Extend it in core/CFilePath.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CFilePathStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "Invalid project name"
+        },
+        "102": {
+            "description": "Project does not have directory set"
+        },
+        "103": {
+            "description": "Project directory does not exist"
+        },
+        "104": {
+            "severity": 2,
+            "description": "Warning - Project name is a directory alias"
+        },
+        "105": {
+            "severity": 2,
+            "description": "Warning - Project does not have directory set"
+        },
+        "106": {
+            "severity": 2,
+            "description": "Warning - Project directory does not exist"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "allowAlias": True,
+        "allowUnfound": True,
+        "default": None,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'allowAlias',
+        'allowUnfound',
+        'default'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow undefined value at run time'},
+        "allowAlias": {'type': 'bool', 'description': 'Flag if allow project to be directory alias at run time'},
+        "allowUnfound": {'type': 'bool', 'description': 'Flag if allow unfound project at run time'},
+        "default": {'type': 'str'},
+    },
+)
+class CProjectNameStub(CString):
+    """
+    The name of a CCP4i project or directory alias
+
+    This is a pure data class stub. Extend it in core/CProjectName.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CProjectNameStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 0,
+    },
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+    },
+)
+class CSearchPathListStub(CList):
+    """
+    A list with all items of one CData sub-class
+
+    This is a pure data class stub. Extend it in core/CSearchPathList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CSearchPathListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
     attributes={
         "name": attribute(AttributeType.STRING),
         "path": attribute(AttributeType.CUSTOM, custom_class="CDataFile"),
     },
     error_codes={
         "0": {
-                "severity": 0,
-                "description": "OK"
+            "severity": 0,
+            "description": "OK"
         },
         "1": {
-                "severity": 1,
-                "description": "Data has undefined value"
+            "severity": 1,
+            "description": "Data has undefined value"
         },
         "2": {
-                "severity": 3,
-                "description": "Data has undefined value"
+            "severity": 3,
+            "description": "Data has undefined value"
         },
         "3": {
-                "severity": 2,
-                "description": "Missing data"
+            "severity": 2,
+            "description": "Missing data"
         },
         "4": {
-                "description": "Missing data"
+            "description": "Missing data"
         },
         "5": {
-                "description": "Attempting to set data of wrong type"
+            "description": "Attempting to set data of wrong type"
         },
         "6": {
-                "description": "Default value does not satisfy validity check"
+            "description": "Default value does not satisfy validity check"
         },
         "7": {
-                "severity": 2,
-                "description": "Unrecognised qualifier in data input"
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
         },
         "8": {
-                "severity": 2,
-                "description": "Attempting to get inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
         },
         "9": {
-                "description": "Failed to get property"
+            "description": "Failed to get property"
         },
         "10": {
-                "severity": 2,
-                "description": "Attempting to set inaccessible attribute:"
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
         },
         "11": {
-                "description": "Failed to set property:"
+            "description": "Failed to set property:"
         },
         "12": {
-                "description": "Undetermined error setting value from XML"
+            "description": "Undetermined error setting value from XML"
         },
         "13": {
-                "description": "Unrecognised class name in qualifier"
+            "description": "Unrecognised class name in qualifier"
         },
         "14": {
-                "severity": 2,
-                "description": "No object name when saving qualifiers to XML"
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
         },
         "15": {
-                "description": "Error saving qualifier to XML"
+            "description": "Error saving qualifier to XML"
         },
         "16": {
-                "severity": 2,
-                "description": "Unrecognised item in XML data file"
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
         },
         "17": {
-                "description": "Attempting to set unrecognised qualifier"
+            "description": "Attempting to set unrecognised qualifier"
         },
         "18": {
-                "description": "Attempting to set qualifier with wrong type"
+            "description": "Attempting to set qualifier with wrong type"
         },
         "19": {
-                "description": "Attempting to set qualifier with wrong list item type"
+            "description": "Attempting to set qualifier with wrong list item type"
         },
         "20": {
-                "description": "Error creating a list/dict item object"
+            "description": "Error creating a list/dict item object"
         },
         "21": {
-                "description": "Unknown error setting qualifiers from Xml file"
+            "description": "Unknown error setting qualifiers from Xml file"
         },
         "22": {
-                "description": "Unknown error testing validity"
+            "description": "Unknown error testing validity"
         },
         "23": {
-                "description": "Error saving data object to XML"
+            "description": "Error saving data object to XML"
         },
         "24": {
-                "description": "Unable to test validity of default",
-                "severity": 2
+            "description": "Unable to test validity of default",
+            "severity": 2
         },
         "300": {
-                "description": "Compared objects are the same",
-                "severity": 0
+            "description": "Compared objects are the same",
+            "severity": 0
         },
         "315": {
-                "description": "Both compared objects are null",
-                "severity": 0
+            "description": "Both compared objects are null",
+            "severity": 0
         },
         "301": {
-                "description": "Unable to compare this class of data",
-                "severity": 2
+            "description": "Unable to compare this class of data",
+            "severity": 2
         },
         "302": {
-                "description": "Other data has null value"
+            "description": "Other data has null value"
         },
         "303": {
-                "description": "My data has null value"
+            "description": "My data has null value"
         },
         "304": {
-                "description": "Data has different values"
+            "description": "Data has different values"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -877,7 +1025,7 @@ class CFileFunctionStub(CString):
 class CSearchPathStub(CData):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     This is a pure data class stub. Extend it in core/CSearchPath.py
     to add methods and implementation-specific functionality.
     """
@@ -899,129 +1047,24 @@ class CSearchPathStub(CData):
 
 @cdata_class(
     error_codes={
-        "101": {
-                "description": "List shorter than required minimum length"
-        },
-        "102": {
-                "description": "List longer than required maximum length"
-        },
-        "103": {
-                "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-                "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-                "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-                "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-                "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-                "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-                "description": "Invalid item class"
-        },
-        "110": {
-                "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-                "description": "No list item object set for list"
-        }
-},
-    qualifiers={
-        "listMinLength": 1,
-    },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-    },
-)
-class CExePathListStub(CList):
-    """
-    A list with all items of one CData sub-class
-    
-    This is a pure data class stub. Extend it in core/CExePathList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CExePathListStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-                "description": "Version is not of form n.m or n.m.i"
-        }
-},
-    qualifiers={
-        "allowUndefined": True,
-        "default": None,
-        "charWidth": 10,
-    },
-    qualifiers_order=['allowUndefined', 'default', 'charWidth'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if allow an unset value at run time'},
-        "default": {'description': 'A default value'},
-        "charWidth": {'type': 'int', 'description': 'Number of characters allowed for widget in GUI'},
-    },
-)
-class CVersionStub(CString):
-    """
-    A (string) version number of the form n.m.i
-    
-    This is a pure data class stub. Extend it in core/CVersion.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CVersionStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
         "201": {
-                "description": "Unrecognised projectId"
+            "description": "Unrecognised projectId"
         },
         "202": {
-                "description": "Project does not have directory set"
+            "description": "Project does not have directory set"
         },
         "203": {
-                "description": "Project directory does not exist"
+            "description": "Project directory does not exist"
         },
         "205": {
-                "severity": 2,
-                "description": "Warning - Project does not have directory set"
+            "severity": 2,
+            "description": "Warning - Project does not have directory set"
         },
         "206": {
-                "severity": 2,
-                "description": "Warning - Project directory does not exist"
+            "severity": 2,
+            "description": "Warning - Project directory does not exist"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "allowUnfound": True,
@@ -1037,7 +1080,7 @@ class CVersionStub(CString):
 class CProjectIdStub(CUUIDStub):
     """
     The CCP4i2 database project id - a global unique id
-    
+
     This is a pure data class stub. Extend it in core/CProjectId.py
     to add methods and implementation-specific functionality.
     """
@@ -1066,64 +1109,75 @@ class CProjectIdStub(CUUIDStub):
     },
     error_codes={
         "101": {
-                "description": "File does not exist"
+            "description": "File does not exist"
         },
         "102": {
-                "description": "No mime type for data file"
+            "description": "No mime type for data file"
         },
         "103": {
-                "description": "Attempting to set file content with inappropriate data"
+            "description": "Attempting to set file content with inappropriate data"
         },
         "104": {
-                "description": "There is no file content class specified for this type of file"
+            "description": "There is no file content class specified for this type of file"
         },
         "105": {
-                "description": "The file content class specified for this type of file can not be found"
+            "description": "The file content class specified for this type of file can not be found"
         },
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
+            "description": "Neither original nor test file exists",
+            "severity": 0
         },
         "306": {
-                "description": "Original file does not exists"
+            "description": "Original file does not exists"
         },
         "307": {
-                "description": "Test file does not exist "
+            "description": "Test file does not exist "
         },
         "308": {
-                "description": "Files failed checksum comparison"
+            "description": "Files failed checksum comparison"
         },
         "309": {
-                "description": "Files failed size comparison"
+            "description": "Files failed size comparison"
         },
         "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
         },
         "311": {
-                "description": "Failed loading original file for comparison"
+            "description": "Failed loading original file for comparison"
         },
         "312": {
-                "description": "Failed loading test file for comparison"
+            "description": "Failed loading test file for comparison"
         },
         "313": {
-                "description": "Files failed simple text diff comparison"
+            "description": "Files failed simple text diff comparison"
         },
         "320": {
-                "description": "Unrecognised error attempting to load file"
+            "description": "Unrecognised error attempting to load file"
         }
-},
-    qualifiers={
-        "mimeTypeName": '"text/plain"',
-        "mimeTypeDescription": 'Standard plain text',
-        "guiLabel": 'yml file',
-        "fileExtensions": ['yml'],
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers={
+        "guiLabel": 'Reflections from DIALS',
+        "fileExtensions": ['refl'],
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -1141,11 +1195,11 @@ class CProjectIdStub(CUUIDStub):
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
 )
-class CYmlFileStub(CDataFile):
+class CDataReflFileStub(CDataFile):
     """
-    A yml data file
-    
-    This is a pure data class stub. Extend it in core/CYmlFile.py
+    Reflection file from DIALS
+
+    This is a pure data class stub. Extend it in core/CDataReflFile.py
     to add methods and implementation-specific functionality.
     """
 
@@ -1159,7 +1213,7 @@ class CYmlFileStub(CDataFile):
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CYmlFileStub.
+        Initialize CDataReflFileStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -1188,27 +1242,34 @@ class CYmlFileStub(CDataFile):
     },
     error_codes={
         "101": {
-                "description": "Attempting to read header from non-existant Xml file"
+            "description": "Attempting to read header from non-existant Xml file"
         },
         "102": {
-                "description": "Error loading file to read header"
+            "description": "Error loading file to read header"
         },
         "103": {
-                "description": "Error finding <ccp4i2_header> in file"
+            "description": "Error finding <ccp4i2_header> in file"
         },
         "104": {
-                "description": "Error interpreting header from file"
+            "description": "Error interpreting header from file"
         },
         "105": {
-                "description": "File does not have <ccp4i2> root node"
+            "description": "File does not have <ccp4i2> root node"
         }
-},
+    },
     qualifiers={
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
     },
-    qualifiers_order=['allowUndefined', 'default', 'toolTip', 'guiLabel', 'guiDefinition', 'helpFile', 'saveToDb'],
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool'},
         "default": {'type': 'dict'},
@@ -1222,7 +1283,7 @@ class CYmlFileStub(CDataFile):
 class CI2XmlHeaderStub(CData):
     """
     Container for header info from XML file
-    
+
     This is a pure data class stub. Extend it in core/CI2XmlHeader.py
     to add methods and implementation-specific functionality.
     """
@@ -1266,61 +1327,77 @@ class CI2XmlHeaderStub(CData):
     },
     error_codes={
         "101": {
-                "description": "File does not exist"
+            "description": "File does not exist"
         },
         "102": {
-                "description": "No mime type for data file"
+            "description": "No mime type for data file"
         },
         "103": {
-                "description": "Attempting to set file content with inappropriate data"
+            "description": "Attempting to set file content with inappropriate data"
         },
         "104": {
-                "description": "There is no file content class specified for this type of file"
+            "description": "There is no file content class specified for this type of file"
         },
         "105": {
-                "description": "The file content class specified for this type of file can not be found"
+            "description": "The file content class specified for this type of file can not be found"
         },
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
+            "description": "Neither original nor test file exists",
+            "severity": 0
         },
         "306": {
-                "description": "Original file does not exists"
+            "description": "Original file does not exists"
         },
         "307": {
-                "description": "Test file does not exist "
+            "description": "Test file does not exist "
         },
         "308": {
-                "description": "Files failed checksum comparison"
+            "description": "Files failed checksum comparison"
         },
         "309": {
-                "description": "Files failed size comparison"
+            "description": "Files failed size comparison"
         },
         "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
         },
         "311": {
-                "description": "Failed loading original file for comparison"
+            "description": "Failed loading original file for comparison"
         },
         "312": {
-                "description": "Failed loading test file for comparison"
+            "description": "Failed loading test file for comparison"
         },
         "313": {
-                "description": "Files failed simple text diff comparison"
+            "description": "Files failed simple text diff comparison"
         },
         "320": {
-                "description": "Unrecognised error attempting to load file"
+            "description": "Unrecognised error attempting to load file"
         }
-},
-    qualifiers={
-        "fileExtensions": ['cif', 'ent'],
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers={
+        "mimeTypeName": '"text/plain"',
+        "mimeTypeDescription": 'Standard plain text',
+        "fileLabel": None,
+        "fileExtensions": ['txt', 'log'],
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -1338,13 +1415,11 @@ class CI2XmlHeaderStub(CData):
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
 )
-class CMmcifDataFileStub(CDataFile):
+class CTextDataFileStub(CDataFile):
     """
-    A generic mmCIF format file.
-This is intended to be a base class for other classes
-specific to coordinates, reflections or geometry data.
-    
-    This is a pure data class stub. Extend it in core/CMmcifDataFile.py
+    A text data file
+
+    This is a pure data class stub. Extend it in core/CTextDataFile.py
     to add methods and implementation-specific functionality.
     """
 
@@ -1358,7 +1433,7 @@ specific to coordinates, reflections or geometry data.
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CMmcifDataFileStub.
+        Initialize CTextDataFileStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -1380,284 +1455,57 @@ specific to coordinates, reflections or geometry data.
     },
     error_codes={
         "101": {
-                "description": "File does not exist"
+            "description": "File does not exist"
         },
         "102": {
-                "description": "No mime type for data file"
+            "description": "No mime type for data file"
         },
         "103": {
-                "description": "Attempting to set file content with inappropriate data"
+            "description": "Attempting to set file content with inappropriate data"
         },
         "104": {
-                "description": "There is no file content class specified for this type of file"
+            "description": "There is no file content class specified for this type of file"
         },
         "105": {
-                "description": "The file content class specified for this type of file can not be found"
+            "description": "The file content class specified for this type of file can not be found"
         },
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
+            "description": "Neither original nor test file exists",
+            "severity": 0
         },
         "306": {
-                "description": "Original file does not exists"
+            "description": "Original file does not exists"
         },
         "307": {
-                "description": "Test file does not exist "
+            "description": "Test file does not exist "
         },
         "308": {
-                "description": "Files failed checksum comparison"
+            "description": "Files failed checksum comparison"
         },
         "309": {
-                "description": "Files failed size comparison"
+            "description": "Files failed size comparison"
         },
         "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
         },
         "311": {
-                "description": "Failed loading original file for comparison"
+            "description": "Failed loading original file for comparison"
         },
         "312": {
-                "description": "Failed loading test file for comparison"
+            "description": "Failed loading test file for comparison"
         },
         "313": {
-                "description": "Files failed simple text diff comparison"
+            "description": "Files failed simple text diff comparison"
         },
         "320": {
-                "description": "Unrecognised error attempting to load file"
+            "description": "Unrecognised error attempting to load file"
         }
-},
-    qualifiers={
-        "mimeTypeName": 'application/postscript',
-        "fileExtensions": ['ps'],
-        "guiLabel": 'Postscript file',
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
-        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
-        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
-        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
-        "mimeTypeName": {'type': 'str', 'description': ''},
-        "mimeTypeDescription": {'type': 'str', 'description': ''},
-        "fileLabel": {'type': 'str', 'description': 'Label for file'},
-        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
-        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
-        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
-        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
-        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
-        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
-        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
-    },
-)
-class CPostscriptDataFileStub(CDataFile):
-    """
-    A postscript format file
-    
-    This is a pure data class stub. Extend it in core/CPostscriptDataFile.py
-    to add methods and implementation-specific functionality.
-    """
-
-    project: Optional[CProjectIdStub] = None
-    baseName: Optional[CFilePathStub] = None
-    relPath: Optional[CFilePathStub] = None
-    annotation: Optional[CString] = None
-    dbFileId: Optional[CUUIDStub] = None
-    subType: Optional[CInt] = None
-    contentFlag: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CPostscriptDataFileStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
-        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "annotation": attribute(AttributeType.STRING),
-        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
-        "subType": attribute(AttributeType.INT),
-        "contentFlag": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "101": {
-                "description": "File does not exist"
-        },
-        "102": {
-                "description": "No mime type for data file"
-        },
-        "103": {
-                "description": "Attempting to set file content with inappropriate data"
-        },
-        "104": {
-                "description": "There is no file content class specified for this type of file"
-        },
-        "105": {
-                "description": "The file content class specified for this type of file can not be found"
-        },
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
-        },
-        "306": {
-                "description": "Original file does not exists"
-        },
-        "307": {
-                "description": "Test file does not exist "
-        },
-        "308": {
-                "description": "Files failed checksum comparison"
-        },
-        "309": {
-                "description": "Files failed size comparison"
-        },
-        "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
-        },
-        "311": {
-                "description": "Failed loading original file for comparison"
-        },
-        "312": {
-                "description": "Failed loading test file for comparison"
-        },
-        "313": {
-                "description": "Files failed simple text diff comparison"
-        },
-        "320": {
-                "description": "Unrecognised error attempting to load file"
-        }
-},
-    qualifiers={
-        "guiLabel": 'Reflections from DIALS',
-        "fileExtensions": ['refl'],
-    },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
-        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
-        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
-        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
-        "mimeTypeName": {'type': 'str', 'description': ''},
-        "mimeTypeDescription": {'type': 'str', 'description': ''},
-        "fileLabel": {'type': 'str', 'description': 'Label for file'},
-        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
-        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
-        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
-        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
-        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
-        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
-        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
-    },
-)
-class CDataReflFileStub(CDataFile):
-    """
-    Reflection file from DIALS
-    
-    This is a pure data class stub. Extend it in core/CDataReflFile.py
-    to add methods and implementation-specific functionality.
-    """
-
-    project: Optional[CProjectIdStub] = None
-    baseName: Optional[CFilePathStub] = None
-    relPath: Optional[CFilePathStub] = None
-    annotation: Optional[CString] = None
-    dbFileId: Optional[CUUIDStub] = None
-    subType: Optional[CInt] = None
-    contentFlag: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CDataReflFileStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
-        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "annotation": attribute(AttributeType.STRING),
-        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
-        "subType": attribute(AttributeType.INT),
-        "contentFlag": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "101": {
-                "description": "File does not exist"
-        },
-        "102": {
-                "description": "No mime type for data file"
-        },
-        "103": {
-                "description": "Attempting to set file content with inappropriate data"
-        },
-        "104": {
-                "description": "There is no file content class specified for this type of file"
-        },
-        "105": {
-                "description": "The file content class specified for this type of file can not be found"
-        },
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
-        },
-        "306": {
-                "description": "Original file does not exists"
-        },
-        "307": {
-                "description": "Test file does not exist "
-        },
-        "308": {
-                "description": "Files failed checksum comparison"
-        },
-        "309": {
-                "description": "Files failed size comparison"
-        },
-        "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
-        },
-        "311": {
-                "description": "Failed loading original file for comparison"
-        },
-        "312": {
-                "description": "Failed loading test file for comparison"
-        },
-        "313": {
-                "description": "Files failed simple text diff comparison"
-        },
-        "320": {
-                "description": "Unrecognised error attempting to load file"
-        }
-},
     qualifiers={
         "fileLabel": 'scene',
         "mimeTypeName": 'application/CCP4-scene',
@@ -1665,7 +1513,20 @@ class CDataReflFileStub(CDataFile):
         "guiLabel": 'CCP4mg scene',
         "fileExtensions": ['scene.xml'],
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -1686,7 +1547,7 @@ class CDataReflFileStub(CDataFile):
 class CSceneDataFileStub(CDataFile):
     """
     An xml format file for defining scene in CCP4mg.
-    
+
     This is a pure data class stub. Extend it in core/CSceneDataFile.py
     to add methods and implementation-specific functionality.
     """
@@ -1723,62 +1584,74 @@ class CSceneDataFileStub(CDataFile):
     },
     error_codes={
         "101": {
-                "description": "File does not exist"
+            "description": "File does not exist"
         },
         "102": {
-                "description": "No mime type for data file"
+            "description": "No mime type for data file"
         },
         "103": {
-                "description": "Attempting to set file content with inappropriate data"
+            "description": "Attempting to set file content with inappropriate data"
         },
         "104": {
-                "description": "There is no file content class specified for this type of file"
+            "description": "There is no file content class specified for this type of file"
         },
         "105": {
-                "description": "The file content class specified for this type of file can not be found"
+            "description": "The file content class specified for this type of file can not be found"
         },
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
+            "description": "Neither original nor test file exists",
+            "severity": 0
         },
         "306": {
-                "description": "Original file does not exists"
+            "description": "Original file does not exists"
         },
         "307": {
-                "description": "Test file does not exist "
+            "description": "Test file does not exist "
         },
         "308": {
-                "description": "Files failed checksum comparison"
+            "description": "Files failed checksum comparison"
         },
         "309": {
-                "description": "Files failed size comparison"
+            "description": "Files failed size comparison"
         },
         "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
         },
         "311": {
-                "description": "Failed loading original file for comparison"
+            "description": "Failed loading original file for comparison"
         },
         "312": {
-                "description": "Failed loading test file for comparison"
+            "description": "Failed loading test file for comparison"
         },
         "313": {
-                "description": "Files failed simple text diff comparison"
+            "description": "Files failed simple text diff comparison"
         },
         "320": {
-                "description": "Unrecognised error attempting to load file"
+            "description": "Unrecognised error attempting to load file"
         }
-},
-    qualifiers={
-        "mimeTypeName": 'application/grace',
-        "fileExtensions": ['xmgr'],
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers={
+        "fileExtensions": ['cif', 'ent'],
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -1796,11 +1669,13 @@ class CSceneDataFileStub(CDataFile):
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
 )
-class CXmgrDataFileStub(CDataFile):
+class CMmcifDataFileStub(CDataFile):
     """
-    An xmgr format file. This is the input format for xmgrace, as output by scala or aimless
-    
-    This is a pure data class stub. Extend it in core/CXmgrDataFile.py
+    A generic mmCIF format file.
+This is intended to be a base class for other classes
+specific to coordinates, reflections or geometry data.
+
+    This is a pure data class stub. Extend it in core/CMmcifDataFile.py
     to add methods and implementation-specific functionality.
     """
 
@@ -1814,121 +1689,7 @@ class CXmgrDataFileStub(CDataFile):
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CXmgrDataFileStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
-        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "annotation": attribute(AttributeType.STRING),
-        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
-        "subType": attribute(AttributeType.INT),
-        "contentFlag": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "101": {
-                "description": "File does not exist"
-        },
-        "102": {
-                "description": "No mime type for data file"
-        },
-        "103": {
-                "description": "Attempting to set file content with inappropriate data"
-        },
-        "104": {
-                "description": "There is no file content class specified for this type of file"
-        },
-        "105": {
-                "description": "The file content class specified for this type of file can not be found"
-        },
-        "300": {
-                "description": "Passed",
-                "severity": 0
-        },
-        "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
-        },
-        "306": {
-                "description": "Original file does not exists"
-        },
-        "307": {
-                "description": "Test file does not exist "
-        },
-        "308": {
-                "description": "Files failed checksum comparison"
-        },
-        "309": {
-                "description": "Files failed size comparison"
-        },
-        "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
-        },
-        "311": {
-                "description": "Failed loading original file for comparison"
-        },
-        "312": {
-                "description": "Failed loading test file for comparison"
-        },
-        "313": {
-                "description": "Files failed simple text diff comparison"
-        },
-        "320": {
-                "description": "Unrecognised error attempting to load file"
-        }
-},
-    qualifiers={
-        "mimeTypeName": 'application/x-pdf',
-        "fileExtensions": ['pdf'],
-        "guiLabel": 'PDF file',
-    },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
-        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
-        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
-        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
-        "mimeTypeName": {'type': 'str', 'description': ''},
-        "mimeTypeDescription": {'type': 'str', 'description': ''},
-        "fileLabel": {'type': 'str', 'description': 'Label for file'},
-        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
-        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
-        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
-        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
-        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
-        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
-        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
-    },
-)
-class CPDFDataFileStub(CDataFile):
-    """
-    An PDF format file
-    
-    This is a pure data class stub. Extend it in core/CPDFDataFile.py
-    to add methods and implementation-specific functionality.
-    """
-
-    project: Optional[CProjectIdStub] = None
-    baseName: Optional[CFilePathStub] = None
-    relPath: Optional[CFilePathStub] = None
-    annotation: Optional[CString] = None
-    dbFileId: Optional[CUUIDStub] = None
-    subType: Optional[CInt] = None
-    contentFlag: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CPDFDataFileStub.
+        Initialize CMmcifDataFileStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -1950,42 +1711,55 @@ class CPDFDataFileStub(CDataFile):
     },
     error_codes={
         "1001": {
-                "description": "Unknown error reading XML file"
+            "description": "Unknown error reading XML file"
         },
         "1002": {
-                "description": "Error trying to find root node in XML"
+            "description": "Error trying to find root node in XML"
         },
         "1006": {
-                "description": "Attempting to save XML file with incorrect body"
+            "description": "Attempting to save XML file with incorrect body"
         },
         "1007": {
-                "description": "Error creating XML text"
+            "description": "Error creating XML text"
         },
         "1008": {
-                "description": "Error saving XML text to file"
+            "description": "Error saving XML text to file"
         },
         "1009": {
-                "description": "Error reading XML file"
+            "description": "Error reading XML file"
         },
         "1010": {
-                "description": "XML file does not exist"
+            "description": "XML file does not exist"
         },
         "1011": {
-                "description": "No file name given for making I2XMlDataFile"
+            "description": "No file name given for making I2XMlDataFile"
         },
         "1012": {
-                "description": "Error creating I2XMlDataFile object"
+            "description": "Error creating I2XMlDataFile object"
         },
         "1013": {
-                "description": "Error creating I2XMlDataFile file"
+            "description": "Error creating I2XMlDataFile file"
         }
-},
+    },
     qualifiers={
         "fileExtensions": ['xml'],
         "saveToDb": False,
         "mimeTypeName": 'application/xml',
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -2006,7 +1780,7 @@ class CPDFDataFileStub(CDataFile):
 class CXmlDataFileStub(CDataFile):
     """
     A reference to an XML file
-    
+
     This is a pure data class stub. Extend it in core/CXmlDataFile.py
     to add methods and implementation-specific functionality.
     """
@@ -2043,64 +1817,75 @@ class CXmlDataFileStub(CDataFile):
     },
     error_codes={
         "101": {
-                "description": "File does not exist"
+            "description": "File does not exist"
         },
         "102": {
-                "description": "No mime type for data file"
+            "description": "No mime type for data file"
         },
         "103": {
-                "description": "Attempting to set file content with inappropriate data"
+            "description": "Attempting to set file content with inappropriate data"
         },
         "104": {
-                "description": "There is no file content class specified for this type of file"
+            "description": "There is no file content class specified for this type of file"
         },
         "105": {
-                "description": "The file content class specified for this type of file can not be found"
+            "description": "The file content class specified for this type of file can not be found"
         },
         "300": {
-                "description": "Passed",
-                "severity": 0
+            "description": "Passed",
+            "severity": 0
         },
         "305": {
-                "description": "Neither original nor test file exists",
-                "severity": 0
+            "description": "Neither original nor test file exists",
+            "severity": 0
         },
         "306": {
-                "description": "Original file does not exists"
+            "description": "Original file does not exists"
         },
         "307": {
-                "description": "Test file does not exist "
+            "description": "Test file does not exist "
         },
         "308": {
-                "description": "Files failed checksum comparison"
+            "description": "Files failed checksum comparison"
         },
         "309": {
-                "description": "Files failed size comparison"
+            "description": "Files failed size comparison"
         },
         "310": {
-                "description": "No comparison testing implemented for this file type",
-                "severity": 2
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
         },
         "311": {
-                "description": "Failed loading original file for comparison"
+            "description": "Failed loading original file for comparison"
         },
         "312": {
-                "description": "Failed loading test file for comparison"
+            "description": "Failed loading test file for comparison"
         },
         "313": {
-                "description": "Files failed simple text diff comparison"
+            "description": "Files failed simple text diff comparison"
         },
         "320": {
-                "description": "Unrecognised error attempting to load file"
+            "description": "Unrecognised error attempting to load file"
         }
-},
-    qualifiers={
-        "mimeTypeName": '"text/plain"',
-        "mimeTypeDescription": 'Standard plain text',
-        "fileLabel": None,
-        "fileExtensions": ['txt', 'log'],
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers={
+        "mimeTypeName": 'application/grace',
+        "fileExtensions": ['xmgr'],
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -2118,11 +1903,11 @@ class CXmlDataFileStub(CDataFile):
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
 )
-class CTextDataFileStub(CDataFile):
+class CXmgrDataFileStub(CDataFile):
     """
-    A text data file
-    
-    This is a pure data class stub. Extend it in core/CTextDataFile.py
+    An xmgr format file. This is the input format for xmgrace, as output by scala or aimless
+
+    This is a pure data class stub. Extend it in core/CXmgrDataFile.py
     to add methods and implementation-specific functionality.
     """
 
@@ -2136,7 +1921,442 @@ class CTextDataFileStub(CDataFile):
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CTextDataFileStub.
+        Initialize CXmgrDataFileStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "101": {
+            "description": "File does not exist"
+        },
+        "102": {
+            "description": "No mime type for data file"
+        },
+        "103": {
+            "description": "Attempting to set file content with inappropriate data"
+        },
+        "104": {
+            "description": "There is no file content class specified for this type of file"
+        },
+        "105": {
+            "description": "The file content class specified for this type of file can not be found"
+        },
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "305": {
+            "description": "Neither original nor test file exists",
+            "severity": 0
+        },
+        "306": {
+            "description": "Original file does not exists"
+        },
+        "307": {
+            "description": "Test file does not exist "
+        },
+        "308": {
+            "description": "Files failed checksum comparison"
+        },
+        "309": {
+            "description": "Files failed size comparison"
+        },
+        "310": {
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
+        },
+        "311": {
+            "description": "Failed loading original file for comparison"
+        },
+        "312": {
+            "description": "Failed loading test file for comparison"
+        },
+        "313": {
+            "description": "Files failed simple text diff comparison"
+        },
+        "320": {
+            "description": "Unrecognised error attempting to load file"
+        }
+    },
+    qualifiers={
+        "mimeTypeName": '"text/plain"',
+        "mimeTypeDescription": 'Standard plain text',
+        "guiLabel": 'yml file',
+        "fileExtensions": ['yml'],
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
+        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
+        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
+        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
+        "mimeTypeName": {'type': 'str', 'description': ''},
+        "mimeTypeDescription": {'type': 'str', 'description': ''},
+        "fileLabel": {'type': 'str', 'description': 'Label for file'},
+        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
+        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
+        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
+        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
+        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
+        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
+        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
+    },
+)
+class CYmlFileStub(CDataFile):
+    """
+    A yml data file
+
+    This is a pure data class stub. Extend it in core/CYmlFile.py
+    to add methods and implementation-specific functionality.
+    """
+
+    project: Optional[CProjectIdStub] = None
+    baseName: Optional[CFilePathStub] = None
+    relPath: Optional[CFilePathStub] = None
+    annotation: Optional[CString] = None
+    dbFileId: Optional[CUUIDStub] = None
+    subType: Optional[CInt] = None
+    contentFlag: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CYmlFileStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "101": {
+            "description": "File does not exist"
+        },
+        "102": {
+            "description": "No mime type for data file"
+        },
+        "103": {
+            "description": "Attempting to set file content with inappropriate data"
+        },
+        "104": {
+            "description": "There is no file content class specified for this type of file"
+        },
+        "105": {
+            "description": "The file content class specified for this type of file can not be found"
+        },
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "305": {
+            "description": "Neither original nor test file exists",
+            "severity": 0
+        },
+        "306": {
+            "description": "Original file does not exists"
+        },
+        "307": {
+            "description": "Test file does not exist "
+        },
+        "308": {
+            "description": "Files failed checksum comparison"
+        },
+        "309": {
+            "description": "Files failed size comparison"
+        },
+        "310": {
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
+        },
+        "311": {
+            "description": "Failed loading original file for comparison"
+        },
+        "312": {
+            "description": "Failed loading test file for comparison"
+        },
+        "313": {
+            "description": "Files failed simple text diff comparison"
+        },
+        "320": {
+            "description": "Unrecognised error attempting to load file"
+        }
+    },
+    qualifiers={
+        "mimeTypeName": 'application/postscript',
+        "fileExtensions": ['ps'],
+        "guiLabel": 'Postscript file',
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
+        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
+        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
+        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
+        "mimeTypeName": {'type': 'str', 'description': ''},
+        "mimeTypeDescription": {'type': 'str', 'description': ''},
+        "fileLabel": {'type': 'str', 'description': 'Label for file'},
+        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
+        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
+        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
+        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
+        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
+        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
+        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
+    },
+)
+class CPostscriptDataFileStub(CDataFile):
+    """
+    A postscript format file
+
+    This is a pure data class stub. Extend it in core/CPostscriptDataFile.py
+    to add methods and implementation-specific functionality.
+    """
+
+    project: Optional[CProjectIdStub] = None
+    baseName: Optional[CFilePathStub] = None
+    relPath: Optional[CFilePathStub] = None
+    annotation: Optional[CString] = None
+    dbFileId: Optional[CUUIDStub] = None
+    subType: Optional[CInt] = None
+    contentFlag: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CPostscriptDataFileStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "annotation": attribute(AttributeType.STRING),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUIDStub"),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "101": {
+            "description": "File does not exist"
+        },
+        "102": {
+            "description": "No mime type for data file"
+        },
+        "103": {
+            "description": "Attempting to set file content with inappropriate data"
+        },
+        "104": {
+            "description": "There is no file content class specified for this type of file"
+        },
+        "105": {
+            "description": "The file content class specified for this type of file can not be found"
+        },
+        "300": {
+            "description": "Passed",
+            "severity": 0
+        },
+        "305": {
+            "description": "Neither original nor test file exists",
+            "severity": 0
+        },
+        "306": {
+            "description": "Original file does not exists"
+        },
+        "307": {
+            "description": "Test file does not exist "
+        },
+        "308": {
+            "description": "Files failed checksum comparison"
+        },
+        "309": {
+            "description": "Files failed size comparison"
+        },
+        "310": {
+            "description": "No comparison testing implemented for this file type",
+            "severity": 2
+        },
+        "311": {
+            "description": "Failed loading original file for comparison"
+        },
+        "312": {
+            "description": "Failed loading test file for comparison"
+        },
+        "313": {
+            "description": "Files failed simple text diff comparison"
+        },
+        "320": {
+            "description": "Unrecognised error attempting to load file"
+        }
+    },
+    qualifiers={
+        "mimeTypeName": 'application/x-pdf',
+        "fileExtensions": ['pdf'],
+        "guiLabel": 'PDF file',
+    },
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
+        "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
+        "fromPreviousJob": {'type': 'bool', 'description': 'Flag if input data file can be inferred from preceeding jobs'},
+        "jobCombo": {'type': 'bool', 'description': 'Flag if data widget should be a combo box '},
+        "mimeTypeName": {'type': 'str', 'description': ''},
+        "mimeTypeDescription": {'type': 'str', 'description': ''},
+        "fileLabel": {'type': 'str', 'description': 'Label for file'},
+        "fileExtensions": {'type': 'list', 'listItemType': "<class 'str'>", 'description': 'A list of strings containing allowed file extensions (no dot)'},
+        "fileContentClassName": {'type': 'str', 'editable': False, 'description': 'A string containing the name of a class which will hold the file contents'},
+        "isDirectory": {'type': 'bool', 'description': 'Flag if the data is a directory'},
+        "ifInfo": {'type': 'bool', 'description': 'Flag if gui widget should have info icon'},
+        "saveToDb": {'type': 'bool', 'description': 'Save the name of this file in the database'},
+        "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
+        "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
+    },
+)
+class CPDFDataFileStub(CDataFile):
+    """
+    An PDF format file
+
+    This is a pure data class stub. Extend it in core/CPDFDataFile.py
+    to add methods and implementation-specific functionality.
+    """
+
+    project: Optional[CProjectIdStub] = None
+    baseName: Optional[CFilePathStub] = None
+    relPath: Optional[CFilePathStub] = None
+    annotation: Optional[CString] = None
+    dbFileId: Optional[CUUIDStub] = None
+    subType: Optional[CInt] = None
+    contentFlag: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CPDFDataFileStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
+        "header": attribute(AttributeType.CUSTOM, custom_class="CI2XmlHeaderStub"),
+    },
+    error_codes={
+        "1003": {
+            "description": "XML does not have <ccp4i2> root node"
+        },
+        "1004": {
+            "severity": 2,
+            "description": "XML does not have <ccp4i2_header> section"
+        },
+        "1005": {
+            "description": "XML does not have <ccp4i2_body> section"
+        }
+    },
+    qualifiers={
+        "fileExtensions": ['xml'],
+        "autoLoadHeader": True,
+    },
+    qualifiers_order=['autoLoadHeader'],
+    qualifiers_definition={
+        "autoLoadHeader": {'type': 'bool'},
+    },
+)
+class CI2XmlDataFileStub(CXmlDataFileStub):
+    """
+    A reference to an XML file with CCP4i2 Header
+
+    This is a pure data class stub. Extend it in core/CI2XmlDataFile.py
+    to add methods and implementation-specific functionality.
+    """
+
+    project: Optional[CProjectIdStub] = None
+    baseName: Optional[CFilePathStub] = None
+    relPath: Optional[CFilePathStub] = None
+    header: Optional[CI2XmlHeaderStub] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CI2XmlDataFileStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -2158,42 +2378,55 @@ class CTextDataFileStub(CDataFile):
     },
     error_codes={
         "1001": {
-                "description": "Unknown error reading XML file"
+            "description": "Unknown error reading XML file"
         },
         "1002": {
-                "description": "Error trying to find root node in XML"
+            "description": "Error trying to find root node in XML"
         },
         "1006": {
-                "description": "Attempting to save XML file with incorrect body"
+            "description": "Attempting to save XML file with incorrect body"
         },
         "1007": {
-                "description": "Error creating XML text"
+            "description": "Error creating XML text"
         },
         "1008": {
-                "description": "Error saving XML text to file"
+            "description": "Error saving XML text to file"
         },
         "1009": {
-                "description": "Error reading XML file"
+            "description": "Error reading XML file"
         },
         "1010": {
-                "description": "XML file does not exist"
+            "description": "XML file does not exist"
         },
         "1011": {
-                "description": "No file name given for making I2XMlDataFile"
+            "description": "No file name given for making I2XMlDataFile"
         },
         "1012": {
-                "description": "Error creating I2XMlDataFile object"
+            "description": "Error creating I2XMlDataFile object"
         },
         "1013": {
-                "description": "Error creating I2XMlDataFile file"
+            "description": "Error creating I2XMlDataFile file"
         }
-},
+    },
     qualifiers={
         "mimeTypeName": 'application/EBI-validation-xml',
         "fileExtensions": ['xml'],
         "guiLabel": 'EBI Validation XML',
     },
-    qualifiers_order=['fileExtensions', 'mimeTypeName', 'mimeTypeDescription', 'fileLabel', 'allowUndefined', 'mustExist', 'fromPreviousJob', 'jobCombo', 'fileContentClassName', 'isDirectory', 'saveToDb', 'requiredSubType', 'requiredContentFlag'],
+    qualifiers_order=[
+        'fileExtensions',
+        'mimeTypeName',
+        'mimeTypeDescription',
+        'fileLabel',
+        'allowUndefined',
+        'mustExist',
+        'fromPreviousJob',
+        'jobCombo',
+        'fileContentClassName',
+        'isDirectory',
+        'saveToDb',
+        'requiredSubType',
+        'requiredContentFlag'],
     qualifiers_definition={
         "allowUndefined": {'type': 'bool', 'description': 'Flag if data file can be undefined at run time'},
         "mustExist": {'type': 'bool', 'description': 'Flag if data file must exist at run time'},
@@ -2213,8 +2446,8 @@ class CTextDataFileStub(CDataFile):
 )
 class CEBIValidationXMLDataFileStub(CXmlDataFileStub):
     """
-    An XLM file returned from the EBI validation server 
-    
+    An XLM file returned from the EBI validation server
+
     This is a pure data class stub. Extend it in core/CEBIValidationXMLDataFile.py
     to add methods and implementation-specific functionality.
     """
@@ -2237,57 +2470,3 @@ class CEBIValidationXMLDataFileStub(CXmlDataFileStub):
             **kwargs: Additional keyword arguments
         """
         super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "project": attribute(AttributeType.CUSTOM, custom_class="CProjectIdStub"),
-        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePathStub"),
-        "header": attribute(AttributeType.CUSTOM, custom_class="CI2XmlHeaderStub"),
-    },
-    error_codes={
-        "1003": {
-                "description": "XML does not have <ccp4i2> root node"
-        },
-        "1004": {
-                "severity": 2,
-                "description": "XML does not have <ccp4i2_header> section"
-        },
-        "1005": {
-                "description": "XML does not have <ccp4i2_body> section"
-        }
-},
-    qualifiers={
-        "fileExtensions": ['xml'],
-        "autoLoadHeader": True,
-    },
-    qualifiers_order=['autoLoadHeader'],
-    qualifiers_definition={
-        "autoLoadHeader": {'type': 'bool'},
-    },
-)
-class CI2XmlDataFileStub(CXmlDataFileStub):
-    """
-    A reference to an XML file with CCP4i2 Header
-    
-    This is a pure data class stub. Extend it in core/CI2XmlDataFile.py
-    to add methods and implementation-specific functionality.
-    """
-
-    project: Optional[CProjectIdStub] = None
-    baseName: Optional[CFilePathStub] = None
-    relPath: Optional[CFilePathStub] = None
-    header: Optional[CI2XmlHeaderStub] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CI2XmlDataFileStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-

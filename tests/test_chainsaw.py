@@ -13,4 +13,5 @@ from core.CCP4TaskManager import TASKMANAGER
 )
 def test_chainsaw():
     task = TASKMANAGER().get_plugin_class("chainsaw")()
-    assert not task.container.inputData.isSet() 
+    task.container.inputData.XYZIN = os.path.join(os.environ["CCP4I2_ROOT"], "demo_data", "mdm2", "4hg7.pdb")
+    assert task.container.inputData.XYZIN.__str__().endswith("4hg7.pdb")

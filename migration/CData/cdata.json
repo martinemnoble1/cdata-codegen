@@ -21335,6 +21335,15 @@
         "226": {
           "description": "Failed importing from an mmcif file - no output from cif2mtz"
         }
+      },
+      "CONTENT_FLAGS": {
+        "CONTENT_FLAG_FREER": {
+          "value": 1,
+          "annotation": "FreeR",
+          "columns": [
+            "FREER"
+          ]
+        }
       }
     },
     "CGenericReflDataFile": {
@@ -22688,6 +22697,30 @@
         },
         "226": {
           "description": "Failed importing from an mmcif file - no output from cif2mtz"
+        }
+      },
+      "SUBTYPES": {
+        "SUBTYPE_NORMAL": {
+          "value": 1,
+          "description": "normal map"
+        },
+        "SUBTYPE_DIFFERENCE": {
+          "value": 2,
+          "description": "difference map"
+        },
+        "SUBTYPE_ANOM_DIFFERENCE": {
+          "value": 3,
+          "description": "anomalous difference map"
+        }
+      },
+      "CONTENT_FLAGS": {
+        "CONTENT_FLAG_FPHI": {
+          "value": 1,
+          "annotation": "FPhi",
+          "columns": [
+            "F",
+            "PHI"
+          ]
         }
       }
     },
@@ -24695,6 +24728,58 @@
         "303": {
           "description": "Running sftools failed"
         }
+      },
+      "SUBTYPES": {
+        "SUBTYPE_OBSERVED": {
+          "value": 1,
+          "description": "observed data"
+        },
+        "SUBTYPE_DERIVED": {
+          "value": 2,
+          "description": "derived data"
+        },
+        "SUBTYPE_REFERENCE": {
+          "value": 3,
+          "description": "reference data"
+        }
+      },
+      "CONTENT_FLAGS": {
+        "CONTENT_FLAG_IPAIR": {
+          "value": 1,
+          "annotation": "Anomalous Is",
+          "columns": [
+            "Iplus",
+            "SIGIplus",
+            "Iminus",
+            "SIGIminus"
+          ]
+        },
+        "CONTENT_FLAG_FPAIR": {
+          "value": 2,
+          "annotation": "Anomalous SFs",
+          "columns": [
+            "Fplus",
+            "SIGFplus",
+            "Fminus",
+            "SIGFminus"
+          ]
+        },
+        "CONTENT_FLAG_IMEAN": {
+          "value": 3,
+          "annotation": "Mean Is",
+          "columns": [
+            "I",
+            "SIGI"
+          ]
+        },
+        "CONTENT_FLAG_FMEAN": {
+          "value": 4,
+          "annotation": "Mean SFs",
+          "columns": [
+            "F",
+            "SIGF"
+          ]
+        }
       }
     },
     "CPhaserRFileDataFile": {
@@ -25310,6 +25395,36 @@
         },
         "226": {
           "description": "Failed importing from an mmcif file - no output from cif2mtz"
+        }
+      },
+      "SUBTYPES": {
+        "SUBTYPE_UNBIASED": {
+          "value": 1,
+          "description": "unbiased data"
+        },
+        "SUBTYPE_BIASED": {
+          "value": 2,
+          "description": "biased data"
+        }
+      },
+      "CONTENT_FLAGS": {
+        "CONTENT_FLAG_HL": {
+          "value": 1,
+          "annotation": "Hendrickson-Lattmann coeffs",
+          "columns": [
+            "HLA",
+            "HLB",
+            "HLC",
+            "HLD"
+          ]
+        },
+        "CONTENT_FLAG_PHIFOM": {
+          "value": 2,
+          "annotation": "Phi,FOM",
+          "columns": [
+            "PHI",
+            "FOM"
+          ]
         }
       }
     },
