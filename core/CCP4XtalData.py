@@ -934,16 +934,23 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
                 'SIGFm': column_names[3]
             })
 
-        # Set output file path
+        # Set output file paths
         # Important: Output must go to work_directory (not input directory) to ensure writability
         if work_directory:
             from pathlib import Path
             input_path = Path(self.getFullPath())
-            output_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
-            output_path = str(Path(work_directory) / output_name)
+            # HKLOUT: full ctruncate output (all columns)
+            hklout_name = f"{input_path.stem}_full{input_path.suffix}"
+            hklout_path = str(Path(work_directory) / hklout_name)
+            # OBSOUT: mini-MTZ with only requested columns (F, SIGF)
+            obsout_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
+            obsout_path = str(Path(work_directory) / obsout_name)
         else:
-            output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
-        wrapper.container.outputData.HKLOUT.setFullPath(output_path)
+            hklout_path = self._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
+            obsout_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
+
+        wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
+        wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
 
         # Run ctruncate
         status = wrapper.process()
@@ -955,7 +962,41 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
             error_msg += f"\nCheck logs in {ctruncate_work}"
             raise RuntimeError(error_msg)
 
-        return str(output_path)
+        # Manually call processOutputFiles to create the mini-MTZ
+        # (normally called by postProcess, but we skip that for synchronous execution)
+        if hasattr(wrapper, 'processOutputFiles'):
+            try:
+                wrapper.processOutputFiles()
+            except AttributeError as e:
+                # Handle missing methods like datasetName() that are not critical
+                # The essential work (creating mini-MTZ) is done by splitMtz
+                print(f"[DEBUG as_FMEAN] processOutputFiles partial failure (non-critical): {e}")
+
+        # Return path to mini-MTZ output (OBSOUT), not the full HKLOUT
+        # OBSOUT contains only the requested columns (F, SIGF for FMEAN)
+        # while HKLOUT contains all columns including intensities
+        obsout_path = wrapper.container.outputData.OBSOUT.getFullPath()
+
+        # Debug: List files created by ctruncate
+        print(f"[DEBUG as_FMEAN] Expected OBSOUT: {obsout_path}")
+        print(f"[DEBUG as_FMEAN] Expected HKLOUT: {wrapper.container.outputData.HKLOUT.getFullPath()}")
+        print(f"[DEBUG as_FMEAN] ctruncate work directory: {ctruncate_work}")
+        from pathlib import Path
+        if work_directory and Path(work_directory).exists():
+            print(f"[DEBUG as_FMEAN] Files in work_directory:")
+            for f in Path(work_directory).rglob("*.mtz"):
+                print(f"  {f} (size: {f.stat().st_size} bytes)")
+
+        # Also check the ctruncate subdirectory
+        if Path(ctruncate_work).exists():
+            print(f"[DEBUG as_FMEAN] Files in ctruncate work directory:")
+            for f in Path(ctruncate_work).rglob("*.mtz"):
+                print(f"  {f} (size: {f.stat().st_size} bytes)")
+
+        if not obsout_path or not os.path.exists(obsout_path):
+            raise RuntimeError(f"ctruncate mini-MTZ output not found. Expected at: {obsout_path}")
+
+        return str(obsout_path)
 
 
 class CPhaserRFileDataFile(CPhaserRFileDataFileStub):

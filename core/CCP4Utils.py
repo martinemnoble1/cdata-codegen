@@ -16,13 +16,212 @@ class MtzMergeError(Exception):
     pass
 
 
+class MtzSplitError(Exception):
+    """Errors during MTZ splitting operations."""
+    pass
+
+
+def split_mtz_file(
+    input_path: Union[str, Path],
+    output_path: Union[str, Path],
+    column_mapping: dict
+) -> Path:
+    """
+    Split/extract columns from an MTZ file using gemmi (completely CData-agnostic).
+
+    Creates a new MTZ file with a complete unique reflection set for the space group,
+    containing only the specified columns. Uses gemmi.make_miller_array() to ensure
+    all expected reflections (including systematic absences) are present.
+
+    Args:
+        input_path: Path to input MTZ file
+        output_path: Path for output MTZ file
+        column_mapping: Dictionary mapping input column names to output column names
+                       e.g., {'FMEAN': 'F', 'SIGFMEAN': 'SIGF'}
+
+    Returns:
+        Path: Full path to created output file
+
+    Raises:
+        FileNotFoundError: If input MTZ file doesn't exist
+        ValueError: If column not found in input
+        MtzSplitError: If gemmi operations fail
+
+    Example:
+        >>> split_mtz_file(
+        ...     input_path='/data/full.mtz',
+        ...     output_path='/data/mini.mtz',
+        ...     column_mapping={'FMEAN': 'F', 'SIGFMEAN': 'SIGF'}
+        ... )
+        Path('/data/mini.mtz')
+    """
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+
+    # Validate input
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input MTZ file not found: {input_path}")
+
+    if not column_mapping:
+        raise ValueError("column_mapping cannot be empty")
+
+    try:
+        # Read input MTZ and ensure reflections are in ASU
+        mtzin = gemmi.read_mtz_file(str(input_path))
+        mtzin.ensure_asu()
+
+        # Validate all requested columns exist
+        available_columns = mtzin.column_labels()
+        for input_col in column_mapping.keys():
+            if input_col not in available_columns:
+                raise ValueError(
+                    f"Column '{input_col}' not found in {input_path}. "
+                    f"Available columns: {available_columns}"
+                )
+
+        # Create output MTZ with complete unique reflection set
+        mtzout = gemmi.Mtz()
+        mtzout.spacegroup = mtzin.spacegroup
+        mtzout.cell = mtzin.cell
+
+        # Add HKL_base dataset for H, K, L columns
+        hkl_base = mtzout.add_dataset('HKL_base')
+        mtzout.add_column('H', 'H')
+        mtzout.add_column('K', 'H')
+        mtzout.add_column('L', 'H')
+
+        # Create complete unique reflection set for the space group
+        # This ensures all expected reflections (including absences) are present
+        uniques = gemmi.make_miller_array(
+            mtzout.cell,
+            mtzout.spacegroup,
+            mtzin.resolution_high(),
+            mtzin.resolution_low()
+        )
+        mtzout.set_data(uniques)
+
+        # Determine if we need a data dataset (for non-HKL columns)
+        dataset = hkl_base
+        for input_col_name in column_mapping.keys():
+            col = mtzin.column_with_label(input_col_name)
+            if col.dataset_id > 0 and len(mtzin.datasets) > 1:
+                src_dataset = mtzin.dataset(col.dataset_id)
+                dataset = mtzout.add_dataset(src_dataset.project_name)
+                dataset.crystal_name = src_dataset.crystal_name
+                dataset.dataset_name = src_dataset.dataset_name
+                dataset.wavelength = src_dataset.wavelength
+                break
+
+        # Copy data columns using copy_column for automatic H,K,L matching
+        for input_col_name, output_col_name in column_mapping.items():
+            src_col = mtzin.column_with_label(input_col_name)
+            # Use copy_column(-1, col) to automatically match H,K,L indices
+            new_col = mtzout.copy_column(-1, src_col)
+            new_col.label = output_col_name
+            new_col.dataset_id = dataset.id
+
+        # Set history
+        mtzout.history = [
+            f'MTZ file created from {input_path.name} using split_mtz_file (gemmi)',
+            f'Columns: {", ".join(f"{i}->{o}" for i, o in column_mapping.items())}'
+        ]
+
+        # Write output file
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        mtzout.write_to_file(str(output_path))
+
+        if not output_path.exists():
+            raise MtzSplitError(f"Output file not created: {output_path}")
+
+        return output_path
+
+    except (ValueError, FileNotFoundError):
+        raise
+    except Exception as e:
+        raise MtzSplitError(f"Failed to split MTZ file: {e}")
+
+
+def merge_mtz_files_cad(
+    input_specs: List[dict],
+    output_path: Union[str, Path],
+    merge_strategy: str = 'first'
+) -> Path:
+    """
+    Merge multiple MTZ files using CAD (CCP4's official merging tool).
+
+    This function uses the external `cad` command from CCP4 to properly merge
+    MTZ files with different reflection sets, handling H,K,L matching correctly.
+
+    Args: Same as merge_mtz_files
+    Returns: Path to merged MTZ file
+    """
+    import subprocess
+    import os
+    import shutil
+
+    output_path = Path(output_path)
+
+    # Check if CAD is available
+    cad_exe = shutil.which('cad')
+    if not cad_exe:
+        cbin = os.environ.get('CBIN')
+        if cbin:
+            cad_path = os.path.join(cbin, 'cad')
+            if os.path.exists(cad_path):
+                cad_exe = cad_path
+
+    if not cad_exe:
+        raise MtzMergeError("CAD executable not found. Please ensure CCP4 is installed and sourced.")
+
+    # Build CAD command
+    cmd = [cad_exe, 'HKLOUT', str(output_path)]
+
+    # Add input files
+    for i, spec in enumerate(input_specs, 1):
+        cmd.extend(['HKLIN' + str(i), str(spec['path'])])
+
+    # Build labin commands for column selection/renaming
+    labin_lines = []
+    for i, spec in enumerate(input_specs, 1):
+        column_mapping = spec.get('column_mapping', {})
+        if column_mapping:
+            parts = [f'E{i}={in_col}' for in_col, out_col in column_mapping.items()]
+            labin_lines.append(f'labin file {i} {" ".join(parts)}')
+
+    # Run CAD
+    stdin_text = '\n'.join(labin_lines + ['END'])
+
+    try:
+        result = subprocess.run(
+            cmd,
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env=os.environ.copy()
+        )
+
+        if result.returncode != 0:
+            raise MtzMergeError(f"CAD failed: {result.stderr}")
+
+        if not output_path.exists():
+            raise MtzMergeError(f"CAD did not create output file: {output_path}")
+
+        return output_path
+
+    except subprocess.TimeoutExpired:
+        raise MtzMergeError("CAD timed out")
+    except Exception as e:
+        raise MtzMergeError(f"CAD execution failed: {e}")
+
+
 def merge_mtz_files(
     input_specs: List[dict],
     output_path: Union[str, Path],
     merge_strategy: str = 'first'
 ) -> Path:
     """
-    Merge multiple MTZ files using gemmi (completely CData-agnostic).
+    Merge multiple MTZ files using CAD from CCP4 (CData-agnostic).
 
     This is a low-level utility that merges reflection data from multiple
     MTZ files into a single output file. It has NO knowledge of CMiniMtzDataFile,
@@ -91,20 +290,32 @@ def merge_mtz_files(
     except Exception as e:
         raise MtzMergeError(f"Failed to read {first_path}: {e}")
 
-    # Create new output MTZ starting with H, K, L data from first file
-    # We'll copy the full data array from the first file, which includes H, K, L
-    out_mtz = gemmi.Mtz(with_base=True)
-    out_mtz.spacegroup = first_mtz.spacegroup
-    out_mtz.set_cell_for_all(first_mtz.cell)
+    # Ensure first MTZ has reflections in ASU
+    first_mtz.ensure_asu()
 
-    # Copy the reflection data (H, K, L) from first file
-    # Extract just the H, K, L columns (first 3 columns)
-    hkl_data = first_mtz.array[:, :3]  # Just H, K, L columns
-    out_mtz.set_data(hkl_data)
+    # Create new output MTZ with complete reflection set for the space group
+    out_mtz = gemmi.Mtz()
+    out_mtz.spacegroup = first_mtz.spacegroup
+    out_mtz.cell = first_mtz.cell
+
+    # Add HKL_base dataset for H, K, L columns
+    hkl_base = out_mtz.add_dataset('HKL_base')
+    out_mtz.add_column('H', 'H')
+    out_mtz.add_column('K', 'H')
+    out_mtz.add_column('L', 'H')
+
+    # Create complete unique reflection set for the space group
+    # This ensures all files will have a common reflection list
+    uniques = gemmi.make_miller_array(
+        out_mtz.cell,
+        out_mtz.spacegroup,
+        first_mtz.resolution_high(),
+        first_mtz.resolution_low()
+    )
+    out_mtz.set_data(uniques)
 
     # Track which columns have been added to detect conflicts
-    # H, K, L are already present from with_base=True
-    added_columns = {'H', 'K', 'L'}
+    added_columns = set()
 
     # Process each input file
     for spec_idx, spec in enumerate(input_specs):
@@ -125,6 +336,7 @@ def merge_mtz_files(
         # Read MTZ file
         try:
             in_mtz = gemmi.read_mtz_file(str(input_path))
+            in_mtz.ensure_asu()  # Ensure reflections are in ASU
         except Exception as e:
             raise MtzMergeError(f"Failed to read {input_path}: {e}")
 
@@ -142,6 +354,14 @@ def merge_mtz_files(
                 f"Incompatible unit cells: {first_path} has {out_mtz.cell.parameters}, "
                 f"{input_path} has {in_mtz.cell.parameters}"
             )
+
+        # Add dataset if needed (for data columns, not H,K,L)
+        if len(out_mtz.datasets) < 2:
+            # Get first data dataset from source
+            src_dataset = in_mtz.datasets[1] if len(in_mtz.datasets) > 1 else in_mtz.datasets[0]
+            ds = out_mtz.add_dataset(src_dataset.dataset_name or 'data')
+            ds.crystal_name = src_dataset.crystal_name
+            ds.wavelength = src_dataset.wavelength
 
         # Copy requested columns (input_label -> output_label)
         for input_label, output_label in column_mapping.items():
@@ -177,20 +397,12 @@ def merge_mtz_files(
                         new_label = f"{output_label}_{counter}"
                     output_label = new_label
 
-            # Copy column to output
-            # This will match H,K,L indices between files and copy values
+            # Copy column using gemmi's automatic H,K,L matching
             try:
-                # Add dataset if needed (use first dataset from source)
-                if not out_mtz.datasets:
-                    out_mtz.add_dataset('merged')
-
-                # Copy the column (gemmi handles H,K,L matching)
-                out_mtz.copy_column(-1, src_col)
-
-                # Rename if needed
-                if output_label != input_label:
-                    # Get the just-added column and rename it
-                    out_mtz.columns[-1].label = output_label
+                # Use copy_column with -1 to automatically match H,K,L indices
+                new_col = out_mtz.copy_column(-1, src_col)
+                new_col.label = output_label
+                new_col.dataset_id = 1  # Use dataset 1 for all data columns
 
                 added_columns.add(output_label)
 

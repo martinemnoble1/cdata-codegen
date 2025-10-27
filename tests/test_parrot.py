@@ -137,19 +137,23 @@ def test_parrot_makehklin(tmp_path):
     print(f"hklin.mtz columns: {columns}")
 
     # Expected columns from F_SIGF input (after conversion)
-    assert 'F' in columns, f"F column not found in hklin.mtz. Columns: {columns}"
-    assert 'SIGF' in columns, f"SIGF column not found in hklin.mtz. Columns: {columns}"
+    # Object name is prepended with underscore (e.g., F_SIGF_F)
+    assert 'F_SIGF_F' in columns, f"F_SIGF_F column not found in hklin.mtz. Columns: {columns}"
+    assert 'F_SIGF_SIGF' in columns, f"F_SIGF_SIGF column not found in hklin.mtz. Columns: {columns}"
 
     # Expected columns from ABCD input (phases)
-    assert 'ABCD' in columns or 'HLA' in columns or 'HLB' in columns, \
-        f"Phase columns (ABCD or HLA/HLB) not found in hklin.mtz. Columns: {columns}"
+    # Object name is prepended with underscore (e.g., ABCD_HLA)
+    assert 'ABCD_HLA' in columns, f"ABCD_HLA column not found in hklin.mtz. Columns: {columns}"
+    assert 'ABCD_HLB' in columns, f"ABCD_HLB column not found in hklin.mtz. Columns: {columns}"
+    assert 'ABCD_HLC' in columns, f"ABCD_HLC column not found in hklin.mtz. Columns: {columns}"
+    assert 'ABCD_HLD' in columns, f"ABCD_HLD column not found in hklin.mtz. Columns: {columns}"
 
     # Expected crystallographic columns
     assert 'H' in columns, f"H (Miller index) not found. Columns: {columns}"
     assert 'K' in columns, f"K (Miller index) not found. Columns: {columns}"
     assert 'L' in columns, f"L (Miller index) not found. Columns: {columns}"
 
-    print("✅ hklin.mtz contains all expected columns (F, SIGF, phases, Miller indices)")
+    print("✅ hklin.mtz contains all expected columns (F_SIGF_F, F_SIGF_SIGF, ABCD_HLA/HLB/HLC/HLD, Miller indices)")
 
 
 @pytest.mark.skipif(
@@ -185,6 +189,14 @@ def test_parrot(tmp_path):
         ccp4_root, "demo_data", "gamma", "initial_phases.mtz"
     )
     assert str(task.container.inputData.ABCD).endswith("initial_phases.mtz")
+
+    # Set ASUIN (observations - structure factors with sigmas)
+    task.container.inputData.ASUIN = os.path.join(
+        ccp4_root, "demo_data", "gamma", "gamma.asu.xml"
+    )
+    assert str(task.container.inputData.ASUIN).endswith(
+        "gamma.asu.xml"
+    )
 
     # Run the task - outputs will be created in tmp_path
     result = task.process()

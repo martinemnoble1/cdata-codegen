@@ -106,6 +106,9 @@ class CPluginScript(CData):
         # Command line for external program
         self.commandLine = []
 
+        # Command script (list of lines to write to stdin or script file)
+        self.commandScript = []
+
         # Working directory and file paths
         if workDirectory is not None:
             self.workDirectory = Path(workDirectory)
@@ -777,6 +780,9 @@ class CPluginScript(CData):
         Runs the program specified by TASKCOMMAND with the command line
         arguments built by makeCommandAndScript(), capturing output to log files.
 
+        If both commandLine and commandScript are defined, the commandLine is used
+        to start the process and commandScript is fed as stdin.
+
         Returns:
             CErrorReport with any errors
         """
@@ -800,6 +806,11 @@ class CPluginScript(CData):
             work_dir_path.mkdir(parents=True, exist_ok=True)
             print(f"Created working directory: {self.workDirectory}")
 
+        # Write command script to file if present
+        command_script_file = None
+        if self.commandScript:
+            command_script_file = self.writeCommandFile()
+
         # Prepare log file paths
         stdout_path = self.makeFileName('STDOUT')
         stderr_path = self.makeFileName('STDERR')
@@ -819,6 +830,8 @@ class CPluginScript(CData):
         print(f"Working directory: {self.workDirectory}")
         print(f"Stdout log: {stdout_path}")
         print(f"Stderr log: {stderr_path}")
+        if command_script_file:
+            print(f"Command script: {command_script_file}")
         print(f"{'='*60}\n")
 
         try:
@@ -831,11 +844,45 @@ class CPluginScript(CData):
             print(f"Environment CCP4: {env.get('CCP4', 'NOT SET')}")
             print(f"Environment CLIB: {env.get('CLIB', 'NOT SET')}")
 
+            # Prepare stdin input
+            # When using input= parameter, do NOT set stdin= parameter
+            # The input= parameter automatically opens stdin as PIPE, writes data, and closes (sends EOF)
+            stdin_input = None
+            if self.commandScript:
+                # Join command script lines into single string
+                stdin_input = ''.join(self.commandScript)
+
             with open(stdout_path, 'w') as stdout_file, open(stderr_path, 'w') as stderr_file:
+                # Write formatted header to stdout
+                stdout_file.write("="*70 + "\n")
+                stdout_file.write(f"CCP4i2 Task: {self.TASKNAME}\n")
+                stdout_file.write("="*70 + "\n\n")
+
+                # Write command line
+                stdout_file.write("Command Line:\n")
+                stdout_file.write("-" * 70 + "\n")
+                stdout_file.write(f"{' '.join(command)}\n\n")
+
+                # Write command script if present
+                if self.commandScript:
+                    stdout_file.write("Command Script (stdin):\n")
+                    stdout_file.write("-" * 70 + "\n")
+                    for line in self.commandScript:
+                        stdout_file.write(line)
+                    stdout_file.write("\n")
+
+                stdout_file.write("="*70 + "\n")
+                stdout_file.write("Program Output:\n")
+                stdout_file.write("="*70 + "\n\n")
+                stdout_file.flush()
+
+                # Run the process
+                # Note: When input= is provided, stdin is automatically set to PIPE and closed after writing
+                # When input= is None, stdin defaults to inheriting from parent (but files are closed)
                 result = subprocess.run(
                     command,
                     cwd=self.workDirectory,
-                    stdin=subprocess.DEVNULL,  # Provide empty stdin so program doesn't wait for input
+                    input=stdin_input,
                     stdout=stdout_file,
                     stderr=stderr_file,
                     text=True,
@@ -1080,12 +1127,14 @@ class CPluginScript(CData):
         input_specs = []
 
         for file_spec in file_objects:
-            # Parse spec to get name and optional rename
+            # Parse spec to get name, display_name, and optional rename
             if isinstance(file_spec, str):
                 name = file_spec
+                display_name = file_spec
                 rename_map = {}
             elif isinstance(file_spec, dict):
                 name = file_spec['name']
+                display_name = file_spec.get('display_name', name)
                 rename_map = file_spec.get('rename', {})
             else:
                 raise ValueError(
@@ -1106,13 +1155,16 @@ class CPluginScript(CData):
 
             # Get filesystem path
             path = file_obj.getFullPath()
+            print(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
 
             # Auto-detect contentFlag from file content to ensure accuracy
             # This ensures the contentFlag reflects the actual file contents
             if hasattr(file_obj, 'setContentFlag'):
+                print(f"[DEBUG makeHklinGemmi] Before setContentFlag: contentFlag = {file_obj.contentFlag}")
                 file_obj.setContentFlag()
+                print(f"[DEBUG makeHklinGemmi] After setContentFlag: contentFlag = {file_obj.contentFlag}")
 
             # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
             # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
@@ -1132,9 +1184,16 @@ class CPluginScript(CData):
             columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
 
             # Build column_mapping (input_label -> output_label)
+            # By default, prepend display_name to column (e.g., F_PHI_IN_HLA)
+            # unless explicit rename is provided
             column_mapping = {}
             for col in columns:
-                output_col = rename_map.get(col, col)
+                if col in rename_map:
+                    # Explicit rename provided
+                    output_col = rename_map[col]
+                else:
+                    # Default: prepend display_name with underscore
+                    output_col = f"{display_name}_{col}"
                 column_mapping[col] = output_col
 
             # Build spec for merge_mtz_files
@@ -1222,7 +1281,7 @@ class CPluginScript(CData):
             for item_idx, item in enumerate(miniMtzsIn):
                 if isinstance(item, str):
                     # Simple name - use object's own contentFlag
-                    file_objects.append(item)
+                    file_objects.append({'name': item, 'display_name': item})
 
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
                     # [name, target_contentFlag] - may need conversion
@@ -1281,6 +1340,7 @@ class CPluginScript(CData):
 
                             conversion_method = getattr(file_obj, method_name)
                             converted_path = conversion_method(self.workDirectory)
+                            print(f"[DEBUG makeHklin] Converted {name} to {converted_path}")
 
                             # Create a temporary file object pointing to converted file
                             # We need to create an instance of the same class
@@ -1290,13 +1350,15 @@ class CPluginScript(CData):
                             # Set the full path to the converted file
                             temp_file_obj.setFullPath(str(converted_path))
                             temp_file_obj.contentFlag = CInt(target_flag)
+                            print(f"[DEBUG makeHklin] Created temp obj '{temp_name}', path={temp_file_obj.getFullPath()}, contentFlag={temp_file_obj.contentFlag}")
 
                             # Add to inputData temporarily
                             setattr(self.container.inputData, temp_name, temp_file_obj)
                             converted_files.append(temp_name)
 
-                            # Use the temp name for merging
-                            file_objects.append(temp_name)
+                            # Use the temp name for merging, but keep original name for column prefixes
+                            file_objects.append({'name': temp_name, 'display_name': name})
+                            print(f"[DEBUG makeHklin] Added '{temp_name}' (display as '{name}') to file_objects list")
 
                         except NotImplementedError as e:
                             error.append(
@@ -1334,7 +1396,7 @@ class CPluginScript(CData):
                             return error
                     else:
                         # No conversion needed - flags match
-                        file_objects.append(name)
+                        file_objects.append({'name': name, 'display_name': name})
 
                 else:
                     error.append(
@@ -1414,3 +1476,236 @@ class CPluginScript(CData):
         colnames = ""
 
         return outfile, colnames, error
+
+    def splitMtz(self, infile: str, outfiles: list, logFile: str = None) -> int:
+        """
+        Split an MTZ file into multiple mini-MTZ files with selected columns.
+
+        This is a thin CData wrapper around split_mtz_file() from CCP4Utils.
+        It handles the legacy outfiles list format and converts it to the
+        simple column_mapping dict format.
+
+        Args:
+            infile: Path to input MTZ file
+            outfiles: List of output specifications, each is a list of:
+                     [output_path, input_columns] or
+                     [output_path, input_columns, output_columns]
+                     where input_columns and output_columns are comma-separated column names
+            logFile: Optional path to log file (not used in gemmi implementation)
+
+        Returns:
+            SUCCEEDED or FAILED status code
+
+        Example:
+            >>> self.splitMtz(
+            ...     '/path/to/input.mtz',
+            ...     [['/path/to/output.mtz', 'FMEAN,SIGFMEAN', 'F,SIGF']],
+            ...     '/path/to/log'
+            ... )
+        """
+        from core.CCP4Utils import split_mtz_file, MtzSplitError
+
+        print(f'[DEBUG splitMtz] Splitting {infile} using gemmi')
+        print(f'[DEBUG splitMtz] Output specs: {outfiles}')
+
+        try:
+            # Process each output file
+            for outfile_spec in outfiles:
+                # Parse output specification
+                if len(outfile_spec) == 2:
+                    output_path, input_cols = outfile_spec
+                    output_cols = input_cols  # Use same names for output
+                elif len(outfile_spec) == 3:
+                    output_path, input_cols, output_cols = outfile_spec
+                else:
+                    print(f'[ERROR] Invalid outfile spec: {outfile_spec}')
+                    return self.FAILED
+
+                # Parse column names
+                input_col_names = [c.strip() for c in input_cols.split(',')]
+                output_col_names = [c.strip() for c in output_cols.split(',')]
+
+                if len(input_col_names) != len(output_col_names):
+                    print(f'[ERROR] Input and output column counts must match')
+                    return self.FAILED
+
+                # Build column mapping dict for utility function
+                column_mapping = dict(zip(input_col_names, output_col_names))
+
+                print(f'[DEBUG splitMtz] Creating {output_path}')
+                print(f'[DEBUG splitMtz]   Column mapping: {column_mapping}')
+
+                # Call CData-agnostic utility function
+                result_path = split_mtz_file(
+                    input_path=infile,
+                    output_path=output_path,
+                    column_mapping=column_mapping
+                )
+
+                import os
+                file_size = os.path.getsize(result_path)
+                print(f'[DEBUG splitMtz] Created: {result_path} ({file_size} bytes)')
+
+            return self.SUCCEEDED
+
+        except (FileNotFoundError, ValueError, MtzSplitError) as e:
+            print(f'[ERROR] splitMtz failed: {e}')
+            return self.FAILED
+        except Exception as e:
+            print(f'[ERROR] splitMtz unexpected error: {e}')
+            import traceback
+            traceback.print_exc()
+            return self.FAILED
+
+    def appendCommandScript(self, text=None, fileName=None, oneLine=False, clear=False):
+        """
+        Add text to the command script (list of lines for stdin/script file).
+
+        Args:
+            text: String or list of strings to add
+            fileName: Path to file whose contents should be added
+            oneLine: If text is a list, join into single line
+            clear: Clear existing script before adding
+
+        Returns:
+            CErrorReport with any errors encountered
+        """
+        from core.CCP4ErrorHandling import CErrorReport
+
+        error = CErrorReport()
+
+        if clear:
+            self.commandScript = []
+
+        # Load from file if provided
+        if fileName is not None:
+            fileName = str(fileName)
+            if not os.path.exists(fileName):
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=16,
+                    details=f"File not found: {fileName}",
+                    name=fileName
+                )
+                return error
+            try:
+                with open(fileName, 'r') as f:
+                    text = f.read()
+            except Exception as e:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=16,
+                    details=f"Error reading file: {e}",
+                    name=fileName
+                )
+                return error
+
+        # Process text
+        if text is not None:
+            # Handle list inputs
+            if isinstance(text, list):
+                if not oneLine:
+                    # Add each item separately
+                    for item in text:
+                        sub_error = self.appendCommandScript(item)
+                        if sub_error.count() > 0:
+                            error.extend(sub_error)
+                    return error
+                else:
+                    # Join into single line
+                    text = ' '.join(str(item) for item in text)
+
+            # Convert to string
+            try:
+                text_str = str(text)
+            except Exception:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=5,
+                    details="Could not convert text to string"
+                )
+                return error
+
+            # Ensure newline at end
+            if text_str and not text_str.endswith('\n'):
+                text_str += '\n'
+
+            self.commandScript.append(text_str)
+
+        return error
+
+    def writeCommandFile(self, qualifier=None):
+        """
+        Write the command script to a file.
+
+        Args:
+            qualifier: Optional qualifier for filename (creates com_{qualifier}.txt)
+
+        Returns:
+            Path to written file, or None on error
+        """
+        if not self.commandScript:
+            return None
+
+        # Prepend header comment
+        script_lines = [f'# Task {self.TASKNAME} command script\n'] + self.commandScript
+
+        # Generate filename
+        fileName = self.makeFileName('COM', qualifier=qualifier)
+
+        try:
+            with open(fileName, 'w') as f:
+                f.writelines(script_lines)
+            return fileName
+        except Exception as e:
+            print(f'[ERROR] Writing command file {fileName}: {e}')
+            self.errorReport.append(
+                klass=self.__class__.__name__,
+                code=7,
+                details=f'Error writing command file: {e}',
+                name=fileName
+            )
+            return None
+
+    def makeFileName(self, format='COM', ext='', qualifier=None):
+        """
+        Generate consistent names for output files.
+
+        Args:
+            format: File type (COM, LOG, STDOUT, STDERR, etc.)
+            ext: Custom extension (overrides format default)
+            qualifier: Optional qualifier to add to filename
+
+        Returns:
+            Full path to file in work directory
+        """
+        defNames = {
+            'ROOT': '',
+            'PARAMS': 'params.xml',
+            'JOB_INPUT': 'input_params.xml',
+            'PROGRAMXML': 'program.xml',
+            'LOG': 'log.txt',
+            'STDOUT': 'stdout.txt',
+            'STDERR': 'stderr.txt',
+            'INTERRUPT': 'interrupt_status.xml',
+            'DIAGNOSTIC': 'diagnostic.xml',
+            'REPORT': 'report.html',
+            'COM': 'com.txt',
+            'MGPICDEF': 'report.mgpic.py',
+            'PIC': 'report.png',
+            'RVAPIXML': 'i2.xml'
+        }
+
+        fileName = defNames.get(format, 'unknown.unk')
+
+        # Add qualifier if provided
+        if qualifier is not None:
+            base, extension = fileName.rsplit('.', 1)
+            fileName = f'{base}_{qualifier}.{extension}'
+
+        # Use custom extension if provided
+        if ext:
+            base = fileName.rsplit('.', 1)[0]
+            fileName = f'{base}.{ext}'
+
+        return str(self.workDirectory / fileName)

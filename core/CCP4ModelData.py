@@ -50,13 +50,180 @@ class CAsuContentSeqList(CAsuContentSeqListStub):
 class CAsuDataFile(CAsuDataFileStub):
     """
     A reference to an XML file with CCP4i2 Header
-    
+
     Extends CAsuDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self):
+        """
+        Load the XML file and populate fileContent with CAsuContent.
+
+        This method reads the XML file at the path specified by getFullPath()
+        and parses it into the fileContent attribute.
+        """
+        # Check if already loaded
+        if hasattr(self, 'fileContent') and self.fileContent is not None:
+            return
+
+        # Get the file path
+        file_path = self.getFullPath()
+        if not file_path:
+            print(f"Debug: getFullPath() returned empty for CAsuDataFile")
+            return
+
+        print(f"Debug: Loading ASU file from {file_path}")
+
+        # Parse the XML file
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        if not Path(file_path).exists():
+            return
+
+        try:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+
+            # Create CAsuContent object
+            # Import here to avoid circular imports
+            from core.cdata_stubs.CCP4ModelData import CAsuContentStub, CAsuContentSeqStub
+
+            # Find the class - it might be in stubs or in this file
+            try:
+                from core.CCP4ModelData import CAsuContent
+            except ImportError:
+                CAsuContent = CAsuContentStub
+
+            try:
+                from core.CCP4ModelData import CAsuContentSeq
+            except ImportError:
+                CAsuContentSeq = CAsuContentSeqStub
+
+            # Create fileContent
+            self.fileContent = CAsuContent(parent=self, name='fileContent')
+
+            # Parse sequences from XML
+            # Handle namespace
+            ns = {'ccp4': 'http://www.ccp4.ac.uk/ccp4ns'}
+            body = root.find('.//ccp4i2_body', ns) or root.find('.//ccp4i2_body')
+
+            if body is not None:
+                seqList_elem = body.find('seqList')
+                if seqList_elem is not None:
+                    for seq_elem in seqList_elem.findall('CAsuContentSeq'):
+                        seq_obj = CAsuContentSeq(parent=self.fileContent.seqList, name=None)
+
+                        # Parse sequence fields
+                        if seq_elem.find('sequence') is not None:
+                            seq_obj.sequence = seq_elem.find('sequence').text or ''
+                        if seq_elem.find('nCopies') is not None:
+                            seq_obj.nCopies = int(seq_elem.find('nCopies').text or '1')
+                        if seq_elem.find('polymerType') is not None:
+                            seq_obj.polymerType = seq_elem.find('polymerType').text or ''
+                        if seq_elem.find('name') is not None:
+                            seq_obj.name = seq_elem.find('name').text or ''
+                        if seq_elem.find('description') is not None:
+                            seq_obj.description = seq_elem.find('description').text or ''
+
+                        # Add to seqList
+                        self.fileContent.seqList.append(seq_obj)
+
+        except ET.ParseError as e:
+            print(f"Error parsing XML file {file_path}: {e}")
+        except Exception as e:
+            print(f"Error loading file {file_path}: {e}")
+
+    def writeFasta(
+        self,
+        fileName: str,
+        indx: int = -1,
+        format: str = 'fasta',
+        writeMulti: bool = False,
+        polymerTypes: list = None
+    ):
+        """
+        Write sequences to a FASTA or PIR format file.
+
+        Args:
+            fileName: Output file path
+            indx: Index of specific sequence to write (-1 for all)
+            format: Output format ('fasta' or 'pir')
+            writeMulti: Write multiple copies based on nCopies
+            polymerTypes: List of polymer types to include (default: PROTEIN, RNA, DNA)
+        """
+        if polymerTypes is None:
+            polymerTypes = ["PROTEIN", "RNA", "DNA"]
+
+        # Load the file to populate fileContent
+        self.loadFile()
+
+        # Check if fileContent was populated
+        if not hasattr(self, 'fileContent') or self.fileContent is None:
+            print(f"Warning: No fileContent loaded from {self.getFullPath()}")
+            return
+
+        # Get selection mode from qualifiers if available
+        selectionMode = self.get_qualifier('selectionMode', default=0)
+
+        text = ''
+
+        if indx < 0:
+            # Write all sequences
+            if not hasattr(self.fileContent, 'seqList'):
+                return  # No sequences to write
+
+            for seqObj in self.fileContent.seqList:
+                # Filter by polymer type
+                if str(seqObj.polymerType) not in polymerTypes:
+                    continue
+
+                # Determine number of copies to write
+                if writeMulti:
+                    nCopies = int(seqObj.nCopies)
+                else:
+                    nCopies = min(1, int(seqObj.nCopies))
+
+                # Write each copy
+                for nC in range(nCopies):
+                    name = str(seqObj.name)
+
+                    # Check selection if available
+                    if selectionMode == 0 or (not hasattr(self, 'selection')) or \
+                       (not self.selection.isSet()) or self.selection.get(name, True):
+
+                        # Write FASTA/PIR header
+                        text += '>' + name + '\n'
+                        if format == 'pir':
+                            text += '\n'
+
+                        # Write sequence in 60-character lines
+                        seq = str(seqObj.sequence)
+                        while len(seq) > 0:
+                            text += seq[0:60] + '\n'
+                            seq = seq[60:]
+        else:
+            # Write single sequence by index
+            if not hasattr(self.fileContent, 'seqList') or \
+               indx >= len(self.fileContent.seqList):
+                return
+
+            seqObj = self.fileContent.seqList[indx]
+
+            # Write FASTA/PIR header
+            text += '>' + str(seqObj.name) + '\n'
+            if format == 'pir':
+                text += '\n'
+
+            # Write sequence in 60-character lines
+            seq = str(seqObj.sequence)
+            while len(seq) > 0:
+                text += seq[0:60] + '\n'
+                seq = seq[60:]
+
+        # Save to file
+        with open(fileName, 'w') as f:
+            f.write(text)
 
 
 class CAtomRefmacSelection(CAtomRefmacSelectionStub):
