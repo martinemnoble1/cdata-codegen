@@ -852,7 +852,9 @@ class CPluginScript(CData):
             command_script_file = self.writeCommandFile()
 
         # Prepare log file paths
-        stdout_path = self.makeFileName('STDOUT')
+        # Use LOG for program output (not STDOUT) to match CCP4 conventions
+        # This allows wrappers to find the logfile via makeFileName('LOG')
+        stdout_path = self.makeFileName('LOG')
         stderr_path = self.makeFileName('STDERR')
 
         # Find full path to executable to ensure subprocess can find it
@@ -868,8 +870,8 @@ class CPluginScript(CData):
         print(f"\n{'='*60}")
         print(f"Running: {' '.join(command)}")
         print(f"Working directory: {self.workDirectory}")
-        print(f"Stdout log: {stdout_path}")
-        print(f"Stderr log: {stderr_path}")
+        print(f"Log file: {stdout_path}")
+        print(f"Stderr file: {stderr_path}")
         if command_script_file:
             print(f"Command script: {command_script_file}")
         print(f"{'='*60}\n")
