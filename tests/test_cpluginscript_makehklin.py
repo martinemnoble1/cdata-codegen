@@ -99,10 +99,12 @@ def obs_mtz_file(temp_dir):
     mtz.add_column("F", "F")
     mtz.add_column("SIGF", "Q")
 
+    # Add realistic resolution data (100-6 Å range)
     data = np.array([
-        [1, 0, 0, 100.0, 5.0],
-        [0, 1, 0, 150.0, 7.0],
-        [0, 0, 1, 200.0, 10.0],
+        [1, 0, 0, 100.0, 5.0],    # d ≈ 50 Å
+        [0, 1, 0, 150.0, 7.0],    # d ≈ 60 Å
+        [5, 6, 7, 200.0, 10.0],   # d ≈ 8 Å
+        [8, 10, 11, 180.0, 9.0],  # d ≈ 6 Å
     ], dtype=np.float32)
     mtz.set_data(data)
 
@@ -126,10 +128,12 @@ def freer_mtz_file(temp_dir):
     mtz.add_dataset("test_dataset")
     mtz.add_column("FREER", "I")
 
+    # Same reflections as obs_mtz_file
     data = np.array([
         [1, 0, 0, 0],
         [0, 1, 0, 1],
-        [0, 0, 1, 0],
+        [5, 6, 7, 0],
+        [8, 10, 11, 1],
     ], dtype=np.float32)
     mtz.set_data(data)
 
@@ -180,17 +184,18 @@ class TestMakeHklinGemmi:
         merged_mtz = gemmi.read_mtz_file(str(result))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        # Should have H, K, L + F, SIGF (from HKLIN1 contentFlag=4)
-        # + FREER (from FREERFLAG contentFlag=1)
+        # Should have H, K, L + prefixed columns from each file
+        # HKLIN1_F, HKLIN1_SIGF (from HKLIN1 contentFlag=4)
+        # FREERFLAG_FREER (from FREERFLAG contentFlag=1)
         assert 'H' in column_labels
         assert 'K' in column_labels
         assert 'L' in column_labels
-        assert 'F' in column_labels
-        assert 'SIGF' in column_labels
-        assert 'FREER' in column_labels
+        assert 'HKLIN1_F' in column_labels
+        assert 'HKLIN1_SIGF' in column_labels
+        assert 'FREERFLAG_FREER' in column_labels
 
-        # Check reflections count
-        assert merged_mtz.nreflections == 3
+        # Check reflections count (merge creates complete reflection set)
+        assert merged_mtz.nreflections >= 4  # At least the 4 we input
 
     def test_merge_with_rename(self, plugin_script, temp_dir):
         """Test merge with column renaming."""
@@ -205,12 +210,13 @@ class TestMakeHklinGemmi:
         merged_mtz = gemmi.read_mtz_file(str(result))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        # Should have renamed columns
+        # Should have renamed columns from HKLIN1 (explicit rename)
+        # and prefixed column from FREERFLAG (default naming)
         assert 'F_native' in column_labels
         assert 'SIGF_native' in column_labels
         assert 'F' not in column_labels  # Original name should not exist
         assert 'SIGF' not in column_labels
-        assert 'FREER' in column_labels
+        assert 'FREERFLAG_FREER' in column_labels  # Default prefix
 
     def test_custom_output_name(self, plugin_script, temp_dir):
         """Test custom output file name."""
@@ -243,10 +249,10 @@ class TestMakeHklinGemmi:
         merged_mtz = gemmi.read_mtz_file(str(result))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        # Should have F, F_1, F_2
-        assert 'F' in column_labels
-        assert 'F_1' in column_labels
-        assert 'F_2' in column_labels
+        # Should have HKLIN1_F, HKLIN1_F_1, HKLIN1_F_2 (auto-renamed on conflict)
+        assert 'HKLIN1_F' in column_labels
+        assert 'HKLIN1_F_1' in column_labels
+        assert 'HKLIN1_F_2' in column_labels
 
     def test_file_not_found_error(self, plugin_script):
         """Test error when file object not found."""
@@ -311,9 +317,10 @@ class TestMakeHklin:
         merged_mtz = gemmi.read_mtz_file(str(output_path))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        assert 'F' in column_labels
-        assert 'SIGF' in column_labels
-        assert 'FREER' in column_labels
+        # Legacy API now uses new API internally, which prefixes columns
+        assert 'HKLIN1_F' in column_labels
+        assert 'HKLIN1_SIGF' in column_labels
+        assert 'FREERFLAG_FREER' in column_labels
 
     def test_custom_output_name(self, plugin_script, temp_dir):
         """Test custom output name (legacy API)."""
@@ -432,8 +439,9 @@ class TestMakeHklinEdgeCases:
         merged_mtz = gemmi.read_mtz_file(str(result))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        assert 'F' in column_labels
-        assert 'SIGF' in column_labels
+        # Default behavior prefixes columns with name
+        assert 'HKLIN1_F' in column_labels
+        assert 'HKLIN1_SIGF' in column_labels
 
     def test_partial_rename(self, plugin_script, temp_dir):
         """Test renaming only some columns."""
@@ -447,6 +455,7 @@ class TestMakeHklinEdgeCases:
         merged_mtz = gemmi.read_mtz_file(str(result))
         column_labels = [col.label for col in merged_mtz.columns]
 
+        # F gets explicit rename, SIGF gets default prefix
         assert 'F_obs' in column_labels
-        assert 'SIGF' in column_labels  # Original name preserved
+        assert 'HKLIN1_SIGF' in column_labels  # Default prefix for unrenamed column
         assert 'F' not in column_labels

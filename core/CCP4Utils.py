@@ -306,11 +306,15 @@ def merge_mtz_files(
 
     # Create complete unique reflection set for the space group
     # This ensures all files will have a common reflection list
+    # Note: resolution_high() returns HIGH resolution (small d-spacing)
+    #       resolution_low() returns LOW resolution (large d-spacing)
+    #       make_miller_array expects: (cell, spacegroup, d_min, d_max)
+    #       So d_min should be resolution_high() and d_max should be resolution_low()
     uniques = gemmi.make_miller_array(
         out_mtz.cell,
         out_mtz.spacegroup,
-        first_mtz.resolution_high(),
-        first_mtz.resolution_low()
+        first_mtz.resolution_high(),  # d_min (high resolution, small value)
+        first_mtz.resolution_low()     # d_max (low resolution, large value)
     )
     out_mtz.set_data(uniques)
 

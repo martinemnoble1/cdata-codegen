@@ -14,11 +14,15 @@ def test_cpdbdatafile_set_from_dict():
     # Attempt to instantiate CPdbDataFile
     obj = CPdbDataFile()
     obj.set({"baseName": "test_file", "dbFileId": "12345"})
-    assert isinstance(obj.baseName, str)
-    assert obj.baseName == "test_file"
-    assert isinstance(obj.dbFileId, str)
-    assert obj.dbFileId == "12345"  
-    assert obj.relPath is None
+
+    # baseName and dbFileId are CData wrappers (CFilePath, CUUID), not plain strings
+    # Access their values via .value attribute
+    assert hasattr(obj.baseName, 'value')
+    assert obj.baseName.value == "test_file"
+    assert hasattr(obj.dbFileId, 'value')
+    assert obj.dbFileId.value == "12345"
+
+    # relPath should not be set (or None/empty)
+    assert not hasattr(obj.relPath, 'value') or obj.relPath.value is None or obj.relPath.value == ""
+
     assert isinstance(obj, CPdbDataFile)
-    # Optionally, check for expected attributes or behaviors
-    # Example: assert hasattr(obj, 'some_expected_attribute')

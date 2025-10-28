@@ -1129,8 +1129,10 @@ class CPluginScript(CData):
                        Uses the file's contentFlag to determine columns automatically.
                 - dict: Explicit specification with keys:
                     {
-                        'name': str,              # Attribute name (required)
-                        'rename': Dict[str, str]  # Optional column renaming
+                        'name': str,                    # Attribute name (required)
+                        'target_contentFlag': int,      # Optional: Convert to this contentFlag if needed
+                        'rename': Dict[str, str],       # Optional: Column renaming
+                        'display_name': str             # Optional: Name for column prefixes (default: name)
                     }
 
             output_name: Base name for output file (default: 'hklin')
@@ -1149,6 +1151,7 @@ class CPluginScript(CData):
             AttributeError: If file object not found in inputData/outputData
             ValueError: If contentFlag unknown or file has no path set
             FileNotFoundError: If MTZ file doesn't exist at specified path
+            NotImplementedError: If conversion method not available
 
         Example:
             >>> # Simple merge using contentFlags
@@ -1163,20 +1166,33 @@ class CPluginScript(CData):
             ...         'rename': {'F': 'F_deriv', 'SIGF': 'SIGF_deriv'}
             ...     }
             ... ])
+
+            >>> # With automatic conversion
+            >>> hklin = self.makeHklinGemmi([
+            ...     'HKLIN1',
+            ...     {
+            ...         'name': 'HKLIN2',
+            ...         'target_contentFlag': 4  # Convert to FMEAN if not already
+            ...     }
+            ... ])
         """
         from core.CCP4Utils import merge_mtz_files
+        from core.base_object.fundamental_types import CInt
 
         input_specs = []
+        converted_files = []  # Track temporary file objects for cleanup
 
-        for file_spec in file_objects:
-            # Parse spec to get name, display_name, and optional rename
+        for file_spec_idx, file_spec in enumerate(file_objects):
+            # Parse spec to get name, display_name, target_contentFlag, and optional rename
             if isinstance(file_spec, str):
                 name = file_spec
                 display_name = file_spec
+                target_content_flag = None
                 rename_map = {}
             elif isinstance(file_spec, dict):
                 name = file_spec['name']
                 display_name = file_spec.get('display_name', name)
+                target_content_flag = file_spec.get('target_contentFlag', None)
                 rename_map = file_spec.get('rename', {})
             else:
                 raise ValueError(
@@ -1195,18 +1211,65 @@ class CPluginScript(CData):
                     f"File object '{name}' not found in inputData or outputData"
                 )
 
+            # Auto-detect contentFlag from file content to ensure accuracy
+            if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
+                print(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
+                file_obj.setContentFlag()
+
+            # Check if conversion is needed
+            current_content_flag = int(file_obj.contentFlag)
+
+            if target_content_flag is not None and current_content_flag != target_content_flag:
+                # CONVERSION NEEDED!
+                print(f"[DEBUG makeHklinGemmi] Conversion needed: {name} from contentFlag={current_content_flag} to {target_content_flag}")
+
+                # Validate target contentFlag
+                if not hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
+                    raise ValueError(
+                        f"File object '{name}' (class {file_obj.__class__.__name__}) "
+                        f"has no CONTENT_SIGNATURE_LIST. Cannot convert."
+                    )
+
+                if target_content_flag < 1 or target_content_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
+                    raise ValueError(
+                        f"Invalid target_contentFlag {target_content_flag} for '{name}'. "
+                        f"Valid range: 1-{len(file_obj.CONTENT_SIGNATURE_LIST)}"
+                    )
+
+                # Get target content flag name (e.g., 'IPAIR', 'FMEAN')
+                target_name = self._get_content_flag_name(file_obj, target_content_flag)
+
+                # Call conversion method (e.g., as_IPAIR(), as_FMEAN())
+                method_name = f'as_{target_name}'
+                if not hasattr(file_obj, method_name):
+                    raise NotImplementedError(
+                        f"Conversion method '{method_name}' not found on {file_obj.__class__.__name__}. "
+                        f"Cannot convert from contentFlag={current_content_flag} to {target_content_flag}."
+                    )
+
+                conversion_method = getattr(file_obj, method_name)
+                converted_path = conversion_method(self.workDirectory)
+                print(f"[DEBUG makeHklinGemmi] Converted {name} to {converted_path}")
+
+                # Create a temporary file object pointing to converted file
+                temp_name = f"_converted_{name}_{file_spec_idx}"
+                temp_file_obj = file_obj.__class__(parent=self.container.inputData, name=temp_name)
+                temp_file_obj.setFullPath(str(converted_path))
+                temp_file_obj.contentFlag = CInt(target_content_flag)
+
+                # Add to inputData temporarily
+                setattr(self.container.inputData, temp_name, temp_file_obj)
+                converted_files.append(temp_name)
+
+                # Use temp object for merging
+                file_obj = temp_file_obj
+                print(f"[DEBUG makeHklinGemmi] Using temp file object '{temp_name}' with contentFlag={target_content_flag}")
+
             # Get filesystem path
             path = file_obj.getFullPath()
             print(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
-
-            # Auto-detect contentFlag from file content to ensure accuracy
-            # This ensures the contentFlag reflects the actual file contents
-            if hasattr(file_obj, 'setContentFlag'):
-                print(f"[DEBUG makeHklinGemmi] Before setContentFlag: contentFlag = {file_obj.contentFlag}")
-                file_obj.setContentFlag()
-                print(f"[DEBUG makeHklinGemmi] After setContentFlag: contentFlag = {file_obj.contentFlag}")
 
             # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
             # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
@@ -1226,7 +1289,7 @@ class CPluginScript(CData):
             columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
 
             # Build column_mapping (input_label -> output_label)
-            # By default, prepend display_name to column (e.g., F_PHI_IN_HLA)
+            # By default, prepend display_name to column (e.g., HKLIN1_F)
             # unless explicit rename is provided
             column_mapping = {}
             for col in columns:
@@ -1282,10 +1345,9 @@ class CPluginScript(CData):
         """
         Merge mini-MTZ files into HKLIN (backward-compatible legacy API).
 
-        This method provides backward compatibility with the old CCP4i2 API.
-        When a [name, contentFlag] tuple is provided, if the file's current
-        contentFlag differs from the requested flag, the file is automatically
-        converted to the requested format.
+        This is a lightweight wrapper around makeHklinGemmi() that translates
+        the old API format to the new API format. All conversion logic is
+        handled by makeHklinGemmi().
 
         Args:
             miniMtzsIn: List of file specifications. Each can be either:
@@ -1293,7 +1355,7 @@ class CPluginScript(CData):
                        Uses the file object's own contentFlag
                 - [str, int]: [attribute_name, target_contentFlag]
                        If file's contentFlag != target_contentFlag,
-                       converts file to target format first
+                       converts file to target format first (handled by makeHklinGemmi)
 
             hklin: Base name for output file (default: 'hklin')
 
@@ -1310,165 +1372,62 @@ class CPluginScript(CData):
             ...     ['HKLIN2', CObsDataFile.CONTENT_FLAG_FPAIR]
             ... ])
         """
-        from pathlib import Path
-        from core.base_object.fundamental_types import CInt
-
         error = CErrorReport()
-        converted_files = []  # Track temporary files created by conversions
 
         try:
-            # Convert old API to new API
+            # Translate old API to new API
             file_objects = []
 
-            for item_idx, item in enumerate(miniMtzsIn):
+            for item in miniMtzsIn:
                 if isinstance(item, str):
                     # Simple name - use object's own contentFlag
-                    file_objects.append({'name': item, 'display_name': item})
+                    file_objects.append(item)
 
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
-                    # [name, target_contentFlag] - may need conversion
+                    # [name, target_contentFlag] - let makeHklinGemmi handle conversion
                     name, target_flag = item
-
-                    # Lookup file object
-                    file_obj = None
-                    if hasattr(self.container.inputData, name):
-                        file_obj = getattr(self.container.inputData, name)
-                    elif hasattr(self.container.outputData, name):
-                        file_obj = getattr(self.container.outputData, name)
-                    else:
-                        error.append(
-                            klass=self.__class__.__name__,
-                            code=205,
-                            details=f"File object '{name}' not found",
-                            name=name
-                        )
-                        self.errorReport.extend(error)
-                        return error
-
-                    # Validate target contentFlag
-                    if target_flag < 1 or target_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
-                        error.append(
-                            klass=self.__class__.__name__,
-                            code=206,
-                            details=f"Invalid contentFlag {target_flag} for '{name}'",
-                            name=name
-                        )
-                        self.errorReport.extend(error)
-                        return error
-
-                    # Auto-detect contentFlag from file content if not already set
-                    if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
-                        file_obj.setContentFlag()
-
-                    # Check if conversion is needed
-                    current_flag = int(file_obj.contentFlag)
-                    if current_flag != target_flag:
-                        # Conversion needed!
-                        try:
-                            # Get target content flag name (e.g., 'IPAIR', 'FMEAN')
-                            target_name = self._get_content_flag_name(file_obj, target_flag)
-
-                            # Call conversion method (e.g., as_IPAIR(), as_FMEAN())
-                            method_name = f'as_{target_name}'
-                            if not hasattr(file_obj, method_name):
-                                error.append(
-                                    klass=self.__class__.__name__,
-                                    code=208,
-                                    details=f"Conversion method '{method_name}' not found on {file_obj.__class__.__name__}",
-                                    name=name
-                                )
-                                self.errorReport.extend(error)
-                                return error
-
-                            conversion_method = getattr(file_obj, method_name)
-                            converted_path = conversion_method(self.workDirectory)
-                            print(f"[DEBUG makeHklin] Converted {name} to {converted_path}")
-
-                            # Create a temporary file object pointing to converted file
-                            # We need to create an instance of the same class
-                            temp_name = f"_converted_{name}_{item_idx}"
-                            temp_file_obj = file_obj.__class__(parent=self.container.inputData, name=temp_name)
-
-                            # Set the full path to the converted file
-                            temp_file_obj.setFullPath(str(converted_path))
-                            temp_file_obj.contentFlag = CInt(target_flag)
-                            print(f"[DEBUG makeHklin] Created temp obj '{temp_name}', path={temp_file_obj.getFullPath()}, contentFlag={temp_file_obj.contentFlag}")
-
-                            # Add to inputData temporarily
-                            setattr(self.container.inputData, temp_name, temp_file_obj)
-                            converted_files.append(temp_name)
-
-                            # Use the temp name for merging, but keep original name for column prefixes
-                            file_objects.append({'name': temp_name, 'display_name': name})
-                            print(f"[DEBUG makeHklin] Added '{temp_name}' (display as '{name}') to file_objects list")
-
-                        except NotImplementedError as e:
-                            error.append(
-                                klass=self.__class__.__name__,
-                                code=209,
-                                details=str(e),
-                                name=name
-                            )
-                            # Add to self.errorReport before returning
-                            self.errorReport.extend(error)
-                            # Print ERROR-level messages
-                            if error.maxSeverity() >= SEVERITY_ERROR:
-                                print(f"\n{'='*60}")
-                                print(f"ERROR in {self.__class__.__name__}.makeHklin():")
-                                print(f"{'='*60}")
-                                print(error.report())
-                                print(f"{'='*60}\n")
-                            return error
-                        except Exception as e:
-                            error.append(
-                                klass=self.__class__.__name__,
-                                code=210,
-                                details=f"Error converting file: {e}",
-                                name=name
-                            )
-                            # Add to self.errorReport before returning
-                            self.errorReport.extend(error)
-                            # Print ERROR-level messages
-                            if error.maxSeverity() >= SEVERITY_ERROR:
-                                print(f"\n{'='*60}")
-                                print(f"ERROR in {self.__class__.__name__}.makeHklin():")
-                                print(f"{'='*60}")
-                                print(error.report())
-                                print(f"{'='*60}\n")
-                            return error
-                    else:
-                        # No conversion needed - flags match
-                        file_objects.append({'name': name, 'display_name': name})
+                    file_objects.append({
+                        'name': name,
+                        'display_name': name,
+                        'target_contentFlag': target_flag
+                    })
 
                 else:
                     error.append(
                         klass=self.__class__.__name__,
                         code=207,
-                        details=f"Invalid miniMtzsIn item: {item}",
+                        details=f"Invalid miniMtzsIn item: {item}. Expected str or [str, int]",
                         name=str(item)
                     )
                     self.errorReport.extend(error)
                     return error
 
-            # Call new API with all files (original or converted)
+            # Call new API - it handles all conversions
             self.makeHklinGemmi(
                 file_objects=file_objects,
                 output_name=hklin,
                 merge_strategy='first'
             )
 
-        except Exception as e:
+        except (AttributeError, ValueError, NotImplementedError, FileNotFoundError) as e:
+            # Map specific exceptions to error codes
             error.append(
                 klass=self.__class__.__name__,
                 code=200,
-                details=f"Error merging MTZ files: {e}",
+                details=f"Error in makeHklin: {e}",
                 name=hklin
             )
-        finally:
-            # Clean up temporary converted file objects from inputData
-            for temp_name in converted_files:
-                if hasattr(self.container.inputData, temp_name):
-                    delattr(self.container.inputData, temp_name)
+            self.errorReport.extend(error)
+
+        except Exception as e:
+            # Catch-all for unexpected errors
+            error.append(
+                klass=self.__class__.__name__,
+                code=200,
+                details=f"Unexpected error in makeHklin: {e}",
+                name=hklin
+            )
+            self.errorReport.extend(error)
 
         # Add errors to plugin's error report
         self.errorReport.extend(error)

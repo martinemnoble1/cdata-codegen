@@ -77,6 +77,7 @@ class TestMakePluginObject:
 
         assert sub_plugin is not None
         assert hasattr(sub_plugin, 'container'), "Should have container"
-        assert hasattr(sub_plugin, 'inputData'), "Should have inputData"
-        assert hasattr(sub_plugin, 'outputData'), "Should have outputData"
-        assert hasattr(sub_plugin, 'controlParameters'), "Should have controlParameters"
+        # Check that container has the expected sub-containers
+        assert hasattr(sub_plugin.container, 'inputData'), "Should have container.inputData"
+        assert hasattr(sub_plugin.container, 'outputData'), "Should have container.outputData"
+        assert hasattr(sub_plugin.container, 'controlParameters'), "Should have container.controlParameters"

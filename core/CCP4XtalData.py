@@ -849,6 +849,29 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
             f"Would output to: {output_path}"
         )
 
+    def _ensure_container_child(self, container, name, child_class):
+        """Helper to get or create a child in a container.
+
+        Args:
+            container: Parent container
+            name: Child name
+            child_class: Class to instantiate if child doesn't exist
+
+        Returns:
+            The child object
+        """
+        # First check if it already exists
+        try:
+            return getattr(container, name)
+        except AttributeError:
+            pass
+
+        # Doesn't exist - create WITHOUT parent, then add to container
+        # (add_item will set the parent, and by then signals are initialized)
+        child = child_class(name=name)
+        container.add_item(child)
+        return child
+
     def as_FMEAN(self, work_directory: Optional[Any] = None) -> str:
         """
         Convert this file to FMEAN format (Mean Structure Factors).
@@ -870,6 +893,7 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         """
         import os
         from core.CCP4PluginScript import CPluginScript
+        from core.base_object.fundamental_types import CInt, CBoolean
 
         # Auto-detect content flag from file
         self.setContentFlag()
@@ -896,13 +920,19 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
         wrapper = wrapper_class(parent=self, workDirectory=ctruncate_work)
 
-        # Set input file
+        # Populate container manually (in production, this would come from def.xml loading)
+        # NOTE: The ccp4i2 wrapper expects these items but since we're using our new CContainer
+        # without def.xml loading, we need to create them explicitly
         inp = wrapper.container.inputData
+        self._ensure_container_child(inp, 'HKLIN', CMtzDataFile)
         inp.HKLIN.setFullPath(self.getFullPath())
 
-        # Configure to output mini-MTZ with FMEAN format
-        wrapper.container.controlParameters.OUTPUTMINIMTZ.set(True)
-        wrapper.container.controlParameters.OUTPUTMINIMTZCONTENTFLAG.set(self.CONTENT_FLAG_FMEAN)
+        # Configure to output mini-MTZ with FMEAN format (create params if needed)
+        par = wrapper.container.controlParameters
+        self._ensure_container_child(par, 'OUTPUTMINIMTZ', CBoolean)
+        self._ensure_container_child(par, 'OUTPUTMINIMTZCONTENTFLAG', CInt)
+        par.OUTPUTMINIMTZ.set(True)
+        par.OUTPUTMINIMTZCONTENTFLAG.set(self.CONTENT_FLAG_FMEAN)
 
         # Get expected column names from CONTENT_SIGNATURE_LIST
         # contentFlag is 1-indexed, so subtract 1 for list index
@@ -912,6 +942,7 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         # IMPORTANT: Use .set() to mark the container as set (needed for isSet() check)
         if current_flag == self.CONTENT_FLAG_IPAIR:
             # Anomalous intensities: ['Iplus', 'SIGIplus', 'Iminus', 'SIGIminus']
+            self._ensure_container_child(inp, 'ISIGIanom', CProgramColumnGroup)
             inp.ISIGIanom.set({
                 'Ip': column_names[0],
                 'SIGIp': column_names[1],
@@ -920,13 +951,16 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
             })
         elif current_flag == self.CONTENT_FLAG_IMEAN:
             # Mean intensities: ['I', 'SIGI']
+            self._ensure_container_child(inp, 'ISIGI', CProgramColumnGroup)
             inp.ISIGI.set({
                 'I': column_names[0],
                 'SIGI': column_names[1]
             })
         elif current_flag == self.CONTENT_FLAG_FPAIR:
             # Anomalous structure factors: ['Fplus', 'SIGFplus', 'Fminus', 'SIGFminus']
-            wrapper.container.controlParameters.AMPLITUDES.set(True)
+            self._ensure_container_child(par, 'AMPLITUDES', CBoolean)
+            par.AMPLITUDES.set(True)
+            self._ensure_container_child(inp, 'FSIGFanom', CProgramColumnGroup)
             inp.FSIGFanom.set({
                 'Fp': column_names[0],
                 'SIGFp': column_names[1],
@@ -1096,14 +1130,124 @@ class CPhsDataFile(CPhsDataFileStub, CMiniMtzDataFile):
 
 class CProgramColumnGroup(CProgramColumnGroupStub):
     """
-    A group of MTZ columns required for program input
-    
-    Extends CProgramColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
+    A group of MTZ columns required for program input.
+
+    This class maps between generic column names (e.g., 'Ip', 'SIGIp') and
+    actual MTZ column labels (e.g., 'Iplus', 'SIGIplus'). It behaves like
+    a dictionary that can be accessed via attributes.
+
+    Example:
+        >>> colgroup = CProgramColumnGroup()
+        >>> colgroup.set({'Ip': 'Iplus', 'SIGIp': 'SIGIplus'})
+        >>> print(colgroup.Ip)  # Returns 'Iplus'
+        >>> print(colgroup.isSet())  # Returns True
+
+    This provides compatibility with ccp4i2 wrapper code that expects
+    attribute access to column mappings.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize with an internal column mapping dict."""
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Internal storage for column name mappings
+        self._column_mapping = {}
+        self._is_set = False
+
+    def set(self, mapping: dict):
+        """
+        Set the column name mappings.
+
+        Args:
+            mapping: Dict mapping generic column names to actual MTZ column labels
+                    e.g., {'Ip': 'Iplus', 'SIGIp': 'SIGIplus', 'Im': 'Iminus', 'SIGIm': 'SIGIminus'}
+        """
+        if isinstance(mapping, dict):
+            self._column_mapping = mapping.copy()
+            self._is_set = True
+        else:
+            # If it's a CData object, try to extract its value
+            if hasattr(mapping, '__dict__') and '_column_mapping' in mapping.__dict__:
+                self._column_mapping = mapping._column_mapping.copy()
+                self._is_set = mapping._is_set
+            else:
+                raise TypeError(f"Expected dict, got {type(mapping)}")
+
+    def isSet(self):
+        """
+        Check if column mappings have been set.
+
+        Returns:
+            bool: True if set() has been called with mappings
+        """
+        return self._is_set
+
+    def __getattr__(self, name):
+        """
+        Allow attribute access to column mappings.
+
+        Args:
+            name: Generic column name (e.g., 'Ip', 'SIGIp')
+
+        Returns:
+            The mapped MTZ column label, or None if not found
+        """
+        # Avoid recursion for internal attributes
+        if name.startswith('_'):
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+        # Check if we have this column mapping
+        if '_column_mapping' in self.__dict__ and name in self._column_mapping:
+            return self._column_mapping[name]
+
+        # For missing column names, return None (matches ccp4i2 behavior)
+        # This allows wrapper code to check `if inp.ISIGI.I:` without errors
+        return None
+
+    def __setattr__(self, name, value):
+        """
+        Allow attribute assignment to update column mappings.
+
+        Args:
+            name: Generic column name
+            value: Actual MTZ column label
+        """
+        # Internal attributes go through normal path
+        if name.startswith('_'):
+            super().__setattr__(name, value)
+        else:
+            # For column names, store in mapping
+            if '_column_mapping' not in self.__dict__:
+                self.__dict__['_column_mapping'] = {}
+            if '_is_set' not in self.__dict__:
+                self.__dict__['_is_set'] = False
+
+            self._column_mapping[name] = value
+            self._is_set = True
+
+    def get(self, name, default=None):
+        """
+        Get a mapped column name with optional default.
+
+        Args:
+            name: Generic column name
+            default: Value to return if name not found
+
+        Returns:
+            Mapped column label or default
+        """
+        return self._column_mapping.get(name, default)
+
+    def keys(self):
+        """Return all generic column names."""
+        return self._column_mapping.keys()
+
+    def values(self):
+        """Return all mapped column labels."""
+        return self._column_mapping.values()
+
+    def items(self):
+        """Return all (generic_name, mapped_label) pairs."""
+        return self._column_mapping.items()
 
 
 class CProgramColumnGroup0(CProgramColumnGroup0Stub):

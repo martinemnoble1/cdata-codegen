@@ -168,8 +168,9 @@ class HierarchicalObject(ABC):
             else:
                 self._parent_ref = None
 
-            # Emit signal
-            self.parent_changed.emit(parent)
+            # Emit signal (guard against GC ordering issues)
+            if hasattr(self, 'parent_changed') and self.parent_changed is not None:
+                self.parent_changed.emit(parent)
             logger.debug(
                 f"Set parent of {self._name} to {parent._name if parent else None}"
             )
@@ -183,7 +184,9 @@ class HierarchicalObject(ABC):
 
             child_ref = weakref.ref(child)
             self._children.add(child_ref)
-            self.child_added.emit(child)
+            # Guard against GC ordering issues
+            if hasattr(self, 'child_added') and self.child_added is not None:
+                self.child_added.emit(child)
             logging.debug(f"Added child {child._name} to {self._name}")
 
     def _remove_child(self, child: "HierarchicalObject"):
@@ -198,7 +201,9 @@ class HierarchicalObject(ABC):
 
             if to_remove:
                 self._children.remove(to_remove)
-                self.child_removed.emit(child)
+                # Guard against GC ordering issues - signal might be cleaned up already
+                if hasattr(self, 'child_removed') and self.child_removed is not None:
+                    self.child_removed.emit(child)
                 logger.debug(
                     f"Removed child {child._name} from {self._name}"
                 )
