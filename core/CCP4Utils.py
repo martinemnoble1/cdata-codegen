@@ -432,3 +432,44 @@ def merge_mtz_files(
         raise MtzMergeError(f"Failed to write output MTZ to {output_path}: {e}")
 
     return output_path
+
+
+def getCCP4I2Dir(**kw):
+    """
+    Get the CCP4i2 installation directory.
+
+    Returns the root directory of the CCP4i2 installation by examining
+    the location of this module and going up one directory level.
+
+    This is used by plugins to locate resources like smartie, reports, etc.
+
+    Returns:
+        str: Absolute path to CCP4i2 root directory
+
+    Example:
+        >>> ccp4i2_root = getCCP4I2Dir()
+        >>> smartie_path = os.path.join(ccp4i2_root, 'smartie')
+    """
+    import os
+    import sys
+
+    # Use the module's file location to find CCP4i2 root
+    # CCP4Utils is at <CCP4I2_ROOT>/core/CCP4Utils.py
+    # So we go up one level from core/ to get CCP4I2_ROOT
+    f = os.path.normpath(__import__('core.CCP4Utils').__file__)
+    return os.path.split(os.path.split(f)[0])[0]
+
+
+def writeXML(file, xml_string):
+    """
+    Write XML string to file.
+
+    Legacy compatibility function used by plugins to write XML output.
+
+    Args:
+        file: File object opened for writing
+        xml_string: XML content as string or bytes
+    """
+    if isinstance(xml_string, bytes):
+        xml_string = xml_string.decode('utf-8')
+    file.write(xml_string)

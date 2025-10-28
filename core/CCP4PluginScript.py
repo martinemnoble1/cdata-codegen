@@ -447,9 +447,20 @@ class CPluginScript(CData):
             self.errorReport.extend(error)
             return self.FAILED
 
-        # For now, return RUNNING after starting the process
-        # In the future, we may want to call postProcess() here for synchronous execution
-        # but for now we keep the legacy behavior
+        # For synchronous execution (subprocess.run), process is complete when startProcess returns
+        # Call processOutputFiles to extract output data, but don't call full postProcess
+        # which includes saveParams and reportStatus (those are for GUI/database integration)
+        try:
+            error = self.processOutputFiles()
+            if error:
+                self.errorReport.extend(error)
+                return self.FAILED
+        except Exception as e:
+            # Legacy wrappers may not have processOutputFiles implemented
+            print(f"Warning: processOutputFiles() exception: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
         return self.SUCCEEDED
 
     def _find_datafile_descendants(self, container) -> list:
@@ -588,14 +599,22 @@ class CPluginScript(CData):
 
         def process_container(container, parent_path: str = ""):
             """Recursively process container to set output file paths."""
-            for child in container.children():
+            print(f'[DEBUG checkOutputData] Processing container: {container.name if hasattr(container, "name") else "unknown"}')
+            children = list(container.children())
+            print(f'[DEBUG checkOutputData] Found {len(children)} children')
+            for child in children:
+                print(f'[DEBUG checkOutputData] Processing child: {child.name if hasattr(child, "name") else "unknown"} (type: {type(child).__name__})')
                 # Handle CDataFile
                 if isinstance(child, CDataFile):
                     # Only set path if baseName has not been set by the user
                     # Check baseName rather than fullPath as it's more fundamental
+                    # Also check that baseName is non-empty (DEF files may set it to empty string)
                     basename_is_set = False
                     if hasattr(child, 'baseName') and hasattr(child.baseName, 'isSet'):
-                        basename_is_set = child.baseName.isSet('value')
+                        basename_is_set = child.baseName.isSet('value') and bool(str(child.baseName).strip())
+
+                    obj_name = child.objectName() if hasattr(child, 'objectName') else (child.name if hasattr(child, 'name') else 'unknown')
+                    print(f'[DEBUG checkOutputData]   {obj_name}: basename_is_set={basename_is_set}, baseName={str(child.baseName) if hasattr(child, "baseName") else "N/A"}')
 
                     if not basename_is_set:
                         # Generate path from objectName
@@ -612,7 +631,11 @@ class CPluginScript(CData):
 
                         # Combine with workDirectory
                         file_path = os.path.join(self.workDirectory, file_name)
+                        print(f'[DEBUG checkOutputData] Setting path for {obj_name}: {file_path}')
                         child.setFullPath(file_path)
+                        # Verify it was set
+                        retrieved_path = child.getFullPath()
+                        print(f'[DEBUG checkOutputData] Retrieved path: {retrieved_path}')
 
                 # Handle CList - pre-populate if it contains CDataFiles
                 elif isinstance(child, CList):
@@ -772,6 +795,23 @@ class CPluginScript(CData):
             base, ext = fileName.split('.', 1)
             fileName = base + '_' + str(qualifier) + '.' + ext
         return os.path.join(self.workDirectory, fileName)
+
+    def jobNumberString(self) -> str:
+        """
+        Return a string representation of the job number for annotations.
+
+        In a full CCP4i2 environment with database integration, this would
+        return something like "Job #123". For standalone testing without
+        database, returns the task name.
+
+        Returns:
+            String describing the job (e.g., "parrot" or "Job #123")
+        """
+        # When running standalone (no database integration), use task name
+        # In full CCP4i2, this would query the database for the job number
+        if hasattr(self, 'jobId') and self.jobId:
+            return f"Job #{self.jobId}"
+        return self.TASKNAME or "Job"
 
     def startProcess(self) -> CErrorReport:
         """
@@ -955,10 +995,12 @@ class CPluginScript(CData):
                 if error:
                     self.errorReport.extend(error)
                     status = self.FAILED
-            except (AttributeError, NotImplementedError) as e:
+            except Exception as e:
                 # Legacy wrappers may depend on methods we haven't implemented yet
                 # For now, just log a warning and continue
-                print(f"Warning: processOutputFiles() not fully implemented: {str(e)}")
+                print(f"Warning: processOutputFiles() exception: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 # Don't fail the job for this - the main output file should still be created
 
         # Report status and save params
@@ -1556,6 +1598,113 @@ class CPluginScript(CData):
             import traceback
             traceback.print_exc()
             return self.FAILED
+
+    def splitHklout(
+        self,
+        miniMtzsOut: list,
+        programColumnNames: list,
+        inFile: str = None,
+        logFile: str = None
+    ) -> 'CErrorReport':
+        """
+        Split an HKLOUT file into multiple mini-MTZ files (CData-aware API).
+
+        This is the standard CCP4i2 API method that works with object names
+        in container.outputData. It wraps the lower-level splitMtz() method.
+
+        Args:
+            miniMtzsOut: List of output object names in container.outputData
+            programColumnNames: List of comma-separated column name strings
+                              e.g., ['F,SIGF', 'HLA,HLB,HLC,HLD']
+            inFile: Input MTZ file path (default: workDirectory/hklout.mtz)
+            logFile: Log file path (default: workDirectory/splitmtz.log)
+
+        Returns:
+            CErrorReport with any errors
+
+        Example:
+            >>> # Split hklout.mtz into FPHIOUT and ABCDOUT
+            >>> error = self.splitHklout(
+            ...     ['FPHIOUT', 'ABCDOUT'],
+            ...     ['F,phi', 'A,B,C,D']
+            ... )
+        """
+        error = CErrorReport()
+
+        # Default input file
+        if inFile is None:
+            inFile = str(self.workDirectory / 'hklout.mtz')
+
+        # Validate input file exists
+        from pathlib import Path
+        if not Path(inFile).exists():
+            error.append(
+                klass=self.__class__.__name__,
+                code=300,
+                details=f"Input file not found: {inFile}"
+            )
+            return error
+
+        # Validate arguments
+        if len(miniMtzsOut) != len(programColumnNames):
+            error.append(
+                klass=self.__class__.__name__,
+                code=301,
+                details=f"miniMtzsOut and programColumnNames must have same length. "
+                        f"Got {len(miniMtzsOut)} vs {len(programColumnNames)}"
+            )
+            return error
+
+        print(f'[DEBUG splitHklout] Splitting {inFile}')
+        print(f'[DEBUG splitHklout] Output objects: {miniMtzsOut}')
+        print(f'[DEBUG splitHklout] Column names: {programColumnNames}')
+
+        # Build outfiles list for splitMtz
+        outfiles = []
+        for obj_name, col_string in zip(miniMtzsOut, programColumnNames):
+            # Get output file object from container.outputData
+            if not hasattr(self.container.outputData, obj_name):
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=302,
+                    details=f"Output object '{obj_name}' not found in container.outputData"
+                )
+                continue
+
+            file_obj = getattr(self.container.outputData, obj_name)
+
+            # Get output file path
+            output_path = file_obj.getFullPath()
+            if not output_path:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=303,
+                    details=f"Output object '{obj_name}' has no path set"
+                )
+                continue
+
+            # col_string is already comma-separated (e.g., 'F,SIGF')
+            # Add to outfiles list: [output_path, input_columns]
+            # (input and output columns are the same)
+            outfiles.append([output_path, col_string])
+
+            print(f'[DEBUG splitHklout]   {obj_name} -> {output_path} (columns: {col_string})')
+
+        # Return early if there were errors
+        if error.count() > 0:
+            return error
+
+        # Call splitMtz to do the actual work
+        result = self.splitMtz(inFile, outfiles, logFile)
+
+        if result == self.FAILED:
+            error.append(
+                klass=self.__class__.__name__,
+                code=304,
+                details="splitMtz failed"
+            )
+
+        return error
 
     def appendCommandScript(self, text=None, fileName=None, oneLine=False, clear=False):
         """
