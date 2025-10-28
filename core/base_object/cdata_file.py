@@ -107,6 +107,33 @@ class CDataFile(CData):
         """
         return self.getFullPath()
 
+    def set(self, value={}, **kw):
+        """Set file attributes. Compatible with old CCP4i2 API.
+
+        Args:
+            value: Can be:
+                - str: File path (calls setFullPath)
+                - dict: Dict of attributes to set
+                - CDataFile: Another file object to copy from
+            **kw: Additional keyword arguments passed to parent
+        """
+        if isinstance(value, str):
+            # String argument: set as file path
+            self.setFullPath(value)
+        elif isinstance(value, CDataFile):
+            # Another CDataFile: copy its attributes
+            super().set(value.get())
+        elif isinstance(value, dict):
+            # Dict: handle special cases for file paths
+            if 'fullPath' in value:
+                self.setFullPath(value['fullPath'])
+            else:
+                # Regular dict - pass to parent
+                super().set(value)
+        else:
+            # Fallback to parent implementation
+            super().set(value)
+
     def load_from_file(self, file_path: str):
         """Load data from file."""
         self.setFullPath(file_path)

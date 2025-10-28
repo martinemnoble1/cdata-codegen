@@ -519,14 +519,119 @@ class CMapCoeffsDataFile(CMapCoeffsDataFileStub):
 
         FPHI format: F, PHI
 
+        This is a thin wrapper around PhaseDataConverter.to_fphi().
+        See core.conversions.phase_data_converter for implementation details.
+
         Args:
             work_directory: Ignored for this class
 
         Returns:
             Full path to this file (no conversion needed)
         """
-        # No conversion needed - already in FPHI format
-        return self.getFullPath()
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_fphi(self, work_directory=work_directory)
+
+
+class CPhsDataFile(CPhsDataFileStub):
+    """
+    An MTZ phase data file.
+
+    Handles phase data in different formats:
+    - HL (1): Hendrickson-Lattman coefficients (HLA, HLB, HLC, HLD)
+    - PHIFOM (2): Phase + Figure of Merit (PHI, FOM)
+
+    NOTE: Cannot inherit from CMiniMtzDataFile due to definition order.
+    CMiniMtzDataFile is defined later in the file.
+
+    Extends CPhsDataFileStub with conversion methods for transforming
+    between different phase data representations.
+    """
+
+    def setContentFlag(self):
+        """
+        Introspect the MTZ file to determine the phase data content type.
+
+        Sets self.contentFlag to:
+        - 1 (CONTENT_FLAG_HL): Hendrickson-Lattman coefficients (HLA, HLB, HLC, HLD)
+        - 2 (CONTENT_FLAG_PHIFOM): Phase + Figure of Merit (PHI, FOM)
+        - 0: If content type cannot be determined
+
+        Returns:
+            int: The detected content flag value
+        """
+        import gemmi
+        from pathlib import Path
+
+        input_path = self.getFullPath()
+        if not input_path or not Path(input_path).exists():
+            self.contentFlag.set(0)
+            return 0
+
+        try:
+            mtz = gemmi.read_mtz_file(input_path)
+            column_labels = {col.label.upper() for col in mtz.columns}
+
+            # Check for HL coefficients
+            hl_cols = {'HLA', 'HLB', 'HLC', 'HLD'}
+            if hl_cols.issubset(column_labels):
+                self.contentFlag.set(self.CONTENT_FLAG_HL)
+                return self.CONTENT_FLAG_HL
+
+            # Check for PHI/FOM
+            phifom_cols = {'PHI', 'FOM'}
+            if phifom_cols.issubset(column_labels):
+                self.contentFlag.set(self.CONTENT_FLAG_PHIFOM)
+                return self.CONTENT_FLAG_PHIFOM
+
+            # Cannot determine
+            self.contentFlag.set(0)
+            return 0
+
+        except Exception:
+            self.contentFlag.set(0)
+            return 0
+
+    def as_HL(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to HL format (Hendrickson-Lattman coefficients).
+
+        HL format: HLA, HLB, HLC, HLD
+
+        This is a thin wrapper around PhaseDataConverter.to_hl().
+        See core.conversions.phase_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If conversion not possible from current format
+        """
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_hl(self, work_directory=work_directory)
+
+    def as_PHIFOM(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to PHIFOM format (Phase + Figure of Merit).
+
+        PHIFOM format: PHI, FOM
+
+        This is a thin wrapper around PhaseDataConverter.to_phifom().
+        See core.conversions.phase_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If conversion not possible from current format
+        """
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_phifom(self, work_directory=work_directory)
 
 
 class CMapColumnGroup(CMapColumnGroupStub):
@@ -803,83 +908,36 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
             f"Would output to: {output_path}"
         )
 
+    def _ensure_container_child(self, container, name: str, child_class):
+        """
+        Ensure a container has a child of specified type.
+
+        Helper method for conversion routines that need to initialize container children.
+
+        Args:
+            container: CContainer instance
+            name: Name of the child attribute
+            child_class: Class to instantiate if child doesn't exist
+
+        Returns:
+            The child instance (existing or newly created)
+        """
+        if not hasattr(container, name) or getattr(container, name) is None:
+            child = child_class(name=name)
+            container.add_item(child)
+        return getattr(container, name)
+
     def as_FPAIR(self, work_directory: Optional[Any] = None) -> str:
         """
         Convert this file to FPAIR format (Anomalous Structure Factors).
 
         FPAIR format: Fplus, SIGFplus, Fminus, SIGFminus
 
-        Args:
-            work_directory: Directory for output if input dir not writable
+        Uses ctruncate to convert IPAIR (anomalous intensities) to FPAIR
+        (anomalous structure factor amplitudes) via French-Wilson conversion.
 
-        Returns:
-            Full path to converted file
-
-        Raises:
-            NotImplementedError: Conversion logic not yet implemented
-        """
-        output_path = self._get_conversion_output_path('FPAIR', work_directory=work_directory)
-
-        # TODO: Implement conversion logic
-        raise NotImplementedError(
-            f"Conversion to FPAIR format not yet implemented. "
-            f"Would output to: {output_path}"
-        )
-
-    def as_IMEAN(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to IMEAN format (Mean Intensities).
-
-        IMEAN format: I, SIGI
-
-        Args:
-            work_directory: Directory for output if input dir not writable
-
-        Returns:
-            Full path to converted file
-
-        Raises:
-            NotImplementedError: Conversion logic not yet implemented
-        """
-        output_path = self._get_conversion_output_path('IMEAN', work_directory=work_directory)
-
-        # TODO: Implement conversion logic
-        raise NotImplementedError(
-            f"Conversion to IMEAN format not yet implemented. "
-            f"Would output to: {output_path}"
-        )
-
-    def _ensure_container_child(self, container, name, child_class):
-        """Helper to get or create a child in a container.
-
-        Args:
-            container: Parent container
-            name: Child name
-            child_class: Class to instantiate if child doesn't exist
-
-        Returns:
-            The child object
-        """
-        # First check if it already exists
-        try:
-            return getattr(container, name)
-        except AttributeError:
-            pass
-
-        # Doesn't exist - create WITHOUT parent, then add to container
-        # (add_item will set the parent, and by then signals are initialized)
-        child = child_class(name=name)
-        container.add_item(child)
-        return child
-
-    def as_FMEAN(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to FMEAN format (Mean Structure Factors).
-
-        FMEAN format: F, SIGF
-
-        Uses the ctruncate plugin to perform French-Wilson conversion
-        from intensities to structure factor amplitudes.
+        This is a thin wrapper around ObsDataConverter.to_fpair().
+        See core.conversions.obs_data_converter for implementation details.
 
         Args:
             work_directory: Directory for ctruncate working files
@@ -888,270 +946,64 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
             Full path to converted file
 
         Raises:
-            RuntimeError: If ctruncate plugin is not available
+            ValueError: If contentFlag cannot be determined or conversion not possible
+            RuntimeError: If ctruncate plugin is not available or conversion fails
+        """
+        from core.conversions import ObsDataConverter
+        return ObsDataConverter.to_fpair(self, work_directory=work_directory)
+
+
+    def as_IMEAN(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to IMEAN format (Mean Intensities).
+
+        IMEAN format: I, SIGI
+
+        Uses ctruncate to convert IPAIR (anomalous intensities) to IMEAN
+        (mean intensities) by averaging I+ and I-.
+
+        This is a thin wrapper around ObsDataConverter.to_imean().
+        See core.conversions.obs_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for ctruncate working files
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If contentFlag cannot be determined or conversion not possible
+            RuntimeError: If ctruncate plugin is not available or conversion fails
+        """
+        from core.conversions import ObsDataConverter
+        return ObsDataConverter.to_imean(self, work_directory=work_directory)
+
+    def as_FMEAN(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to FMEAN format (Mean Structure Factors).
+
+        FMEAN format: F, SIGF
+
+        Handles multiple input formats:
+        - IPAIR → FMEAN: French-Wilson via ctruncate
+        - IMEAN → FMEAN: French-Wilson via ctruncate
+        - FPAIR → FMEAN: Inverse-variance weighted mean via gemmi
+
+        This is a thin wrapper around ObsDataConverter.to_fmean().
+        See core.conversions.obs_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for working files
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If contentFlag cannot be determined
             RuntimeError: If conversion fails
         """
-        import os
-        from core.CCP4PluginScript import CPluginScript
-        from core.base_object.fundamental_types import CInt, CBoolean
-
-        # Auto-detect content flag from file
-        self.setContentFlag()
-        current_flag = int(self.contentFlag)
-
-        if current_flag == 0:
-            raise ValueError("Cannot convert: contentFlag could not be determined from file")
-
-        # If already FMEAN, just copy the file
-        if current_flag == self.CONTENT_FLAG_FMEAN:
-            import shutil
-            from pathlib import Path
-            output_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
-            input_path = Path(self.getFullPath())
-            shutil.copy2(input_path, output_path)
-            return str(output_path)
-
-        # Get ctruncate plugin
-        wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
-        if wrapper_class is None:
-            raise RuntimeError("ctruncate plugin not available")
-
-        # Create ctruncate instance with working directory
-        ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
-        wrapper = wrapper_class(parent=self, workDirectory=ctruncate_work)
-
-        # Populate container manually (in production, this would come from def.xml loading)
-        # NOTE: The ccp4i2 wrapper expects these items but since we're using our new CContainer
-        # without def.xml loading, we need to create them explicitly
-        inp = wrapper.container.inputData
-        self._ensure_container_child(inp, 'HKLIN', CMtzDataFile)
-        inp.HKLIN.setFullPath(self.getFullPath())
-
-        # Configure to output mini-MTZ with FMEAN format (create params if needed)
-        par = wrapper.container.controlParameters
-        self._ensure_container_child(par, 'OUTPUTMINIMTZ', CBoolean)
-        self._ensure_container_child(par, 'OUTPUTMINIMTZCONTENTFLAG', CInt)
-        par.OUTPUTMINIMTZ.set(True)
-        par.OUTPUTMINIMTZCONTENTFLAG.set(self.CONTENT_FLAG_FMEAN)
-
-        # Get expected column names from CONTENT_SIGNATURE_LIST
-        # contentFlag is 1-indexed, so subtract 1 for list index
-        column_names = self.CONTENT_SIGNATURE_LIST[current_flag - 1]
-
-        # Set column names based on current content flag
-        # IMPORTANT: Use .set() to mark the container as set (needed for isSet() check)
-        if current_flag == self.CONTENT_FLAG_IPAIR:
-            # Anomalous intensities: ['Iplus', 'SIGIplus', 'Iminus', 'SIGIminus']
-            self._ensure_container_child(inp, 'ISIGIanom', CProgramColumnGroup)
-            inp.ISIGIanom.set({
-                'Ip': column_names[0],
-                'SIGIp': column_names[1],
-                'Im': column_names[2],
-                'SIGIm': column_names[3]
-            })
-            # Ensure unused column groups are NOT marked as set
-            for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
-                if hasattr(inp, unused_group):
-                    group = getattr(inp, unused_group)
-                    if hasattr(group, '_is_set'):
-                        group._is_set = False
-                    if hasattr(group, '_column_mapping'):
-                        group._column_mapping = {}
-
-        elif current_flag == self.CONTENT_FLAG_IMEAN:
-            # Mean intensities: ['I', 'SIGI']
-            self._ensure_container_child(inp, 'ISIGI', CProgramColumnGroup)
-            inp.ISIGI.set({
-                'I': column_names[0],
-                'SIGI': column_names[1]
-            })
-            # Ensure unused column groups are NOT marked as set
-            for unused_group in ['ISIGIanom', 'FSIGF', 'FSIGFanom']:
-                if hasattr(inp, unused_group):
-                    group = getattr(inp, unused_group)
-                    if hasattr(group, '_is_set'):
-                        group._is_set = False
-                    if hasattr(group, '_column_mapping'):
-                        group._column_mapping = {}
-
-        elif current_flag == self.CONTENT_FLAG_FPAIR:
-            # Anomalous structure factors: ['Fplus', 'SIGFplus', 'Fminus', 'SIGFminus']
-            self._ensure_container_child(par, 'AMPLITUDES', CBoolean)
-            par.AMPLITUDES.set(True)
-            self._ensure_container_child(inp, 'FSIGFanom', CProgramColumnGroup)
-            inp.FSIGFanom.set({
-                'Fp': column_names[0],
-                'SIGFp': column_names[1],
-                'Fm': column_names[2],
-                'SIGFm': column_names[3]
-            })
-            # Ensure unused column groups are NOT marked as set
-            for unused_group in ['ISIGI', 'ISIGIanom', 'FSIGF']:
-                if hasattr(inp, unused_group):
-                    group = getattr(inp, unused_group)
-                    if hasattr(group, '_is_set'):
-                        group._is_set = False
-                    if hasattr(group, '_column_mapping'):
-                        group._column_mapping = {}
-
-        # Set output file paths
-        # Important: Output must go to work_directory (not input directory) to ensure writability
-        if work_directory:
-            from pathlib import Path
-            input_path = Path(self.getFullPath())
-            # HKLOUT: full ctruncate output (all columns)
-            hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
-            # OBSOUT: mini-MTZ with only requested columns (F, SIGF)
-            obsout_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
-        else:
-            hklout_path = self._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
-            obsout_path = self._get_conversion_output_path('FMEAN', work_directory=work_directory)
-
-        wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
-        wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
-
-        # Run ctruncate
-        status = wrapper.process()
-
-        if status != CPluginScript.SUCCEEDED:
-            error_msg = f"ctruncate conversion failed with status {status}."
-            if wrapper.errorReport.count() > 0:
-                error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            error_msg += f"\nCheck logs in {ctruncate_work}"
-            raise RuntimeError(error_msg)
-
-        # Manually call processOutputFiles to create the mini-MTZ
-        # (normally called by postProcess, but we skip that for synchronous execution)
-        if hasattr(wrapper, 'processOutputFiles'):
-            try:
-                wrapper.processOutputFiles()
-            except AttributeError as e:
-                # Handle missing methods like datasetName() that are not critical
-                # The essential work (creating mini-MTZ) is done by splitMtz
-                print(f"[DEBUG as_FMEAN] processOutputFiles partial failure (non-critical): {e}")
-
-        # Return path to mini-MTZ output (OBSOUT), not the full HKLOUT
-        # OBSOUT contains only the requested columns (F, SIGF for FMEAN)
-        # while HKLOUT contains all columns including intensities
-        obsout_path = wrapper.container.outputData.OBSOUT.getFullPath()
-
-        # Debug: List files created by ctruncate
-        print(f"[DEBUG as_FMEAN] Expected OBSOUT: {obsout_path}")
-        print(f"[DEBUG as_FMEAN] Expected HKLOUT: {wrapper.container.outputData.HKLOUT.getFullPath()}")
-        print(f"[DEBUG as_FMEAN] ctruncate work directory: {ctruncate_work}")
-        from pathlib import Path
-        if work_directory and Path(work_directory).exists():
-            print(f"[DEBUG as_FMEAN] Files in work_directory:")
-            for f in Path(work_directory).rglob("*.mtz"):
-                print(f"  {f} (size: {f.stat().st_size} bytes)")
-
-        # Also check the ctruncate subdirectory
-        if Path(ctruncate_work).exists():
-            print(f"[DEBUG as_FMEAN] Files in ctruncate work directory:")
-            for f in Path(ctruncate_work).rglob("*.mtz"):
-                print(f"  {f} (size: {f.stat().st_size} bytes)")
-
-        if not obsout_path or not os.path.exists(obsout_path):
-            raise RuntimeError(f"ctruncate mini-MTZ output not found. Expected at: {obsout_path}")
-
-        return str(obsout_path)
-
-
-class CPhaserRFileDataFile(CPhaserRFileDataFileStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CPhaserRFileDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CPhaserSolDataFile(CPhaserSolDataFileStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CPhaserSolDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CPhiFomColumnGroup(CPhiFomColumnGroupStub):
-    """
-    A group of MTZ columns required for program input
-    
-    Extends CPhiFomColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CPhsDataFile(CPhsDataFileStub, CMiniMtzDataFile):
-    """
-    An MTZ experimental data file
-
-    Inherits from:
-    - CPhsDataFileStub: Metadata and structure
-    - CMiniMtzDataFile: Shared full-fat methods
-
-    Extends CPhsDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    def as_HL(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to HL format (Hendrickson-Lattman coefficients).
-
-        HL format: HLA, HLB, HLC, HLD
-
-        Args:
-            work_directory: Directory for output if input dir not writable
-
-        Returns:
-            Full path to converted file
-
-        Raises:
-            NotImplementedError: Conversion logic not yet implemented
-        """
-        output_path = self._get_conversion_output_path('HL', work_directory=work_directory)
-
-        # TODO: Implement conversion logic
-        raise NotImplementedError(
-            f"Conversion to HL format not yet implemented. "
-            f"Would output to: {output_path}"
-        )
-
-    def as_PHIFOM(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to PHIFOM format (Phase + Figure of Merit).
-
-        PHIFOM format: PHI, FOM
-
-        Args:
-            work_directory: Directory for output if input dir not writable
-
-        Returns:
-            Full path to converted file
-
-        Raises:
-            NotImplementedError: Conversion logic not yet implemented
-        """
-        output_path = self._get_conversion_output_path('PHIFOM', work_directory=work_directory)
-
-        # TODO: Implement conversion logic
-        raise NotImplementedError(
-            f"Conversion to PHIFOM format not yet implemented. "
-            f"Would output to: {output_path}"
-        )
+        from core.conversions import ObsDataConverter
+        return ObsDataConverter.to_fmean(self, work_directory=work_directory)
 
 
 class CProgramColumnGroup(CProgramColumnGroupStub):
