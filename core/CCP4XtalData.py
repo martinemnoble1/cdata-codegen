@@ -949,6 +949,15 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
                 'Im': column_names[2],
                 'SIGIm': column_names[3]
             })
+            # Ensure unused column groups are NOT marked as set
+            for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
+                if hasattr(inp, unused_group):
+                    group = getattr(inp, unused_group)
+                    if hasattr(group, '_is_set'):
+                        group._is_set = False
+                    if hasattr(group, '_column_mapping'):
+                        group._column_mapping = {}
+
         elif current_flag == self.CONTENT_FLAG_IMEAN:
             # Mean intensities: ['I', 'SIGI']
             self._ensure_container_child(inp, 'ISIGI', CProgramColumnGroup)
@@ -956,6 +965,15 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
                 'I': column_names[0],
                 'SIGI': column_names[1]
             })
+            # Ensure unused column groups are NOT marked as set
+            for unused_group in ['ISIGIanom', 'FSIGF', 'FSIGFanom']:
+                if hasattr(inp, unused_group):
+                    group = getattr(inp, unused_group)
+                    if hasattr(group, '_is_set'):
+                        group._is_set = False
+                    if hasattr(group, '_column_mapping'):
+                        group._column_mapping = {}
+
         elif current_flag == self.CONTENT_FLAG_FPAIR:
             # Anomalous structure factors: ['Fplus', 'SIGFplus', 'Fminus', 'SIGFminus']
             self._ensure_container_child(par, 'AMPLITUDES', CBoolean)
@@ -967,6 +985,14 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
                 'Fm': column_names[2],
                 'SIGFm': column_names[3]
             })
+            # Ensure unused column groups are NOT marked as set
+            for unused_group in ['ISIGI', 'ISIGIanom', 'FSIGF']:
+                if hasattr(inp, unused_group):
+                    group = getattr(inp, unused_group)
+                    if hasattr(group, '_is_set'):
+                        group._is_set = False
+                    if hasattr(group, '_column_mapping'):
+                        group._column_mapping = {}
 
         # Set output file paths
         # Important: Output must go to work_directory (not input directory) to ensure writability
@@ -1177,9 +1203,11 @@ class CProgramColumnGroup(CProgramColumnGroupStub):
         Check if column mappings have been set.
 
         Returns:
-            bool: True if set() has been called with mappings
+            bool: True if set() has been called with mappings AND mappings contain data
         """
-        return self._is_set
+        # Check both the flag AND that we have actual column mappings
+        # This prevents reporting True for empty/uninitialized column groups
+        return self._is_set and len(self._column_mapping) > 0
 
     def __getattr__(self, name):
         """

@@ -104,6 +104,16 @@ def test_ctruncate_intensity_to_fmean(tmp_path):
         print(f"DEBUG: ISIGIanom.Ip type = {type(ctruncate.container.inputData.ISIGIanom.Ip)}")
         print(f"DEBUG: ISIGIanom.Ip value = {ctruncate.container.inputData.ISIGIanom.Ip}")
         print(f"DEBUG: ISIGIanom._value_states = {getattr(ctruncate.container.inputData.ISIGIanom, '_value_states', {})}")
+
+        # Clear unused column groups to prevent ctruncate from using them
+        for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
+            if hasattr(ctruncate.container.inputData, unused_group):
+                group = getattr(ctruncate.container.inputData, unused_group)
+                if hasattr(group, '_is_set'):
+                    group._is_set = False
+                if hasattr(group, '_column_mapping'):
+                    group._column_mapping = {}
+
     elif 'I' in input_columns:
         print("Input has mean intensities (I/SIGI)")
         ctruncate.container.inputData.ISIGI.set({
@@ -111,6 +121,16 @@ def test_ctruncate_intensity_to_fmean(tmp_path):
             'SIGI': 'SIGI'
         })
         print(f"DEBUG: ISIGI.isSet() = {ctruncate.container.inputData.ISIGI.isSet()}")
+
+        # Clear unused column groups to prevent ctruncate from using them
+        for unused_group in ['ISIGIanom', 'FSIGF', 'FSIGFanom']:
+            if hasattr(ctruncate.container.inputData, unused_group):
+                group = getattr(ctruncate.container.inputData, unused_group)
+                if hasattr(group, '_is_set'):
+                    group._is_set = False
+                if hasattr(group, '_column_mapping'):
+                    group._column_mapping = {}
+
     else:
         pytest.skip(f"Unexpected input columns: {input_columns}")
 
