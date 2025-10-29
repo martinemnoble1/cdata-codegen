@@ -15,14 +15,14 @@ Tests cover:
 """
 
 import pytest
-import os
-import tempfile
-import shutil
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 
 from core.CCP4ErrorHandling import CException
-from core.conversions import PhaseDataConverter, ObsDataConverter, ModelConverter
+from core.conversions import (
+    PhaseDataConverter,
+    ObsDataConverter,
+    ModelConverter
+)
 
 
 class TestPhaseDataConverterErrorHandling:
@@ -104,7 +104,7 @@ class TestPhaseDataConverterErrorHandling:
         assert "contentFlag=99" in report['details']
         assert "Only HL (1)" in report['details']
 
-    def test_chltofom_import_error(self, tmp_path):
+    def test_chltofom_import_error(self):
         """Test error code 4: chltofom plugin not available.
 
         Note: This test is simplified since mocking the import machinery
@@ -230,7 +230,7 @@ class TestObsDataConverterErrorHandling:
         assert "contentFlag 2" in report['details']
         assert "IMEAN" in report['details']
 
-    def test_ctruncate_not_available(self, tmp_path):
+    def test_ctruncate_not_available(self):
         """Test error code 4: ctruncate plugin not available.
 
         Note: This test is simplified since mocking TASKMANAGER is complex.
@@ -323,7 +323,7 @@ class TestModelConverterErrorHandling:
         assert report['code'] == 1
         assert "/nonexistent/model.pdb" in report['details']
 
-    def test_gemmi_not_available(self, tmp_path):
+    def test_gemmi_not_available(self):
         """Test error code 3: gemmi library not available.
 
         Note: This test is simplified since mocking imports is complex.
@@ -384,7 +384,7 @@ class TestErrorCodeDocumentation:
         assert isinstance(ObsDataConverter.ERROR_CODES, dict)
         assert len(ObsDataConverter.ERROR_CODES) > 0
 
-        for code, info in ObsDataConverter.ERROR_CODES.items():
+        for _, info in ObsDataConverter.ERROR_CODES.items():
             assert 'description' in info
             assert 'severity' in info
 
@@ -394,7 +394,7 @@ class TestErrorCodeDocumentation:
         assert isinstance(ModelConverter.ERROR_CODES, dict)
         assert len(ModelConverter.ERROR_CODES) > 0
 
-        for code, info in ModelConverter.ERROR_CODES.items():
+        for _, info in ModelConverter.ERROR_CODES.items():
             assert 'description' in info
             assert 'severity' in info
 
@@ -413,7 +413,7 @@ class TestErrorCodeDocumentation:
 class TestCExceptionIntegration:
     """Test that CException properly captures converter errors for diagnostic.xml."""
 
-    def test_cexception_captures_converter_class(self, tmp_path):
+    def test_cexception_captures_converter_class(self):
         """Test that CException captures the converter class."""
         mock_file = Mock()
         mock_file.getFullPath.return_value = "/nonexistent/file.mtz"
@@ -479,23 +479,19 @@ class TestCExceptionIntegration:
 
         # Both should raise error code 1 (file not found)
         # But from different converter classes
-        try:
+        with pytest.raises(CException) as phase_exc:
             PhaseDataConverter._validate_input_file(mock_phase_file)
-        except CException as e1:
-            phase_error = e1
 
-        try:
+        with pytest.raises(CException) as obs_exc:
             ObsDataConverter._validate_input_file(mock_obs_file)
-        except CException as e2:
-            obs_error = e2
 
         # Same error code number
-        assert phase_error._errors[0]['code'] == 1
-        assert obs_error._errors[0]['code'] == 1
+        assert phase_exc.value._errors[0]['code'] == 1
+        assert obs_exc.value._errors[0]['code'] == 1
 
         # But different converter classes
-        assert phase_error._errors[0]['class'] == PhaseDataConverter
-        assert obs_error._errors[0]['class'] == ObsDataConverter
+        assert phase_exc.value._errors[0]['class'] == PhaseDataConverter
+        assert obs_exc.value._errors[0]['class'] == ObsDataConverter
 
 
 if __name__ == "__main__":

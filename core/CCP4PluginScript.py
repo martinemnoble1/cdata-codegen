@@ -32,6 +32,11 @@ from core.base_object.class_metadata import cdata_class
         '208': {'description': 'Conversion method not found on file object'},
         '209': {'description': 'Conversion to requested format not yet implemented'},
         '210': {'description': 'Error during MTZ file conversion'},
+        '300': {'description': 'Input MTZ file not found for split operation'},
+        '301': {'description': 'miniMtzsOut and programColumnNames length mismatch'},
+        '302': {'description': 'Output object not found in container.outputData'},
+        '303': {'description': 'Output object has no path set'},
+        '304': {'description': 'Error splitting MTZ file'},
     }
 )
 class CPluginScript(CData):
