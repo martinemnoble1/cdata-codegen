@@ -44,6 +44,9 @@ class CDataFile(CData):
         # Legacy compatibility
         self.file_path = file_path
 
+        # File content instance (instantiated by loadFile())
+        self.content = None
+
         # Set baseName if file_path provided
         if file_path is not None:
             self.setFullPath(file_path)
@@ -145,6 +148,120 @@ class CDataFile(CData):
         if not path:
             raise ValueError("No file path specified")
         # TODO: Implement file saving logic
+
+    def loadFile(self, initialise: bool = False):
+        """
+        Load file content by instantiating fileContentClassName and calling its loadFile().
+
+        This base method:
+        1. Gets fileContentClassName from qualifiers
+        2. Instantiates that class if not already created
+        3. Delegates to content class's loadFile() method
+        4. Handles errors and emits dataLoaded signal
+
+        Args:
+            initialise: If True, recreate content object even if it exists
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            >>> mtz_file = CMtzDataFile()
+            >>> mtz_file.setFullPath('/path/to/data.mtz')
+            >>> error = mtz_file.loadFile()
+            >>> if error.count() == 0:
+            ...     print(f"Cell: {mtz_file.content.cell}")
+        """
+        from core.base_object.error_reporting import CErrorReport, CException, SEVERITY_ERROR
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # Check if file loading is blocked
+        if hasattr(self, 'BLOCK_LOAD_FILES') and self.BLOCK_LOAD_FILES:
+            return error
+
+        # Get content class name from qualifiers
+        content_class_name = self.get_qualifier('fileContentClassName')
+        if content_class_name is None:
+            return error  # No content class specified - not an error
+
+        # Instantiate content object if needed
+        if self.content is None or initialise:
+            try:
+                # Import the content class
+                # Try local imports first (CCP4XtalData, CCP4ModelData, etc.)
+                content_class = None
+                for module_name in ['core.CCP4XtalData', 'core.CCP4ModelData', 'core.CCP4CootData']:
+                    try:
+                        module = __import__(module_name, fromlist=[content_class_name])
+                        content_class = getattr(module, content_class_name, None)
+                        if content_class is not None:
+                            break
+                    except (ImportError, AttributeError):
+                        continue
+
+                if content_class is None:
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=105,
+                        details=f"Content class '{content_class_name}' not found",
+                        name=self.object_name() if hasattr(self, 'object_name') else ''
+                    )
+                    return error
+
+                # Create content instance
+                self.content = content_class(parent=self, name='fileContent')
+
+            except Exception as e:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=106,
+                    details=f"Error instantiating content class '{content_class_name}': {e}",
+                    name=self.object_name() if hasattr(self, 'object_name') else ''
+                )
+                return error
+
+        # Get file path
+        file_path = self.getFullPath()
+        if not file_path:
+            # No path set - unset content
+            if self.content is not None:
+                self.content.unSet()
+            return error
+
+        # Check file exists
+        path_obj = Path(file_path)
+        if path_obj.exists() and path_obj.is_file():
+            try:
+                # Delegate to content class's loadFile()
+                content_error = self.content.loadFile(file_path)
+                if content_error is not None:
+                    error.extend(content_error)
+
+            except CException as e:
+                error.extend(e)
+
+            except Exception as e:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=320,
+                    details=f"Unrecognised error loading file '{file_path}': {e}",
+                    name=self.object_name() if hasattr(self, 'object_name') else ''
+                )
+        else:
+            # File doesn't exist - unset content
+            if self.content is not None:
+                self.content.unSet()
+
+        # Emit signal (if event system available)
+        if hasattr(self, 'dataLoaded'):
+            try:
+                self.dataLoaded.emit()
+            except:
+                pass  # Signal system may not be available
+
+        return error
 
     def _get_conversion_output_path(
         self,

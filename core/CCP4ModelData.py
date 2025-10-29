@@ -508,13 +508,86 @@ class COccRelationRefmacList(COccRelationRefmacListStub):
 class CPdbData(CPdbDataStub):
     """
     Contents of a PDB file - a subset with functionality for GUI
-    
+
     Extends CPdbDataStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, file_path: str):
+        """
+        Load PDB or mmCIF coordinate file using gemmi library.
+
+        This method:
+        1. Reads coordinate file using gemmi.read_structure()
+        2. Stores gemmi Structure object for queries
+        3. Handles both PDB and mmCIF formats automatically
+
+        Args:
+            file_path: Full path to coordinate file (.pdb, .cif, .ent)
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            >>> pdb_data = CPdbData()
+            >>> error = pdb_data.loadFile('/path/to/model.pdb')
+            >>> if error.count() == 0:
+            ...     print(f"Loaded structure with {len(pdb_data._gemmi_structure)} models")
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # Validate file path
+        if not file_path:
+            return error
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            error.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f"Coordinate file does not exist or is not a file: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            import gemmi
+        except ImportError as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Failed to import gemmi library: {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            # Read structure using gemmi (handles PDB and mmCIF automatically)
+            structure = gemmi.read_structure(str(file_path))
+
+            # Store gemmi Structure object for advanced queries
+            # Use object.__setattr__ to bypass smart assignment
+            object.__setattr__(self, '_gemmi_structure', structure)
+
+            # Emit signal if available
+            if hasattr(self, 'dataChanged'):
+                try:
+                    self.dataChanged.emit()
+                except:
+                    pass  # Signal system may not be available
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details=f"Error reading coordinate file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+
+        return error
 
 
 class CPdbDataFile(CPdbDataFileStub):
@@ -524,6 +597,11 @@ class CPdbDataFile(CPdbDataFileStub):
     Extends CPdbDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier
+        self.set_qualifier('fileContentClassName', 'CPdbData')
 
     def _introspect_content_flag(self) -> Optional[int]:
         """Auto-detect contentFlag by determining if file is PDB or mmCIF format.

@@ -771,25 +771,176 @@ class CMmcifReflData(CMmcifReflDataStub):
     Generic mmCIF data.
 This is intended to be a base class for other classes
 specific to coordinates, reflections or geometry data.
-    
+
     Extends CMmcifReflDataStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, file_path: str):
+        """
+        Load mmCIF reflection file using gemmi library.
+
+        This method:
+        1. Reads mmCIF file using gemmi.cif.read()
+        2. Extracts cell, space group, wavelength
+        3. Detects which column types are present
+        4. Uses proper CData setters (NO __dict__ manipulation)
+
+        Args:
+            file_path: Full path to mmCIF file
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            >>> cif_data = CMmcifReflData()
+            >>> error = cif_data.loadFile('/path/to/reflections.cif')
+            >>> if error.count() == 0:
+            ...     print(f"Has F columns: {cif_data.haveFobsColumn.value}")
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # Validate file path
+        if not file_path:
+            return error
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            error.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f"mmCIF file does not exist or is not a file: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            import gemmi
+        except ImportError as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Failed to import gemmi library: {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            # Read mmCIF file using gemmi
+            cif_doc = gemmi.cif.read(str(file_path))
+
+            # Get the first data block
+            if len(cif_doc) == 0:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=104,
+                    details=f"mmCIF file contains no data blocks: '{file_path}'",
+                    name=self.object_name() if hasattr(self, 'object_name') else ''
+                )
+                return error
+
+            block = cif_doc[0]
+
+            # Extract cell parameters using smart assignment
+            if hasattr(self, 'cell') and self.cell is not None:
+                try:
+                    self.cell.a = float(block.find_value('_cell.length_a'))
+                    self.cell.b = float(block.find_value('_cell.length_b'))
+                    self.cell.c = float(block.find_value('_cell.length_c'))
+                    self.cell.alpha = float(block.find_value('_cell.angle_alpha'))
+                    self.cell.beta = float(block.find_value('_cell.angle_beta'))
+                    self.cell.gamma = float(block.find_value('_cell.angle_gamma'))
+                except (ValueError, RuntimeError):
+                    pass  # Cell parameters not available
+
+            # Extract space group using smart assignment
+            if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+                try:
+                    sg_name = block.find_value('_symmetry.space_group_name_H-M')
+                    if sg_name:
+                        self.spaceGroup = sg_name.strip('"').strip("'").strip()
+                except RuntimeError:
+                    # Try alternative tag
+                    try:
+                        sg_num = block.find_value('_symmetry.Int_Tables_number')
+                        if sg_num:
+                            self.spaceGroup = f"Space group {sg_num}"
+                    except RuntimeError:
+                        pass  # Space group not available
+
+            # Extract wavelength using smart assignment
+            if hasattr(self, 'wavelength') and self.wavelength is not None:
+                try:
+                    wavelength_val = block.find_value('_diffrn_radiation_wavelength.wavelength')
+                    if wavelength_val:
+                        self.wavelength = float(wavelength_val)
+                except (ValueError, RuntimeError):
+                    pass  # Wavelength not available
+
+            # Detect which column types are present
+            # Check for FreeR column
+            if hasattr(self, 'haveFreeRColumn') and self.haveFreeRColumn is not None:
+                self.haveFreeRColumn = block.find_loop('_refln.status') is not None
+
+            # Check for F_meas columns
+            if hasattr(self, 'haveFobsColumn') and self.haveFobsColumn is not None:
+                self.haveFobsColumn = (
+                    block.find_loop('_refln.F_meas') is not None or
+                    block.find_loop('_refln.F_meas_au') is not None
+                )
+
+            # Check for F+/F- columns
+            if hasattr(self, 'haveFpmObsColumn') and self.haveFpmObsColumn is not None:
+                self.haveFpmObsColumn = block.find_loop('_refln.pdbx_F_plus') is not None
+
+            # Check for intensity columns
+            if hasattr(self, 'haveIobsColumn') and self.haveIobsColumn is not None:
+                self.haveIobsColumn = (
+                    block.find_loop('_refln.intensity_meas') is not None or
+                    block.find_loop('_refln.F_squared_meas') is not None
+                )
+
+            # Check for I+/I- columns
+            if hasattr(self, 'haveIpmObsColumn') and self.haveIpmObsColumn is not None:
+                self.haveIpmObsColumn = block.find_loop('_refln.pdbx_I_plus') is not None
+
+            # Store gemmi CIF document for advanced queries
+            # Use object.__setattr__ to bypass smart assignment
+            object.__setattr__(self, '_gemmi_cif_doc', cif_doc)
+
+            # Emit signal if available
+            if hasattr(self, 'dataLoaded'):
+                try:
+                    self.dataLoaded.emit()
+                except:
+                    pass  # Signal system may not be available
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details=f"Error reading mmCIF file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+
+        return error
 
 
 class CMmcifReflDataFile(CMmcifReflDataFileStub):
     """
     A reflection file in mmCIF format
-    
+
     Extends CMmcifReflDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier
+        self.set_qualifier('fileContentClassName', 'CMmcifReflData')
 
 
 class CMtzColumn(CMtzColumnStub):
@@ -835,25 +986,151 @@ class CMtzColumnGroupType(CMtzColumnGroupTypeStub, CColumnType):
 class CMtzData(CMtzDataStub):
     """
     Base class for classes holding file contents
-    
+
     Extends CMtzDataStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, file_path: str):
+        """
+        Load MTZ file using gemmi library.
+
+        This method:
+        1. Reads MTZ file using gemmi.read_mtz_file()
+        2. Extracts metadata (cell, spacegroup, resolution, datasets)
+        3. Populates CData attributes using proper setters (NO __dict__ manipulation)
+        4. Stores gemmi Mtz object for advanced queries
+
+        Args:
+            file_path: Full path to MTZ file
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            >>> mtz_data = CMtzData()
+            >>> error = mtz_data.loadFile('/path/to/data.mtz')
+            >>> if error.count() == 0:
+            ...     print(f"Space group: {mtz_data.spaceGroup}")
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # Validate file path
+        if not file_path:
+            return error
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            error.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f"MTZ file does not exist or is not a file: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            import gemmi
+        except ImportError as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Failed to import gemmi library: {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            # Read MTZ file using gemmi
+            mtz = gemmi.read_mtz_file(str(file_path))
+
+            # Extract cell parameters using smart assignment (NO __dict__)
+            if hasattr(self, 'cell') and self.cell is not None:
+                self.cell.a = mtz.cell.a
+                self.cell.b = mtz.cell.b
+                self.cell.c = mtz.cell.c
+                self.cell.alpha = mtz.cell.alpha
+                self.cell.beta = mtz.cell.beta
+                self.cell.gamma = mtz.cell.gamma
+
+            # Extract space group using smart assignment
+            if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+                self.spaceGroup = mtz.spacegroup.hm
+
+            # Extract resolution range using smart assignment
+            if hasattr(self, 'resolutionRange') and self.resolutionRange is not None:
+                mtz.update_reso()
+                self.resolutionRange.low = mtz.resolution_low()
+                self.resolutionRange.high = mtz.resolution_high()
+
+            # Extract column names
+            if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
+                column_names = [col.label for col in mtz.columns]
+                self.listOfColumns = column_names
+
+            # Extract dataset information
+            if hasattr(self, 'datasets') and self.datasets is not None:
+                dataset_names = [ds.dataset_name for ds in mtz.datasets]
+                self.datasets = dataset_names
+
+            # Extract crystal names
+            if hasattr(self, 'crystalNames') and self.crystalNames is not None:
+                crystal_names = [ds.crystal_name for ds in mtz.datasets]
+                self.crystalNames = crystal_names
+
+            # Extract wavelengths
+            if hasattr(self, 'wavelengths') and self.wavelengths is not None:
+                wavelength_list = [ds.wavelength for ds in mtz.datasets]
+                self.wavelengths = wavelength_list
+
+            # Extract dataset cells
+            if hasattr(self, 'datasetCells') and self.datasetCells is not None:
+                cells = []
+                for ds in mtz.datasets:
+                    cells.append({
+                        'a': ds.cell.a,
+                        'b': ds.cell.b,
+                        'c': ds.cell.c,
+                        'alpha': ds.cell.alpha,
+                        'beta': ds.cell.beta,
+                        'gamma': ds.cell.gamma
+                    })
+                self.datasetCells = cells
+
+            # Determine if merged (MTZ files are typically merged)
+            if hasattr(self, 'merged') and self.merged is not None:
+                self.merged = True
+
+            # Store gemmi Mtz object for advanced queries
+            # Use object.__setattr__ to bypass smart assignment
+            object.__setattr__(self, '_gemmi_mtz', mtz)
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details=f"Error reading MTZ file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+
+        return error
 
 
 class CMtzDataFile(CMtzDataFileStub):
     """
     An MTZ experimental data file
-    
+
     Extends CMtzDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier
+        self.set_qualifier('fileContentClassName', 'CMtzData')
 
 
 class CMtzDataset(CMtzDatasetStub):

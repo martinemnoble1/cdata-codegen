@@ -756,6 +756,27 @@ class CString(CData):
     def __len__(self):
         return len(self.value)
 
+    def set(self, value: str):
+        """Set the value directly using .set() method."""
+        self.value = value
+        return self
+
+    def isSet(self, field_name: str = None) -> bool:
+        """Check if the value has been set.
+
+        Args:
+            field_name: Optional field name. If not provided, checks if 'value' is set.
+
+        Returns:
+            True if the value (or specified field) has been set, False otherwise.
+        """
+        if field_name is None:
+            field_name = "value"
+        return super().isSet(field_name)
+
+    def _is_value_type(self) -> bool:
+        return True
+
     def validity(self):
         """Validate the string value against qualifiers.
 
