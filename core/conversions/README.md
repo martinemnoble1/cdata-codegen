@@ -70,7 +70,7 @@ from core.conversions import ObsDataConverter
 fmean_path = ObsDataConverter.to_fmean(obs_file, work_directory="./output")
 ```
 
-**Tests**: `tests/test_obs_conversions.py` - 4/4 passing
+**Tests**: `tests/test_obs_conversions.py` - All passing (4/4)
 
 ---
 
@@ -95,13 +95,21 @@ PHIFOM  ✓     ✓
 ```
 
 **Implementation Methods**:
-- `HL → PHIFOM`: Numerical calculation of best phase from HL coefficients
-  - Phase probability: `P(φ) ∝ exp(A·cos(φ) + B·sin(φ) + C·cos(2φ) + D·sin(2φ))`
-  - Best phase: `φ_best = argmax P(φ)` (numerical optimization)
-  - FOM: `∫ cos(φ - φ_best) P(φ) dφ` (numerical integration)
-- `PHIFOM → HL`: Centrosymmetric approximation
-  - HLA = FOM·cos(PHI), HLB = FOM·sin(PHI), HLC = HLD = 0
+- `HL → PHIFOM`: Uses CCP4 chltofom plugin for accurate conversion
+  - Validated reference implementation from CCP4 suite
+  - Calculates best phase and FOM from HL coefficient probability distribution
+  - Post-processes with gemmi to extract only converted columns (ensures correct contentFlag)
+- `PHIFOM → HL`: Uses CCP4 chltofom plugin for accurate conversion
+  - Converts PHI/FOM to HL coefficient representation
+  - Post-processes with gemmi to extract only converted columns (ensures correct contentFlag)
 - `FPHI` conversions: Pass-through (CMapCoeffsDataFile has only one format)
+
+**Note**: The chltofom plugin outputs both original and converted columns by default.
+We post-process with gemmi to extract only the desired columns so that `setContentFlag()`
+correctly identifies the output file's format. The module also includes experimental
+gemmi-based implementations using numerical methods, but these are not used in
+production due to FOM calculation differences (correlation 0.08 vs chltofom).
+The experimental code is preserved for future investigation and refinement.
 
 **Usage**:
 ```python
@@ -115,6 +123,12 @@ phifom_path = hl_file.as_PHIFOM(work_directory="./output")
 phifom_file = CPhsDataFile("phases.mtz")
 hl_path = phifom_file.as_HL(work_directory="./output")
 ```
+
+**Tests**: `tests/test_phase_conversions.py` - All passing (4/4)
+- HL → PHIFOM conversion
+- PHIFOM → HL conversion
+- Round-trip conversion (HL → PHIFOM → HL)
+- Numerical accuracy validation
 
 **References**:
 - Read, R.J. (1986). *Acta Cryst.* **A42**, 140-149.
@@ -270,11 +284,12 @@ pytest tests/test_obs_conversions.py -v -s
 ## Dependencies
 
 - **ctruncate**: CCP4 program for French-Wilson conversion (IPAIR/IMEAN → FMEAN/FPAIR)
+- **chltofom**: CCP4 program for phase data conversions (HL ↔ PHIFOM)
 - **gemmi**: Python library for crystallographic file I/O
   - MTZ file handling
   - PDB/mmCIF conversions
   - Crystallographic calculations
-- **numpy**: Numerical computations (weighted averaging, phase calculations)
+- **numpy**: Numerical computations (weighted averaging, experimental phase calculations)
 
 ## Future Work
 
@@ -284,30 +299,24 @@ pytest tests/test_obs_conversions.py -v -s
    - Add validation methods
    - Handle edge cases (long names, chain IDs)
 
-2. **Add test coverage for PhaseDataConverter**
-   - Test HL → PHIFOM conversion with real data
-   - Test PHIFOM → HL round-trip conversion
-   - Validate FOM values are in [0, 1] range
-   - Test edge cases (missing data, unusual phase distributions)
-
 ### Medium Priority
-3. **Add MAP file conversions**
+2. **Add MAP file conversions**
    - Create MapConverter module
    - CCP4 MAP ↔ other map formats
    - May use gemmi or CCP4 programs
 
-4. **Expand test coverage for all converters**
+3. **Expand test coverage for all converters**
    - Add edge case tests (missing data, unusual formats)
    - Test error handling
    - Performance benchmarks for large files
 
-5. **Add conversion validation**
+4. **Add conversion validation**
    - Verify output correctness
    - Compare statistics before/after conversion
    - Warn about information loss
 
 ### Low Priority
-6. **Optimization**
+5. **Optimization**
    - Cache converted files
    - Parallel conversions
    - Progress reporting for large files

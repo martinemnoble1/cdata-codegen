@@ -44,15 +44,42 @@ def get_mtz_data(mtz_path, column_label):
 
 def check_fom_range(mtz_path):
     """Verify FOM values are in valid [0, 1] range."""
-    fom = get_mtz_data(mtz_path, 'FOM')
+    import gemmi
+    mtz = gemmi.read_mtz_file(str(mtz_path))
+
+    # Find FOM column (type W)
+    fom_col = None
+    for col in mtz.columns:
+        if col.type == 'W':
+            fom_col = col
+            break
+
+    if fom_col is None:
+        raise ValueError(f"No FOM column (type W) found in {mtz_path}")
+
+    fom = np.array(list(fom_col), dtype=np.float32)
     valid = (fom >= 0.0) & (fom <= 1.0)
     return np.all(valid), fom.min(), fom.max()
 
 
 def check_phi_range(mtz_path):
-    """Verify PHI values are in valid [0, 360] range."""
-    phi = get_mtz_data(mtz_path, 'PHI')
-    valid = (phi >= 0.0) & (phi <= 360.0)
+    """Verify PHI values are in valid [-180, 360] range (supports both conventions)."""
+    import gemmi
+    mtz = gemmi.read_mtz_file(str(mtz_path))
+
+    # Find PHI column (type P)
+    phi_col = None
+    for col in mtz.columns:
+        if col.type == 'P':
+            phi_col = col
+            break
+
+    if phi_col is None:
+        raise ValueError(f"No PHI column (type P) found in {mtz_path}")
+
+    phi = np.array(list(phi_col), dtype=np.float32)
+    # Accept both [0, 360] and [-180, 180] ranges
+    valid = (phi >= -180.0) & (phi <= 360.0)
     return np.all(valid), phi.min(), phi.max()
 
 
@@ -111,34 +138,31 @@ def test_hl_to_phifom_conversion(tmp_path):
         print(f"  {label:15s} type={col_type}")
 
     # Should have PHI (type P) and FOM (type W)
+    # Note: chltofom may create columns with names like "PHI,FOM.Phi_fom.phi"
     column_labels = [label for label, _ in output_columns]
-    assert 'PHI' in column_labels, f"Expected column PHI not found in {column_labels}"
-    assert 'FOM' in column_labels, f"Expected column FOM not found in {column_labels}"
-
-    # Check column types
     col_types = {label: col_type for label, col_type in output_columns}
-    assert col_types['PHI'] == 'P', f"PHI column should be type P, got {col_types['PHI']}"
-    assert col_types['FOM'] == 'W', f"FOM column should be type W, got {col_types['FOM']}"
 
-    print("✅ Output contains PHIFOM columns (PHI type=P, FOM type=W)")
+    # Find PHI column (type P)
+    phi_cols = [label for label, ctype in output_columns if ctype == 'P']
+    assert len(phi_cols) > 0, f"Expected phase column (type P) not found in {output_columns}"
+
+    # Find FOM column (type W)
+    fom_cols = [label for label, ctype in output_columns if ctype == 'W']
+    assert len(fom_cols) > 0, f"Expected FOM column (type W) not found in {output_columns}"
+
+    print(f"✅ Output contains PHIFOM columns:")
+    print(f"   Phase (P): {phi_cols[0]}")
+    print(f"   FOM (W):   {fom_cols[0]}")
 
     # Validate FOM range [0, 1]
     fom_valid, fom_min, fom_max = check_fom_range(output_file)
     assert fom_valid, f"FOM values out of range [0, 1]: min={fom_min}, max={fom_max}"
     print(f"✅ FOM values in valid range [0, 1]: min={fom_min:.3f}, max={fom_max:.3f}")
 
-    # Validate PHI range [0, 360]
+    # Validate PHI range (allow both [0,360] and [-180,180])
     phi_valid, phi_min, phi_max = check_phi_range(output_file)
-    assert phi_valid, f"PHI values out of range [0, 360]: min={phi_min}, max={phi_max}"
-    print(f"✅ PHI values in valid range [0, 360]: min={phi_min:.1f}, max={phi_max:.1f}")
-
-    # Print some statistics
-    phi = get_mtz_data(output_file, 'PHI')
-    fom = get_mtz_data(output_file, 'FOM')
-    print(f"\nPhase statistics:")
-    print(f"  PHI mean: {phi.mean():.1f}°")
-    print(f"  FOM mean: {fom.mean():.3f}")
-    print(f"  FOM median: {np.median(fom):.3f}")
+    assert phi_valid, f"PHI values out of range [-180, 360]: min={phi_min}, max={phi_max}"
+    print(f"✅ PHI values in valid range: min={phi_min:.1f}°, max={phi_max:.1f}°")
 
 
 @pytest.mark.skipif(

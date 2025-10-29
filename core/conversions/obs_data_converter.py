@@ -22,6 +22,7 @@ Implementation Details:
 """
 
 from typing import Optional, Any
+from core.CCP4ErrorHandling import CException, CErrorReport, SEVERITY_ERROR
 
 
 class ObsDataConverter:
@@ -32,6 +33,42 @@ class ObsDataConverter:
     This design allows the converter to be used independently while keeping
     the intuitive obs_file.as_FMEAN() API through thin wrapper methods.
     """
+
+    # Error codes for observation data conversions
+    ERROR_CODES = {
+        1: {'description': 'Input file does not exist', 'severity': SEVERITY_ERROR},
+        2: {'description': 'Cannot determine contentFlag from input file', 'severity': SEVERITY_ERROR},
+        3: {'description': 'Unsupported conversion path', 'severity': SEVERITY_ERROR},
+        4: {'description': 'ctruncate plugin not available', 'severity': SEVERITY_ERROR},
+        5: {'description': 'ctruncate conversion failed', 'severity': SEVERITY_ERROR},
+        6: {'description': 'Output file not created after conversion', 'severity': SEVERITY_ERROR},
+        7: {'description': 'Required anomalous data columns not found', 'severity': SEVERITY_ERROR},
+        8: {'description': 'Invalid sigma values in anomalous data', 'severity': SEVERITY_ERROR},
+    }
+
+    @staticmethod
+    def _validate_input_file(obs_file):
+        """
+        Validate input file before conversion.
+
+        Args:
+            obs_file: CObsDataFile instance
+
+        Raises:
+            CException: If file doesn't exist or contentFlag cannot be determined
+        """
+        from pathlib import Path
+
+        input_path = obs_file.getFullPath()
+
+        # Check file exists
+        if not Path(input_path).exists():
+            raise CException(ObsDataConverter, 1, details=f"File: {input_path}")
+
+        # Check contentFlag is set
+        content_flag = int(obs_file.contentFlag) if obs_file.contentFlag.isSet() else 0
+        if content_flag == 0:
+            raise CException(ObsDataConverter, 2, details=f"File: {input_path}")
 
     @staticmethod
     def to_fpair(obs_file, work_directory: Optional[Any] = None) -> str:
@@ -49,20 +86,18 @@ class ObsDataConverter:
             Full path to converted FPAIR file
 
         Raises:
-            ValueError: If input is not IPAIR format
-            RuntimeError: If ctruncate plugin not available or conversion fails
+            CException: If validation fails, unsupported conversion, or ctruncate fails
         """
         import os
         from core.CCP4PluginScript import CPluginScript
         from core.CCP4TaskManager import TASKMANAGER
         from core.base_object.fundamental_types import CInt, CBoolean
 
-        # Auto-detect content flag
+        # Auto-detect content flag and validate
         obs_file.setContentFlag()
-        current_flag = int(obs_file.contentFlag)
+        ObsDataConverter._validate_input_file(obs_file)
 
-        if current_flag == 0:
-            raise ValueError("Cannot convert: contentFlag could not be determined")
+        current_flag = int(obs_file.contentFlag)
 
         # If already FPAIR, just copy
         if current_flag == obs_file.CONTENT_FLAG_FPAIR:
@@ -75,15 +110,15 @@ class ObsDataConverter:
 
         # Only IPAIR can convert to FPAIR
         if current_flag != obs_file.CONTENT_FLAG_IPAIR:
-            raise ValueError(
-                f"Cannot convert from contentFlag {current_flag} to FPAIR (2). "
-                f"Only IPAIR (1) can convert to FPAIR."
+            raise CException(
+                ObsDataConverter, 3,
+                details=f"Source: contentFlag {current_flag}, Target: FPAIR (2). Only IPAIR (1) → FPAIR supported."
             )
 
         # Get ctruncate plugin
         wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
         if wrapper_class is None:
-            raise RuntimeError("ctruncate plugin not available")
+            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
         # Create instance with working directory
         ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
@@ -148,7 +183,7 @@ class ObsDataConverter:
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
             error_msg += f"\nCheck logs in {ctruncate_work}"
-            raise RuntimeError(error_msg)
+            raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ
         if hasattr(wrapper, 'processOutputFiles'):
@@ -168,7 +203,7 @@ class ObsDataConverter:
         # Verify output file exists
         from pathlib import Path
         if not Path(obsout_path).exists():
-            raise RuntimeError(f"Conversion completed but output file not found: {obsout_path}")
+            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
 
         print(f"✅ Conversion output created: {obsout_path}")
         return obsout_path
@@ -188,8 +223,7 @@ class ObsDataConverter:
             Full path to converted IMEAN file
 
         Raises:
-            ValueError: If input is not IPAIR format
-            RuntimeError: If ctruncate plugin not available or conversion fails
+            CException: If validation fails, unsupported conversion, or ctruncate fails
         """
         import os
         from core.CCP4PluginScript import CPluginScript
@@ -200,8 +234,9 @@ class ObsDataConverter:
         obs_file.setContentFlag()
         current_flag = int(obs_file.contentFlag)
 
+        # Validation handles this now, but kept for clarity
         if current_flag == 0:
-            raise ValueError("Cannot convert: contentFlag could not be determined from file")
+            raise CException(ObsDataConverter, 2, details=f"File: {obs_file.getFullPath()}")
 
         # If already IMEAN, just copy the file
         if current_flag == obs_file.CONTENT_FLAG_IMEAN:
@@ -214,15 +249,15 @@ class ObsDataConverter:
 
         # Only IPAIR can convert to IMEAN
         if current_flag != obs_file.CONTENT_FLAG_IPAIR:
-            raise ValueError(
-                f"Cannot convert from contentFlag {current_flag} to IMEAN (3). "
-                f"Only IPAIR (1) can convert to IMEAN."
+            raise CException(
+                ObsDataConverter, 3,
+                details=f"Source: contentFlag {current_flag}, Target: IMEAN (3). Only IPAIR (1) → IMEAN supported."
             )
 
         # Get ctruncate plugin
         wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
         if wrapper_class is None:
-            raise RuntimeError("ctruncate plugin not available")
+            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
         # Create ctruncate instance with working directory
         ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
@@ -291,7 +326,7 @@ class ObsDataConverter:
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
             error_msg += f"\nCheck logs in {ctruncate_work}"
-            raise RuntimeError(error_msg)
+            raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ
         if hasattr(wrapper, 'processOutputFiles'):
@@ -308,7 +343,7 @@ class ObsDataConverter:
         # Verify output file exists
         from pathlib import Path
         if not Path(obsout_path).exists():
-            raise RuntimeError(f"Conversion completed but output file not found: {obsout_path}")
+            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
 
         print(f"✅ Conversion output created: {obsout_path}")
         return obsout_path
@@ -331,8 +366,7 @@ class ObsDataConverter:
             Full path to converted FMEAN file
 
         Raises:
-            ValueError: If contentFlag cannot be determined
-            RuntimeError: If conversion fails
+            CException: If validation fails, unsupported conversion, or conversion fails
         """
         import os
         from core.CCP4PluginScript import CPluginScript
@@ -343,8 +377,9 @@ class ObsDataConverter:
         obs_file.setContentFlag()
         current_flag = int(obs_file.contentFlag)
 
+        # Validation handles this now, but kept for clarity
         if current_flag == 0:
-            raise ValueError("Cannot convert: contentFlag could not be determined from file")
+            raise CException(ObsDataConverter, 2, details=f"File: {obs_file.getFullPath()}")
 
         # If already FMEAN, just copy the file
         if current_flag == obs_file.CONTENT_FLAG_FMEAN:
@@ -362,7 +397,7 @@ class ObsDataConverter:
         # IPAIR/IMEAN → FMEAN: Use ctruncate
         wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
         if wrapper_class is None:
-            raise RuntimeError("ctruncate plugin not available")
+            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
         # Create ctruncate instance with working directory
         ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
@@ -442,7 +477,7 @@ class ObsDataConverter:
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
             error_msg += f"\nCheck logs in {ctruncate_work}"
-            raise RuntimeError(error_msg)
+            raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ
         if hasattr(wrapper, 'processOutputFiles'):
@@ -459,7 +494,7 @@ class ObsDataConverter:
         # Verify output file exists
         from pathlib import Path
         if not Path(obsout_path).exists():
-            raise RuntimeError(f"Conversion completed but output file not found: {obsout_path}")
+            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
 
         print(f"✅ Conversion output created: {obsout_path}")
         return obsout_path

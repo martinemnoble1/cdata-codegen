@@ -36,6 +36,7 @@ Example Usage (future):
 """
 
 from typing import Optional, Any
+from core.CCP4ErrorHandling import CException, CErrorReport, SEVERITY_ERROR
 
 
 class ModelConverter:
@@ -45,6 +46,42 @@ class ModelConverter:
     Handles PDB ↔ mmCIF conversions using the gemmi library.
     All methods are static and take the model file instance as first parameter.
     """
+
+    # Error codes for model format conversions
+    ERROR_CODES = {
+        1: {'description': 'Input file does not exist', 'severity': SEVERITY_ERROR},
+        2: {'description': 'Cannot read model file - invalid format', 'severity': SEVERITY_ERROR},
+        3: {'description': 'gemmi library not available', 'severity': SEVERITY_ERROR},
+        4: {'description': 'Model conversion failed', 'severity': SEVERITY_ERROR},
+        5: {'description': 'Output file not created after conversion', 'severity': SEVERITY_ERROR},
+        6: {'description': 'Model validation failed', 'severity': SEVERITY_ERROR},
+    }
+
+    @staticmethod
+    def _validate_input_file(model_file):
+        """
+        Validate input file before conversion.
+
+        Args:
+            model_file: CPdbDataFile or CMmcifDataFile instance
+
+        Raises:
+            CException: If file doesn't exist or cannot be read
+        """
+        from pathlib import Path
+
+        input_path = model_file.getFullPath()
+
+        # Check file exists
+        if not Path(input_path).exists():
+            raise CException(ModelConverter, 1, details=f"File: {input_path}")
+
+        # Try to verify it's readable (when implemented)
+        try:
+            import gemmi
+            # Could add: gemmi.read_structure(input_path) to validate format
+        except ImportError:
+            raise CException(ModelConverter, 3, details="gemmi library required for model conversions")
 
     @staticmethod
     def to_pdb(model_file, work_directory: Optional[Any] = None) -> str:
@@ -70,7 +107,7 @@ class ModelConverter:
 
         Raises:
             NotImplementedError: Conversion logic not yet implemented
-            ValueError: If input file type not supported
+            CException: If validation fails or conversion fails
         """
         import gemmi
 
@@ -128,7 +165,7 @@ class ModelConverter:
 
         Raises:
             NotImplementedError: Conversion logic not yet implemented
-            ValueError: If input file type not supported
+            CException: If validation fails or conversion fails
         """
         import gemmi
 

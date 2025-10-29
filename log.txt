@@ -1,0 +1,12 @@
+======================================================================
+CCP4i2 Task: chltofom
+======================================================================
+
+Command Line:
+----------------------------------------------------------------------
+chltofom -mtzin /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases.mtz -colin-hl /*/*/[HLA,HLB,HLC,HLD] -colout /*/*/[PHI,FOM] -mtzout /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases_as_PHIFOM.mtz
+
+======================================================================
+Program Output:
+======================================================================
+

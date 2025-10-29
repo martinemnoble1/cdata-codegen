@@ -23,20 +23,42 @@ def get_mtz_data(mtz_path, column_label):
     import gemmi
     mtz = gemmi.read_mtz_file(str(mtz_path))
 
-    # Try exact match first
-    try:
-        col = mtz.column_with_label(column_label)
-        return np.array(col)
-    except RuntimeError:
-        pass
-
-    # If exact match fails, search for partial match
+    # Search for column by matching key terms
     # (chltofom creates names like "PHI_REF,FOM_REF.Phi_fom.phi")
-    for col in mtz.columns:
-        if column_label.lower() in col.label.lower():
-            return np.array(col)
+    search_key = column_label.lower().replace('_', ' ').split()[-1]  # e.g., "PHI_REF" → "phi"
 
-    raise ValueError(f"Column {column_label} not found in {mtz_path}")
+    best_match = None
+    for col in mtz.columns:
+        label_lower = col.label.lower()
+        # Match based on the key term and check it's a data column (not H/K/L)
+        if search_key in label_lower and col.type not in ['H']:
+            # For PHI, check column type is 'P' (phase)
+            # For FOM, check column type is 'W' (weight/FOM)
+            if 'phi' in search_key and col.type == 'P':
+                best_match = col
+                break
+            elif 'fom' in search_key and col.type == 'W':
+                best_match = col
+                break
+            elif best_match is None:
+                best_match = col
+
+    if best_match is None:
+        # Try simple exact match as fallback
+        try:
+            best_match = mtz.column_with_label(column_label)
+        except RuntimeError:
+            pass
+
+    if best_match:
+        arr = np.array(list(best_match), dtype=np.float32)
+        if arr.shape != (mtz.nreflections,):
+            print(f"Warning: Column {best_match.label} has shape {arr.shape}, expected ({mtz.nreflections},)")
+        return arr
+
+    # Still not found - list all columns
+    available = [(col.label, col.type) for col in mtz.columns]
+    raise ValueError(f"Column matching '{column_label}' not found in {mtz_path}. Available columns: {available}")
 
 
 def check_chltofom_available():
@@ -52,6 +74,19 @@ def check_chltofom_available():
     return False
 
 
+def normalize_phases_to_0_360(phases):
+    """
+    Normalize phases to [0, 360) range.
+
+    Args:
+        phases: Array of phases in degrees (any range)
+
+    Returns:
+        Array of phases in [0, 360) range
+    """
+    return (phases + 360.0) % 360.0
+
+
 def calculate_circular_rmsd(angles1, angles2):
     """
     Calculate RMSD for angular data accounting for 360° periodicity.
@@ -62,6 +97,10 @@ def calculate_circular_rmsd(angles1, angles2):
     Returns:
         float: Circular RMSD in degrees
     """
+    # Normalize both to [0, 360) first
+    angles1 = normalize_phases_to_0_360(angles1)
+    angles2 = normalize_phases_to_0_360(angles2)
+
     diff = np.abs(angles1 - angles2)
     # Handle wrap-around: min(diff, 360-diff)
     diff = np.minimum(diff, 360.0 - diff)
@@ -81,6 +120,10 @@ def calculate_circular_correlation(angles1, angles2):
     Returns:
         float: Circular correlation coefficient [-1, 1]
     """
+    # Normalize both to [0, 360) first
+    angles1 = normalize_phases_to_0_360(angles1)
+    angles2 = normalize_phases_to_0_360(angles2)
+
     # Convert to radians
     rad1 = np.radians(angles1)
     rad2 = np.radians(angles2)
@@ -156,12 +199,31 @@ def test_benchmark_hl_to_phifom_vs_chltofom(tmp_path):
     print(f"\n3. Comparing results...")
 
     # CCP4 chltofom output
-    phi_ref = get_mtz_data(str(chltofom_output), 'PHI_REF')
-    fom_ref = get_mtz_data(str(chltofom_output), 'FOM_REF')
+    try:
+        phi_ref = get_mtz_data(str(chltofom_output), 'PHI_REF')
+        fom_ref = get_mtz_data(str(chltofom_output), 'FOM_REF')
+        print(f"   ✅ Loaded chltofom data: phi_ref shape={phi_ref.shape}, fom_ref shape={fom_ref.shape}")
+    except Exception as e:
+        print(f"   ❌ Error loading chltofom data: {e}")
+        raise
 
     # Our output
-    phi_ours = get_mtz_data(our_output, 'PHI')
-    fom_ours = get_mtz_data(our_output, 'FOM')
+    try:
+        phi_ours = get_mtz_data(our_output, 'PHI')
+        fom_ours = get_mtz_data(our_output, 'FOM')
+        print(f"   ✅ Loaded our data: phi_ours shape={phi_ours.shape}, fom_ours shape={fom_ours.shape}")
+    except Exception as e:
+        print(f"   ❌ Error loading our data: {e}")
+        raise
+
+    # Verify data integrity
+    assert phi_ref.dtype in [np.float32, np.float64], f"phi_ref has wrong dtype: {phi_ref.dtype}"
+    assert fom_ref.dtype in [np.float32, np.float64], f"fom_ref has wrong dtype: {fom_ref.dtype}"
+    assert phi_ours.dtype in [np.float32, np.float64], f"phi_ours has wrong dtype: {phi_ours.dtype}"
+    assert fom_ours.dtype in [np.float32, np.float64], f"fom_ours has wrong dtype: {fom_ours.dtype}"
+    assert len(phi_ref) == len(phi_ours), f"Length mismatch: phi_ref={len(phi_ref)}, phi_ours={len(phi_ours)}"
+    assert len(fom_ref) == len(fom_ours), f"Length mismatch: fom_ref={len(fom_ref)}, fom_ours={len(fom_ours)}"
+    print(f"   ✅ Data integrity verified")
 
     # 4. Statistical comparison
     print(f"\n" + "=" * 70)
