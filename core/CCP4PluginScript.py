@@ -68,6 +68,7 @@ class CPluginScript(CData):
     TASKVERSION = None
     COMLINETEMPLATE = None
     COMTEMPLATE = None
+    ASYNCHRONOUS = False  # Set to True for async execution
 
     # Status codes
     SUCCEEDED = 0
@@ -92,6 +93,11 @@ class CPluginScript(CData):
         """
         # Initialize CData base class (provides hierarchy and event system)
         super().__init__(parent=parent, name=name or self.TASKNAME, **kwargs)
+
+        # Create finished signal (inherits SignalManager from HierarchicalObject)
+        # This signal is emitted when the plugin completes execution
+        from core.base_object.signal_system import Signal
+        self.finished = self._signal_manager.create_signal("finished", dict)
 
         # Initialize infrastructure components
         self._def_parser = DefXmlParser()
@@ -825,6 +831,9 @@ class CPluginScript(CData):
         Runs the program specified by TASKCOMMAND with the command line
         arguments built by makeCommandAndScript(), capturing output to log files.
 
+        If ASYNCHRONOUS is True, uses AsyncProcessManager for non-blocking execution.
+        Otherwise uses subprocess.run() for synchronous execution.
+
         If both commandLine and commandScript are defined, the commandLine is used
         to start the process and commandScript is fed as stdin.
 
@@ -843,6 +852,19 @@ class CPluginScript(CData):
                 details="No TASKCOMMAND specified for this plugin"
             )
             return error
+
+        # Check if async execution is requested
+        if self.ASYNCHRONOUS or getattr(self, 'waitForFinished', 0) == -1:
+            return self._startProcessAsync()
+        else:
+            return self._startProcessSync()
+
+    def _startProcessSync(self) -> CErrorReport:
+        """Synchronous process execution using subprocess.run()."""
+        import subprocess
+        import os
+
+        error = CErrorReport()
 
         # Ensure working directory exists
         from pathlib import Path
@@ -979,6 +1001,104 @@ class CPluginScript(CData):
 
         return error
 
+    def _startProcessAsync(self) -> CErrorReport:
+        """
+        Asynchronous process execution using AsyncProcessManager.
+
+        This method:
+        1. Starts the subprocess in non-blocking mode
+        2. Returns immediately (RUNNING status)
+        3. When subprocess finishes, calls _onProcessFinished handler
+        4. Handler calls postProcess() which emits finished signal
+        """
+        import os
+        from pathlib import Path
+        from core.async_process_manager import ASYNC_PROCESSMANAGER
+
+        error = CErrorReport()
+
+        # Ensure working directory exists
+        work_dir_path = Path(self.workDirectory)
+        if not work_dir_path.exists():
+            work_dir_path.mkdir(parents=True, exist_ok=True)
+            print(f"Created working directory: {self.workDirectory}")
+
+        # Write command script to file if present
+        command_script_file = None
+        if self.commandScript:
+            command_script_file = self.writeCommandFile()
+
+        # Prepare log file paths
+        stdout_path = self.makeFileName('LOG')
+        stderr_path = self.makeFileName('STDERR')
+
+        # Find full path to executable
+        import shutil
+        exe_path = shutil.which(self.TASKCOMMAND)
+        command = exe_path if exe_path else self.TASKCOMMAND
+
+        print(f"\n{'='*60}")
+        print(f"Starting ASYNC: {command} {' '.join(self.commandLine)}")
+        print(f"Working directory: {self.workDirectory}")
+        print(f"Log file: {stdout_path}")
+        if command_script_file:
+            print(f"Command script: {command_script_file}")
+        print(f"{'='*60}\n")
+
+        try:
+            # Get async process manager
+            pm = ASYNC_PROCESSMANAGER()
+
+            # Prepare stdin input
+            input_file = command_script_file if command_script_file else None
+
+            # Create handler callback
+            handler = [self._onProcessFinished, {}]
+
+            # Start async process
+            self._runningProcessId = pm.startProcess(
+                command=command,
+                args=self.commandLine,
+                inputFile=input_file,
+                logFile=stdout_path,
+                cwd=str(self.workDirectory),
+                env=os.environ.copy(),
+                handler=handler,
+                timeout=-1,  # No timeout
+                ifAsync=True
+            )
+
+            print(f"✅ Process started asynchronously (PID: {self._runningProcessId})")
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=110,
+                details=f"Error starting async process: {e}"
+            )
+
+        return error
+
+    def _onProcessFinished(self, pid: int):
+        """
+        Called when async subprocess completes.
+
+        This handler:
+        1. Checks process exit status
+        2. Calls postProcess() to handle completion
+        3. postProcess() eventually calls reportStatus() which emits finished signal
+        """
+        print(f"\n{'='*60}")
+        print(f"Process {pid} finished")
+        print(f"{'='*60}\n")
+
+        # Call postProcess to handle completion
+        # This will call processOutputFiles() and reportStatus()
+        # reportStatus() emits the finished signal
+        status = self.postProcess()
+
+        return status
+
     def postProcess(self) -> int:
         """
         Post-processing after program completes.
@@ -1056,8 +1176,13 @@ class CPluginScript(CData):
         # Report to database (placeholder)
         # In real implementation, would notify database
 
-        # Emit signal (placeholder)
-        # In real implementation, would emit Qt signal
+        # Emit finished signal with status dict
+        # This matches the Qt API: finished.emit({'finishStatus': status})
+        status_dict = {
+            'finishStatus': status,
+            'jobId': getattr(self, 'jobId', None)
+        }
+        self.finished.emit(status_dict)
 
         self._status = status
 
@@ -1113,6 +1238,30 @@ class CPluginScript(CData):
     def getContainer(self) -> CContainer:
         """Get the main container."""
         return self.container
+
+    def connectSignal(self, origin, signal_name: str, handler):
+        """
+        Connect a signal from an origin object to a handler.
+
+        This provides the same API as Qt's signal system but uses our
+        built-in Signal infrastructure from HierarchicalObject.
+
+        Args:
+            origin: Object that emits the signal
+            signal_name: Name of the signal to connect to (e.g., 'finished')
+            handler: Callable to invoke when signal is emitted
+
+        Example:
+            sub_plugin = self.makePluginObject('mtzdump')
+            self.connectSignal(sub_plugin, 'finished', self.on_mtzdump_finished)
+        """
+        if signal_name == 'finished' and hasattr(origin, 'finished'):
+            # Connect to the finished signal using our Signal system
+            origin.finished.connect(handler, weak=False)
+        else:
+            raise ValueError(
+                f"Unknown signal '{signal_name}' on {origin.__class__.__name__}"
+            )
 
     # =========================================================================
     # MTZ File Merging Methods (makeHklin family)

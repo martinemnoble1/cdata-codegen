@@ -1762,6 +1762,8 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
 
     def _load_xds_file(self, file_path: str, gemmi, error):
         """Load XDS file (INTEGRATE.HKL or XDS_ASCII.HKL) using gemmi."""
+        from pathlib import Path
+
         xds = gemmi.read_xds_ascii(str(file_path))
 
         # Set format
@@ -1883,7 +1885,7 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
                 parts = line1.split(None, 1)  # Split on first whitespace
                 if len(parts) >= 2:
                     try:
-                        nsyms = int(parts[0])
+                        # parts[0] is nsyms (number of symmetry operations)
                         spacegroup = parts[1]
                         self.spaceGroup = spacegroup
                     except (ValueError, IndexError):

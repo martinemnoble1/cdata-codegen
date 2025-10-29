@@ -137,8 +137,10 @@ class ParamsXmlHandler:
                     "child_added",
                     "child_removed",
                     "destroyed",
+                    "finished",  # Skip signal objects
                     "object_info",
                     "parent_changed",
+                    "parent",  # Skip parent to avoid circular references
                     "state",
                 ]
             ):
