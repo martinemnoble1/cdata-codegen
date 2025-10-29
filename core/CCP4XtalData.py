@@ -1530,25 +1530,393 @@ class CSpaceGroupCell(CSpaceGroupCellStub):
 class CUnmergedDataContent(CUnmergedDataContentStub):
     """
     Base class for classes holding file contents
-    
+
     Extends CUnmergedDataContentStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, file_path: str):
+        """
+        Load unmerged reflection file using gemmi library.
+
+        Supports multiple formats:
+        - MTZ (using gemmi.read_mtz_file)
+        - mmCIF (using gemmi.cif.read)
+        - Other formats detected by extension
+
+        Args:
+            file_path: Full path to reflection file
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            >>> unmerged = CUnmergedDataContent()
+            >>> error = unmerged.loadFile('/path/to/unmerged.mtz')
+            >>> if error.count() == 0:
+            ...     print(f"Format: {unmerged.format.value}")
+            ...     print(f"Merged: {unmerged.merged.value}")
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # Validate file path
+        if not file_path:
+            return error
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            error.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f"File does not exist or is not a file: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            import gemmi
+        except ImportError as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Failed to import gemmi library: {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        # Determine format from extension
+        suffix = path_obj.suffix.lower()
+
+        try:
+            # Handle MTZ files
+            if suffix == '.mtz':
+                self._load_mtz_file(file_path, gemmi, error)
+
+            # Handle mmCIF files
+            elif suffix in ['.cif', '.mmcif', '.ent']:
+                self._load_mmcif_file(file_path, gemmi, error)
+
+            # Handle Scalepack format (.sca, .hkl)
+            elif suffix in ['.sca', '.hkl']:
+                self._load_scalepack_file(file_path, error)
+
+            # Handle XDS files (INTEGRATE.HKL, XDS_ASCII.HKL)
+            elif 'INTEGRATE' in path_obj.name or 'XDS_ASCII' in path_obj.name or suffix == '.hkl':
+                # Try XDS format first
+                try:
+                    self._load_xds_file(file_path, gemmi, error)
+                except:
+                    # Fall back to Scalepack
+                    self._load_scalepack_file(file_path, error)
+
+            elif suffix == '.shelx':
+                self.format = 'shelx'
+                self.merged = 'unk'
+                self.knowncell = False
+                self.knownwavelength = False
+                object.__setattr__(self, '_file_path', file_path)
+
+            else:
+                # Try MTZ as default for unknown extensions
+                try:
+                    self._load_mtz_file(file_path, gemmi, error)
+                except:
+                    self.format = 'unk'
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=103,
+                        details=f"Unknown file format for: '{file_path}'",
+                        name=self.object_name() if hasattr(self, 'object_name') else ''
+                    )
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=104,
+                details=f"Error reading file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+
+        return error
+
+    def _load_mtz_file(self, file_path: str, gemmi, error):
+        """Load MTZ file and extract metadata."""
+        mtz = gemmi.read_mtz_file(str(file_path))
+
+        # Set format
+        self.format = 'mtz'
+
+        # Determine if merged (unmerged MTZ have batch columns)
+        has_batch = any(col.label == 'BATCH' for col in mtz.columns)
+        self.merged = 'unmerged' if has_batch else 'merged'
+
+        # Extract cell using smart assignment
+        if hasattr(self, 'cell') and self.cell is not None:
+            self.cell.a = mtz.cell.a
+            self.cell.b = mtz.cell.b
+            self.cell.c = mtz.cell.c
+            self.cell.alpha = mtz.cell.alpha
+            self.cell.beta = mtz.cell.beta
+            self.cell.gamma = mtz.cell.gamma
+
+        # Extract space group
+        if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+            self.spaceGroup = mtz.spacegroup.hm
+
+        # Extract resolution range
+        mtz.update_reso()
+        if hasattr(self, 'lowRes') and self.lowRes is not None:
+            self.lowRes = mtz.resolution_low()
+        if hasattr(self, 'highRes') and self.highRes is not None:
+            self.highRes = mtz.resolution_high()
+
+        # Extract dataset information
+        if len(mtz.datasets) > 0:
+            # Use first non-HKL_base dataset
+            for ds in mtz.datasets:
+                if ds.dataset_name != 'HKL_base':
+                    if hasattr(self, 'datasetName') and self.datasetName is not None:
+                        self.datasetName = ds.dataset_name
+                    if hasattr(self, 'crystalName') and self.crystalName is not None:
+                        self.crystalName = ds.crystal_name
+                    if hasattr(self, 'wavelength') and self.wavelength is not None:
+                        self.wavelength = ds.wavelength
+                    break
+
+        # Number of datasets
+        if hasattr(self, 'numberofdatasets') and self.numberofdatasets is not None:
+            self.numberofdatasets = len(mtz.datasets)
+
+        # Number of lattices (count of batches)
+        if has_batch:
+            if hasattr(self, 'numberLattices') and self.numberLattices is not None:
+                self.numberLattices = len(mtz.batches)
+
+        # Cell and wavelength are known for MTZ
+        self.knowncell = True
+        self.knownwavelength = True
+
+        # Store gemmi Mtz object
+        object.__setattr__(self, '_gemmi_mtz', mtz)
+
+    def _load_mmcif_file(self, file_path: str, gemmi, error):
+        """Load mmCIF file and extract metadata."""
+        cif_doc = gemmi.cif.read(str(file_path))
+
+        if len(cif_doc) == 0:
+            error.append(
+                klass=self.__class__.__name__,
+                code=105,
+                details=f"mmCIF file contains no data blocks: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return
+
+        block = cif_doc[0]
+
+        # Set format
+        self.format = 'mmcif'
+
+        # mmCIF reflection files are typically merged
+        self.merged = 'merged'
+
+        # Extract cell
+        if hasattr(self, 'cell') and self.cell is not None:
+            try:
+                self.cell.a = float(block.find_value('_cell.length_a'))
+                self.cell.b = float(block.find_value('_cell.length_b'))
+                self.cell.c = float(block.find_value('_cell.length_c'))
+                self.cell.alpha = float(block.find_value('_cell.angle_alpha'))
+                self.cell.beta = float(block.find_value('_cell.angle_beta'))
+                self.cell.gamma = float(block.find_value('_cell.angle_gamma'))
+                self.knowncell = True
+            except (ValueError, RuntimeError):
+                self.knowncell = False
+
+        # Extract space group
+        if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+            try:
+                sg_name = block.find_value('_symmetry.space_group_name_H-M')
+                if sg_name:
+                    self.spaceGroup = sg_name.strip('"').strip("'").strip()
+            except RuntimeError:
+                pass
+
+        # Extract wavelength
+        if hasattr(self, 'wavelength') and self.wavelength is not None:
+            try:
+                wavelength_val = block.find_value('_diffrn_radiation_wavelength.wavelength')
+                if wavelength_val:
+                    self.wavelength = float(wavelength_val)
+                    self.knownwavelength = True
+                else:
+                    self.knownwavelength = False
+            except (ValueError, RuntimeError):
+                self.knownwavelength = False
+
+        # Store gemmi CIF document
+        object.__setattr__(self, '_gemmi_cif_doc', cif_doc)
+
+    def _load_xds_file(self, file_path: str, gemmi, error):
+        """Load XDS file (INTEGRATE.HKL or XDS_ASCII.HKL) using gemmi."""
+        xds = gemmi.read_xds_ascii(str(file_path))
+
+        # Set format
+        if 'INTEGRATE' in Path(file_path).name:
+            self.format = 'xds'
+        else:
+            self.format = 'xds'
+
+        # XDS files are always unmerged
+        self.merged = 'unmerged'
+
+        # Extract cell using smart assignment
+        if hasattr(self, 'cell') and self.cell is not None:
+            cell_params = xds.cell_constants
+            self.cell.a = cell_params[0]
+            self.cell.b = cell_params[1]
+            self.cell.c = cell_params[2]
+            self.cell.alpha = cell_params[3]
+            self.cell.beta = cell_params[4]
+            self.cell.gamma = cell_params[5]
+            self.knowncell = True
+        else:
+            self.knowncell = False
+
+        # Extract space group from number
+        if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+            sg_num = xds.spacegroup_number
+            # Convert to Hermann-Mauguin symbol if possible
+            try:
+                from gemmi import SpaceGroup
+                sg = SpaceGroup(sg_num)
+                self.spaceGroup = sg.hm
+            except:
+                self.spaceGroup = f"Space group {sg_num}"
+
+        # Extract wavelength
+        if hasattr(self, 'wavelength') and self.wavelength is not None:
+            self.wavelength = xds.wavelength
+            self.knownwavelength = True
+        else:
+            self.knownwavelength = False
+
+        # Number of reflections
+        data_size = xds.data_size
+        if data_size > 0:
+            # Store data size info
+            object.__setattr__(self, '_xds_data_size', data_size)
+
+        # Store gemmi XDS object
+        object.__setattr__(self, '_gemmi_xds', xds)
+
+    def _load_scalepack_file(self, file_path: str, error):
+        """Load Scalepack (.sca) file header to extract metadata.
+
+        Scalepack has two formats:
+
+        Merged format:
+          Line 1: Version (1 = merged)
+          Line 2: -987 (magic number)
+          Line 3: a b c alpha beta gamma space_group
+
+        Unmerged format:
+          Line 1: nsyms space_group (e.g., "8 C2221")
+          Line 2+: Symmetry matrices (nsyms * 3 lines)
+          No cell parameters in file
+        """
+        try:
+            with open(file_path, 'r') as f:
+                line1 = f.readline().strip()
+                line2 = f.readline().strip()
+                line3 = f.readline().strip()
+
+            # Set format
+            self.format = 'sca'
+
+            # Detect file format by checking line 2
+            if line2 == '-987':
+                # MERGED FORMAT: line1 = version, line2 = -987, line3 = cell
+                try:
+                    version = int(line1)
+                    if version == 1:
+                        self.merged = 'merged'
+                    elif version in [2, 3]:
+                        self.merged = 'unmerged'
+                    else:
+                        self.merged = 'unk'
+                except ValueError:
+                    self.merged = 'unk'
+
+                # Parse cell parameters from line 3
+                parts = line3.split()
+                if len(parts) >= 6:
+                    try:
+                        self.cell.a = float(parts[0])
+                        self.cell.b = float(parts[1])
+                        self.cell.c = float(parts[2])
+                        self.cell.alpha = float(parts[3])
+                        self.cell.beta = float(parts[4])
+                        self.cell.gamma = float(parts[5])
+                        self.knowncell = True
+
+                        # Space group is after cell parameters
+                        if len(parts) > 6:
+                            sg_text = ' '.join(parts[6:])
+                            self.spaceGroup = sg_text.strip()
+                    except (ValueError, IndexError):
+                        self.knowncell = False
+                else:
+                    self.knowncell = False
+
+                # Merged format doesn't have wavelength
+                self.knownwavelength = False
+
+            else:
+                # UNMERGED FORMAT: line1 = "nsyms spacegroup"
+                self.merged = 'unmerged'
+
+                # Parse space group from line 1
+                parts = line1.split(None, 1)  # Split on first whitespace
+                if len(parts) >= 2:
+                    try:
+                        nsyms = int(parts[0])
+                        spacegroup = parts[1]
+                        self.spaceGroup = spacegroup
+                    except (ValueError, IndexError):
+                        pass
+
+                # Unmerged Scalepack files do not contain cell or wavelength
+                self.knowncell = False
+                self.knownwavelength = False
+
+            # Store file path for potential future full parsing
+            object.__setattr__(self, '_file_path', file_path)
+
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=107,
+                details=f"Error parsing Scalepack file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
 
 
 class CUnmergedDataFile(CUnmergedDataFileStub):
     """
     Handle MTZ, XDS and scalepack files. Allow wildcard filename
-    
+
     Extends CUnmergedDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier
+        self.set_qualifier('fileContentClassName', 'CUnmergedDataContent')
 
 
 class CUnmergedDataFileList(CUnmergedDataFileListStub):
