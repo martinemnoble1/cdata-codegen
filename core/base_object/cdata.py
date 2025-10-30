@@ -132,8 +132,31 @@ class CData(HierarchicalObject):
             self.qualifiers = {}
         self.qualifiers[key] = value
 
-    def set(self, values: dict):
-        """Set attributes from dict, unset others. Uses smart assignment to avoid overwriting CData objects."""
+    def set(self, values):
+        """
+        Set attributes from dict or CData object, unset others.
+        Uses smart assignment to avoid overwriting CData objects.
+
+        Args:
+            values: Either a dict of attributes, or another CData object to copy from
+        """
+        # If values is a CData object, extract its attributes as a dict
+        if isinstance(values, CData):
+            if hasattr(values, 'get') and callable(values.get):
+                values = values.get()
+            else:
+                # Fallback: create dict from CData attributes
+                values = {
+                    k: getattr(values, k)
+                    for k in dir(values)
+                    if not k.startswith('_') and not callable(getattr(values, k))
+                    and k not in ['parent', 'name', 'children', 'signals']
+                }
+
+        # Ensure values is a dict at this point
+        if not isinstance(values, dict):
+            raise TypeError(f"set() expects dict or CData, got {type(values).__name__}")
+
         # Get all fields (metadata-aware)
         metadata = None
         try:
@@ -171,6 +194,54 @@ class CData(HierarchicalObject):
         # This is important for legacy code that checks `object.isSet()`
         if values and hasattr(self, '_value_states'):
             self._value_states['value'] = ValueState.EXPLICITLY_SET
+
+    def get(self) -> dict:
+        """Get attributes as dict. Compatible with old CCP4i2 API.
+
+        Returns a dict of all CData attributes and their values.
+        For CData objects with a 'value' attribute, returns the value.
+        For nested CData objects, recursively calls get().
+
+        Returns:
+            Dict of attribute names to values
+        """
+        result = {}
+
+        # Get all fields (metadata-aware)
+        metadata = None
+        try:
+            from .metadata_system import MetadataRegistry
+            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
+        except Exception:
+            pass
+
+        if metadata:
+            all_fields = list(metadata.fields.keys())
+        else:
+            all_fields = [
+                k for k in self.__dict__
+                if not k.startswith('_')
+                and k not in ['parent', 'name', 'children', 'signals', 'content']
+            ]
+
+        for field_name in all_fields:
+            if not hasattr(self, field_name):
+                continue
+
+            value = getattr(self, field_name)
+
+            # Handle CData objects recursively
+            if isinstance(value, CData):
+                # If it has a value attribute, use that
+                if hasattr(value, 'value'):
+                    result[field_name] = value.value
+                else:
+                    # Otherwise recurse
+                    result[field_name] = value.get()
+            else:
+                result[field_name] = value
+
+        return result
 
     def update(self, values: dict):
         """Update only provided attributes. Uses smart assignment to avoid overwriting CData objects."""

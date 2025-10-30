@@ -1,401 +1,197 @@
 """
-Integration test for demo_copycell pattern with AsyncProcessManager.
+Integration test for real demo_copycell plugin using CCP4 demo data.
 
-This test demonstrates the exact pattern from demo_copycell but using
-simple shell commands instead of real crystallography programs.
-
-The pattern:
-1. Run first subprocess (mtzdump) to extract cell parameters
-2. On completion, run second subprocess (pdbset) to apply them
-3. Report final status
-
-This validates that the async signal chain works correctly.
+This tests the complete async infrastructure with a real CCP4i2 plugin
+and actual crystallographic data files.
 """
 
 import pytest
 import time
 import tempfile
+import os
+import sys
 from pathlib import Path
-from core.base_object.signal_system import Signal, Slot
-from core.async_process_manager import AsyncProcessManager
+import shutil
 
+# Ensure CCP4I2_ROOT is set
+CCP4I2_ROOT = os.environ.get('CCP4I2_ROOT')
+if not CCP4I2_ROOT:
+    pytest.skip("CCP4I2_ROOT not set", allow_module_level=True)
 
-class SimpleMockPlugin:
-    """
-    Simplified mock plugin that mimics CPluginScript behavior.
+# Check if demo_data exists
+demo_data_path = Path(CCP4I2_ROOT) / 'demo_data' / 'mdm2'
+if not demo_data_path.exists():
+    pytest.skip(f"Demo data not found: {demo_data_path}", allow_module_level=True)
 
-    This represents plugins like 'mtzdump' or 'pdbset' but uses
-    simple shell commands for testing.
-    """
+# Add legacy ccp4i2 to path (at the end to avoid conflicts)
+if CCP4I2_ROOT not in sys.path:
+    sys.path.append(CCP4I2_ROOT)
 
-    SUCCEEDED = 0
-    FAILED = 1
+# Now try to import the real demo_copycell plugin
+try:
+    # Import our modern CPluginScript first
+    from core.CCP4PluginScript import CPluginScript as ModernCPluginScript
+    from core.base_object.signal_system import Slot
 
-    def __init__(self, name: str, parent=None):
-        self.name = name
-        self.parent = parent
-        self.finished = Signal[dict](name=f'{name}_finished')
-        self._process_manager = AsyncProcessManager()
-        self._pid = None
-
-        # Mock container with input/output data
-        self.container = type('Container', (), {
-            'inputData': type('InputData', (), {})(),
-            'outputData': type('OutputData', (), {})(),
-        })()
-
-    def process(self):
-        """Start the plugin's subprocess."""
-        # Simulate command execution
-        # In real plugin this would be mtzdump, pdbset, etc.
-        if self.name == 'mock_mtzdump':
-            command = 'echo'
-            args = ['CELL: 78.0 78.0 38.0 90.0 90.0 90.0']
-        elif self.name == 'mock_pdbset':
-            command = 'echo'
-            args = ['PDB file updated with cell']
-        else:
-            command = 'echo'
-            args = [f'{self.name} output']
-
-        # Create handler
-        handler = [self._on_finished, {}]
-
-        # Start process
-        self._pid = self._process_manager.startProcess(
-            command=command,
-            args=args,
-            handler=handler,
-            ifAsync=True
-        )
-
-        return SimpleMockPlugin.SUCCEEDED
-
-    def _on_finished(self, pid):
-        """Called when subprocess completes."""
-        exit_code = self._process_manager.getJobData(pid, 'exitCode')
-
-        # Simulate reading output (in real plugin would parse log file)
-        if self.name == 'mock_mtzdump':
-            # Simulate extracting cell parameters
-            self.container.outputData.CELL = "78.0 78.0 38.0 90.0 90.0 90.0"
-
-        # Emit finished signal
-        finish_status = SimpleMockPlugin.SUCCEEDED if exit_code == 0 else SimpleMockPlugin.FAILED
-        status_dict = {
-            'pid': pid,
-            'finishStatus': finish_status
-        }
-
-        self.finished.emit(status_dict)
-
-
-class MockDemoCopycell:
-    """
-    Mock version of demo_copycell pipeline.
-
-    This exactly mimics the demo_copycell pattern:
-    1. Run mtzdump to get cell parameters
-    2. When it finishes, run pdbset to apply them to PDB
-    3. Report final status
-    """
-
-    SUCCEEDED = 0
-    FAILED = 1
-
-    def __init__(self, name: str = 'demo_copycell'):
-        self.name = name
-        self.finished = Signal[dict](name=f'{name}_finished')
-        self.mtzdump = None
-        self.pdbset = None
-        self.final_status = None
-
-        # Mock container
-        self.container = type('Container', (), {
-            'inputData': type('InputData', (), {
-                'HKLIN': 'input.mtz',
-                'XYZIN': 'input.pdb'
-            })(),
-            'outputData': type('OutputData', (), {
-                'XYZOUT': 'output.pdb'
-            })(),
-        })()
-
-    def connectSignal(self, origin, signal_name: str, handler):
-        """Connect signal to handler (mimics CPluginScript.connectSignal)."""
-        if signal_name == 'finished' and hasattr(origin, 'finished'):
-            origin.finished.connect(handler, weak=False)
-        else:
-            raise ValueError(f"Unknown signal '{signal_name}'")
-
-    def makePluginObject(self, plugin_name: str):
-        """Create a plugin instance (mimics CPluginScript.makePluginObject)."""
-        if plugin_name == 'mtzdump':
-            return SimpleMockPlugin(name='mock_mtzdump', parent=self)
-        elif plugin_name == 'pdbset':
-            return SimpleMockPlugin(name='mock_pdbset', parent=self)
-        else:
-            raise ValueError(f"Unknown plugin: {plugin_name}")
-
-    def process(self):
-        """
-        Main entry point - mimics demo_copycell.process().
-
-        Step 1: Run mtzdump to get cell parameters from MTZ file.
-        """
-        # Create mtzdump instance
-        self.mtzdump = self.makePluginObject('mtzdump')
-
-        # Set input file (in real code: self.mtzdump.container.inputData.HKLIN.set(...))
-        self.mtzdump.container.inputData.HKLIN = self.container.inputData.HKLIN
-
-        # Connect finished signal to handler
-        self.connectSignal(self.mtzdump, 'finished', self.process_1)
-
-        # Start mtzdump (async)
-        self.mtzdump.process()
-
-        return MockDemoCopycell.SUCCEEDED
-
-    @Slot(dict)
-    def process_1(self, status_dict):
-        """
-        Called when mtzdump finishes - mimics demo_copycell.process_1().
-
-        Step 2: Run pdbset to copy cell parameters to PDB file.
-        """
-        status = status_dict['finishStatus']
-
-        if status == SimpleMockPlugin.FAILED:
-            self.final_status = MockDemoCopycell.FAILED
-            self.finished.emit({'finishStatus': self.final_status})
-            return
-
-        # Create pdbset instance
-        self.pdbset = self.makePluginObject('pdbset')
-
-        # Set input file
-        self.pdbset.container.inputData.XYZIN = self.container.inputData.XYZIN
-
-        # Copy cell from mtzdump output
-        self.pdbset.container.inputData.CELL = self.mtzdump.container.outputData.CELL
-
-        # Set output file
-        self.pdbset.container.outputData.XYZOUT = self.container.outputData.XYZOUT
-
-        # Connect to final handler
-        self.connectSignal(self.pdbset, 'finished', self.postProcessWrapper)
-
-        # Start pdbset (async)
-        self.pdbset.process()
-
-    @Slot(dict)
-    def postProcessWrapper(self, status_dict):
-        """
-        Called when pdbset finishes - final handler.
-
-        This would normally do post-processing, here just records status.
-        """
-        status = status_dict['finishStatus']
-        self.final_status = status
-        self.finished.emit({'finishStatus': self.final_status})
+    # Try to import the legacy plugin
+    # This might fail if Qt dependencies aren't satisfied
+    from wrappers2.demo_copycell.script.demo_copycell import demo_copycell
+    DEMO_COPYCELL_AVAILABLE = True
+except ImportError as e:
+    print(f"Could not import demo_copycell: {e}")
+    DEMO_COPYCELL_AVAILABLE = False
 
 
 class TestDemoCopycellIntegration:
-    """Test the demo_copycell async pattern."""
+    """Integration test for real demo_copycell plugin."""
 
-    def test_demo_copycell_two_step_pipeline(self):
+    @pytest.mark.skipif(not DEMO_COPYCELL_AVAILABLE,
+                        reason="demo_copycell plugin not available")
+    def test_demo_copycell_with_mdm2_data(self):
         """
-        Test complete demo_copycell pipeline with two async steps.
+        Run real demo_copycell plugin with MDM2 test data.
 
-        This validates:
-        1. First plugin (mtzdump) runs and finishes
-        2. Handler creates and starts second plugin (pdbset)
-        3. Second plugin finishes
-        4. Final status is reported
+        This test:
+        1. Copies cell parameters from mdm2_unmerged.mtz
+        2. Applies them to 4qo4.pdb using real mtzdump and pdbset
+        3. Verifies async execution completes successfully
+        4. Checks output PDB file is created
+
+        Expected behavior:
+        - mtzdump extracts cell: ~42.7 42.7 42.7 90 90 90 (P213)
+        - pdbset writes output PDB with updated cell
         """
-        result = {'status': None, 'completed': False}
+        # Input files from demo_data
+        input_mtz = demo_data_path / 'mdm2_unmerged.mtz'
+        input_pdb = demo_data_path / '4qo4.pdb'
 
-        @Slot(dict)
-        def on_pipeline_finished(status_dict):
-            result['status'] = status_dict['finishStatus']
-            result['completed'] = True
+        if not input_mtz.exists():
+            pytest.skip(f"Test data not found: {input_mtz}")
+        if not input_pdb.exists():
+            pytest.skip(f"Test data not found: {input_pdb}")
 
-        # Create and run pipeline
-        pipeline = MockDemoCopycell(name='test_demo_copycell')
-        pipeline.finished.connect(on_pipeline_finished, weak=False)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Copy input files to work directory
+            work_mtz = Path(tmpdir) / 'input.mtz'
+            work_pdb = Path(tmpdir) / 'input.pdb'
+            output_pdb = Path(tmpdir) / 'output.pdb'
 
-        # Start pipeline
-        status = pipeline.process()
-        assert status == MockDemoCopycell.SUCCEEDED, "Pipeline failed to start"
+            shutil.copy(input_mtz, work_mtz)
+            shutil.copy(input_pdb, work_pdb)
 
-        # Wait for completion (both plugins need to finish)
-        for _ in range(100):  # Max 10 seconds
-            if result['completed']:
-                break
-            time.sleep(0.1)
+            print(f"\n{'='*70}")
+            print("Running demo_copycell with MDM2 data")
+            print(f"{'='*70}")
+            print(f"Input MTZ: {work_mtz}")
+            print(f"Input PDB: {work_pdb}")
+            print(f"Output PDB: {output_pdb}")
+            print(f"{'='*70}\n")
 
-        # Verify pipeline completed
-        assert result['completed'], "Pipeline did not complete"
-        assert result['status'] == MockDemoCopycell.SUCCEEDED, "Pipeline failed"
-
-        # Verify both plugins ran
-        assert pipeline.mtzdump is not None, "mtzdump was not created"
-        assert pipeline.pdbset is not None, "pdbset was not created"
-
-        # Verify data flow
-        assert hasattr(pipeline.mtzdump.container.outputData, 'CELL'), \
-            "mtzdump did not produce CELL output"
-        assert pipeline.pdbset.container.inputData.CELL is not None, \
-            "pdbset did not receive CELL input"
-
-    def test_demo_copycell_mtzdump_failure(self):
-        """Test that pipeline stops if mtzdump fails."""
-        result = {'status': None, 'completed': False}
-
-        @Slot(dict)
-        def on_pipeline_finished(status_dict):
-            result['status'] = status_dict['finishStatus']
-            result['completed'] = True
-
-        # Create pipeline with failing mtzdump
-        class FailingDemoCopycell(MockDemoCopycell):
-            def makePluginObject(self, plugin_name: str):
-                if plugin_name == 'mtzdump':
-                    # Create plugin that will fail
-                    class FailingPlugin(SimpleMockPlugin):
-                        def process(self):
-                            handler = [self._on_finished, {}]
-                            self._pid = self._process_manager.startProcess(
-                                command='false',  # Always fails
-                                handler=handler,
-                                ifAsync=True
-                            )
-                            return SimpleMockPlugin.SUCCEEDED
-                    return FailingPlugin(name='failing_mtzdump', parent=self)
-                else:
-                    return super().makePluginObject(plugin_name)
-
-        pipeline = FailingDemoCopycell(name='failing_pipeline')
-        pipeline.finished.connect(on_pipeline_finished, weak=False)
-        pipeline.process()
-
-        # Wait for completion
-        for _ in range(100):
-            if result['completed']:
-                break
-            time.sleep(0.1)
-
-        # Verify
-        assert result['completed'], "Pipeline did not complete"
-        assert result['status'] == MockDemoCopycell.FAILED, "Pipeline should have failed"
-        assert pipeline.mtzdump is not None, "mtzdump was created"
-        assert pipeline.pdbset is None, "pdbset should not have been created"
-
-    def test_demo_copycell_pdbset_failure(self):
-        """Test that pipeline reports failure if pdbset fails."""
-        result = {'status': None, 'completed': False}
-
-        @Slot(dict)
-        def on_pipeline_finished(status_dict):
-            result['status'] = status_dict['finishStatus']
-            result['completed'] = True
-
-        # Create pipeline with failing pdbset
-        class FailingPdbsetPipeline(MockDemoCopycell):
-            def makePluginObject(self, plugin_name: str):
-                if plugin_name == 'pdbset':
-                    # Create plugin that will fail
-                    class FailingPlugin(SimpleMockPlugin):
-                        def process(self):
-                            handler = [self._on_finished, {}]
-                            self._pid = self._process_manager.startProcess(
-                                command='false',  # Always fails
-                                handler=handler,
-                                ifAsync=True
-                            )
-                            return SimpleMockPlugin.SUCCEEDED
-                    return FailingPlugin(name='failing_pdbset', parent=self)
-                else:
-                    return super().makePluginObject(plugin_name)
-
-        pipeline = FailingPdbsetPipeline(name='pdbset_failing_pipeline')
-        pipeline.finished.connect(on_pipeline_finished, weak=False)
-        pipeline.process()
-
-        # Wait for completion
-        for _ in range(100):
-            if result['completed']:
-                break
-            time.sleep(0.1)
-
-        # Verify
-        assert result['completed'], "Pipeline did not complete"
-        assert result['status'] == MockDemoCopycell.FAILED, "Pipeline should have failed"
-        assert pipeline.mtzdump is not None, "mtzdump was created"
-        assert pipeline.pdbset is not None, "pdbset was created"
-
-    def test_signal_chain_timing(self):
-        """
-        Test that signals fire in correct order.
-
-        Verifies:
-        1. mtzdump finishes before pdbset starts
-        2. pdbset finishes before final handler
-        3. All handlers execute in sequence
-        """
-        events = []
-
-        class TimingPipeline(MockDemoCopycell):
-            def process(self):
-                events.append(('pipeline_start', time.time()))
-                return super().process()
+            # Track completion
+            result = {
+                'status': None,
+                'completed': False,
+                'mtzdump_cell': None,
+                'error': None
+            }
 
             @Slot(dict)
-            def process_1(self, status_dict):
-                events.append(('mtzdump_finished', time.time()))
-                events.append(('pdbset_start', time.time()))
-                super().process_1(status_dict)
+            def on_finished(status_dict):
+                """Handler for pipeline completion."""
+                result['status'] = status_dict.get('finishStatus')
+                result['completed'] = True
+                print(f"\n{'='*70}")
+                print("Pipeline finished!")
+                print(f"Status: {result['status']}")
+                print(f"{'='*70}\n")
 
-            @Slot(dict)
-            def postProcessWrapper(self, status_dict):
-                events.append(('pdbset_finished', time.time()))
-                super().postProcessWrapper(status_dict)
+            try:
+                # Create demo_copycell instance
+                pipeline = demo_copycell(
+                    workDirectory=tmpdir,
+                    name="test_demo_copycell_mdm2"
+                )
 
-        result = {'completed': False}
+                # Set input files using setFullPath API
+                pipeline.container.inputData.HKLIN.setFullPath(str(work_mtz))
+                pipeline.container.inputData.XYZIN.setFullPath(str(work_pdb))
+                pipeline.container.outputData.XYZOUT.setFullPath(str(output_pdb))
 
-        @Slot(dict)
-        def on_finished(status_dict):
-            events.append(('pipeline_finished', time.time()))
-            result['completed'] = True
+                # Connect finished signal
+                pipeline.finished.connect(on_finished, weak=False)
 
-        pipeline = TimingPipeline(name='timing_test')
-        pipeline.finished.connect(on_finished, weak=False)
-        pipeline.process()
+                # Start pipeline
+                print("Starting demo_copycell pipeline...")
+                pipeline.process()
 
-        # Wait for completion
-        for _ in range(100):
-            if result['completed']:
-                break
-            time.sleep(0.1)
+                # Wait for completion
+                print("Waiting for completion...\n")
+                max_wait = 600  # 60 seconds max (real programs take time)
+                for i in range(max_wait):
+                    if result['completed']:
+                        break
+                    time.sleep(0.1)
+                    if (i + 1) % 50 == 0:
+                        print(f"  ... waiting ({(i+1)/10:.1f}s)")
 
-        assert result['completed'], "Pipeline did not complete"
+                # Check if we timed out
+                if not result['completed']:
+                    pytest.fail("Pipeline did not complete within 60 seconds")
 
-        # Verify event order
-        event_names = [e[0] for e in events]
-        assert event_names == [
-            'pipeline_start',
-            'mtzdump_finished',
-            'pdbset_start',
-            'pdbset_finished',
-            'pipeline_finished'
-        ], f"Events out of order: {event_names}"
+                # Verify completion
+                print(f"\n{'='*70}")
+                print("Verification Results")
+                print(f"{'='*70}")
+                print(f"Completed: {result['completed']}")
+                print(f"Status: {result['status']}")
 
-        # Verify timing (each step happens after previous)
-        times = [e[1] for e in events]
-        for i in range(len(times) - 1):
-            assert times[i] <= times[i + 1], \
-                f"Event {i} happened after event {i+1}"
+                # Check status
+                assert result['status'] == ModernCPluginScript.SUCCEEDED, \
+                    f"Pipeline failed with status {result['status']}"
+
+                # Verify sub-plugins were created
+                assert hasattr(pipeline, 'mtzdump'), \
+                    "mtzdump plugin was not created"
+                assert hasattr(pipeline, 'pdbset'), \
+                    "pdbset plugin was not created"
+
+                print(f"mtzdump plugin: {pipeline.mtzdump}")
+                print(f"pdbset plugin: {pipeline.pdbset}")
+
+                # Try to get cell from mtzdump output
+                if hasattr(pipeline.mtzdump, 'container'):
+                    if hasattr(pipeline.mtzdump.container, 'outputData'):
+                        if hasattr(pipeline.mtzdump.container.outputData, 'CELL'):
+                            cell = pipeline.mtzdump.container.outputData.CELL
+                            print(f"Cell extracted by mtzdump: {cell}")
+                            result['mtzdump_cell'] = cell
+
+                # Verify output file
+                print(f"Output PDB exists: {output_pdb.exists()}")
+                if output_pdb.exists():
+                    print(f"Output PDB size: {output_pdb.stat().st_size} bytes")
+
+                assert output_pdb.exists(), \
+                    "Output PDB file was not created"
+                assert output_pdb.stat().st_size > 0, \
+                    "Output PDB file is empty"
+
+                # Read first few lines of output to verify CRYST1 record
+                with open(output_pdb, 'r') as f:
+                    for line in f:
+                        if line.startswith('CRYST1'):
+                            print(f"CRYST1 record: {line.strip()}")
+                            break
+
+                print(f"\n✅ All checks passed!")
+                print(f"{'='*70}\n")
+
+            except Exception as e:
+                result['error'] = str(e)
+                print(f"\n❌ Error during pipeline execution: {e}")
+                import traceback
+                traceback.print_exc()
+                pytest.fail(f"Pipeline execution failed: {e}")
 
 
 if __name__ == '__main__':

@@ -110,6 +110,21 @@ class CDataFile(CData):
         """
         return self.getFullPath()
 
+    def get(self) -> dict:
+        """Get file attributes as a dict. Compatible with old CCP4i2 API.
+
+        For file objects, this returns the fullPath as the primary value.
+        Overrides base CData.get() to provide file-specific behavior.
+
+        Returns:
+            Dict with fullPath and other file attributes
+        """
+        # Get base attributes
+        result = super().get()
+        # Add fullPath as a convenience
+        result['fullPath'] = self.getFullPath()
+        return result
+
     def set(self, value={}, **kw):
         """Set file attributes. Compatible with old CCP4i2 API.
 

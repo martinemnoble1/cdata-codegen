@@ -571,6 +571,164 @@ class HierarchicalObject(ABC):
         self._state = ObjectState.DESTROYED
         logger.debug(f"Destroyed {self._name}")
 
+    def connectSignal(self, origin, signal_name: str, handler):
+        """
+        Connect a signal from an origin object to a handler.
+
+        This provides Qt-compatible API for connecting signals, with automatic
+        adaptation between modern (dict) and legacy (int) handler signatures.
+
+        Supports both modern and legacy handler signatures:
+        - Modern: handler(data: dict) receives full payload
+        - Legacy: handler(status: int) receives just an int value
+
+        Args:
+            origin: Object that emits the signal
+            signal_name: Name of the signal to connect to (e.g., 'finished')
+            handler: Callable to invoke when signal is emitted
+
+        Example:
+            sub_plugin = self.makePluginObject('mtzdump')
+            self.connectSignal(sub_plugin, 'finished', self.on_mtzdump_finished)
+
+        Raises:
+            ValueError: If signal_name doesn't exist on origin object
+        """
+        # Check if origin has the requested signal
+        if not hasattr(origin, signal_name):
+            raise ValueError(
+                f"Object {origin.__class__.__name__} has no signal '{signal_name}'"
+            )
+
+        signal = getattr(origin, signal_name)
+
+        # Verify it's actually a Signal object
+        if not hasattr(signal, 'connect'):
+            raise ValueError(
+                f"Attribute '{signal_name}' on {origin.__class__.__name__} "
+                f"is not a Signal object"
+            )
+
+        # For 'finished' signal specifically, check for int vs dict signature
+        if signal_name == 'finished':
+            import inspect
+            sig = inspect.signature(handler)
+            params = list(sig.parameters.values())
+
+            # Skip 'self' parameter if it's a method
+            if params and params[0].name == 'self':
+                params = params[1:]
+
+            # Check parameter type hint if available
+            expects_int = False
+            if params:
+                param = params[0]
+                if param.annotation != inspect.Parameter.empty:
+                    # Has type hint - check if it's int
+                    expects_int = param.annotation == int or param.annotation == 'int'
+
+            # If handler expects int, wrap it to extract from dict
+            if expects_int:
+                def adapter(status_dict):
+                    """Adapter for legacy handlers expecting int."""
+                    # Handle both dict and int for flexibility
+                    if isinstance(status_dict, dict):
+                        status = status_dict.get('finishStatus', 0)
+                    else:
+                        status = status_dict
+                    return handler(status)
+
+                signal.connect(adapter, weak=False)
+                return
+
+        # Default: connect handler directly
+        signal.connect(handler, weak=False)
+
+    def find(self, path: str):
+        """
+        Find a child object by name or path in the hierarchy.
+
+        Supports both simple names and dotted paths:
+        - find("XYZIN") - Searches for first child named "XYZIN" (depth-first)
+        - find("protein.XYZIN") - Finds child "protein", then its child "XYZIN"
+        - find("container.inputData.HKLIN") - Multi-level path navigation
+
+        This is compatible with the CCP4ComTemplate system which expects
+        containers to have a find() method for template variable substitution
+        (e.g., $HKLIN expands by calling container.find("HKLIN")).
+
+        Args:
+            path: Object name or dotted path (e.g., "protein.XYZIN")
+
+        Returns:
+            The found object, or None if not found
+
+        Examples:
+            >>> container = CContainer(name="root")
+            >>> protein = CContainer(name="protein", parent=container)
+            >>> xyzin = CPdbDataFile(name="XYZIN", parent=protein)
+            >>> container.find("protein.XYZIN")  # Returns xyzin
+            >>> container.find("XYZIN")  # Also returns xyzin (depth-first search)
+        """
+        if not path:
+            return None
+
+        # Split path into components
+        path_parts = path.split('.')
+
+        # If single name, check immediate children first
+        if len(path_parts) == 1:
+            name = path_parts[0]
+
+            # Check immediate children by name attribute
+            # _children is a set, so convert to list for iteration
+            for child_ref in list(self._children):
+                child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
+                if child is not None:
+                    # Skip destroyed objects
+                    if hasattr(child, '_state'):
+                        from .hierarchy_system import ObjectState
+                        if child.state == ObjectState.DESTROYED:
+                            continue
+                    # Check if name matches
+                    if hasattr(child, 'name') and child.name == name:
+                        return child
+
+            # Not found in immediate children - search recursively
+            for child_ref in list(self._children):
+                child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
+                if child is not None and hasattr(child, 'find'):
+                    result = child.find(name)
+                    if result is not None:
+                        return result
+
+            return None
+
+        # Multi-part path: navigate step by step
+        first_name = path_parts[0]
+        remaining_path = '.'.join(path_parts[1:])
+
+        # Find the first component in immediate children
+        # _children is a set, so convert to list for iteration
+        for child_ref in list(self._children):
+            child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
+            if child is not None:
+                # Skip destroyed objects
+                if hasattr(child, '_state'):
+                    from .hierarchy_system import ObjectState
+                    if child.state == ObjectState.DESTROYED:
+                        continue
+                # Check if name matches
+                if hasattr(child, 'name') and child.name == first_name:
+                    # Found first component - recurse for remaining path
+                    if hasattr(child, 'find'):
+                        return child.find(remaining_path)
+                    else:
+                        # Child doesn't have find() - return None
+                        return None
+
+        return None
+
     def __del__(self):
         """Ensure cleanup on garbage collection."""
         if self._state != ObjectState.DESTROYED:

@@ -114,6 +114,17 @@ class CPluginScript(CData):
         self._process = None
         self._status = None
 
+        # Child job counter for sub-plugins (follows legacy convention)
+        self._childJobCounter = 0
+
+        # Database integration attributes (for database-backed environments)
+        # These are set by the database handler when running in CCP4i2 GUI
+        self._dbHandler = None        # Database handler object
+        self._dbProjectId = None       # Project identifier in database
+        self._dbProjectName = None     # Project name
+        self._dbJobId = None           # Job identifier in database
+        self._dbJobNumber = None       # Job number (e.g., "1.2.3" for nested jobs)
+
         # Command line for external program
         self.commandLine = []
 
@@ -447,7 +458,9 @@ class CPluginScript(CData):
             return self.FAILED
 
         # Generate command and script
+        print(f"[DEBUG process] Calling makeCommandAndScript() for {self.TASKNAME}")
         error = self.makeCommandAndScript()
+        print(f"[DEBUG process] makeCommandAndScript() returned, commandLine has {len(self.commandLine)} items")
         if error:
             self.errorReport.extend(error)
             return self.FAILED
@@ -459,20 +472,24 @@ class CPluginScript(CData):
             return self.FAILED
 
         # For synchronous execution (subprocess.run), process is complete when startProcess returns
-        # Call processOutputFiles to extract output data, but don't call full postProcess
-        # which includes saveParams and reportStatus (those are for GUI/database integration)
+        # Call processOutputFiles to extract output data
+        status = self.SUCCEEDED
         try:
             error = self.processOutputFiles()
             if error:
                 self.errorReport.extend(error)
-                return self.FAILED
+                status = self.FAILED
         except Exception as e:
             # Legacy wrappers may not have processOutputFiles implemented
             print(f"Warning: processOutputFiles() exception: {type(e).__name__}: {str(e)}")
             import traceback
             traceback.print_exc()
 
-        return self.SUCCEEDED
+        # Emit finished signal so pipelines can continue
+        # This is essential for sub-plugins in pipelines (e.g., mtzdump in demo_copycell)
+        self.reportStatus(status)
+
+        return status
 
     def _find_datafile_descendants(self, container) -> list:
         """
@@ -697,20 +714,85 @@ class CPluginScript(CData):
         """
         return CErrorReport()
 
-    def makeCommandAndScript(self) -> CErrorReport:
+    def makeCommandAndScript(self, container=None) -> CErrorReport:
         """
         Generate command line and command file for the program.
 
         Uses COMLINETEMPLATE and COMTEMPLATE class attributes to
         generate the command line and input file.
 
+        Args:
+            container: Container object with input/output data (defaults to self.container)
+
         Returns:
             CErrorReport with any errors
         """
         error = CErrorReport()
 
-        # This would use CComTemplate to process templates
-        # For now, placeholder implementation
+        # Use the container from this plugin if not specified
+        if container is None:
+            container = self.container
+
+        # Use our modern CComTemplate implementation (Qt-free)
+        try:
+            from core import CCP4ComTemplate
+            print(f"[DEBUG makeCommandAndScript] CComTemplate imported successfully")
+        except ImportError as e:
+            # Should never happen since CCP4ComTemplate is in our core package
+            print(f"[DEBUG makeCommandAndScript] CComTemplate import failed: {e}")
+            return error
+
+        # Process COMTEMPLATE (generates stdin script)
+        # The numeric prefix is stripped by CComTemplate, output goes to stdin
+        if self.COMTEMPLATE is not None:
+            print(f"[DEBUG makeCommandAndScript] Processing COMTEMPLATE: {self.COMTEMPLATE}")
+            try:
+                comTemplate = CCP4ComTemplate.CComTemplate(parent=self, template=self.COMTEMPLATE)
+                text, tmpl_err = comTemplate.makeComScript(container)
+                print(f"[DEBUG makeCommandAndScript] COMTEMPLATE expanded to: '{text}'")
+                if tmpl_err and len(tmpl_err) > 0:
+                    print(f"[DEBUG makeCommandAndScript] COMTEMPLATE errors: {tmpl_err}")
+                    error.extend(tmpl_err)
+                if text and len(text) > 0:
+                    # Add to commandScript (stdin) - preserve newlines
+                    print(f"[DEBUG makeCommandAndScript] Adding to commandScript (stdin)")
+                    self.commandScript.append(text + '\n')
+            except Exception as e:
+                print(f"[DEBUG makeCommandAndScript] Exception processing COMTEMPLATE: {e}")
+                import traceback
+                traceback.print_exc()
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=13,
+                    details=f"Error processing COMTEMPLATE: {e}"
+                )
+
+        # Process COMLINETEMPLATE (generates command line arguments)
+        # The leading numeric prefix (e.g., "1 HKLIN") is stripped by CComTemplate
+        if self.COMLINETEMPLATE is not None:
+            print(f"[DEBUG makeCommandAndScript] Processing COMLINETEMPLATE: {self.COMLINETEMPLATE}")
+            try:
+                comTemplate = CCP4ComTemplate.CComTemplate(parent=self, template=self.COMLINETEMPLATE)
+                text, tmpl_err = comTemplate.makeComScript(container)
+                print(f"[DEBUG makeCommandAndScript] Template expanded to: '{text}'")
+                if tmpl_err and len(tmpl_err) > 0:
+                    print(f"[DEBUG makeCommandAndScript] Template errors: {tmpl_err}")
+                    error.extend(tmpl_err)
+                if text and len(text) > 0:
+                    # Split the text and append each word to commandLine
+                    wordList = text.split()
+                    print(f"[DEBUG makeCommandAndScript] Adding words to commandLine: {wordList}")
+                    for word in wordList:
+                        self.commandLine.append(word)
+            except Exception as e:
+                print(f"[DEBUG makeCommandAndScript] Exception processing COMLINETEMPLATE: {e}")
+                import traceback
+                traceback.print_exc()
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=15,
+                    details=f"Error processing COMLINETEMPLATE: {e}"
+                )
 
         return error
 
@@ -806,6 +888,25 @@ class CPluginScript(CData):
             base, ext = fileName.split('.', 1)
             fileName = base + '_' + str(qualifier) + '.' + ext
         return os.path.join(self.workDirectory, fileName)
+
+    def logFileText(self) -> str:
+        """
+        Read and return the contents of the log file.
+
+        This is a legacy API method used by plugins to parse their output.
+
+        Returns:
+            Contents of the log file as a string, or empty string if file doesn't exist
+        """
+        log_path = self.makeFileName('LOG')
+        try:
+            with open(log_path, 'r') as f:
+                return f.read()
+        except FileNotFoundError:
+            return ""
+        except Exception as e:
+            print(f"Warning: Error reading log file {log_path}: {e}")
+            return ""
 
     def jobNumberString(self) -> str:
         """
@@ -1176,8 +1277,8 @@ class CPluginScript(CData):
         # Report to database (placeholder)
         # In real implementation, would notify database
 
-        # Emit finished signal with status dict
-        # This matches the Qt API: finished.emit({'finishStatus': status})
+        # Emit finished signal with status dict (modern API)
+        # Legacy plugins may expect just int, handled by connectSignal() wrapper
         status_dict = {
             'finishStatus': status,
             'jobId': getattr(self, 'jobId', None)
@@ -1186,24 +1287,83 @@ class CPluginScript(CData):
 
         self._status = status
 
+    def postProcessWrapper(self, finishStatus):
+        """
+        Wrapper method for propagating finish status from sub-plugins.
+
+        This is called by pipelines as a callback when a sub-plugin finishes.
+        It simply forwards the status to reportStatus() to emit the finished signal.
+
+        Args:
+            finishStatus: Can be either int (legacy) or dict (modern)
+        """
+        # Handle both int and dict status formats
+        if isinstance(finishStatus, dict):
+            status = finishStatus.get('finishStatus', self.FAILED)
+        else:
+            status = finishStatus
+
+        self.reportStatus(status)
+
     # =========================================================================
     # Utility methods for backward compatibility with old API
     # =========================================================================
 
-    def makePluginObject(self, taskName: str, version: Optional[str] = None, **kwargs) -> Optional['CPluginScript']:
+    def makePluginObject(self, taskName: str, version: Optional[str] = None,
+                         reportToDatabase: bool = True, **kwargs) -> Optional['CPluginScript']:
         """
         Create a sub-plugin (sub-job) instance using TASKMANAGER.
 
         This is used when a pipeline calls other wrappers as sub-jobs.
 
+        Following legacy CCP4i2 convention, each sub-plugin is assigned:
+        - A working directory: parent_workdir/job_N (where N = 1, 2, 3, ...)
+        - A unique name: parent_name_N
+
+        The working directory is created if it doesn't exist.
+
         Args:
             taskName: Name of the task to instantiate
             version: Optional version of the task (defaults to latest)
+            reportToDatabase: Whether to report this job to the database (default True).
+                            In database-backed environments (CCP4i2 GUI), this controls
+                            whether the sub-job is registered in the project database.
+                            In standalone mode, this parameter is ignored.
             **kwargs: Additional arguments passed to the plugin constructor
+                     (workDirectory will be overridden based on convention)
 
         Returns:
             New CPluginScript instance, or None if plugin not found
         """
+        import os
+        from pathlib import Path
+
+        # TODO: In database-backed mode, if reportToDatabase is True and _dbHandler exists,
+        # would call self._dbHandler.createJob() to register sub-job in database
+        # For now (standalone mode), we skip database registration
+
+        # Increment child job counter
+        self._childJobCounter += 1
+
+        # Create subdirectory following convention: job_1, job_2, etc.
+        child_work_dir = Path(self.workDirectory) / f"job_{self._childJobCounter}"
+        try:
+            if not child_work_dir.exists():
+                child_work_dir.mkdir(parents=True, exist_ok=True)
+                print(f"[DEBUG makePluginObject] Created subdirectory: {child_work_dir}")
+        except Exception as e:
+            self.errorReport.append(
+                klass=self.__class__.__name__,
+                code=24,
+                details=f"Failed to create working directory '{child_work_dir}': {e}",
+                name=str(child_work_dir)
+            )
+            # Fall back to parent's work directory
+            child_work_dir = Path(self.workDirectory)
+
+        # Create name following convention: parent_name_N
+        child_name = f"{self.name}_{self._childJobCounter}" if self.name else f"job_{self._childJobCounter}"
+
         # Use TASKMANAGER to get the plugin class
         task_manager = TASKMANAGER()
         plugin_class = task_manager.get_plugin_class(taskName, version=version)
@@ -1218,9 +1378,16 @@ class CPluginScript(CData):
             )
             return None
 
-        # Instantiate the plugin
+        # Instantiate the plugin with computed workDirectory and name
+        # Override any workDirectory/name in kwargs
         try:
-            plugin_instance = plugin_class(**kwargs)
+            plugin_kwargs = kwargs.copy()
+            plugin_kwargs['workDirectory'] = str(child_work_dir)
+            plugin_kwargs['name'] = child_name
+            plugin_kwargs['parent'] = self  # Set parent relationship
+
+            plugin_instance = plugin_class(**plugin_kwargs)
+            print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{child_name}' in '{child_work_dir}'")
             return plugin_instance
         except Exception as e:
             self.errorReport.append(
@@ -1229,6 +1396,8 @@ class CPluginScript(CData):
                 details=f"Failed to instantiate plugin '{taskName}': {e}",
                 name=taskName
             )
+            import traceback
+            traceback.print_exc()
             return None
 
     def getErrorReport(self) -> CErrorReport:
@@ -1239,29 +1408,46 @@ class CPluginScript(CData):
         """Get the main container."""
         return self.container
 
-    def connectSignal(self, origin, signal_name: str, handler):
+    # =========================================================================
+    # Database integration methods (for database-backed environments)
+    # =========================================================================
+
+    def getJobId(self):
+        """Get the database job ID.
+
+        Returns:
+            Job ID in database, or None if not running in database-backed mode
         """
-        Connect a signal from an origin object to a handler.
+        return self._dbJobId
 
-        This provides the same API as Qt's signal system but uses our
-        built-in Signal infrastructure from HierarchicalObject.
+    def getJobNumber(self):
+        """Get the database job number.
 
-        Args:
-            origin: Object that emits the signal
-            signal_name: Name of the signal to connect to (e.g., 'finished')
-            handler: Callable to invoke when signal is emitted
-
-        Example:
-            sub_plugin = self.makePluginObject('mtzdump')
-            self.connectSignal(sub_plugin, 'finished', self.on_mtzdump_finished)
+        Returns:
+            Job number (e.g., "1.2.3"), or None if not running in database-backed mode
         """
-        if signal_name == 'finished' and hasattr(origin, 'finished'):
-            # Connect to the finished signal using our Signal system
-            origin.finished.connect(handler, weak=False)
-        else:
-            raise ValueError(
-                f"Unknown signal '{signal_name}' on {origin.__class__.__name__}"
-            )
+        return self._dbJobNumber
+
+    def getProjectId(self):
+        """Get the database project ID.
+
+        Returns:
+            Project ID in database, or None if not running in database-backed mode
+        """
+        return self._dbProjectId
+
+    def getChildJobNumber(self):
+        """Get the current child job counter.
+
+        This returns how many sub-plugins have been created via makePluginObject().
+
+        Returns:
+            Child job counter (starts at 0, increments with each makePluginObject call)
+        """
+        return self._childJobCounter
+
+    # connectSignal() is now inherited from HierarchicalObject base class
+    # with automatic signature adaptation for legacy int handlers
 
     # =========================================================================
     # MTZ File Merging Methods (makeHklin family)
