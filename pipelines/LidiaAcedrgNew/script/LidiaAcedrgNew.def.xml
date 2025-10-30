@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='ASCII'?>
+<ccp4:ccp4i2 xmlns:ccp4="http://www.ccp4.ac.uk/ccp4ns">
+    <ccp4i2_header>
+        <function>DEF</function>
+        <comment/>
+        <hostName>mnmacpro.ncl.ac.uk</hostName>
+        <userId>martin</userId>
+        <ccp4iVersion>0.1</ccp4iVersion>
+        <pluginName>LidiaAcedrgNew</pluginName>
+        <creationTime>11:06 21/Nov/14</creationTime>
+        <pluginTitle>LidiaAcedrgNew</pluginTitle>
+        <jobNumber/>
+    </ccp4i2_header>
+    <ccp4i2_body id="LidiaAcedrgNew">
+        <container id="inputData">
+            <content id="DICTIN2">
+                <className>CDictDataFile</className>
+                <qualifiers>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id="DICTIN">
+                <className>CDictDataFile</className>
+                <qualifiers>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='MOLSMILESORSKETCH'>
+                <className>CString</className>
+                <qualifiers>
+                    <onlyEnumerators>True</onlyEnumerators>
+                    <enumerators>MOL,MOL2,SMILES,SMILESFILE,SKETCH,DICT,PDBMMCIF</enumerators>
+                    <menuText>a MOL or SDF file,a MOL2 file,a SMILES string,a SMILES file,a sketch,a CIF dictionary,a PDB or mmCIF file</menuText>
+                    <default>DICT</default>
+                    <guiLabel>Input format</guiLabel>
+                </qualifiers>
+            </content>
+            <content id='ATOMMATCHOPTION'>
+                <className>CString</className>
+                <qualifiers>
+                    <onlyEnumerators>True</onlyEnumerators>
+                    <enumerators>NOMATCH,MONLIBCODE,LOCALDICT,ALLMONLIB</enumerators>
+                    <menuText>nothing,a specific code,user dictionary,all monomers</menuText>
+                    <default>NOMATCH</default>
+                    <guiLabel>Atom match option</guiLabel>
+                </qualifiers>
+            </content>
+            <content id='TLC'>
+                <className>CString</className>
+                <qualifiers>
+                    <minLength>1</minLength>
+                    <maxLength>5</maxLength>
+                    <default>LIG</default>
+                    <mustExist>True</mustExist>
+                    <allowUndefined>False</allowUndefined>
+                    <guiLabel>Monomer code (usually 3-5 characters) for new molecule</guiLabel><!-- (required except of a CIF file is provided)-->
+                </qualifiers>
+            </content>
+            <content id='MATCHTLC'>
+                <className>CString</className>
+                <qualifiers>
+                    <minLength>1</minLength>
+                    <guiLabel>Monomer code (usually 3-5 characters) to match atom names with</guiLabel>
+                </qualifiers>
+            </content>
+            <content id='SMILESFILEIN'>
+                <className>CDataFile</className>
+                <qualifiers>
+                    <fromPreviousJob>True</fromPreviousJob>
+                    <mustExist>True</mustExist>
+                    <allowUndefined>True</allowUndefined>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='MOLIN'>
+                <className>CMDLMolDataFile</className>
+                <qualifiers>
+                    <fromPreviousJob>True</fromPreviousJob>
+                    <mustExist>True</mustExist>
+                    <allowUndefined>True</allowUndefined>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='MOL2IN'>
+                <className>CMol2DataFile</className>
+                <qualifiers>
+                    <fromPreviousJob>True</fromPreviousJob>
+                    <mustExist>True</mustExist>
+                    <allowUndefined>True</allowUndefined>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='PDBMMCIFIN'>
+                <className>CPdbDataFile</className>
+                <qualifiers>
+                    <fromPreviousJob>True</fromPreviousJob>
+                    <allowUndefined>True</allowUndefined>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='SMILESIN'>
+                <className>CString</className>
+            </content>
+            <content id='METAL_STRUCTURE'>
+                <className>CPdbDataFile</className>
+                <qualifiers>
+                    <fromPreviousJob>True</fromPreviousJob>
+                    <mustExist>True</mustExist>
+                    <allowUndefined>True</allowUndefined>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id='CONFORMERSFROM'>
+                <className>CString</className>
+                <qualifiers>
+                    <onlyEnumerators>True</onlyEnumerators>
+                    <enumerators>RDKIT,ACEDRG,BOTH</enumerators>
+                    <menuText>RDKit,ACEDRG,Both</menuText>
+                    <default>RDKIT</default>
+                </qualifiers>
+            </content>
+            <content id='NRANDOM'>
+                <className>CInt</className>
+                <qualifiers>
+                    <default>20</default>
+                    <guiLabel>Number of initial conformers to try</guiLabel>
+                    <toolTip>More start structures may provide a better start conformer (20 by default)</toolTip>
+                </qualifiers>
+            </content>
+        </container>
+        <container id="outputData">
+            <content id="MOLOUT_LIST">
+                <className>CList</className>
+                <subItem>
+                    <className>CMDLMolDataFile</className>
+                    <qualifiers>
+                        <saveToDb>True</saveToDb>
+                    </qualifiers>
+                </subItem>
+            </content>
+            <content id="DICTOUT_LIST">
+                <className>CList</className>
+                <subItem>
+                    <className>CDictDataFile</className>
+                    <qualifiers>
+                        <saveToDb>True</saveToDb>
+                    </qualifiers>
+                </subItem>
+            </content>
+            <content id="XYZOUT_LIST">
+                <className>CList</className>
+                <subItem>
+                    <className>CPdbDataFile</className>
+                    <qualifiers>
+                        <saveToDb>True</saveToDb>
+                    </qualifiers>
+                </subItem>
+            </content>            
+        </container>
+        <container id="controlParameters">
+            <content id='USE_COORD'>
+                <className>CBoolean</className>
+                <qualifiers>
+                    <default>False</default>
+                </qualifiers>
+            </content>
+            <content id='TOGGLE_METAL'>
+                <className>CBoolean</className>
+                <qualifiers>
+                    <default>False</default>
+                    <guiLabel>This monomer contains a metal atom.</guiLabel>
+                </qualifiers>
+            </content>
+            <content id='TOGGLE_NRANDOM'>
+                <className>CBoolean</className>
+                <qualifiers>
+                    <default>False</default>
+                    <guiLabel>Set number of initial conformers to try</guiLabel>
+                </qualifiers>
+            </content>
+            <content id='NOPROT'>
+                <className>CBoolean</className>
+                <qualifiers>
+                    <default>False</default>
+                    <guiLabel>No further protonation/deprotonation will be done by AceDRG</guiLabel>
+                </qualifiers>
+            </content>
+        </container>
+    </ccp4i2_body>
+</ccp4:ccp4i2>

@@ -753,6 +753,46 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
             # Could log this in the future
             return None
 
+    def datasetName(self) -> str:
+        """
+        Get the first dataset name from the MTZ file (excluding 'HKL_base').
+
+        Returns:
+            Dataset name, or empty string if:
+            - File is not set
+            - File doesn't exist
+            - No datasets found (excluding 'HKL_base')
+            - File cannot be read
+        """
+        if not self.isSet():
+            return ''
+
+        file_path = self.getFullPath()
+        if not file_path:
+            return ''
+
+        try:
+            import gemmi
+            from pathlib import Path
+
+            if not Path(file_path).exists():
+                return ''
+
+            # Read MTZ file
+            mtz = gemmi.read_mtz_file(file_path)
+
+            # Get dataset names (excluding HKL_base)
+            for dataset in mtz.datasets:
+                dataset_name = dataset.dataset_name
+                if dataset_name and dataset_name != 'HKL_base':
+                    return dataset_name
+
+            return ''
+
+        except Exception:
+            # File reading error or gemmi not available
+            return ''
+
 
 class CMiniMtzDataFileList(CMiniMtzDataFileListStub):
     """
@@ -1131,6 +1171,10 @@ class CMtzDataFile(CMtzDataFileStub):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
         # Set the content class name qualifier
         self.set_qualifier('fileContentClassName', 'CMtzData')
+        # Note: MIME type now comes from ccp4i2_static_data.py via get_file_type_from_class()
+        self.set_qualifier('guiLabel', 'Experimental data')
+        self.set_qualifier('toolTip', 'MTZ format reflection data file')
+        self.set_qualifier('fileExtensions', ['mtz'])
 
 
 class CMtzDataset(CMtzDatasetStub):
@@ -1156,6 +1200,13 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
     Extends CObsDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Note: MIME type now comes from ccp4i2_static_data.py via get_file_type_from_class()
+        self.set_qualifier('guiLabel', 'Observed data')
+        self.set_qualifier('toolTip', 'MTZ format observed data file')
+        self.set_qualifier('fileExtensions', ['mtz'])
 
     def as_IPAIR(self, work_directory: Optional[Any] = None) -> str:
         """
@@ -1332,11 +1383,17 @@ class CProgramColumnGroup(CProgramColumnGroupStub):
         Check if column mappings have been set.
 
         Returns:
-            bool: True if set() has been called with mappings AND mappings contain data
+            bool: True if set() has been called with mappings AND mappings contain actual column data
         """
         # Check both the flag AND that we have actual column mappings
         # This prevents reporting True for empty/uninitialized column groups
-        return self._is_set and len(self._column_mapping) > 0
+        # Ignore 'name' key as it's just metadata, not a column mapping
+        if not self._is_set:
+            return False
+
+        # Check if we have any column mappings besides 'name'
+        actual_columns = {k: v for k, v in self._column_mapping.items() if k != 'name'}
+        return len(actual_columns) > 0
 
     def __getattr__(self, name):
         """

@@ -153,6 +153,27 @@ class CPluginScript(CData):
         if xmlFile:
             self.loadDataFromXml(xmlFile)
 
+    # Getter/setter methods for database-related attributes
+    def get_status(self) -> Optional[int]:
+        """Get the current plugin status."""
+        return self._status
+
+    def get_db_job_id(self) -> Optional[str]:
+        """Get the database job UUID."""
+        return self._dbJobId
+
+    def set_db_job_id(self, job_id: str) -> None:
+        """Set the database job UUID."""
+        self._dbJobId = job_id
+
+    def get_db_job_number(self) -> Optional[str]:
+        """Get the database job number (e.g., '1.2.3')."""
+        return self._dbJobNumber
+
+    def set_db_job_number(self, job_number: str) -> None:
+        """Set the database job number."""
+        self._dbJobNumber = job_number
+
     def _ensure_standard_containers(self):
         """
         Ensure standard sub-containers exist.
@@ -643,6 +664,11 @@ class CPluginScript(CData):
 
                     obj_name = child.objectName() if hasattr(child, 'objectName') else (child.name if hasattr(child, 'name') else 'unknown')
                     print(f'[DEBUG checkOutputData]   {obj_name}: basename_is_set={basename_is_set}, baseName={str(child.baseName) if hasattr(child, "baseName") else "N/A"}')
+                    if hasattr(child, 'baseName'):
+                        if hasattr(child.baseName, '_value_states'):
+                            print(f'[DEBUG checkOutputData]     baseName._value_states={child.baseName._value_states}')
+                        if hasattr(child.baseName, 'value'):
+                            print(f'[DEBUG checkOutputData]     baseName.value={child.baseName.value}')
 
                     if not basename_is_set:
                         # Generate path from objectName
@@ -1285,6 +1311,7 @@ class CPluginScript(CData):
         }
         self.finished.emit(status_dict)
 
+        # Set the internal status
         self._status = status
 
     def postProcessWrapper(self, finishStatus):

@@ -17,6 +17,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - `signal_system.py`: Type-safe signals/slots with async support
    - `hierarchy_system.py`: Thread-safe object lifecycle management
    - `event_system.py`: Async event loop and task scheduling
+4. **Plugin System**: 148 legacy ccp4i2 plugins accessible via lazy-loading registry
+   - `wrappers/`, `wrappers2/`, `pipelines/` - **LOCKED legacy code, do not modify**
+   - `core/task_manager/plugin_registry.py` - **LOCKED, pre-generated from legacy ccp4i2**
+
+### IMPORTANT: Locked Directories
+
+The following directories contain **locked legacy code** from ccp4i2 and should **NOT be modified**:
+
+- **`wrappers/`** - 115+ plugin wrappers from legacy ccp4i2
+- **`wrappers2/`** - Additional legacy plugin wrappers
+- **`pipelines/`** - Multi-step pipeline plugins
+- **`demo_data/`** - Test data files from legacy ccp4i2
+
+**Plugin Registry Files (LOCKED - do not regenerate):**
+- `core/task_manager/plugin_registry.py` (344KB, 148 plugins)
+- `core/task_manager/plugin_lookup.json` (449KB, 148 plugins)
+
+These were pre-generated from a full ccp4i2 environment and should remain unchanged. See `core/task_manager/README.md` for details.
+
+### CCP4I2_ROOT Environment Variable
+
+**CRITICAL**: All tests and the plugin system require `CCP4I2_ROOT` to be set to the project root:
+
+```bash
+export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
+```
+
+This allows the system to find plugins in `wrappers/`, `wrappers2/`, and `pipelines/` directories.
 
 ## Development Commands
 

@@ -1,0 +1,45 @@
+======================================================================
+CCP4i2 Task: ctruncate
+======================================================================
+
+Command Line:
+----------------------------------------------------------------------
+/Applications/ccp4-9/bin/ctruncate -hklin /Users/nmemn/Developer/cdata-codegen/demo_data/toxd_fobs.mtz -hklout CCP4_JOBS/job_1/HKLOUT.mtz -colano /*/*/[Iplus,SIGIplus,Iminus,SIGIminus] -colin /*/*/[None,None] -xmlout CCP4_JOBS/job_1/program.xml -nres 0
+
+======================================================================
+Program Output:
+======================================================================
+
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+<html> <!-- CCP4 HTML LOGFILE -->
+<hr>
+<pre>
+ 
+ ###############################################################
+ ###############################################################
+ ###############################################################
+ ### CCP4 9.0.011: ctruncate        version 1.17.29 : 02/01/18##
+ ###############################################################
+ User: root  Run date: 30/10/2025 Run time: 16:19:23 
+
+
+ Please reference: Collaborative Computational Project, Number 4. 2011.
+ "Overview of the CCP4 suite and current developments". Acta Cryst. D67, 235-242.
+ as well as any specific reference in the program write-up.
+
+<!--SUMMARY_END--></FONT></B>
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+
+USER SUPPLIED INPUT:
+
+hklin 	/Users/nmemn/Developer/cdata-codegen/demo_data/toxd_fobs.mtz
+hklout 	CCP4_JOBS/job_1/HKLOUT.mtz
+colano 	/*/*/[Iplus,SIGIplus,Iminus,SIGIminus]
+colin 	/*/*/[None,None]
+xmlout 	CCP4_JOBS/job_1/program.xml
+nres 	0
+<!--SUMMARY_END--></FONT></B>
+>>>>>> CCP4 library signal library_file:Cannot open file (Error)
+	 raised in ccp4_file_open2 <<<<<<
+>>>>>> CCP4 library signal mtz:Cannot open file (Error)
+	 raised in MtzGet <<<<<<

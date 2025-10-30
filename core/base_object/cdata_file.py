@@ -55,30 +55,186 @@ class CDataFile(CData):
         """Set the full path of the file.
 
         In non-database-connected mode, this sets the baseName attribute.
-        In database-connected mode (future), this would parse the path
-        and set project, relPath, and baseName appropriately.
+        In database-connected mode, this parses the path and sets project,
+        relPath, baseName, and dbFileId appropriately.
 
         Args:
             path: Full file path as a string
         """
-        # For now (non-database mode), just set baseName
+        from pathlib import Path
+
+        print(f"\n[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}")
+        print(f"  Input path: {path}")
+        print(f"  hasattr baseName: {hasattr(self, 'baseName')}")
+        if hasattr(self, 'baseName'):
+            print(f"  baseName type: {type(self.baseName)}")
+            print(f"  baseName has .value: {hasattr(self.baseName, 'value')}")
+
+        # Always set baseName first (basic functionality)
         if hasattr(self, 'baseName'):
             # If baseName is a CFilePath or similar, set its value
             if hasattr(self.baseName, 'value'):
                 self.baseName.value = path
+                print(f"  Set baseName.value = {path}")
             else:
                 # Otherwise set it directly
                 self.baseName = path
+                print(f"  Set baseName = {path}")
         else:
             # baseName doesn't exist yet - store in file_path for now
             object.__setattr__(self, 'file_path', path)
+            print(f"  Set file_path = {path} (baseName doesn't exist)")
+
+        # After setting, check the result
+        if hasattr(self, 'baseName'):
+            if hasattr(self.baseName, 'value'):
+                print(f"  AFTER: baseName.value = {self.baseName.value}")
+                # Check value state
+                if hasattr(self.baseName, '_value_states'):
+                    print(f"  AFTER: baseName._value_states = {self.baseName._value_states}")
+                print(f"  AFTER: baseName.isSet('value') = {self.baseName.isSet('value') if hasattr(self.baseName, 'isSet') else 'N/A'}")
+            else:
+                print(f"  AFTER: baseName = {self.baseName}")
+
+        print(f"  AFTER: dbFileId = {self.dbFileId.value if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value') else 'N/A'}")
+        print(f"  AFTER: relPath = {self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A'}")
+        print(f"  AFTER: project = {self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A'}")
+
+        # Database-aware logic: check if we're in a database context
+        plugin = self._find_plugin_parent()
+        if plugin and hasattr(plugin, 'get_db_job_id') and plugin.get_db_job_id():
+            print(f"  DB-aware mode: plugin job ID = {plugin.get_db_job_id()}")
+            try:
+                self._update_from_database(path, plugin)
+            except Exception as e:
+                # Don't fail on database errors - just log and continue
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.debug(f"Failed to update file from database: {e}")
+        else:
+            print(f"  Non-DB mode")
+
+    def _find_plugin_parent(self):
+        """Walk up the parent hierarchy to find the CPluginScript parent."""
+        from core.CCP4PluginScript import CPluginScript
+        current = self.parent
+        while current:
+            if isinstance(current, CPluginScript):
+                return current
+            current = getattr(current, 'parent', None)
+        return None
+
+    def _get_db_handler(self):
+        """Get the database handler from the plugin parent, if available."""
+        plugin = self._find_plugin_parent()
+        if plugin and hasattr(plugin, '_db_handler'):
+            return plugin._db_handler
+        return None
+
+    def _update_from_database(self, path: str, plugin):
+        """Update file attributes from database if the file matches an existing database record.
+
+        Uses the database handler attached to the plugin, if available. This keeps
+        CDataFile decoupled from Django and allows for different database backends.
+
+        Args:
+            path: Full file path
+            plugin: Parent CPluginScript instance
+        """
+        from pathlib import Path
+        import re
+
+        # Get database handler from plugin
+        db_handler = self._get_db_handler()
+        if not db_handler:
+            return  # No database handler available
+
+        abs_path = Path(path).resolve()
+
+        # Try to extract job number from path
+        # Path structure: .../project_dir/CCP4_JOBS/job_1/job_2/filename.ext
+        # Should extract "1.2" from job_1/job_2
+        path_str = str(abs_path)
+
+        # Look for CCP4_JOBS directory pattern
+        jobs_match = re.search(r'CCP4_JOBS/(job_\d+(?:/job_\d+)*)', path_str)
+        if not jobs_match:
+            return  # Not a job directory path
+
+        # Extract job path like "job_1/job_2"
+        job_path = jobs_match.group(1)
+        # Convert to job number format: "job_1/job_2" → "1.2"
+        job_numbers = re.findall(r'job_(\d+)', job_path)
+        job_number = '.'.join(job_numbers)
+
+        filename = abs_path.name
+
+        # Query database via handler (returns dict, not Django model)
+        try:
+            file_info = db_handler.find_file_by_path_sync(
+                file_path=str(abs_path),
+                job_number=job_number,
+                filename=filename
+            )
+
+            if file_info:
+                # Update CDataFile attributes from database record
+                if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value'):
+                    self.dbFileId.value = file_info['uuid']
+
+                # Set relPath if available
+                if file_info.get('relative_path'):
+                    if hasattr(self, 'relPath') and hasattr(self.relPath, 'value'):
+                        self.relPath.value = file_info['relative_path']
+
+                # Set project ID
+                project_id = getattr(plugin, '_dbProjectId', None)
+                if project_id:
+                    if hasattr(self, 'project') and hasattr(self.project, 'value'):
+                        self.project.value = str(project_id)
+
+        except Exception as e:
+            # Silently ignore errors - we're in a file setter
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to update from database: {e}")
 
     def getFullPath(self) -> str:
         """Get the full file path as a string.
 
+        In database-aware mode, if dbFileId is set, retrieves path from database
+        via the database handler. Otherwise returns baseName or legacy file_path.
+
         Returns:
             Full path to the file, or empty string if not set
         """
+        # Database-aware mode: Check if dbFileId is set
+        if hasattr(self, 'dbFileId') and self.dbFileId is not None:
+            # Get dbFileId value (handle both CData wrapper and plain value)
+            db_file_id = None
+            if hasattr(self.dbFileId, 'value') and self.dbFileId.value is not None:
+                db_file_id = self.dbFileId.value
+            elif isinstance(self.dbFileId, str):
+                db_file_id = self.dbFileId
+
+            # If we have a dbFileId, try to retrieve path from database via handler
+            if db_file_id:
+                db_handler = self._get_db_handler()
+                if db_handler:
+                    try:
+                        import uuid
+                        # Convert string UUID to UUID object
+                        file_uuid = uuid.UUID(str(db_file_id))
+                        # Query via handler instead of Django directly
+                        path = db_handler.get_file_path_sync(file_uuid)
+                        if path:
+                            return path
+                    except Exception as e:
+                        # If database query fails, fall through to baseName
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.debug(f"Failed to retrieve path from database: {e}")
+
         # Non-database mode: return baseName
         if hasattr(self, 'baseName') and self.baseName is not None:
             # If baseName has a value attribute, return that
@@ -92,6 +248,47 @@ class CDataFile(CData):
             return str(self.file_path)
 
         return ""
+
+    def exists(self) -> bool:
+        """Check if the file exists on disk.
+
+        Returns:
+            True if the file exists, False otherwise
+        """
+        from pathlib import Path
+        path = self.getFullPath()
+        if path:
+            return Path(path).exists()
+        return False
+
+    def isSet(self, field_name: str = None) -> bool:
+        """Check if the file has been set.
+
+        For CDataFile, a file is considered "set" if its baseName attribute is set.
+        This overrides the base CData.isSet() to provide file-specific semantics.
+
+        Args:
+            field_name: If None, checks baseName. Otherwise delegates to parent.
+
+        Returns:
+            True if baseName is set (has a non-None, non-empty value)
+        """
+        if field_name is None:
+            # For files, check if baseName is set
+            if hasattr(self, 'baseName'):
+                if hasattr(self.baseName, 'value'):
+                    # baseName is a CData wrapper - check its value
+                    return self.baseName.value is not None and self.baseName.value != ""
+                else:
+                    # baseName is a plain value
+                    return self.baseName is not None and self.baseName != ""
+            # Fallback to legacy file_path
+            if hasattr(self, 'file_path') and self.file_path is not None:
+                return self.file_path != ""
+            return False
+        else:
+            # For specific field names, delegate to parent
+            return super().isSet(field_name)
 
     @property
     def fullPath(self) -> str:

@@ -1,0 +1,299 @@
+<?xml version='1.0' encoding='ASCII'?>
+<ccp4i2>
+  <ccp4i2_header>
+    <function>DEF</function>
+    <userId>martinmaly</userId>
+    <creationTime>16:00 16/Oct/24</creationTime>
+    <pluginVersion></pluginVersion>
+    <ccp4iVersion>0.2</ccp4iVersion>
+    <pluginName>metalCoord</pluginName>
+    <pluginTitle>metalCoord: restraints for metal atoms and ions</pluginTitle>
+    <jobId/>
+  </ccp4i2_header>
+  <ccp4i2_body id="metalCoord">
+
+    <container id="inputData">
+       <content id="LIGAND_CODE">
+          <className>CString</className>
+          <qualifiers>
+             <guiLabel>Monomer code</guiLabel>
+             <mustExist>True</mustExist>
+             <allowUndefined>True</allowUndefined>
+             <minLength>1</minLength>
+             <maxLength>5</maxLength>
+          </qualifiers>
+       </content>
+      <content id="XYZIN">
+         <className>CPdbDataFile</className>
+         <qualifiers>
+            <mustExist>True</mustExist>
+            <allowUndefined>False</allowUndefined>
+            <fromPreviousJob>True</fromPreviousJob>
+         </qualifiers>
+      </content>
+    </container>
+
+    <container id="outputData">
+      <content id="RESTRAINTS">
+        <className>CRefmacRestraintsDataFile</className>
+        <qualifiers>
+        </qualifiers>
+      </content>
+      <content id="JSON">
+        <className>CDataFile</className>
+        <qualifiers>
+            <fileExtensions>json</fileExtensions>
+        </qualifiers>
+      </content>
+      <content id="XYZOUT">
+         <className>CPdbDataFile</className>
+      </content>
+    </container>
+
+    <container id="controlParameters">
+    <!--
+  -l LIGAND CODE, - -ligand LIGAND CODE
+                        Ligand code.
+  -p PDB CODE|PDB FILE, - -pdb PDB CODE|PDB FILE
+                        PDB code or pdb file.
+  -o OUTPUT JSON FILE, - -output OUTPUT JSON FILE
+                        Output json file.
+  -d DISTANCE THRESHOLD, - -dist DISTANCE THRESHOLD
+                        Distance threshold.
+  -t PROCRUSTES DISTANCE THRESHOLD, - -threshold PROCRUSTES DISTANCE THRESHOLD
+                        Procrustes distance threshold.
+  -m MINIMUM SAMPLE SIZE, - -min_size MINIMUM SAMPLE SIZE
+                        Minimum sample size for statistics.
+  - -ideal-angles        Provide only ideal angles
+  -s, - -simple          Simple distance based filtering
+  - -save                Save COD files used in statistics
+  - -use-pdb             Use COD structures based on pdb coordinates
+  -c MAXIMUM COORDINATION NUMBER, - -coordination MAXIMUM COORDINATION NUMBER
+                        Maximum coordination number.
+-->
+      <content id="MAXIMUM_COORDINATION_NUMBER">
+        <className>CString</className>
+        <qualifiers>
+           <guiLabel>Coordination number</guiLabel>
+           <onlyEnumerators>True</onlyEnumerators>
+           <enumerators>auto,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,24</enumerators>
+           <menuText>auto,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,24</menuText>
+           <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="MINIMUM_SAMPLE_SIZE">
+        <className>CInt</className>
+        <qualifiers>
+           <guiLabel>Minimum sample size for statistics</guiLabel>
+           <toolTip>Default: 30</toolTip>
+        </qualifiers>
+      </content>
+      <content id="DISTANCE_THRESHOLD">
+        <className>CFloat</className>
+        <qualifiers>
+           <guiLabel>Distance threshold to select atoms</guiLabel>
+           <toolTip>A threshold to select atoms is (r1 + r2)*(1 + d) where r1 and r2 are covalent radii. Range: 0-1. Default: 0.5</toolTip>
+           <min>0</min>
+           <max>1</max>
+        </qualifiers>
+      </content>
+      <content id="PROCRUSTES_DISTANCE_THRESHOLD">
+        <className>CFloat</className>
+        <qualifiers>
+           <guiLabel>Procrustes distance threshold</guiLabel>
+           <toolTip>Range: 0-1. Default: 0.3</toolTip>
+           <min>0</min>
+           <max>1</max>
+        </qualifiers>
+      </content>
+      <content id="IDEAL_ANGLES">
+         <className>CBoolean</className>
+         <qualifiers>
+            <default>False</default>
+            <guiLabel>Provide only ideal angles</guiLabel>
+         </qualifiers>
+      </content>
+      <content id="SIMPLE">
+         <className>CBoolean</className>
+         <qualifiers>
+            <default>False</default>
+            <guiLabel>Simple distance based filtering</guiLabel>
+         </qualifiers>
+      </content>
+      <content id="USE_PDB">
+         <className>CBoolean</className>
+         <qualifiers>
+            <default>False</default>
+            <guiLabel>Use COD structures based on PDB/mmCIF coordinates</guiLabel>
+         </qualifiers>
+      </content>
+
+      <!-- json2restraints.py -->
+      <!-- def main(jsonPaths, stPath=None, outputPrefix="restraints", jsonEquivalentsPath=None, keep_links=False):
+                    list       string       string                     string                    bool               -->
+      <content id="SAVE_PDBMMCIF">
+         <!-- if True,  stPath will be provided   -->
+         <!-- if False, stPath will not be provided so no PDB and mmCIF file will be created at the output -->
+         <className>CBoolean</className>
+         <qualifiers>
+            <default>True</default>
+         </qualifiers>
+      </content>
+      <content id="KEEP_LINKS">
+         <className>CBoolean</className>
+         <qualifiers>
+            <default>False</default>
+         </qualifiers>
+      </content>
+    </container>
+
+    <!-- This section is generated using util1_get_coord_data.sh and util1_get_coord_data.sh -->
+    <container id="coordination">
+      <content id="COORD02">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,linear,bent</enumerators>
+          <menuText>auto,linear (88.3 %),bent (11.7 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD03">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,trigonal-planar,pyramid,t-shape</enumerators>
+          <menuText>auto,trigonal-planar (49.7 %),pyramid (25.7 %),t-shape (24.7 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD04">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,square-planar,tetrahedral,trigonal-pyramid,square-non-planar,bicapped-linear,pyramid</enumerators>
+          <menuText>auto,square-planar (50.3 %),tetrahedral (43.7 %),trigonal-pyramid (5.6 %),square-non-planar (0.2 %),bicapped-linear (0.1 %),pyramid (0.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD05">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,square-pyramid,trigonal-bipyramid,tricapped-trigonal-planar,bicapped-trigonal-planar</enumerators>
+          <menuText>auto,square-pyramid (61.9 %),trigonal-bipyramid (35.7 %),tricapped-trigonal-planar (2.1 %),bicapped-trigonal-planar (0.4 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD06">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,octahedral,bicapped-square-planar,trigonal-prism,sandwich_5_1,sandwich_4_2,sandwich_4h_2,hexagonal-planar</enumerators>
+          <menuText>auto,octahedral (97.0 %),bicapped-square-planar (1.7 %),trigonal-prism (1.1 %),sandwich_5_1 (0.1 %),sandwich_4_2 (0.0 %),sandwich_4h_2 (0.0 %),hexagonal-planar (0.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD07">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_5_2,pentagonal-bipyramid,sandwich_4_3,sandwich_6_1,octahedral</enumerators>
+          <menuText>auto,sandwich_5_2 (53.4 %),pentagonal-bipyramid (41.8 %),sandwich_4_3 (3.1 %),sandwich_6_1 (1.5 %),octahedral (0.1 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD08">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_5_3,square-antiprismatic,dodecahedral,trigonal-prism2,hexagonal-bipyramid,cubic,sandwich_6_2,bicapped-octahedral,sandwich_4h_4,sandwich_7_1</enumerators>
+          <menuText>auto,sandwich_5_3 (53.1 %),square-antiprismatic (14.7 %),dodecahedral (14.2 %),trigonal-prism2 (8.2 %),hexagonal-bipyramid (4.2 %),cubic (2.0 %),sandwich_6_2 (2.0 %),bicapped-octahedral (1.5 %),sandwich_4h_4 (0.0 %),sandwich_7_1 (0.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD09">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_6_3,sandwich_5_4,tricapped-trigonal-prismatic,sandwich_7_2</enumerators>
+          <menuText>auto,sandwich_6_3 (89.6 %),sandwich_5_4 (9.9 %),tricapped-trigonal-prismatic (0.4 %),sandwich_7_2 (0.2 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD10">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_5_5,sandwich_7_3,pentagonal-antiprismatic,sandwich_6_4</enumerators>
+          <menuText>auto,sandwich_5_5 (99.1 %),sandwich_7_3 (0.4 %),pentagonal-antiprismatic (0.3 %),sandwich_6_4 (0.2 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD11">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_6_5,sandwich_8_3</enumerators>
+          <menuText>auto,sandwich_6_5 (93.8 %),sandwich_8_3 (6.2 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD12">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_7_5,paired-octahedral,sandwich_8_4</enumerators>
+          <menuText>auto,sandwich_7_5 (68.4 %),paired-octahedral (26.6 %),sandwich_8_4 (5.1 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD13">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_8_5</enumerators>
+          <menuText>auto,sandwich_8_5 (100.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD15">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,penta-trigonal-planar</enumerators>
+          <menuText>auto,penta-trigonal-planar (100.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD16">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,sandwich_8_8,penta-trigonal-planar_i</enumerators>
+          <menuText>auto,sandwich_8_8 (70.2 %),penta-trigonal-planar_i (29.8 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD17">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,penta-trigonal-planar_i_i</enumerators>
+          <menuText>auto,penta-trigonal-planar_i_i (100.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+      <content id="COORD24">
+        <className>CString</className>
+        <qualifiers>
+          <onlyEnumerators>True</onlyEnumerators>
+          <enumerators>auto,truncated-cuboctahedron</enumerators>
+          <menuText>auto,truncated-cuboctahedron (100.0 %)</menuText>
+          <default>auto</default>
+        </qualifiers>
+      </content>
+    </container>
+
+  </ccp4i2_body>
+</ccp4i2>
