@@ -15,6 +15,7 @@ Tests cover:
 """
 
 import pytest
+from pathlib import Path
 from unittest.mock import Mock
 
 from core.CCP4ErrorHandling import CException

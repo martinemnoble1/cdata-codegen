@@ -1379,15 +1379,25 @@ class CPluginScript(CData):
             return None
 
         # Instantiate the plugin with computed workDirectory and name
-        # Override any workDirectory/name in kwargs
+        # Use automatic workDirectory/name unless explicitly provided in kwargs
         try:
             plugin_kwargs = kwargs.copy()
-            plugin_kwargs['workDirectory'] = str(child_work_dir)
-            plugin_kwargs['name'] = child_name
-            plugin_kwargs['parent'] = self  # Set parent relationship
 
+            # Use automatic workDirectory unless explicitly overridden
+            if 'workDirectory' not in plugin_kwargs:
+                plugin_kwargs['workDirectory'] = str(child_work_dir)
+
+            # Use automatic name unless explicitly overridden
+            if 'name' not in plugin_kwargs:
+                plugin_kwargs['name'] = child_name
+
+            # Always set parent relationship
+            plugin_kwargs['parent'] = self
+
+            actual_name = plugin_kwargs['name']
+            actual_workdir = plugin_kwargs['workDirectory']
             plugin_instance = plugin_class(**plugin_kwargs)
-            print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{child_name}' in '{child_work_dir}'")
+            print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance
         except Exception as e:
             self.errorReport.append(
