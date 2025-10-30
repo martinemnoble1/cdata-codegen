@@ -4,9 +4,39 @@ CCP4i2 Task: chltofom
 
 Command Line:
 ----------------------------------------------------------------------
-chltofom -mtzin /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases.mtz -colin-hl /*/*/[HLA,HLB,HLC,HLD] -colout /*/*/[PHI,FOM] -mtzout /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases_as_PHIFOM.mtz
+/Applications/ccp4-9/bin/chltofom -mtzin /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases.mtz -colin-hl /*/*/[HLA,HLB,HLC,HLD] -colout /*/*/[PHI,FOM] -mtzout /Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases_as_PHIFOM.mtz
 
 ======================================================================
 Program Output:
 ======================================================================
 
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+<html> <!-- CCP4 HTML LOGFILE -->
+<hr>
+<pre>
+ 
+ ###############################################################
+ ###############################################################
+ ###############################################################
+ ### CCP4 9.0.011: chltofom             version 0.1 : 01/05/04##
+ ###############################################################
+ User: root  Run date: 30/10/2025 Run time: 07:55:12 
+
+
+ Please reference: Collaborative Computational Project, Number 4. 2011.
+ "Overview of the CCP4 suite and current developments". Acta Cryst. D67, 235-242.
+ as well as any specific reference in the program write-up.
+
+<!--SUMMARY_END--></FONT></B>
+
+mtzin 	/Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases.mtz
+colin-hl 	/*/*/[HLA,HLB,HLC,HLD]
+colout 	/*/*/[PHI,FOM]
+mtzout 	/Users/nmemn/Developer/ccp4i2/demo_data/gamma/initial_phases_as_PHIFOM.mtz
+
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+chltofom: 
+Times: User:       0.0s System:    0.0s Elapsed:     0:00  
+</pre>
+</html>
+<!--SUMMARY_END--></FONT></B>
