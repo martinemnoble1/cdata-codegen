@@ -42,9 +42,9 @@ from core.CCP4Container import CContainer
 from core import CCP4ErrorHandling
 from ..lib.job_utils.i2run_for_job import i2run_for_job
 from ..lib.job_utils.load_nested_xml import load_nested_xml
-from ..lib.job_utils.validate_container import validate_container
+# validate_container no longer used - validation/ endpoint now uses unified validate_job utility
 from ..lib.job_utils.digest_file import digest_param_file
-from ..lib.job_utils.validate_container import getEtree
+from ..lib.job_utils.validate_container import getEtree  # Still used for error handling in other endpoints
 from ..lib.job_utils.set_input_by_context_job import set_input_by_context_job
 from ..lib.job_utils.preview_job import preview_job
 import tempfile
@@ -63,7 +63,7 @@ from ..lib.job_utils.ccp4i2_report import make_old_report
 from ..lib.job_utils.clone_job import clone_job
 from ..lib.job_utils.find_dependent_jobs import find_dependent_jobs
 from ..lib.job_utils.find_dependent_jobs import delete_job_and_dependents
-from ..lib.job_utils.set_parameter import set_parameter
+# Legacy imports - kept for other endpoints that haven't been refactored yet
 from ..lib.job_utils.upload_file_param import upload_file_param
 from ..lib.job_utils.get_job_container import get_job_container
 from ..lib.job_utils.json_for_job_container import json_for_job_container
@@ -1053,6 +1053,9 @@ class JobViewSet(ModelViewSet):
         Performs comprehensive validation of job parameters against
         task requirements and returns detailed error information in XML format.
 
+        Uses the unified CPluginScript architecture for proper container
+        hierarchy and consistent behavior with CLI validation commands.
+
         Args:
             request (Request): HTTP request object
             pk (int): Primary key of the job
@@ -1081,26 +1084,53 @@ class JobViewSet(ModelViewSet):
 
         Example:
             GET /api/jobs/123/validation/
+
+        Architecture:
+            - Uses CPluginScript + dbHandler for proper context
+            - Shared with validate_job management command
+            - Uses new CErrorReport.getErrors() API
+            - Consistent Result[T] pattern for error handling
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            container: CContainer = get_job_container(the_job)
-            error_etree: ET.Element = validate_container(container)
-            stack_elements = error_etree.findall(".//stack")
-            for stack_element in stack_elements:
-                stack_element.getroot()
-            ET.indent(error_etree, " ")
-            return Response({"status": "Success", "xml": ET.tostring(error_etree)})
-        except (ValueError, models.Job.DoesNotExist) as err:
-            logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+
+            # Use unified utility (CPluginScript architecture)
+            from ..lib.utils.jobs.validate import validate_job
+
+            result = validate_job(the_job)
+
+            if result.success:
+                error_etree = result.data
+                # Remove stack traces from output (too verbose for API)
+                stack_elements = error_etree.findall(".//stack")
+                for stack_element in stack_elements:
+                    parent = error_etree.find(f".//*[stack='{stack_element}']/..")
+                    if parent is not None:
+                        parent.remove(stack_element)
+
+                ET.indent(error_etree, " ")
+                return Response({"status": "Success", "xml": ET.tostring(error_etree)})
+            else:
+                return Response({
+                    "status": "Failed",
+                    "reason": result.error,
+                    "details": result.error_details
+                }, status=400)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
+            )
         except Exception as err:
             logger.exception(
-                "Failed to validate plugin %s",
-                the_job.task_name,
-                exc_info=err,
+                "Unexpected error validating job %s", pk, exc_info=err
             )
-            return Response({"status": "Failed", "reason": str(err)})
+            return Response(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
+            )
 
     @action(
         detail=True,
@@ -1114,6 +1144,9 @@ class JobViewSet(ModelViewSet):
 
         Updates a specific parameter in the job's input_params.xml file,
         allowing dynamic modification of job configuration before execution.
+
+        Uses the unified CPluginScript architecture for proper database
+        synchronization and consistent behavior with CLI commands.
 
         Args:
             request (Request): HTTP request with JSON body containing:
@@ -1133,10 +1166,10 @@ class JobViewSet(ModelViewSet):
         Response Format:
             {
                 "status": "Success",
-                "updated_item": {
-                    "path": "inputData.XYZIN.fileName",
-                    "old_value": "/old/path/file.pdb",
-                    "new_value": "/path/to/new/file.pdb"
+                "data": {
+                    "object_path": "inputData.XYZIN.fileName",
+                    "value_set": true,
+                    "message": "Parameter set successfully"
                 }
             }
 
@@ -1147,19 +1180,46 @@ class JobViewSet(ModelViewSet):
             - Parameter paths validated against task definition
             - File paths checked for security violations
             - Type checking enforced for parameter values
+
+        Architecture:
+            - Uses CPluginScript + dbHandler for proper DB sync
+            - Shared with set_job_parameter management command
+            - Consistent Result[T] pattern for error handling
         """
-        form_data = json.loads(request.body.decode("utf-8"))
-        job = models.Job.objects.get(id=pk)
-        object_path = form_data["object_path"]
-        value = form_data["value"]
         try:
-            result = set_parameter(job, object_path, value)
-            return JsonResponse({"status": "Success", "updated_item": result})
-        except CCP4ErrorHandling.CException as err:
-            error_tree = getEtree(err)
-            ET.indent(error_tree, " ")
+            form_data = json.loads(request.body.decode("utf-8"))
+            job = models.Job.objects.get(id=pk)
+            object_path = form_data["object_path"]
+            value = form_data["value"]
+
+            # Use unified utility (CPluginScript architecture)
+            from ..lib.utils.parameters.set_param import set_parameter as set_job_param
+
+            result = set_job_param(job, object_path, value)
+
+            if result.success:
+                return JsonResponse({
+                    "status": "Success",
+                    "data": result.data
+                })
+            else:
+                return JsonResponse({
+                    "status": "Failed",
+                    "reason": result.error,
+                    "details": result.error_details
+                }, status=400)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
             return JsonResponse(
-                {"status": "Failed", "reason": ET.tostring(error_tree).decode("utf-8")}
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
+            )
+        except Exception as err:
+            logger.exception("Unexpected error setting parameter for job %s", pk, exc_info=err)
+            return JsonResponse(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
             )
 
     @action(
