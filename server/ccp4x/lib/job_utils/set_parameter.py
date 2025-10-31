@@ -9,7 +9,6 @@ from core import CCP4ModelData
 from core import CCP4File
 from core import CCP4Data
 from core.base_object.cdata_file import CDataFile
-from .save_params_for_job import save_params_for_job
 from .find_objects import find_object_by_path
 from .get_job_plugin import get_job_plugin
 from .json_encoder import CCP4i2JsonEncoder
@@ -24,6 +23,18 @@ logger = logging.getLogger(f"ccp4x:{__name__}")
 def set_parameter(
     job: models.Job, object_path: str, value: Union[str, int, dict, None]
 ):
+    """
+    DEPRECATED: Use ccp4x.lib.utils.parameters.set_param.set_parameter instead.
+
+    This function is kept for legacy compatibility but does not properly handle
+    parameter persistence. The new implementation uses CPluginScript with
+    proper ParamsXmlHandler integration.
+    """
+    logger.warning(
+        "Using deprecated set_parameter from job_utils. "
+        "Use ccp4x.lib.utils.parameters.set_param.set_parameter instead."
+    )
+
     the_job_plugin = get_job_plugin(job)
     the_container: CContainer = the_job_plugin.container
 
@@ -57,7 +68,9 @@ def set_parameter(
             object_element.__dict__,
             job.number,
         )
-        save_params_for_job(the_job_plugin=the_job_plugin, the_job=job)
+
+        # NOTE: This deprecated function does not save to XML
+        # Use ccp4x.lib.utils.parameters.set_param.set_parameter for proper persistence
 
         return json.loads(json.dumps(object_element, cls=CCP4i2JsonEncoder))
     except IndexError as err:
@@ -70,44 +83,59 @@ def set_parameter(
 def set_parameter_container(
     the_container: CContainer, object_path: str, value: Union[str, int, dict, None]
 ):
+    # Try flexible find() first - supports partial paths from the right
+    # e.g., "HKLIN", "inputData.HKLIN", "container.inputData.HKLIN" all work
+    object_element = None
     try:
-        object_element = find_object_by_path(the_container, object_path)
-    except AttributeError as err:
-        # A possible explanation is that we have the key (the last path element)
-        # of a dictionary item here.  Test if that is the case and proceed acordingly
-        parent_path = ".".join(object_path.split(".")[:-1])
-        key_name = object_path.split(".")[-1]
+        if hasattr(the_container, 'find'):
+            object_element = the_container.find(object_path)
+            if object_element is not None:
+                full_path = object_element.objectPath() if hasattr(object_element, 'objectPath') else str(object_element)
+                logger.info("Found object using flexible find(): %s (requested: %s)", full_path, object_path)
+    except Exception as e:
+        logger.debug("Flexible find() failed for path '%s': %s", object_path, e)
 
+    # Fall back to strict path matching if flexible find didn't work
+    if object_element is None:
         try:
-            logger.info("Now searching for parent element %s", parent_path)
-            parent_element = find_object_by_path(the_container, parent_path)
-            if isinstance(parent_element, (dict, CCP4Data.CDict, CDict)):
-                parent_element[key_name] = value
-                return parent_element
-            else:
+            object_element = find_object_by_path(the_container, object_path)
+            logger.debug("Found object using strict find_object_by_path(): %s", object_element.objectPath())
+        except AttributeError as err:
+            # A possible explanation is that we have the key (the last path element)
+            # of a dictionary item here.  Test if that is the case and proceed acordingly
+            parent_path = ".".join(object_path.split(".")[:-1])
+            key_name = object_path.split(".")[-1]
+
+            try:
+                logger.info("Now searching for parent element %s", parent_path)
+                parent_element = find_object_by_path(the_container, parent_path)
+                if isinstance(parent_element, (dict, CCP4Data.CDict, CDict)):
+                    parent_element[key_name] = value
+                    return parent_element
+                else:
+                    logger.exception(
+                        "Failed to set parameter with name %s with value %s",
+                        object_path,
+                        value,
+                        exc_info=err,
+                    )
+                    raise
+            except Exception as err1:
                 logger.exception(
                     "Failed to set parameter with name %s with value %s",
                     object_path,
                     value,
-                    exc_info=err,
+                    exc_info=err1,
                 )
                 raise
-        except Exception as err1:
+        except Exception as err:
             logger.exception(
                 "Failed to set parameter with name %s with value %s",
                 object_path,
                 value,
-                exc_info=err1,
+                exc_info=err,
             )
             raise
-    except Exception as err:
-        logger.exception(
-            "Failed to set parameter with name %s with value %s",
-            object_path,
-            value,
-            exc_info=err,
-        )
-        raise
 
     # e = object_element.getEtree()
     # print(ET.tostring(e).decode("utf-8"))

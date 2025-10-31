@@ -154,8 +154,11 @@ class ParamsXmlHandler:
                             container_elem = ET.SubElement(parent_elem, attr_name)
                             self._export_container(attr, container_elem)
 
-                            # Remove empty containers
-                            if len(container_elem) == 0:
+                            # Remove empty containers EXCEPT for standard sub-containers
+                            # Legacy code expects inputData, outputData, and controlParameters
+                            # to always be present, even if empty
+                            standard_containers = {'inputData', 'outputData', 'controlParameters'}
+                            if len(container_elem) == 0 and attr_name not in standard_containers:
                                 parent_elem.remove(container_elem)
 
                         else:
@@ -171,9 +174,27 @@ class ParamsXmlHandler:
     def _is_explicitly_set(self, param: CData) -> bool:
         """Check if a parameter has been explicitly set by the user."""
         try:
+            # Special handling for CDataFile: check if baseName attribute is set
+            # For CDataFiles, isSet is true if baseName is set AND not empty
+            # Import here to avoid circular dependency
+            try:
+                from core.base_object.base_classes import CDataFile
+                if isinstance(param, CDataFile):
+                    if hasattr(param, 'baseName'):
+                        basename_obj = param.baseName
+                        if hasattr(basename_obj, 'isSet') and basename_obj.isSet():
+                            # Also check if the value is not empty
+                            if hasattr(basename_obj, 'value'):
+                                value = basename_obj.value
+                                if isinstance(value, str) and len(value.strip()) > 0:
+                                    return True
+                    return False
+            except ImportError:
+                pass
+
             # Check if it has set state tracking
             if hasattr(param, "getValueState"):
-                from .new_cdata.base_classes import ValueState
+                from core.base_object.base_classes import ValueState
 
                 state = param.getValueState("value")
                 return state == ValueState.EXPLICITLY_SET

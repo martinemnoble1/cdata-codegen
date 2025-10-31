@@ -394,11 +394,17 @@ class CPluginScript(CData):
         Returns:
             CErrorReport indicating success or failure
         """
+        import logging
+        logger = logging.getLogger(f"ccp4x:{__name__}")
+        logger.info(f"saveDataToXml called with fileName: {fileName}")
+
         error = CErrorReport()
         try:
             # Use ParamsXmlHandler to export params
+            logger.info(f"Calling _params_handler.export_params_xml...")
             success = self._params_handler.export_params_xml(
                 self.container, fileName)
+            logger.info(f"export_params_xml returned: {success}")
 
             if not success:
                 error.append(
@@ -409,6 +415,7 @@ class CPluginScript(CData):
                 )
 
         except Exception as e:
+            logger.exception(f"Exception in saveDataToXml: {e}")
             error.append(
                 klass=self.__class__.__name__,
                 code=107,

@@ -78,10 +78,19 @@ def set_parameter(
 
         set_parameter_container(plugin.container, object_path, value)
 
-        # Save parameters to XML
-        params_file = job.directory / "params.xml"
-        logger.debug("Saving parameters to %s", params_file)
-        plugin.container.saveDataToXml(str(params_file))
+        # Save parameters to input_params.xml (user control stage)
+        # Use CPluginScript.saveDataToXml which uses ParamsXmlHandler for proper filtering
+        # This is different from params.xml which is written at plugin lifecycle stages:
+        # - After checkInputData() - clears unpopulated/non-existent file inputs
+        # - After checkOutputData() - includes candidate output file names
+        # - After processOutputFiles() - weeds out non-existent output files
+        input_params_file = job.directory / "input_params.xml"
+        logger.debug("Saving parameters to %s", input_params_file)
+        error = plugin.saveDataToXml(str(input_params_file))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            logger.error("Failed to save parameters to %s: %s", input_params_file, error)
+        else:
+            logger.debug("Successfully saved parameters to %s", input_params_file)
 
         # Update database via dbHandler (if available)
         if plugin._dbHandler:

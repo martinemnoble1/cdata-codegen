@@ -37,6 +37,9 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
         logger.exception("Error in get_job_plugin was", exc_info=err)
         return None
 
+    # Determine which params file to load based on job status
+    # For UNKNOWN/PENDING jobs, prefer input_params.xml (user control stage)
+    # For other jobs, prefer params.xml (plugin lifecycle output)
     params_path = the_job.directory / "params.xml"
     fallback_params_path = the_job.directory / "input_params.xml"
     if the_job.status in [Job.Status.UNKNOWN, Job.Status.PENDING]:
@@ -45,10 +48,15 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
 
     params_file = params_path
     if not params_file.exists():
-        # logger.info('No params.xml at %s', defFile)
         params_file = fallback_params_path
         if not params_file.exists():
-            # logger.info('No params.xml at %s', defFile1)
             raise Exception("No params file found")
-    pluginInstance.container.loadDataFromXml(str(params_file))
+
+    # Use CPluginScript.loadDataFromXml() which handles ParamsXmlHandler format
+    # (with <ccp4i2> wrapper and header) as well as legacy CContainer format
+    error = pluginInstance.loadDataFromXml(str(params_file))
+    if error and hasattr(error, 'hasError') and error.hasError():
+        logger.error("Failed to load params from %s: %s", params_file, error)
+        raise Exception(f"Failed to load params from {params_file}: {error}")
+
     return pluginInstance

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# ccp4i2 - Modern CLI for cdata-codegen (CCP4i2 replacement)
+#
+# This wrapper sets up the environment and runs the modern CLI interface.
+# The CLI provides a clean, resource-oriented command structure.
+#
+# Usage:
+#   ccp4i2 projects list
+#   ccp4i2 jobs create <project> <task>
+#   ccp4i2 jobs run <project> <job> --detach
+#
+# For legacy management commands:
+#   Use: python server/manage.py <command>
+
+# Get the directory where this script lives (project root)
+# Resolve symlinks to get the actual script location
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+# Export project root as CCP4I2_ROOT
+export CCP4I2_ROOT="$SCRIPT_DIR"
+
+# Add project root and server to PYTHONPATH
+export PYTHONPATH="$CCP4I2_ROOT:$CCP4I2_ROOT/server:$PYTHONPATH"
+
+# Activate virtual environment
+if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
+    source "$SCRIPT_DIR/.venv/bin/activate"
+else
+    echo "Warning: Virtual environment not found at $SCRIPT_DIR/.venv" >&2
+fi
+
+# Source CCP4 environment setup
+if [ -f "/Applications/ccp4-9/bin/ccp4.setup-sh" ]; then
+    source /Applications/ccp4-9/bin/ccp4.setup-sh
+else
+    echo "Warning: CCP4 setup script not found at /Applications/ccp4-9/bin/ccp4.setup-sh" >&2
+fi
+
+# Execute the modern CLI with all forwarded arguments
+exec python3 "$SCRIPT_DIR/server/manage_cli.py" "$@"

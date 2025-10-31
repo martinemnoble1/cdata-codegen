@@ -371,6 +371,9 @@ class JobViewSet(ModelViewSet):
         Returns the job's parameter configuration in XML format, either from
         params.xml (for completed jobs) or input_params.xml (for pending jobs).
 
+        Uses the unified utility from ccp4x.lib.utils.jobs.reports for
+        consistent behavior with CLI commands.
+
         Args:
             request (Request): HTTP request object
             pk (int): Primary key of the job
@@ -391,31 +394,39 @@ class JobViewSet(ModelViewSet):
         Example:
             GET /api/jobs/123/params_xml/
 
-            - Handles distributed file access patterns
+        Architecture:
+            - Uses get_job_params_xml() utility
+            - Shared with get_job_report --type params command
+            - Consistent file path logic and error handling
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            params_path = the_job.directory / "params.xml"
-            fallback_params_path = the_job.directory / "input_params.xml"
-            if the_job.status in [models.Job.Status.UNKNOWN, models.Job.Status.PENDING]:
-                params_path = the_job.directory / "input_params.xml"
-                fallback_params_path = the_job.directory / "params.xml"
-            with open(params_path, "r", encoding="UTF-8") as params_xml_file:
-                params_xml = params_xml_file.read()
-            return Response({"status": "Success", "xml": params_xml})
-        except (ValueError, models.Job.DoesNotExist) as err:
-            logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
-        except FileNotFoundError as err:
-            logger.info(err)
-            try:
-                with open(
-                    fallback_params_path, "r", encoding="UTF-8"
-                ) as params_xml_file:
-                    params_xml = params_xml_file.read()
-                    return Response({"status": "Success", "xml": params_xml})
-            except FileNotFoundError as err1:
-                return Response({"status": "Failed", "reason": str(err1)})
+
+            # Use unified utility
+            from ..lib.utils.jobs.reports import get_job_params_xml
+
+            result = get_job_params_xml(the_job)
+
+            if result.success:
+                return Response({"status": "Success", "xml": result.data})
+            else:
+                return Response({
+                    "status": "Failed",
+                    "reason": result.error
+                }, status=404)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
+            )
+        except Exception as err:
+            logger.exception("Unexpected error getting params XML for job %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
+            )
 
     @action(
         detail=True,
@@ -430,6 +441,9 @@ class JobViewSet(ModelViewSet):
         Creates a comprehensive XML report containing job results, statistics,
         and analysis outcomes. Reports are cached for performance and regenerated
         as needed based on job status.
+
+        Uses the unified utility from ccp4x.lib.utils.jobs.reports for
+        consistent behavior with CLI commands.
 
         Args:
             request (Request): HTTP request object
@@ -459,53 +473,47 @@ class JobViewSet(ModelViewSet):
         Example:
             GET /api/jobs/123/report_xml/
 
-            - Optimized for distributed storage access
+        Architecture:
+            - Uses get_job_report_xml() utility
+            - Shared with get_job_report --type report command
+            - Consistent caching logic and report generation
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            report_xml = ""
-            if the_job.status in [models.Job.Status.PENDING, models.Job.Status.UNKNOWN]:
-                report_xml = ET.Element("report")
-                ET.SubElement(report_xml, "status").text = "PENDING"
-            if the_job.status in [
-                models.Job.Status.FAILED,
-                models.Job.Status.UNSATISFACTORY,
-                models.Job.Status.INTERRUPTED,
-                models.Job.Status.FINISHED,
-            ]:
-                report_xml_path = the_job.directory / "report_xml.xml"
-                logger.debug(
-                    "report_xml_path: %s %s", report_xml_path, report_xml_path.exists()
-                )
-                if not report_xml_path.exists():
-                    report_xml = make_old_report(the_job)
-                    ET.indent(report_xml, space="\t", level=0)
-                    with open(report_xml_path, "wb") as report_xml_file:
-                        report_xml_file.write(ET.tostring(report_xml))
-                    with open(
-                        report_xml_path, "r", encoding="utf-8"
-                    ) as report_xml_file:
-                        report_xml = ET.fromstring(report_xml_file.read())
-                else:
-                    with open(
-                        report_xml_path, "r", encoding="utf-8"
-                    ) as report_xml_file:
-                        report_xml = ET.fromstring(report_xml_file.read())
+
+            # Use unified utility
+            from ..lib.utils.jobs.reports import get_job_report_xml
+
+            # Check if regeneration requested
+            regenerate = request.GET.get('regenerate', 'false').lower() == 'true'
+
+            result = get_job_report_xml(the_job, regenerate=regenerate)
+
+            if result.success:
+                response = Response({"status": "Success", "xml": result.data})
+                # Add no-cache headers for real-time updates
+                response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                response["Pragma"] = "no-cache"
+                response["Expires"] = "0"
+                return response
             else:
-                report_xml = make_old_report(the_job)
-            ET.indent(report_xml, space="\t", level=0)
-            response = Response({"status": "Success", "xml": ET.tostring(report_xml)})
-            response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-            response["Pragma"] = "no-cache"
-            response["Expires"] = "0"
-            return response
-        except (ValueError, models.Job.DoesNotExist) as err:
-            logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
-        except FileNotFoundError as err:
-            return Response({"status": "Failed", "reason": str(err)})
+                return Response({
+                    "status": "Failed",
+                    "reason": result.error
+                }, status=404 if "not found" in result.error.lower() else 500)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
+            )
         except Exception as err:
-            return Response({"status": "Failed", "reason": str(err)})
+            logger.exception("Unexpected error getting report XML for job %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
+            )
 
     @action(
         detail=True,
@@ -806,6 +814,9 @@ class JobViewSet(ModelViewSet):
         Returns detailed diagnostic data generated during job execution,
         including error messages, warnings, and debugging information.
 
+        Uses the unified utility from ccp4x.lib.utils.jobs.reports for
+        consistent behavior with CLI commands.
+
         Args:
             request (Request): HTTP request object
             pk (int): Primary key of the job
@@ -831,24 +842,40 @@ class JobViewSet(ModelViewSet):
         Note:
             Diagnostic files are created during job execution and may not
             exist for jobs that haven't run or failed early.
+
+        Architecture:
+            - Uses get_job_diagnostic_xml() utility
+            - Shared with get_job_report --type diagnostic command
+            - Consistent error handling
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            with open(
-                the_job.directory / "diagnostic.xml", "r", encoding="UTF-8"
-            ) as diagnostic_xml_file:
-                diagnostic_xml = diagnostic_xml_file.read()
-            return Response({"status": "Success", "xml": diagnostic_xml})
-        except (ValueError, models.Job.DoesNotExist) as err:
-            logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
-        except FileNotFoundError as err:
-            logger.exception(
-                "Failed to find file %s",
-                str(the_job.directory / "diagnostic.xml"),
-                exc_info=err,
+
+            # Use unified utility
+            from ..lib.utils.jobs.reports import get_job_diagnostic_xml
+
+            result = get_job_diagnostic_xml(the_job)
+
+            if result.success:
+                return Response({"status": "Success", "xml": result.data})
+            else:
+                return Response({
+                    "status": "Failed",
+                    "reason": result.error
+                }, status=404)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
             )
-            return Response({"status": "Failed", "reason": str(err)})
+        except Exception as err:
+            logger.exception("Unexpected error getting diagnostic XML for job %s", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
+            )
 
     @action(
         detail=True,
