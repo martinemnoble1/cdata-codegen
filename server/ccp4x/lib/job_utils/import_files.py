@@ -5,6 +5,7 @@ import pathlib
 import shutil
 import uuid
 import re
+import hashlib
 
 from core import CCP4Container
 from core.base_object.cdata_file import CDataFile
@@ -15,10 +16,32 @@ from core.CCP4File import CI2XmlDataFile as CI2XmlDataFile
 
 from ...db import models
 from .save_params_for_job import save_params_for_job
-from .find_objects import find_objects
+# Legacy import removed - using modern hierarchy traversal instead
+# from .find_objects import find_objects
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
+
+# Map CDataFile class names to MIME types (from ccp4i2_static_data.py)
+# This is more reliable than using qualifiers["mimeTypeName"]
+FILE_CLASS_TO_MIMETYPE = {
+    'CPdbDataFile': 'chemical/x-pdb',
+    'CMtzDataFile': 'application/CCP4-mtz',
+    'CMapDataFile': 'application/CCP4-map',
+    'CSeqDataFile': 'application/CCP4-seq',
+    'CDictDataFile': 'application/refmac-dictionary',
+    'CUnmergedDataFile': 'application/CCP4-unmerged-experimental',
+    'CObsDataFile': 'application/CCP4-mtz-observed',
+    'CFreeRDataFile': 'application/CCP4-mtz-freerflag',
+    'CMiniMtzDataFile': 'application/CCP4-mtz-mini',
+    'CI2XmlDataFile': 'application/xml',
+    'CPhsDataFile': 'application/CCP4-mtz-phases',
+    'CSceneDataFile': 'application/CCP4-scene',
+    'CPDFDataFile': 'application/x-pdf',
+    'CPostscriptDataFile': 'application/postscript',
+    'CEBIValidationXMLDataFile': 'application/EBI-validation-xml',
+    'CMmcifDataFile': 'chemical/x-cif',
+}
 
 
 def extract_from_first_bracketed(path: str) -> str:
@@ -27,6 +50,15 @@ def extract_from_first_bracketed(path: str) -> str:
         if re.search(r"\[.*\]", part):
             return ".".join(parts[i:])
     return parts[-1]  # fallback to the last part if no bracketed part found
+
+
+def compute_file_checksum(file_path: pathlib.Path) -> str:
+    """Compute MD5 checksum of a file."""
+    md5_hash = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            md5_hash.update(chunk)
+    return md5_hash.hexdigest()
 
 
 def _process_input(
@@ -62,17 +94,27 @@ def _process_input(
             # Now have to change the plugin to reflect the new location
 
             try:
+                # Determine MIME type from class name (more reliable than qualifiers)
+                class_name = type(input).__name__
+                file_mime_type = FILE_CLASS_TO_MIMETYPE.get(class_name)
 
-                file_mime_type = input.qualifiers("mimeTypeName")
-                if len(file_mime_type) == 0:
-                    logger.error(
-                        "Class %s Does not have an associated mimeTypeName....ASK FOR DEVELOPER FIX",
+                if not file_mime_type:
+                    # Fallback: try qualifier
+                    file_mime_type = input.get_qualifier("mimeTypeName")
+
+                if not file_mime_type:
+                    logger.warning(
+                        "Class %s (%s) does not have a known MIME type mapping",
                         str(input.objectName()),
+                        class_name
                     )
-                    if isinstance(input, CCP4File.CI2XmlDataFile) or isinstance(
-                        input, CI2XmlDataFile
-                    ):
+                    # Last resort: guess from class name
+                    if 'xml' in class_name.lower():
                         file_mime_type = "application/xml"
+                    else:
+                        # Skip files we can't identify
+                        logger.error("Cannot determine MIME type for %s, skipping", input.objectName())
+                        return None
                 file_type_object = models.FileType.objects.get(name=file_mime_type)
 
                 # print('What I know about import is', str(valueDictForObject(input)))
@@ -102,14 +144,17 @@ def _process_input(
                 input.relPath.set("CCP4_IMPORTED_FILES")
                 input.baseName.set(destFilePath.name)
                 input.loadFile()
-                input.setContentFlag(reset=True)
+                input.setContentFlag()
+
+                # Compute checksum of the destination file
+                file_checksum = compute_file_checksum(destFilePath)
 
                 createDict = {
                     "file": theFile,
                     "name": str(sourceFilePath),
                     "time": datetime.datetime.now(),
                     "last_modified": datetime.datetime.now(),
-                    "checksum": input.checksum(),
+                    "checksum": file_checksum,
                 }
                 # print(createDict)
                 newImportfile = models.FileImport(**createDict)
@@ -147,22 +192,42 @@ def _process_input(
 
 
 def import_files(theJob, plugin):
-    inputs = find_objects(
-        plugin.container.inputData,
-        lambda a: isinstance(
-            a,
-            (
-                CCP4File.CDataFile,
-                CDataFile,
-            ),
-        ),
-        True,
-    )
-    logger.debug("In import_files %s", len(inputs))
+    """
+    Import input files for a job using modern CPluginScript hierarchy.
+
+    Uses the modern hierarchy system's find_all() method instead of legacy find_objects.
+    This searches the inputData container for all CDataFile instances.
+    """
+    # Use modern hierarchy traversal to find all CDataFile objects
+    inputs = []
+
+    if hasattr(plugin.container, 'inputData'):
+        input_data = plugin.container.inputData
+
+        # Walk through the hierarchy to find all CDataFile instances
+        # Use the modern find_all approach with type checking
+        def is_file_object(obj):
+            return isinstance(obj, (CDataFile, CCP4File.CDataFile))
+
+        # Traverse children recursively
+        def collect_files(container, results):
+            """Recursively collect file objects from container hierarchy."""
+            if hasattr(container, 'children'):
+                for child in container.children():
+                    if is_file_object(child):
+                        results.append(child)
+                    # Recurse into child containers
+                    if hasattr(child, 'children'):
+                        collect_files(child, results)
+
+        collect_files(input_data, inputs)
+
+    logger.debug("In import_files found %s input files", len(inputs))
+
     for the_input in inputs:
         _process_input(theJob, plugin, the_input)
 
-    # removeDefaults(plugin.container)
+    # Save parameters after import
     save_params_for_job(plugin, theJob, mode="JOB_INPUT")
 
     return plugin

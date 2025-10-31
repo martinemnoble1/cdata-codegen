@@ -95,6 +95,9 @@ For help on any command:
         # Plugins
         self._add_plugins_commands(subparsers)
 
+        # File types
+        self._add_filetypes_commands(subparsers)
+
         # Shortcuts
         self._add_shortcut_commands(subparsers)
 
@@ -342,6 +345,20 @@ For help on any command:
                                           help='Show plugin details')
         show_cmd.add_argument('plugin', help='Plugin name')
 
+    def _add_filetypes_commands(self, subparsers):
+        """Add file type commands."""
+        filetypes = subparsers.add_parser('filetypes', aliases=['filetype', 'ft'],
+                                          help='File type information')
+        filetypes_sub = filetypes.add_subparsers(dest='action', help='File type action')
+
+        # filetypes list
+        list_cmd = filetypes_sub.add_parser('list', aliases=['ls'],
+                                            help='List registered file types')
+        list_cmd.add_argument('--format', type=str, choices=['table', 'csv', 'json'],
+                             default='table', help='Output format')
+        list_cmd.add_argument('--filter', type=str,
+                             help='Filter by MIME type name')
+
     def _add_shortcut_commands(self, subparsers):
         """Add convenience shortcut commands."""
         # run (create + execute in one)
@@ -402,6 +419,8 @@ For help on any command:
             return self._handle_files(args)
         elif resource in ('plugins', 'plugin', 'tasks'):
             return self._handle_plugins(args)
+        elif resource in ('filetypes', 'filetype', 'ft'):
+            return self._handle_filetypes(args)
         elif resource == 'run':
             return self._handle_run_shortcut(args)
         elif resource in ('status', 'st'):
@@ -716,6 +735,29 @@ For help on any command:
         # These would need new management commands
         print(f"Error: Plugin commands not yet implemented", file=sys.stderr)
         return 1
+
+    def _handle_filetypes(self, args):
+        """Handle file type commands."""
+        action = args.action
+
+        if not action:
+            print("Error: No action specified for filetypes", file=sys.stderr)
+            print("Try: ccp4i2 filetypes --help", file=sys.stderr)
+            return 1
+
+        if action in ('list', 'ls'):
+            cmd_args = ['list_filetypes']
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+            if hasattr(args, 'filter') and args.filter:
+                cmd_args.extend(['--filter', args.filter])
+
+            call_command(*cmd_args)
+            return 0
+
+        else:
+            print(f"Unknown action: {action}", file=sys.stderr)
+            return 1
 
     def _handle_run_shortcut(self, args):
         """Handle the 'run' shortcut (create + run)."""

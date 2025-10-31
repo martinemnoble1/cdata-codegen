@@ -477,3 +477,44 @@ def writeXML(file, xml_string):
     if isinstance(xml_string, bytes):
         xml_string = xml_string.decode('utf-8')
     file.write(xml_string)
+
+
+def backupFile(file_path: Union[str, Path], delete: bool = True) -> Optional[Path]:
+    """
+    Backup a file by renaming it with a numeric suffix.
+
+    Args:
+        file_path: Path to file to backup
+        delete: If True, delete the original file after backup. If False, leave it in place.
+
+    Returns:
+        Path to backup file if created, None if original file doesn't exist
+
+    Example:
+        >>> backupFile('/path/to/file.txt', delete=False)
+        Path('/path/to/file.txt.1')
+    """
+    import shutil
+
+    file_path = Path(file_path)
+
+    if not file_path.exists():
+        return None
+
+    # Find next available backup number
+    counter = 1
+    while True:
+        backup_path = file_path.with_suffix(file_path.suffix + f'.{counter}')
+        if not backup_path.exists():
+            break
+        counter += 1
+
+    # Create backup
+    if delete:
+        # Move (rename) the file
+        shutil.move(str(file_path), str(backup_path))
+    else:
+        # Copy the file
+        shutil.copy2(str(file_path), str(backup_path))
+
+    return backup_path

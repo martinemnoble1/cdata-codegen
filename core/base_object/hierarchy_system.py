@@ -747,7 +747,17 @@ class HierarchicalObject(ABC):
             self.destroy()
 
     def __repr__(self) -> str:
-        parent_name = self.parent._name if self.parent else "None"
+        # Defensive: parent might not be a HierarchicalObject (e.g., QEventLoop)
+        parent = self.parent
+        if parent is None:
+            parent_name = "None"
+        elif hasattr(parent, '_name'):
+            parent_name = parent._name
+        elif hasattr(parent, '__class__'):
+            parent_name = f"<{parent.__class__.__name__}>"
+        else:
+            parent_name = str(type(parent))
+
         child_count = len(self.children())
         return (
             f"{self.__class__.__name__}(name={self._name}, "

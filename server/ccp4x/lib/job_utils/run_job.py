@@ -40,6 +40,16 @@ def run_job(jobId: str):
     new_job = models.Job.objects.get(uuid=jobId)
     logger.info(f"Running job in {new_job.directory}")
 
+    # Remove any existing params.xml to ensure we start fresh from input_params.xml
+    # params.xml will be regenerated during the run at appropriate lifecycle stages:
+    # - After checkInputData() - with validated inputs
+    # - After checkOutputData() - with computed output paths
+    # - After processOutputFiles() - with actual outputs
+    params_file = new_job.directory / "params.xml"
+    if params_file.exists():
+        logger.info(f"Removing old params.xml to start fresh from input_params.xml")
+        params_file.unlink()
+
     with open(new_job.directory / "stdout.txt", "w", encoding="utf-8") as stdout_file:
         with contextlib.redirect_stdout(stdout_file):
             with open(
@@ -173,7 +183,13 @@ def executePlugin(
     the_plugin: CCP4PluginScript.CPluginScript,
     new_job: models.Job,
 ):
-    application_inst: QtCore.QEventLoop = the_plugin.parent()
+    # Get the parent - handle both method and attribute access
+    # (plugins use HierarchicalObject.parent() method, but may also expose .parent attribute)
+    if callable(getattr(the_plugin, 'parent', None)):
+        application_inst: QtCore.QEventLoop = the_plugin.parent()
+    else:
+        # parent is an attribute, not a method (or get_parent exists)
+        application_inst: QtCore.QEventLoop = getattr(the_plugin, 'parent', None) or the_plugin.get_parent()
     logger.info("Using application_inst %s", application_inst)
     try:
         rv = the_plugin.process()

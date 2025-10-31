@@ -10,6 +10,10 @@ from typing import Optional, Any
 
 from core.cdata_stubs.CCP4Data import CBaseDataStub, CCollectionStub, CDictStub, CFloatRangeStub, CFollowFromJobStub, CI2DataTypeStub, CIntRangeStub, CJobStatusStub, CJobTitleStub, COneWordStub, COutputFileListStub, CPatchSelectionStub, CRangeStub, CRangeSelectionStub, CUUIDStub
 
+# Re-export CList for legacy code compatibility
+# Many legacy files use "CCP4Data.CList" which is actually in base_object.fundamental_types
+from core.base_object.fundamental_types import CList
+
 
 class CBaseData(CBaseDataStub):
     """
