@@ -6,44 +6,83 @@ from core import CCP4ErrorHandling
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
+# Severity level to text mapping
+SEVERITY_TEXT = {
+    CCP4ErrorHandling.SEVERITY_OK: "OK",
+    CCP4ErrorHandling.SEVERITY_UNDEFINED: "UNDEFINED",
+    CCP4ErrorHandling.SEVERITY_WARNING: "WARNING",
+    CCP4ErrorHandling.SEVERITY_UNDEFINED_ERROR: "UNDEFINED_ERROR",
+    CCP4ErrorHandling.SEVERITY_ERROR: "ERROR"
+}
+
 
 def getEtree(error_report: CCP4ErrorHandling.CErrorReport):
+    """Convert CErrorReport to XML ElementTree.
+
+    Args:
+        error_report: CErrorReport instance containing validation errors
+
+    Returns:
+        ET.Element: XML tree with error reports
+    """
     element = ET.Element("errorReportList")
-    for item in error_report._reports:
+
+    # Get errors using public API (getErrors() returns list of error dicts)
+    for item in error_report.getErrors():
         try:
             ele = ET.Element("errorReport")
+
+            # className - in new API, item["class"] is already the class name string
             e = ET.Element("className")
-            e.text = item["class"].__name__
+            class_name = item["class"]
+            # Handle both class objects and string class names
+            e.text = class_name.__name__ if hasattr(class_name, '__name__') else str(class_name)
             ele.append(e)
+
+            # code
             e = ET.Element("code")
             e.text = str(item["code"])
             ele.append(e)
+
+            # description - in new API, details field contains the description
             e = ET.Element("description")
-            desc, severity = error_report.description(item)
-            e.text = desc
+            e.text = item["details"]
             ele.append(e)
+
+            # severity - in new API, severity is directly in the item dict
             e = ET.Element("severity")
-            e.text = CCP4ErrorHandling.SEVERITY_TEXT[severity]
+            severity = item["severity"]
+            e.text = SEVERITY_TEXT.get(severity, f"UNKNOWN({severity})")
             ele.append(e)
-            if item["details"] is not None:
-                e = ET.Element("details")
-                e.text = str(item["details"])
+
+            # name (object name) - new field in new API
+            if item.get("name"):
+                e = ET.Element("objectName")
+                e.text = str(item["name"])
                 ele.append(e)
+
+            # time (if present)
             if item.get("time", None) is not None:
                 e = ET.Element("time")
                 e.text = str(item["time"])
                 ele.append(e)
+
+            # stack (if present)
             if item.get("stack", None) is not None:
                 e = ET.Element("stack")
-                # print 'CErrorReport.getEtree stack',item['stack'],type(item['stack']),type(item['stack'][0])
-                text = ""
-                for line in item["stack"]:
-                    text = text + line
+                stack = item["stack"]
+                if isinstance(stack, list):
+                    text = "".join(stack)
+                else:
+                    text = str(stack)
                 e.text = text
                 ele.append(e)
+
             element.append(ele)
+
         except Exception as e:
-            logger.exception("Error in validate_container", exc_info=e)
+            logger.exception("Error processing error report item: %s", e)
+
     return element
 
 

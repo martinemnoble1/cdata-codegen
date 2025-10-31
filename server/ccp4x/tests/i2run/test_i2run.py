@@ -15,13 +15,12 @@ from core import CCP4ErrorHandling
 from core import CCP4Data
 from core import CCP4File
 from utils import QApp
-from core.CCP4File import CDataFile
-from core import CCP4Modules
+from core.base_object.cdata_file import CDataFile
+from core.CCP4TaskManager import TASKMANAGER
 from core import CCP4Container
 from core import CCP4TaskManager
 from ...db.models import Job, Project, File, JobCharValue, JobFloatValue
 from ...db.import_i2xml import import_ccp4_project_zip
-from ...db.ccp4i2_django_wrapper import using_django_pm
 
 from ...i2run import CCP4i2RunnerDjango
 
@@ -105,7 +104,6 @@ class CCP4i2TestCase(TestCase):
     def test_shlex(self):
         self.assertEqual(len(shlex.split(case1, comments=True)), 7)
 
-    @using_django_pm
     def test_case1(self):
         # QApp.MYAPPLICATION = None
         # self.app = CCP4Modules.QTAPPLICATION(graphical=False)
@@ -125,7 +123,6 @@ class CCP4i2TestCase(TestCase):
         the_job = Job.objects.get(uuid=uuid.UUID(i2Runner.jobId))
         self.assertEqual(JobCharValue.objects.filter(job=the_job)[0].value, "P 61 2 2")
 
-    @using_django_pm
     def test_case2(self):
         # QApp.MYAPPLICATION = None
         # self.app = CCP4Modules.QTAPPLICATION(graphical=False)
@@ -150,7 +147,6 @@ class CCP4i2TestCase(TestCase):
             JobFloatValue.objects.filter(job=the_job)[0].value, 0.253
         )
 
-    @using_django_pm
     def test_case3(self):
         args = shlex.split(os.path.expandvars(case3), comments=True)
         i2Runner = CCP4i2RunnerDjango.CCP4i2RunnerDjango(

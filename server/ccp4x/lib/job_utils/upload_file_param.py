@@ -3,7 +3,7 @@ import pathlib
 import json
 import gemmi
 import re
-from core.CCP4File import CDataFile
+from core.base_object.cdata_file import CDataFile
 from core.CCP4XtalData import CMtzDataFile
 from django.utils.text import slugify
 from django.http import HttpRequest

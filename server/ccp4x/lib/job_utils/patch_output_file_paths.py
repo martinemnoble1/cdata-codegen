@@ -1,7 +1,7 @@
 import os
 import logging
 from django.utils.text import slugify
-from core.CCP4File import CDataFile
+from core.base_object.cdata_file import CDataFile
 from core.CCP4ModelData import CPdbDataFile
 from core.CCP4PluginScript import CPluginScript
 from core import CCP4File

@@ -2,7 +2,6 @@ import logging
 import traceback
 
 from core import CCP4TaskManager
-from ...db.ccp4i2_django_wrapper import using_django_pm
 
 # from ...db.ccp4i2_django_db_handler import CCP4i2DjangoDbHandler
 from ...db.models import Job
@@ -10,7 +9,6 @@ from ...db.models import Job
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-@using_django_pm
 def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
     """
     Retrieves and initializes a job plugin instance based on the provided job.
@@ -30,7 +28,7 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
 
     taskManager = CCP4TaskManager.CTaskManager()
 
-    pluginClass = taskManager.getPluginScriptClass(the_job.task_name)
+    pluginClass = taskManager.get_plugin_class(the_job.task_name)
     try:
         pluginInstance = pluginClass(
             workDirectory=str(the_job.directory), parent=parent, dbHandler=dbHandler
@@ -52,7 +50,5 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
         if not params_file.exists():
             # logger.info('No params.xml at %s', defFile1)
             raise Exception("No params file found")
-    pluginInstance.container.loadDataFromXml(
-        str(params_file), check=False, loadHeader=False
-    )
+    pluginInstance.container.loadDataFromXml(str(params_file))
     return pluginInstance

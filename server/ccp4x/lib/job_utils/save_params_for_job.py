@@ -6,13 +6,11 @@ from core import CCP4File
 from core import CCP4Utils
 from core import CCP4PluginScript
 from core import CCP4Container
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from ...db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-@using_django_pm
 def save_params_for_job(
     the_job_plugin: CCP4PluginScript.CPluginScript,
     the_job: models.Job,
@@ -45,7 +43,8 @@ def save_params_for_job(
 
     f = CCP4File.CI2XmlDataFile(fullPath=(relocated_file_path))
 
-    f.header = the_job_plugin.container.header
+    # CI2XmlDataFile already has a header instance created during __init__
+    # Just populate it with job information
     f.header.function.set("PARAMS")
     f.header.projectName.set(the_job.project.name)
     f.header.projectId.set(str(the_job.project.uuid))

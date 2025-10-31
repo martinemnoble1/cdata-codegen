@@ -599,12 +599,17 @@ class JobViewSet(ModelViewSet):
         """
         try:
             old_job_id = models.Job.objects.get(id=pk).uuid
-            new_job = clone_job(old_job_id)
-            serializer = serializers.JobSerializer(new_job)
-            return Response(serializer.data)
+            result = clone_job(old_job_id)
+
+            if result.success:
+                serializer = serializers.JobSerializer(result.data)
+                return Response(serializer.data)
+            else:
+                return Response(result.to_dict(), status=400)
+
         except models.Job.DoesNotExist as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return Response({"status": "Failed", "reason": str(err)}, status=404)
 
     @action(
         detail=True,
@@ -1015,7 +1020,7 @@ class JobViewSet(ModelViewSet):
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            def_xml_path = CCP4TaskManager.TASKMANAGER().lookupDefFile(
+            def_xml_path = CCP4TaskManager.TASKMANAGER().locate_def_xml(
                 name=the_job.task_name, version=None
             )
             with open(def_xml_path, "r") as def_xml_file:

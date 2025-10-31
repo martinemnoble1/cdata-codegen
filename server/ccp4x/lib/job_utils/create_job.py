@@ -6,7 +6,6 @@ from core import CCP4TaskManager
 from core.CCP4Container import CContainer
 
 from ...db import models
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from .remove_container_default_values import remove_container_default_values
 from .save_params_for_job import save_params_for_job
 from .patch_output_file_paths import patch_output_file_paths
@@ -16,7 +15,6 @@ from .get_job_plugin import get_job_plugin
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-@using_django_pm
 def create_job(
     projectId: str = None,
     projectName: str = None,
@@ -88,7 +86,7 @@ def create_job(
         new_job_id = jobId
 
     task_manager = CCP4TaskManager.CTaskManager()
-    plugin_class = task_manager.getPluginScriptClass(taskName)
+    plugin_class = task_manager.get_plugin_class(taskName)
     if saveParams:
         new_job_dir.mkdir(exist_ok=True, parents=True)
     new_job_plugin = plugin_class(workDirectory=str(new_job_dir))

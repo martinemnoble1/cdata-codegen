@@ -5,14 +5,12 @@ from pytz import timezone
 from core import CCP4TaskManager
 from core.CCP4Container import CContainer
 from ...db import models
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from .save_params_for_job import save_params_for_job
 from .patch_output_file_paths import patch_output_file_paths
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-@using_django_pm
 def clone_job(jobId: str = None):
     """
     Clone an existing job by creating a new job with the same parameters.
@@ -44,7 +42,7 @@ def clone_job(jobId: str = None):
     new_job_dir = Path(the_project.directory) / "CCP4_JOBS" / f"job_{next_job_number}"
 
     task_manager = CCP4TaskManager.CTaskManager()
-    plugin_class = task_manager.getPluginScriptClass(task_name)
+    plugin_class = task_manager.get_plugin_class(task_name)
     new_job_dir.mkdir(exist_ok=True, parents=True)
     the_job_plugin: CContainer = plugin_class(workDirectory=str(new_job_dir))
     # Load cloned parameters

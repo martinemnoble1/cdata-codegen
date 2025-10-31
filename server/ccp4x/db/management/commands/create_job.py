@@ -1,8 +1,9 @@
 import uuid
 import logging
+import asyncio
 from django.core.management.base import BaseCommand
 from ccp4x.db.models import Job, Project
-from ccp4x.lib.job_utils.create_task import create_task
+from ccp4x.lib.async_create_job import create_job_async
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -64,19 +65,36 @@ class Command(BaseCommand):
             self.stderr.write(self.style.ERROR(str(e)))
             return
 
-        create_dict = {"task_name": options["taskname"]}
-        if the_context_job is not None:
-            create_dict["context_job_uuid"] = str(the_context_job.uuid)
-        new_job = create_task(the_project, create_dict)
-        print(
-            f"Created job with number {new_job.number}, id {new_job.id}, and uuid {new_job.uuid}"
-        )
+        # Use async create_job_async function
+        parent_job_uuid = the_context_job.uuid if the_context_job is not None else None
+
+        try:
+            result = asyncio.run(
+                create_job_async(
+                    project_uuid=the_project.uuid,
+                    task_name=options["taskname"],
+                    parent_job_uuid=parent_job_uuid,
+                    save_params=True
+                )
+            )
+
+            # Result contains job info directly
+            self.stdout.write(
+                f"Created job with number {result['job_number']}, "
+                f"uuid {result['job_uuid']}"
+            )
+        except Exception as e:
+            self.stderr.write(
+                self.style.ERROR(f"Failed to create job: {e}")
+            )
+            import traceback
+            traceback.print_exc()
 
     def get_context_job(self, options):
         if options["contextjobid"] is not None:
-            return Job.objects.get(id=options["jobid"])
+            return Job.objects.get(id=options["contextjobid"])
         if options["contextjobuuid"] is not None:
-            return Job.objects.get(uuid=uuid.UUID(options["jobuuid"]))
+            return Job.objects.get(uuid=uuid.UUID(options["contextjobuuid"]))
         if (
             options["projectname"] is not None
             and options["contextjobnumber"] is not None

@@ -2,13 +2,11 @@ import logging
 
 from core import CCP4TaskManager
 from core import CCP4Container
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from ...db.models import Job
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-@using_django_pm
 def get_job_container(the_job: Job):
     """
     Retrieves and loads a job container for the given job.
@@ -24,12 +22,12 @@ def get_job_container(the_job: Job):
     Returns:
         CCP4Container.CContainer: The loaded job container.
     """
-    defFile = CCP4TaskManager.CTaskManager().lookupDefFile(
-        name=the_job.task_name, version=None
+    defFile = CCP4TaskManager.CTaskManager().locate_def_xml(
+        the_job.task_name, version=None
     )
     # print 'CProjectDirToDb.globJobs defFile',defFile
     container = CCP4Container.CContainer()
-    container.loadContentsFromXml(defFile, guiAdmin=True)
+    container.loadContentsFromXml(defFile)
 
     params_path = the_job.directory / "params.xml"
     fallback_params_path = the_job.directory / "input_params.xml"

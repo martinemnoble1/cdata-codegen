@@ -15,8 +15,12 @@ File path handling:
 
 from typing import Optional, Any
 from pathlib import Path
+import logging
 
 from .cdata import CData
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class CDataFile(CData):
@@ -63,56 +67,60 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
-        print(f"\n[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}")
-        print(f"  Input path: {path}")
-        print(f"  hasattr baseName: {hasattr(self, 'baseName')}")
+        logger.debug(
+            "[setFullPath] Called for %s, input path: %s, hasattr baseName: %s",
+            self.name if hasattr(self, 'name') else 'unnamed',
+            path,
+            hasattr(self, 'baseName')
+        )
         if hasattr(self, 'baseName'):
-            print(f"  baseName type: {type(self.baseName)}")
-            print(f"  baseName has .value: {hasattr(self.baseName, 'value')}")
+            logger.debug("  baseName type: %s, has .value: %s", type(self.baseName), hasattr(self.baseName, 'value'))
 
         # Always set baseName first (basic functionality)
         if hasattr(self, 'baseName'):
             # If baseName is a CFilePath or similar, set its value
             if hasattr(self.baseName, 'value'):
                 self.baseName.value = path
-                print(f"  Set baseName.value = {path}")
+                logger.debug("  Set baseName.value = %s", path)
             else:
                 # Otherwise set it directly
                 self.baseName = path
-                print(f"  Set baseName = {path}")
+                logger.debug("  Set baseName = %s", path)
         else:
             # baseName doesn't exist yet - store in file_path for now
             object.__setattr__(self, 'file_path', path)
-            print(f"  Set file_path = {path} (baseName doesn't exist)")
+            logger.debug("  Set file_path = %s (baseName doesn't exist)", path)
 
         # After setting, check the result
         if hasattr(self, 'baseName'):
             if hasattr(self.baseName, 'value'):
-                print(f"  AFTER: baseName.value = {self.baseName.value}")
+                logger.debug("  AFTER: baseName.value = %s", self.baseName.value)
                 # Check value state
                 if hasattr(self.baseName, '_value_states'):
-                    print(f"  AFTER: baseName._value_states = {self.baseName._value_states}")
-                print(f"  AFTER: baseName.isSet('value') = {self.baseName.isSet('value') if hasattr(self.baseName, 'isSet') else 'N/A'}")
+                    logger.debug("  AFTER: baseName._value_states = %s", self.baseName._value_states)
+                logger.debug("  AFTER: baseName.isSet('value') = %s",
+                           self.baseName.isSet('value') if hasattr(self.baseName, 'isSet') else 'N/A')
             else:
-                print(f"  AFTER: baseName = {self.baseName}")
+                logger.debug("  AFTER: baseName = %s", self.baseName)
 
-        print(f"  AFTER: dbFileId = {self.dbFileId.value if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value') else 'N/A'}")
-        print(f"  AFTER: relPath = {self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A'}")
-        print(f"  AFTER: project = {self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A'}")
+        logger.debug("  AFTER: dbFileId = %s",
+                    self.dbFileId.value if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value') else 'N/A')
+        logger.debug("  AFTER: relPath = %s",
+                    self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A')
+        logger.debug("  AFTER: project = %s",
+                    self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A')
 
         # Database-aware logic: check if we're in a database context
         plugin = self._find_plugin_parent()
         if plugin and hasattr(plugin, 'get_db_job_id') and plugin.get_db_job_id():
-            print(f"  DB-aware mode: plugin job ID = {plugin.get_db_job_id()}")
+            logger.debug("  DB-aware mode: plugin job ID = %s", plugin.get_db_job_id())
             try:
                 self._update_from_database(path, plugin)
             except Exception as e:
                 # Don't fail on database errors - just log and continue
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.debug(f"Failed to update file from database: {e}")
+                logger.debug("Failed to update file from database: %s", e)
         else:
-            print(f"  Non-DB mode")
+            logger.debug("  Non-DB mode")
 
     def _find_plugin_parent(self):
         """Walk up the parent hierarchy to find the CPluginScript parent."""
@@ -261,7 +269,8 @@ class CDataFile(CData):
             return Path(path).exists()
         return False
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the file has been set.
 
         For CDataFile, a file is considered "set" if its baseName attribute is set.
@@ -269,6 +278,9 @@ class CDataFile(CData):
 
         Args:
             field_name: If None, checks baseName. Otherwise delegates to parent.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types - if True, all children must be set
 
         Returns:
             True if baseName is set (has a non-None, non-empty value)
@@ -288,7 +300,8 @@ class CDataFile(CData):
             return False
         else:
             # For specific field names, delegate to parent
-            return super().isSet(field_name)
+            return super().isSet(field_name, allowUndefined=allowUndefined,
+                               allowDefault=allowDefault, allSet=allSet)
 
     @property
     def fullPath(self) -> str:
@@ -298,6 +311,15 @@ class CDataFile(CData):
             Full path to the file, or empty string if not set
         """
         return self.getFullPath()
+
+    @fullPath.setter
+    def fullPath(self, path: str):
+        """Set the full file path.
+
+        Args:
+            path: Full file path as a string
+        """
+        self.setFullPath(path)
 
     def __str__(self) -> str:
         """Return string representation of the file (its path).

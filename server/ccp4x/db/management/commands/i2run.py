@@ -2,9 +2,8 @@ import sys
 import logging
 
 from django.core.management.base import BaseCommand
-from ....db.ccp4i2_django_wrapper import using_django_pm
 from ....i2run import CCP4i2RunnerDjango
-from core import CCP4Modules
+from core.CCP4TaskManager import TASKMANAGER
 
 # Get an instance of a logger
 logger = logging.getLogger("root")
@@ -26,7 +25,6 @@ class Command(BaseCommand):
         self.i2_runner.parseArgs()
 
     def handle(self, *args, **options):
-        @using_django_pm
         def execute():
             self.i2_runner.execute()
 

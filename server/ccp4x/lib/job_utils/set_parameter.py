@@ -8,7 +8,7 @@ from core import CCP4XtalData
 from core import CCP4ModelData
 from core import CCP4File
 from core import CCP4Data
-from core.CCP4File import CDataFile
+from core.base_object.cdata_file import CDataFile
 from .save_params_for_job import save_params_for_job
 from .find_objects import find_object_by_path
 from .get_job_plugin import get_job_plugin
@@ -29,7 +29,7 @@ def set_parameter(
 
     try:
         previous_object_element = find_object_by_path(the_container, object_path)
-        if isinstance(previous_object_element, (CCP4File.CDataFile, CDataFile)):
+        if isinstance(previous_object_element, CDataFile):
             previous_value = value_dict_for_object(previous_object_element)
             previous_file_id = previous_value.get("dbFileId", None)
             if previous_file_id is not None and not isinstance(previous_file_id, dict):
@@ -111,20 +111,30 @@ def set_parameter_container(
 
     # e = object_element.getEtree()
     # print(ET.tostring(e).decode("utf-8"))
-    object_element.unSet()
+
+    # Unset the value if None
     if value is None:
-        object_element.unSet()
-    elif isinstance(
-        object_element,
-        (
-            CDataFile,
-            CCP4File.CDataFile,
-        ),
-    ) and isinstance(value, str):
+        object_element.unSet()  # Defaults to unsetting 'value'
+        return object_element
+
+    # Handle file objects
+    elif isinstance(object_element, CDataFile) and isinstance(value, str):
         logger.debug("Setting file with string %s", object_element)
         object_element.set(value)
         logger.debug("Set file with string %s", object_element)
-    elif hasattr(object_element, "update"):
+
+    # Handle simple types (int, str, float, bool) - call .set() directly
+    elif isinstance(value, (int, str, float, bool)):
+        try:
+            object_element.set(value)
+            logger.debug("Set simple value %s on %s", value, object_element.objectName())
+        except AttributeError:
+            # Object doesn't have .set(), try direct assignment
+            object_element.value = value
+            logger.debug("Set value via .value = %s on %s", value, object_element.objectName())
+
+    # Handle dict updates (for complex objects)
+    elif isinstance(value, dict) and hasattr(object_element, "update"):
         object_element.update(value)
         logger.debug(
             "Updating parameter %s with dict %s",

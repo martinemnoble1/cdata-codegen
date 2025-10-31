@@ -4,11 +4,17 @@ import sys
 import uuid
 
 from core.CCP4PluginScript import CPluginScript
-from ccp4i2.dbapi import CCP4DbApi
 
 from . import models
 from ..lib.job_utils.create_job import create_job
 from .ccp4i2_django_dbapi import CCP4i2DjangoDbApi
+from .ccp4i2_static_data import (
+    JOB_STATUS_FAILED,
+    JOB_STATUS_FINISHED,
+    JOB_STATUS_INTERRUPTED,
+    JOB_STATUS_TO_DELETE,
+    JOB_STATUS_UNSATISFACTORY,
+)
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
@@ -16,19 +22,19 @@ logger.setLevel(logging.WARNING)
 
 
 def plugin_status_to_job_status(finishStatus):
-    status = CCP4DbApi.JOB_STATUS_FAILED
+    status = JOB_STATUS_FAILED
     if isinstance(finishStatus, dict):
         finishStatus = finishStatus.get("finishStatus")
     if finishStatus == CPluginScript.SUCCEEDED:
-        status = CCP4DbApi.JOB_STATUS_FINISHED
+        status = JOB_STATUS_FINISHED
     elif finishStatus == CPluginScript.FAILED:
-        status = CCP4DbApi.JOB_STATUS_FAILED
+        status = JOB_STATUS_FAILED
     elif finishStatus == CPluginScript.INTERRUPTED:
-        status = CCP4DbApi.JOB_STATUS_INTERRUPTED
+        status = JOB_STATUS_INTERRUPTED
     elif finishStatus == CPluginScript.MARK_TO_DELETE:
-        status = CCP4DbApi.JOB_STATUS_TO_DELETE
+        status = JOB_STATUS_TO_DELETE
     elif finishStatus == CPluginScript.UNSATISFACTORY:
-        status = CCP4DbApi.JOB_STATUS_UNSATISFACTORY
+        status = JOB_STATUS_UNSATISFACTORY
     return status
 
 

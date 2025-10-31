@@ -12,7 +12,6 @@ from ...lib.job_utils.ccp4i2_report import (
 from ...lib.job_utils.get_job_container import get_job_container
 from ...db.ccp4i2_django_projects_manager import CCP4i2DjangoProjectsManager
 
-from ...db.ccp4i2_django_wrapper import using_django_pm
 
 from ...db.ccp4i2_django_dbapi import CCP4i2DjangoDbApi
 
@@ -72,7 +71,6 @@ class CCP4i2TestCase(TestCase):
         self.assertTrue(isinstance(a, CCP4i2DjangoDbApi))
 
     def test_decorator(self):
-        @using_django_pm
         def test_fn():
             return 1
 

@@ -109,7 +109,7 @@ async def create_plugin_for_job(job, db_handler):
 
     # Get plugin class
     task_manager = CCP4TaskManager.CTaskManager()
-    plugin_class = task_manager.getPluginScriptClass(job.task_name)
+    plugin_class = task_manager.get_plugin_class(job.task_name)
 
     # Create plugin instance
     plugin = plugin_class(

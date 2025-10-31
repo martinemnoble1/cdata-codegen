@@ -3,17 +3,15 @@ import pathlib
 import os
 import xml.etree.ElementTree as ET
 
-from core import CCP4Modules
+from core.CCP4TaskManager import TASKMANAGER
 from core.CCP4Container import CContainer
-from core.CCP4Data import CList
+from core.base_object.fundamental_types import CList
 from core.CCP4TaskManager import CTaskManager
-from ccp4i2.dbapi.CCP4DbApi import FILETYPES_CLASS, FILETYPES_TEXT
-from ccp4i2.report.CCP4ReportParser import ReportClass
+from report.CCP4ReportParser import ReportClass
 from core import CCP4File
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from ...db.models import Job, FileUse, File
 from .get_job_plugin import get_job_plugin
-from ...db.ccp4i2_static_data import PATH_FLAG_JOB_DIR, PATH_FLAG_IMPORT_DIR
+from ...db.ccp4i2_static_data import PATH_FLAG_JOB_DIR, PATH_FLAG_IMPORT_DIR, FILETYPES_CLASS, FILETYPES_TEXT
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
@@ -163,7 +161,6 @@ def _path_if_exists(path_str: str):
     return ""
 
 
-@using_django_pm
 def make_old_report(job: Job):
     """
     Generates a report for a given job using the old reporting system.
@@ -180,7 +177,7 @@ def make_old_report(job: Job):
         - The report is generated using the report class obtained from the task manager.
     """
 
-    task_manager: CTaskManager = CCP4Modules.TASKMANAGER()
+    task_manager: CTaskManager = TASKMANAGER()
     report_class = task_manager.getReportClass(name=job.task_name)
     if report_class is None:
         logger.error("Failed to find report class for task %s", job.task_name)

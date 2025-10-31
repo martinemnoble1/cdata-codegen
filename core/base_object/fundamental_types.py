@@ -95,18 +95,23 @@ class CInt(CData):
         self.value = value
         return self
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
             field_name: Optional field name. If not provided, checks if 'value' is set.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types (unused for fundamental types)
 
         Returns:
             True if the value (or specified field) has been set, False otherwise.
         """
         if field_name is None:
             field_name = "value"
-        return super().isSet(field_name)
+        return super().isSet(field_name, allowUndefined=allowUndefined,
+                           allowDefault=allowDefault, allSet=allSet)
 
     def _is_value_type(self) -> bool:
         return True
@@ -419,18 +424,23 @@ class CFloat(CData):
         self.value = value
         return self
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
             field_name: Optional field name. If not provided, checks if 'value' is set.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types (unused for fundamental types)
 
         Returns:
             True if the value (or specified field) has been set, False otherwise.
         """
         if field_name is None:
             field_name = "value"
-        return super().isSet(field_name)
+        return super().isSet(field_name, allowUndefined=allowUndefined,
+                           allowDefault=allowDefault, allSet=allSet)
 
     def _is_value_type(self) -> bool:
         return True
@@ -761,18 +771,23 @@ class CString(CData):
         self.value = value
         return self
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
             field_name: Optional field name. If not provided, checks if 'value' is set.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types (unused for fundamental types)
 
         Returns:
             True if the value (or specified field) has been set, False otherwise.
         """
         if field_name is None:
             field_name = "value"
-        return super().isSet(field_name)
+        return super().isSet(field_name, allowUndefined=allowUndefined,
+                           allowDefault=allowDefault, allSet=allSet)
 
     def _is_value_type(self) -> bool:
         return True
@@ -867,18 +882,23 @@ class CBoolean(CData):
         self.value = value
         return self
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
             field_name: Optional field name. If not provided, checks if 'value' is set.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types (unused for fundamental types)
 
         Returns:
             True if the value (or specified field) has been set, False otherwise.
         """
         if field_name is None:
             field_name = "value"
-        return super().isSet(field_name)
+        return super().isSet(field_name, allowUndefined=allowUndefined,
+                           allowDefault=allowDefault, allSet=allSet)
 
     def _is_value_type(self) -> bool:
         return True

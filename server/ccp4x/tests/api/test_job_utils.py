@@ -6,7 +6,7 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 from core import CCP4Container
 from core.CCP4ModelData import CDictDataFile
-from core.CCP4File import CDataFile
+from core.base_object.cdata_file import CDataFile
 from ...lib.job_utils.i2run_for_job import i2run_for_job
 from ...db.import_i2xml import import_ccp4_project_zip
 from ...db.ccp4i2_django_projects_manager import CCP4i2DjangoProjectsManager

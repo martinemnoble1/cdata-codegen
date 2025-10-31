@@ -1378,9 +1378,16 @@ class CProgramColumnGroup(CProgramColumnGroupStub):
             else:
                 raise TypeError(f"Expected dict, got {type(mapping)}")
 
-    def isSet(self):
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True):
         """
         Check if column mappings have been set.
+
+        Args:
+            field_name: Ignored for CProgramColumnGroup (provided for API compatibility)
+            allowUndefined: Ignored for CProgramColumnGroup (provided for API compatibility)
+            allowDefault: Ignored for CProgramColumnGroup (provided for API compatibility)
+            allSet: Ignored for CProgramColumnGroup (provided for API compatibility)
 
         Returns:
             bool: True if set() has been called with mappings AND mappings contain actual column data

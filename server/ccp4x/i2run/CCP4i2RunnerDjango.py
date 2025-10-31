@@ -11,7 +11,6 @@ from ..api import serializers
 from ..lib.job_utils.create_job import create_job
 from ..lib.job_utils.run_job import run_job
 from ..lib.job_utils.save_params_for_job import save_params_for_job
-from ..db.ccp4i2_django_wrapper import using_django_pm
 
 # Get an instance of a logger
 logger = logging.getLogger(f"ccp4x:{__name__}")
@@ -152,7 +151,6 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         thePlugin.saveParams()
         print(self.jobId)
 
-        @using_django_pm
         def do_run():
             return run_job(self.jobId)
 

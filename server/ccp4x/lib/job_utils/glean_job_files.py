@@ -5,9 +5,9 @@ import re
 from core import CCP4File
 from core import CCP4PerformanceData
 from core import CCP4Data
-from core.CCP4Data import CList
+from core.base_object.fundamental_types import CList
 from core.CCP4Container import CContainer as CContainer
-from core.CCP4File import CDataFile as CDataFile
+from core.base_object.cdata_file import CDataFile as CDataFile
 from core.CCP4File import CI2XmlDataFile as CI2XmlDataFile
 from core.CCP4PerformanceData import CPerformanceIndicator
 from ...db import models

@@ -7,10 +7,9 @@ from core import CCP4Container
 from core.CCP4Container import CContainer
 from core import CCP4File
 from core import CCP4Data
-from core.CCP4Data import CList
-from core.CCP4File import CDataFile
+from core.base_object.fundamental_types import CList
+from core.base_object.cdata_file import CDataFile
 
-from ...db.ccp4i2_django_wrapper import using_django_pm
 from ...db import models
 from .get_job_plugin import get_job_plugin
 from .save_params_for_job import save_params_for_job

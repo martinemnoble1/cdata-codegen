@@ -40,7 +40,7 @@ class Command(BaseCommand):
             return
 
         project_files = list_project(str(the_project.uuid))
-        print(json.dumps(project_files, indent=2))
+        self.stdout.write(json.dumps(project_files, indent=2))
 
     def get_project(self, options):
         if options["projectname"] is not None:

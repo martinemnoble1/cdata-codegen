@@ -1,6 +1,6 @@
 from ...db import models
 from django.http import JsonResponse
-from core import CCP4Modules
+from core.CCP4TaskManager import TASKMANAGER
 from .get_job_plugin import get_job_plugin
 
 
@@ -9,7 +9,7 @@ def get_what_next(job: models.Job):
     if the_job_plugin is None:
         return {"Status": "Failed", "result": []}
 
-    taskManager = CCP4Modules.TASKMANAGER()
+    taskManager = TASKMANAGER()
     if hasattr(the_job_plugin, "WHATNEXT"):
         result = {
             "Status": "Success",

@@ -6,7 +6,7 @@ from core.CCP4Container import CContainer
 from core.CCP4ErrorHandling import CException
 from core.CCP4PluginScript import CPluginScript
 from core import CCP4Container
-from core import CCP4Modules
+from core.CCP4TaskManager import TASKMANAGER
 from core import CCP4Data
 from core import CCP4XtalData
 import traceback
@@ -170,7 +170,7 @@ class CCP4i2RunnerBase(object):
     @staticmethod
     def keywordsOfTaskName(task_name, parent=None):
         theContainer: CContainer = CCP4Container.CContainer(parent=parent)
-        xmlLocation = CCP4Modules.TASKMANAGER().lookupDefFile(
+        xmlLocation = TASKMANAGER().locate_def_xml(
             name=task_name, version=None
         )
         try:
@@ -322,7 +322,7 @@ class CCP4i2RunnerBase(object):
     def pluginWithArgs(self, parsed_args, workDirectory=None, jobId=None):
         if jobId is not None:
             workDirectory = CCP4Modules.PROJECTSMANAGER().jobDirectory(jobId=jobId)
-        thePlugin = CCP4Modules.TASKMANAGER().getPluginScriptClass(
+        thePlugin = TASKMANAGER().get_plugin_class(
             parsed_args.task_name
         )(jobId=jobId, workDirectory=workDirectory, parent=self.parent)
         self.work_directory = workDirectory

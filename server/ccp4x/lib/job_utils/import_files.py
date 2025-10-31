@@ -7,11 +7,10 @@ import uuid
 import re
 
 from core import CCP4Container
-from core.CCP4File import CDataFile
+from core.base_object.cdata_file import CDataFile
 from core import CCP4File
 from core import CCP4PluginScript
-from core.CCP4Data import CList
-from ccp4i2.dbapi import CCP4DbApi
+from core.base_object.fundamental_types import CList
 from core.CCP4File import CI2XmlDataFile as CI2XmlDataFile
 
 from ...db import models

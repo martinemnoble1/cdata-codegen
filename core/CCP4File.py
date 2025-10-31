@@ -110,25 +110,102 @@ class CFilePath(CFilePathStub):
 class CI2XmlDataFile(CI2XmlDataFileStub):
     """
     A reference to an XML file with CCP4i2 Header
-    
+
     Extends CI2XmlDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def saveFile(self, bodyEtree=None):
+        """
+        Save the XML file with header and body structure.
+
+        CCP4i2 XML files have a standard structure:
+        <ccp4i2>
+          <header>...</header>
+          <body>...</body>
+        </ccp4i2>
+
+        Args:
+            bodyEtree: Optional ElementTree element for the body content.
+                      If not provided, an empty body will be created.
+        """
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        # Create root element
+        root = ET.Element('ccp4i2')
+
+        # Add header
+        if hasattr(self, 'header') and self.header is not None:
+            header_elem = self.header.getEtree()
+            if header_elem is not None:
+                root.append(header_elem)
+
+        # Add body
+        if bodyEtree is not None:
+            # If bodyEtree is provided, use it as the body
+            if bodyEtree.tag == 'body':
+                root.append(bodyEtree)
+            else:
+                # Wrap it in a body element
+                body = ET.Element('body')
+                body.append(bodyEtree)
+                root.append(body)
+        else:
+            # Create empty body
+            body = ET.Element('body')
+            root.append(body)
+
+        # Create tree and write to file
+        tree = ET.ElementTree(root)
+        file_path = Path(self.getFullPath())
+
+        # Ensure directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write with pretty formatting
+        ET.indent(tree, space='  ')
+        tree.write(file_path, encoding='utf-8', xml_declaration=True)
+
+        return True
 
 
 class CI2XmlHeader(CI2XmlHeaderStub):
     """
     Container for header info from XML file
-    
+
     Extends CI2XmlHeaderStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def setCurrent(self):
+        """
+        Set header fields to current values: time, hostname, OS, CCP4 version.
+
+        This populates standard header metadata that should be set when creating
+        a new XML file.
+        """
+        import time
+        import socket
+        import platform
+        import sys
+
+        # Set creation time to now (Unix timestamp as integer)
+        if hasattr(self, 'creationTime'):
+            self.creationTime.set(int(time.time()))
+
+        # Set hostname
+        if hasattr(self, 'hostName'):
+            self.hostName.set(socket.gethostname())
+
+        # Set OS
+        if hasattr(self, 'OS'):
+            self.OS.set(f"{platform.system()} {platform.release()}")
+
+        # Set CCP4i version (Python version as proxy for now)
+        if hasattr(self, 'ccp4iVersion'):
+            python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+            self.ccp4iVersion.set(python_version)
 
 
 class CMmcifData(CMmcifDataStub):

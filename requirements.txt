@@ -1,0 +1,48 @@
+# Core requirements for cdata-codegen project
+
+# Django for database and web framework
+Django>=4.2.0,<5.0
+
+# BioPython for sequence file parsing and biological data
+biopython>=1.80
+
+# System and process utilities
+psutil>=5.9.0
+
+# XML processing
+lxml>=4.9.0
+
+# Crystallography library
+gemmi>=0.6.0
+
+# Testing framework
+pytest>=7.4.0
+pytest-django>=4.5.0
+pytest-asyncio>=0.21.0
+
+# Code formatting and linting
+autopep8>=2.0.0
+
+# Django REST Framework for API
+djangorestframework>=3.14.0
+
+# Type checking
+mypy>=1.0.0
+
+# Network/graph analysis
+networkx>=3.0
+
+# HTTP requests
+requests>=2.31.0
+
+# YAML support
+PyYAML>=6.0
+
+# For async database operations
+asgiref>=3.7.0
+
+# CCTBX/iotbx - Computational Crystallography Toolbox (optional)
+# Note: These are larger packages with compiled components
+# Installation: pip install cctbx-base
+# Alternative: conda install -c conda-forge cctbx-base
+# cctbx-base>=2024.0; platform_system != "Windows"

@@ -112,6 +112,77 @@ class CTaskManager:
 
         return None
 
+    def getReportClass(self, name: str, version: Optional[str] = None) -> Optional[Type]:
+        """
+        Get the report class for a plugin/task.
+
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "pointless")
+            version: Optional version string (currently ignored)
+
+        Returns:
+            Report class if found, None otherwise
+        """
+        # Get the plugin class first
+        plugin_class = self.get_plugin_class(name, version)
+        if plugin_class is None:
+            return None
+
+        # Check if the plugin class has a REPORT attribute
+        if hasattr(plugin_class, "REPORT"):
+            return plugin_class.REPORT
+
+        return None
+
+    def getReportAttribute(self, name: str, attribute: str, version: Optional[str] = None) -> Any:
+        """
+        Get an attribute from a plugin's report class.
+
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "pointless")
+            attribute: Name of the attribute to retrieve (e.g., "WATCHED_FILE")
+            version: Optional version string (currently ignored)
+
+        Returns:
+            Attribute value if found, None otherwise
+        """
+        report_class = self.getReportClass(name, version)
+        if report_class is None:
+            return None
+
+        return getattr(report_class, attribute, None)
+
+    def getTitle(self, name: str) -> Optional[str]:
+        """
+        Get the title of a plugin/task.
+
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "pointless")
+
+        Returns:
+            Task title if found, None otherwise
+        """
+        metadata = self.get_plugin_metadata(name)
+        if metadata:
+            return metadata.get("TASKTITLE")
+        return None
+
+    def getShortTitle(self, name: str) -> Optional[str]:
+        """
+        Get the short title of a plugin/task. Falls back to TASKNAME if no short title available.
+
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "pointless")
+
+        Returns:
+            Task short title or task name if found, None otherwise
+        """
+        metadata = self.get_plugin_metadata(name)
+        if metadata:
+            # Try SHORTTITLE first, fall back to TASKNAME
+            return metadata.get("SHORTTITLE", metadata.get("TASKNAME"))
+        return None
+
 
 def TASKMANAGER():
     """Return a unique instance of CTaskManager."""

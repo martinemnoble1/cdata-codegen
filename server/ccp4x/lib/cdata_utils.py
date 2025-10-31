@@ -8,9 +8,9 @@ import logging
 from typing import List, Dict, Any, Optional, Type, Callable
 from pathlib import Path
 
-from core.base_object.base_classes import CData, CDataFile, CDataFileContent
-from core.base_object.hierarchy_system import HierarchicalObject
-from core.base_object.fundamental_types import CInt, CFloat, CString, CBoolean
+from core import CCP4Data
+from core.base_object.cdata_file import CDataFile
+from core.CCP4Container import CContainer
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -53,7 +53,7 @@ def get_file_type_from_class(file_obj: CDataFile) -> str:
         return "unknown"
 
 
-def find_all_files(container: CData) -> List[CDataFile]:
+def find_all_files(container) -> List[CDataFile]:
     """
     Find all CDataFile objects in a container hierarchy using CData introspection.
 
@@ -86,7 +86,6 @@ def find_all_files(container: CData) -> List[CDataFile]:
             print(f"{indent}  -> IS A FILE! Added to list")
 
         # Traverse children - CContainer needs special handling
-        from core.base_object.ccontainer import CContainer
         if isinstance(obj, CContainer):
             # CContainer can store items in THREE ways:
             # 1. Via add_item() -> _container_items list
@@ -126,11 +125,11 @@ def find_all_files(container: CData) -> List[CDataFile]:
                 import traceback
                 traceback.print_exc()
                 logger.debug(f"Error traversing container {obj}: {e}")
-        elif isinstance(obj, HierarchicalObject):
-            # Regular HierarchicalObject - use children() method
+        elif hasattr(obj, 'children'):
+            # Regular CData object - use children() method
             try:
-                children = obj.children() if hasattr(obj, 'children') else []
-                print(f"{indent}  HierarchicalObject has {len(children)} children")
+                children = obj.children()
+                print(f"{indent}  CData object has {len(children)} children")
                 for child in children:
                     if child is not None:
                         child_name = child.name if hasattr(child, 'name') else 'unnamed'
@@ -146,7 +145,7 @@ def find_all_files(container: CData) -> List[CDataFile]:
     return files
 
 
-def find_objects_by_type(container: CData, target_type: Type) -> List[Any]:
+def find_objects_by_type(container, target_type: Type) -> List[Any]:
     """
     Find all objects of a specific type in a container hierarchy.
 
@@ -169,9 +168,9 @@ def find_objects_by_type(container: CData, target_type: Type) -> List[Any]:
         if isinstance(obj, target_type):
             objects.append(obj)
 
-        if isinstance(obj, HierarchicalObject):
+        if hasattr(obj, 'childNames'):
             try:
-                child_names = obj.childNames() if hasattr(obj, 'childNames') else []
+                child_names = obj.childNames()
                 for child_name in child_names:
                     child = getattr(obj, child_name, None)
                     if child is not None:
@@ -183,7 +182,7 @@ def find_objects_by_type(container: CData, target_type: Type) -> List[Any]:
     return objects
 
 
-def find_objects_matching(container: CData, predicate: Callable[[Any], bool]) -> List[Any]:
+def find_objects_matching(container, predicate: Callable[[Any], bool]) -> List[Any]:
     """
     Find all objects matching a predicate function.
 
@@ -210,9 +209,9 @@ def find_objects_matching(container: CData, predicate: Callable[[Any], bool]) ->
         if predicate(obj):
             matches.append(obj)
 
-        if isinstance(obj, HierarchicalObject):
+        if hasattr(obj, 'childNames'):
             try:
-                child_names = obj.childNames() if hasattr(obj, 'childNames') else []
+                child_names = obj.childNames()
                 for child_name in child_names:
                     child = getattr(obj, child_name, None)
                     if child is not None:
@@ -284,7 +283,7 @@ def extract_file_metadata(file_obj: CDataFile) -> Dict[str, Any]:
     return metadata
 
 
-def extract_parameter_name(obj: CData) -> str:
+def extract_parameter_name(obj) -> str:
     """
     Extract the parameter name from a CData object.
 
@@ -314,7 +313,7 @@ def extract_parameter_name(obj: CData) -> str:
     return obj.__class__.__name__
 
 
-def extract_kpi_values(kpi_container: CData) -> Dict[str, Any]:
+def extract_kpi_values(kpi_container) -> Dict[str, Any]:
     """
     Extract key performance indicator values from a CPerformanceIndicator object.
 
@@ -332,11 +331,11 @@ def extract_kpi_values(kpi_container: CData) -> Dict[str, Any]:
     """
     values = {}
 
-    if not isinstance(kpi_container, HierarchicalObject):
+    if not hasattr(kpi_container, 'childNames'):
         return values
 
     try:
-        child_names = kpi_container.childNames() if hasattr(kpi_container, 'childNames') else []
+        child_names = kpi_container.childNames()
 
         for param_name in child_names:
             value_obj = getattr(kpi_container, param_name, None)
@@ -344,19 +343,19 @@ def extract_kpi_values(kpi_container: CData) -> Dict[str, Any]:
                 continue
 
             # Extract value based on CData type
-            if isinstance(value_obj, CFloat):
+            if isinstance(value_obj, CCP4Data.CFloat):
                 if value_obj.isSet():
                     values[param_name] = float(value_obj)
 
-            elif isinstance(value_obj, CInt):
+            elif isinstance(value_obj, CCP4Data.CInt):
                 if value_obj.isSet():
                     values[param_name] = int(value_obj)
 
-            elif isinstance(value_obj, CString):
+            elif isinstance(value_obj, CCP4Data.CString):
                 if value_obj.isSet() and len(str(value_obj)) > 0:
                     values[param_name] = str(value_obj)
 
-            elif isinstance(value_obj, CBoolean):
+            elif isinstance(value_obj, CCP4Data.CBoolean):
                 if value_obj.isSet():
                     values[param_name] = bool(value_obj)
 
@@ -493,7 +492,7 @@ def validate_file_metadata_completeness(file_obj: CDataFile) -> Dict[str, Any]:
     }
 
 
-def debug_print_container_structure(container: CData, max_depth: int = 5, current_depth: int = 0):
+def debug_print_container_structure(container, max_depth: int = 5, current_depth: int = 0):
     """
     Print the hierarchical structure of a container for debugging.
 
@@ -525,9 +524,9 @@ def debug_print_container_structure(container: CData, max_depth: int = 5, curren
     print(f"{indent}{obj_name} ({obj_type}){is_set}")
 
     # Print children
-    if isinstance(container, HierarchicalObject):
+    if hasattr(container, 'childNames'):
         try:
-            child_names = container.childNames() if hasattr(container, 'childNames') else []
+            child_names = container.childNames()
             for i, child_name in enumerate(child_names):
                 child = getattr(container, child_name, None)
                 if child is not None:

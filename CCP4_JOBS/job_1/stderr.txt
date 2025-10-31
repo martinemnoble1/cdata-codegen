@@ -1,2 +1,0 @@
-CCP4MTZfile: open_read - File missing or corrupted: /Users/nmemn/Developer/cdata-codegen/demo_data/toxd_fobs.mtz
-libc++abi: terminating due to uncaught exception of type clipper::Message_fatal

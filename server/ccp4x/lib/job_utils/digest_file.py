@@ -1,17 +1,18 @@
 import json
 import logging
 import gemmi
+import importlib
+from typing import Dict, Type
+
 from core import CCP4File
 from core import CCP4XtalData
 from core import CCP4ModelData
 from core.CCP4Container import CContainer
-from core.CCP4XtalData import CGenericReflDataFile
-from core.CCP4XtalData import CMapDataFile
+from core.base_object.cdata_file import CDataFile
+from core.base_object.cdata import CData
+from core.CCP4XtalData import CGenericReflDataFile, CMapDataFile
 from core.CCP4ModelData import CPdbDataFile, CDictDataFile
-from core import CCP4DataManager
-from core.CCP4File import CDataFile
-from core.CCP4File import CDataFile
-from ccp4i2.pipelines.import_merged.script import mmcifutils
+from pipelines.import_merged.script import mmcifutils
 from .find_objects import find_objects, find_object_by_path
 from .get_job_container import get_job_container
 from .json_encoder import CCP4i2JsonEncoder
@@ -21,6 +22,46 @@ from ...db import models
 from ..parse import identify_data_type
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
+
+
+def _build_class_registry() -> Dict[str, Type[CData]]:
+    """
+    Build registry of available CData classes by name.
+
+    This follows the same pattern as core/task_manager/def_xml_handler.py
+    to dynamically discover all CData implementation classes.
+    """
+    registry = {}
+
+    # Import from implementation modules
+    implementation_modules = [
+        'CCP4File',
+        'CCP4ModelData',
+        'CCP4XtalData',
+    ]
+
+    for module_name in implementation_modules:
+        try:
+            module = importlib.import_module(f'core.{module_name}')
+            for attr_name in dir(module):
+                if attr_name.startswith('_'):
+                    continue
+                attr = getattr(module, attr_name)
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, CData)
+                    and attr is not CData
+                ):
+                    registry[attr.__name__] = attr
+        except ImportError as e:
+            logger.warning(f"Could not import {module_name}: {e}")
+            continue
+
+    return registry
+
+
+# Build class registry at module level for use in digest_file()
+CLASS_REGISTRY = _build_class_registry()
 
 FILETYPES_TEXT = [
     "Unknown",
@@ -149,10 +190,13 @@ def digest_file(the_file: models.File):
         return {"status": "Failed", "reason": "File type not supported for digest"}
     class_name = FILETYPES_CLASS[mimetype_index]
     logger.debug("class_name %s", class_name)
-    data_manager: CCP4DataManager.CDataManager = CCP4DataManager.CDataManager()
-    the_class = data_manager.getClass(f"C{class_name}")
+
+    # Use dynamic class registry to find the class
+    full_class_name = f"C{class_name}"
+    the_class = CLASS_REGISTRY.get(full_class_name)
+
     if the_class is None:
-        return {"status": "Failed", "reason": "File type not supported for digest"}
+        return {"status": "Failed", "reason": f"File type class not found: {full_class_name}"}
     logger.debug("the_class %s", the_class)
     try:
         file_object = the_class()
@@ -181,7 +225,6 @@ def digest_file_object(file_object: CDataFile):
         return {"status": "Failed", "reason": "Not a valid file object", "digest": {}}
     if not file_object.isSet():
         return {"status": "Failed", "reason": "File object is not set", "digest": {}}
-    print("oops")
     if isinstance(file_object, CCP4ModelData.CPdbDataFile):
         return digest_cpdbdata_file_object(file_object)
     if isinstance(file_object, CCP4XtalData.CGenericReflDataFile):

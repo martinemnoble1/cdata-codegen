@@ -13,8 +13,12 @@ import sys
 import os
 from typing import Any, Dict
 from enum import Enum, auto
+import logging
 
 from .hierarchy_system import HierarchicalObject
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class ValueState(Enum):
@@ -35,7 +39,7 @@ class CData(HierarchicalObject):
     def __init__(self, parent=None, name=None, **kwargs):
         # Initialize hierarchical object first (it only takes parent and name)
         super().__init__(parent=parent, name=name)
-        print(f"[DEBUG] Initializing CData instance of type {self.__class__.__name__} with name '{name}'")
+        logger.debug("Initializing CData instance of type %s with name '%s'", self.__class__.__name__, name)
         # Initialize set state tracking
         self._value_states: Dict[str, ValueState] = {}
         self._default_values: Dict[str, Any] = {}
@@ -57,9 +61,9 @@ class CData(HierarchicalObject):
         # Qualifiers
         if hasattr(cls, 'qualifiers'):
             class_qualifiers = getattr(cls, 'qualifiers')
-            print(f"[DEBUG] {cls.__name__}.qualifiers type: {type(class_qualifiers)}, value: {class_qualifiers}")
+            logger.debug("%s.qualifiers type: %s, value: %s", cls.__name__, type(class_qualifiers), class_qualifiers)
             if not isinstance(class_qualifiers, dict):
-                print(f"[WARNING] Class-level qualifiers for {cls.__name__} is not a dict: {type(class_qualifiers)}")
+                logger.warning("Class-level qualifiers for %s is not a dict: %s", cls.__name__, type(class_qualifiers))
             if isinstance(class_qualifiers, dict):
                 self.qualifiers = dict(class_qualifiers)
             elif hasattr(class_qualifiers, 'items'):
@@ -282,27 +286,62 @@ class CData(HierarchicalObject):
         """
         return getattr(self, 'name', '')
 
-    def isSet(self, field_name: str = None) -> bool:
+    def isSet(self, field_name: str = None, allowUndefined: bool = False,
+              allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if a field has been explicitly set.
 
         Args:
             field_name: Name of the field to check. If None, checks the 'value' attribute.
+            allowUndefined: If True, allow None/undefined values to be considered "set"
+                          if the qualifier 'allowUndefined' is True
+            allowDefault: If False, consider values that equal the default as "not set"
+            allSet: For container types - if True, all children must be set;
+                   if False, at least one child must be set
 
         Returns:
-            True if field has been explicitly set, False otherwise
+            True if field has been set according to the criteria, False otherwise
         """
         if field_name is None:
             field_name = "value"
-        return (
-            self._value_states.get(field_name, ValueState.NOT_SET)
-            == ValueState.EXPLICITLY_SET
-        )
 
-    def unSet(self, field_name: str):
+        # Check basic set state
+        state = self._value_states.get(field_name, ValueState.NOT_SET)
+
+        # If checking for explicit set only
+        if state == ValueState.NOT_SET:
+            # Special handling for allowUndefined
+            if allowUndefined and self.get_qualifier('allowUndefined', False):
+                return True
+            return False
+
+        # If state is DEFAULT, check if we allow defaults
+        if state == ValueState.DEFAULT:
+            if not allowDefault:
+                return False
+
+        # Check the actual value
+        if hasattr(self, field_name):
+            value = getattr(self, field_name, None)
+
+            # Handle None values
+            if value is None or value is NotImplemented:
+                if not allowUndefined or not self.get_qualifier('allowUndefined', False):
+                    return False
+                return True
+
+            # Check if value equals default (if allowDefault is False)
+            if not allowDefault:
+                default = self.get_qualifier('default')
+                if default is not None and value == default:
+                    return False
+
+        return True
+
+    def unSet(self, field_name: str = 'value'):
         """Return a field to its not-set state.
 
         Args:
-            field_name: Name of the field to unset
+            field_name: Name of the field to unset (defaults to 'value' for fundamental types)
         """
         # Special case for 'value' property in fundamental types
         if field_name == 'value' and hasattr(self, '_value'):
@@ -399,11 +438,12 @@ class CData(HierarchicalObject):
 
         return report
 
-    def getEtree(self, name: str = None):
+    def getEtree(self, name: str = None, excludeUnset: bool = False):
         """Serialize this object to an XML ElementTree element.
 
         Args:
             name: Optional name for the XML element (uses self.name if not provided)
+            excludeUnset: If True, only serialize fields that have been explicitly set
 
         Returns:
             xml.etree.ElementTree.Element representing this object
@@ -417,6 +457,11 @@ class CData(HierarchicalObject):
         if hasattr(self, 'value'):
             value = getattr(self, 'value')
             if value is not None:
+                # Check if we should exclude this based on set state
+                if excludeUnset and hasattr(self, 'isSet'):
+                    # Use allowDefault=False to exclude default values
+                    if not self.isSet('value', allowDefault=False):
+                        return elem  # Return empty element for unset values
                 elem.text = str(value)
 
         # For containers and complex types, serialize children
@@ -424,8 +469,38 @@ class CData(HierarchicalObject):
             if attr_name.startswith('_') or attr_name in ['parent', 'name', 'children', 'signals']:
                 continue
             if isinstance(attr_value, CData):
-                child_elem = attr_value.getEtree(attr_name)
-                elem.append(child_elem)
+                # Check if child should be excluded
+                if excludeUnset and hasattr(attr_value, 'isSet'):
+                    # For CData objects, check if they have any set values
+                    if not attr_value.isSet(allowDefault=False):
+                        continue  # Skip unset children
+
+                child_elem = attr_value.getEtree(attr_name, excludeUnset=excludeUnset)
+                # Only append if the child element has content
+                if excludeUnset:
+                    # Check if element has text or children
+                    if child_elem.text or len(child_elem) > 0:
+                        elem.append(child_elem)
+                else:
+                    elem.append(child_elem)
+
+        # Special handling for CContainer - also serialize _container_items
+        if hasattr(self, '_container_items'):
+            for item in self._container_items:
+                if isinstance(item, CData):
+                    # Check if item should be excluded
+                    if excludeUnset and hasattr(item, 'isSet'):
+                        if not item.isSet(allowDefault=False):
+                            continue  # Skip unset items
+
+                    item_name = getattr(item, 'name', 'item')
+                    child_elem = item.getEtree(item_name, excludeUnset=excludeUnset)
+                    # Only append if the child element has content
+                    if excludeUnset:
+                        if child_elem.text or len(child_elem) > 0:
+                            elem.append(child_elem)
+                    else:
+                        elem.append(child_elem)
 
         return elem
 
@@ -613,12 +688,12 @@ class CData(HierarchicalObject):
         # DEBUG: Print all contentFlag assignments
         if name == 'contentFlag':
             import traceback
-            print(f"\n[SETATTR] {self.__class__.__name__}.{name} = {value} (type: {type(value).__name__})")
-            print(f"  existing: {existing_attr} (type: {type(existing_attr).__name__})")
-            print(f"  Stack:")
-            for line in traceback.format_stack()[-4:-1]:
-                print(f"    {line.strip()}")
-            print()
+            logger.debug(
+                "[SETATTR] %s.%s = %s (type: %s)\n  existing: %s (type: %s)\n  Stack: %s",
+                self.__class__.__name__, name, value, type(value).__name__,
+                existing_attr, type(existing_attr).__name__,
+                ''.join(traceback.format_stack()[-4:-1])
+            )
 
         if isinstance(value, dict):
             # Dictionary assignment: update object attributes from dictionary
@@ -640,7 +715,7 @@ class CData(HierarchicalObject):
         elif isinstance(value, CData) and isinstance(existing_attr, CData):
             # CData to CData assignment: use smart assignment logic
             if name in ['contentFlag', 'subType']:  # DEBUG
-                print(f"[DEBUG] Branch: CData to CData for {name}")  # DEBUG
+                logger.debug("Branch: CData to CData for %s", name)  # DEBUG
             existing_attr._smart_assign_from_cdata(value)
             # Mark as explicitly set since we're assigning a new value
             if hasattr(self, "_value_states"):
@@ -666,7 +741,7 @@ class CData(HierarchicalObject):
             and existing_attr._is_value_type()
         ):
             if name in ['contentFlag', 'subType']:  # DEBUG
-                print(f"[DEBUG] Branch: Value type smart assign for {name}")  # DEBUG
+                logger.debug("Branch: Value type smart assign for %s", name)  # DEBUG
             # Primitive value assignment to existing CData value type
             # e.g., ctrl.NCYCLES = 25 where ctrl.NCYCLES is a CInt
             if isinstance(value, (int, float, str, bool)):
@@ -690,7 +765,7 @@ class CData(HierarchicalObject):
                 if type_compatible:
                     # Update the value attribute of the existing CData object
                     if name in ['contentFlag', 'subType']:  # DEBUG
-                        print(f"[SMART ASSIGN] Updating {name}.value = {value}, keeping {type(existing_attr).__name__}")  # DEBUG
+                        logger.debug("[SMART ASSIGN] Updating %s.value = %s, keeping %s", name, value, type(existing_attr).__name__)  # DEBUG
                     existing_attr.value = value
                     # Mark as explicitly set
                     if hasattr(self, "_value_states"):
