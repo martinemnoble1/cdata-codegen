@@ -159,21 +159,33 @@ class HierarchicalObject(ABC):
 
             # Set new parent
             if parent is not None:
-                if parent._state == ObjectState.DESTROYED:
+                # Check if parent is destroyed (only if it's a HierarchicalObject)
+                if hasattr(parent, '_state') and parent._state == ObjectState.DESTROYED:
                     logger.warning(f"Cannot set destroyed object as parent")
                     return False
 
                 self._parent_ref = weakref.ref(parent)
-                parent._add_child(self)
+
+                # Only add child if parent supports hierarchy
+                if hasattr(parent, '_add_child'):
+                    parent._add_child(self)
             else:
                 self._parent_ref = None
 
             # Emit signal (guard against GC ordering issues)
             if hasattr(self, 'parent_changed') and self.parent_changed is not None:
                 self.parent_changed.emit(parent)
-            logger.debug(
-                f"Set parent of {self._name} to {parent._name if parent else None}"
-            )
+
+            # Log parent change (safely handle non-HierarchicalObject parents)
+            parent_name = None
+            if parent is not None:
+                if hasattr(parent, '_name'):
+                    parent_name = parent._name
+                elif hasattr(parent, '__class__'):
+                    parent_name = parent.__class__.__name__
+                else:
+                    parent_name = str(type(parent))
+            logger.debug(f"Set parent of {self._name} to {parent_name}")
             return True
 
     def _add_child(self, child: "HierarchicalObject"):
@@ -548,9 +560,9 @@ class HierarchicalObject(ABC):
         for child in self.children():
             child.destroy()
 
-        # Remove from parent
+        # Remove from parent (only if parent supports hierarchy)
         parent = self.parent
-        if parent:
+        if parent and hasattr(parent, '_remove_child'):
             parent._remove_child(self)
             self._parent_ref = None
 

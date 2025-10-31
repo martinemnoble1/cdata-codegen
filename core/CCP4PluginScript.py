@@ -174,6 +174,41 @@ class CPluginScript(CData):
         """Set the database job number."""
         self._dbJobNumber = job_number
 
+    def setDbData(self, handler=None, projectName=None, projectId=None,
+                  jobNumber=None, jobId=None) -> None:
+        """
+        Set database context for this plugin (legacy CCP4i2 API).
+
+        This method provides compatibility with legacy code that calls
+        setDbData() to configure the plugin's database context.
+
+        Args:
+            handler: Database handler instance (CCP4i2DjangoDbHandler)
+            projectName: Project name string
+            projectId: Project UUID (may have hyphens removed)
+            jobNumber: Job number string (e.g., '1.2.3')
+            jobId: Job UUID (may have hyphens removed)
+        """
+        if handler is not None:
+            self._dbHandler = handler
+
+        if projectName is not None:
+            self._dbProjectName = projectName
+
+        if projectId is not None:
+            # Store as-is (may or may not have hyphens)
+            self._dbProjectId = projectId
+
+        if jobNumber is not None:
+            self.set_db_job_number(jobNumber)
+
+        if jobId is not None:
+            # Restore hyphens if they were removed
+            if '-' not in jobId and len(jobId) == 32:
+                # UUID without hyphens - restore them
+                jobId = f"{jobId[0:8]}-{jobId[8:12]}-{jobId[12:16]}-{jobId[16:20]}-{jobId[20:]}"
+            self.set_db_job_id(jobId)
+
     def _ensure_standard_containers(self):
         """
         Ensure standard sub-containers exist.

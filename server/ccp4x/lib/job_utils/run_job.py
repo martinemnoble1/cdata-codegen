@@ -3,7 +3,7 @@ import contextlib
 from xml.etree import ElementTree as ET
 
 from core.CCP4TaskManager import TASKMANAGER
-from core import CCP4PluginScript
+from core import CCP4PluginScript, CCP4Modules
 from PySide2 import QtCore
 
 from ...db import models

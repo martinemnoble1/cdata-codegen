@@ -106,10 +106,35 @@ class ParamsXmlHandler:
             tree = ET.parse(params_xml_path)
             root = tree.getroot()
 
-            # Find the body element
-            body = root.find(".//ccp4i2_body")
+            # Debug: show what we have
+            print(f"[DEBUG] Root tag: {root.tag}")
+            print(f"[DEBUG] Root children: {[child.tag for child in root]}")
+
+            # Find the body element (handle both with and without namespace)
+            # Check if root itself is the container (legacy format)
+            if 'container' in root.tag.lower():
+                print(f"[DEBUG] Legacy format detected - root is container")
+                body = root
+            else:
+                # Try with namespace first
+                body = root.find(".//{http://www.ccp4.ac.uk/ccp4ns}ccp4i2_body")
+                if body is None:
+                    # Try without namespace
+                    body = root.find(".//ccp4i2_body")
+                if body is None:
+                    # Try legacy <body> tag
+                    body = root.find(".//body")
+                if body is None:
+                    # Try direct child access
+                    for child in root:
+                        if 'body' in child.tag.lower():
+                            body = child
+                            print(f"[DEBUG] Found body via direct iteration: {child.tag}")
+                            break
+
             if body is None:
-                print("❌ No ccp4i2_body found in params XML")
+                print("❌ No ccp4i2_body, body, or container found in params XML")
+                print(f"[DEBUG] Searched in: {params_xml_path}")
                 return False
 
             # Import all parameter values

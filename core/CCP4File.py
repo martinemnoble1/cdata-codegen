@@ -10,6 +10,10 @@ from typing import Optional, Any
 
 from core.cdata_stubs.CCP4File import CDataReflFileStub, CEBIValidationXMLDataFileStub, CExePathStub, CExePathListStub, CExportedFileStub, CExportedFileListStub, CFileFunctionStub, CFilePathStub, CI2XmlDataFileStub, CI2XmlHeaderStub, CMmcifDataStub, CMmcifDataFileStub, CPDFDataFileStub, CPostscriptDataFileStub, CProjectIdStub, CProjectNameStub, CSceneDataFileStub, CSearchPathStub, CSearchPathListStub, CTextDataFileStub, CVersionStub, CXmgrDataFileStub, CXmlDataFileStub, CYmlFileStub
 
+# Re-export CDataFile for legacy code compatibility
+# Many legacy files use "CCP4File.CDataFile" which is actually in base_object
+from core.base_object.cdata_file import CDataFile
+
 
 class CDataReflFile(CDataReflFileStub):
     """

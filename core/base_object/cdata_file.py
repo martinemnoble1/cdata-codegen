@@ -210,46 +210,96 @@ class CDataFile(CData):
     def getFullPath(self) -> str:
         """Get the full file path as a string.
 
-        In database-aware mode, if dbFileId is set, retrieves path from database
-        via the database handler. Otherwise returns baseName or legacy file_path.
+        Path construction logic:
+        1. If baseName contains an absolute path → return it directly
+        2. If dbFileId is set (database-aware) → retrieve from database
+        3. If relPath is set → construct: workDirectory/relPath/baseName
+           (This is the standard for output files: relPath = "CCP4_JOBS/job_n/job_m/job_y")
+        4. If only baseName is set → return as-is (may be relative to CWD)
+        5. Fallback to legacy file_path attribute
+
+        For output files computed in checkOutputData():
+        - relPath: "CCP4_JOBS/job_n/job_m/job_y"
+        - baseName: just the filename (e.g., "refined.pdb")
+        - fullPath: workDirectory + relPath + baseName
+
+        For user-specified input files:
+        - baseName: absolute or relative path (e.g., "/path/to/file.mtz" or "demo_data/test.mtz")
+        - relPath: typically empty
+        - fullPath: baseName as-is
 
         Returns:
             Full path to the file, or empty string if not set
         """
+        from pathlib import Path
+
+        # First, get baseName value if it exists
+        basename_value = None
+        if hasattr(self, 'baseName') and self.baseName is not None:
+            if hasattr(self.baseName, 'value'):
+                basename_value = self.baseName.value
+            else:
+                basename_value = self.baseName
+
+        # If baseName is an absolute path, return it directly
+        # This takes precedence over everything (user-specified absolute paths)
+        if basename_value:
+            basename_str = str(basename_value)
+            if basename_str and Path(basename_str).is_absolute():
+                logger.debug("Returning absolute path from baseName: %s", basename_str)
+                return basename_str
+
         # Database-aware mode: Check if dbFileId is set
         if hasattr(self, 'dbFileId') and self.dbFileId is not None:
-            # Get dbFileId value (handle both CData wrapper and plain value)
             db_file_id = None
             if hasattr(self.dbFileId, 'value') and self.dbFileId.value is not None:
                 db_file_id = self.dbFileId.value
             elif isinstance(self.dbFileId, str):
                 db_file_id = self.dbFileId
 
-            # If we have a dbFileId, try to retrieve path from database via handler
             if db_file_id:
                 db_handler = self._get_db_handler()
                 if db_handler:
                     try:
                         import uuid
-                        # Convert string UUID to UUID object
                         file_uuid = uuid.UUID(str(db_file_id))
-                        # Query via handler instead of Django directly
                         path = db_handler.get_file_path_sync(file_uuid)
                         if path:
+                            logger.debug("Retrieved path from database via dbFileId: %s", path)
                             return path
                     except Exception as e:
-                        # If database query fails, fall through to baseName
-                        import logging
-                        logger = logging.getLogger(__name__)
                         logger.debug(f"Failed to retrieve path from database: {e}")
 
-        # Non-database mode: return baseName
-        if hasattr(self, 'baseName') and self.baseName is not None:
-            # If baseName has a value attribute, return that
-            if hasattr(self.baseName, 'value'):
-                return str(self.baseName.value) if self.baseName.value is not None else ""
-            # Otherwise convert baseName directly
-            return str(self.baseName)
+        # Standard path construction: workDirectory + relPath + baseName
+        # This is used for output files where relPath = "CCP4_JOBS/job_n/job_m/job_y"
+        relpath_value = None
+        if hasattr(self, 'relPath') and self.relPath is not None:
+            if hasattr(self.relPath, 'value'):
+                relpath_value = self.relPath.value
+            else:
+                relpath_value = self.relPath
+
+        if relpath_value:
+            relpath_str = str(relpath_value).strip()
+            if relpath_str:
+                # Get workDirectory from plugin parent
+                plugin = self._find_plugin_parent()
+                if plugin and hasattr(plugin, 'workDirectory'):
+                    work_dir = Path(plugin.workDirectory)
+                    # Construct: workDirectory / relPath / baseName
+                    if basename_value:
+                        full_path = work_dir / relpath_str / str(basename_value)
+                        logger.debug("Constructed path from workDir + relPath + baseName: %s", full_path)
+                        return str(full_path)
+                    else:
+                        # Just workDirectory / relPath (no baseName)
+                        full_path = work_dir / relpath_str
+                        logger.debug("Constructed path from workDir + relPath: %s", full_path)
+                        return str(full_path)
+
+        # Return baseName as-is (may be relative path, or empty)
+        if basename_value is not None:
+            return str(basename_value) if basename_value else ""
 
         # Fallback to legacy file_path
         if hasattr(self, 'file_path') and self.file_path is not None:
