@@ -288,8 +288,16 @@ class HierarchicalObject(ABC):
         path = []
         current = self
         while current is not None:
-            path.insert(0, current._name)
-            current = current.parent
+            # Defensive: parent might not be a HierarchicalObject (e.g., QEventLoop)
+            if hasattr(current, '_name'):
+                path.insert(0, current._name)
+            elif hasattr(current, '__class__'):
+                # Use class name for non-HierarchicalObject parents
+                path.insert(0, f"<{current.__class__.__name__}>")
+            else:
+                path.insert(0, "<unknown>")
+
+            current = current.parent if hasattr(current, 'parent') else None
         return path
 
     def object_path(self) -> str:

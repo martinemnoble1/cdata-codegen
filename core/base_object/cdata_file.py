@@ -115,10 +115,11 @@ class CDataFile(CData):
         if plugin and hasattr(plugin, 'get_db_job_id') and plugin.get_db_job_id():
             logger.debug("  DB-aware mode: plugin job ID = %s", plugin.get_db_job_id())
             try:
-                self._update_from_database(path, plugin)
+                # Parse path into project/relPath/baseName for output files
+                self._parse_output_path_database(path, plugin)
             except Exception as e:
                 # Don't fail on database errors - just log and continue
-                logger.debug("Failed to update file from database: %s", e)
+                logger.debug("Failed to parse output path for database: %s", e)
         else:
             logger.debug("  Non-DB mode")
 
@@ -135,8 +136,8 @@ class CDataFile(CData):
     def _get_db_handler(self):
         """Get the database handler from the plugin parent, if available."""
         plugin = self._find_plugin_parent()
-        if plugin and hasattr(plugin, '_db_handler'):
-            return plugin._db_handler
+        if plugin and hasattr(plugin, '_dbHandler'):
+            return plugin._dbHandler
         return None
 
     def _update_from_database(self, path: str, plugin):
@@ -206,6 +207,143 @@ class CDataFile(CData):
             import logging
             logger = logging.getLogger(__name__)
             logger.debug(f"Failed to update from database: {e}")
+
+    def _parse_output_path_database(self, path: str, plugin):
+        """Parse output file path and set project/relPath/baseName for database context.
+
+        This method parses the full path provided to setFullPath() and extracts:
+        - project: UUID of the project (from plugin._dbProjectId)
+        - relPath: Relative path from project root (e.g., "CCP4_JOBS/job_17" or "CCP4_IMPORTED_FILES")
+        - baseName: Just the filename (e.g., "XYZOUT.mtz")
+
+        Args:
+            path: Full file path (e.g., "/path/to/project/CCP4_JOBS/job_17/XYZOUT.mtz")
+            plugin: Parent CPluginScript instance
+        """
+        from pathlib import Path
+        import re
+
+        abs_path = Path(path).resolve()
+        path_str = str(abs_path)
+
+        # Get project ID from plugin
+        project_id = getattr(plugin, '_dbProjectId', None)
+        if not project_id:
+            logger.debug("  No _dbProjectId on plugin, cannot parse for database")
+            return
+
+        # Set project UUID
+        if hasattr(self, 'project') and hasattr(self.project, 'set'):
+            self.project.set(str(project_id))
+            logger.debug("  Set project = %s", project_id)
+
+        # Extract baseName (just the filename)
+        if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
+            self.baseName.set(abs_path.name)
+            logger.debug("  Set baseName = %s", abs_path.name)
+
+        # Determine relPath by looking for known directory patterns
+        # Pattern 1: CCP4_JOBS/job_17 or CCP4_JOBS/job_17/job_1 (nested jobs)
+        jobs_match = re.search(r'(CCP4_JOBS/job_\d+(?:/job_\d+)*)', path_str)
+        if jobs_match:
+            rel_path = jobs_match.group(1)
+            if hasattr(self, 'relPath') and hasattr(self.relPath, 'set'):
+                self.relPath.set(rel_path)
+                logger.debug("  Set relPath = %s (from CCP4_JOBS pattern)", rel_path)
+            return
+
+        # Pattern 2: CCP4_IMPORTED_FILES
+        if 'CCP4_IMPORTED_FILES' in path_str:
+            if hasattr(self, 'relPath') and hasattr(self.relPath, 'set'):
+                self.relPath.set('CCP4_IMPORTED_FILES')
+                logger.debug("  Set relPath = CCP4_IMPORTED_FILES")
+            return
+
+        # Pattern 3: Absolute path outside project structure
+        # In this case, we keep the full path in baseName and leave relPath empty
+        logger.debug("  Path is outside project structure, keeping full path in baseName")
+
+    def setOutputPath(self, jobName: str = "", projectId: str = None, relPath: str = None):
+        """Set output file path using project/relPath/baseName structure (legacy API).
+
+        This is called by set_output_file_names() before job execution to prepare
+        output file paths. It sets project, relPath, and baseName fields.
+
+        Args:
+            jobName: Optional prefix for the filename (usually empty)
+            projectId: Project UUID
+            relPath: Relative path from project root (e.g., "CCP4_JOBS/job_17")
+        """
+        from pathlib import Path
+
+        logger.info(f"[setOutputPath] Called for {self.name if hasattr(self, 'name') else 'unknown'}")
+        logger.info(f"  jobName={jobName}, projectId={projectId}, relPath={relPath}")
+
+        # Set project ID
+        if projectId:
+            print(f"  Has project attr: {hasattr(self, 'project')}")
+            if hasattr(self, 'project'):
+                print(f"  Project type: {type(self.project).__name__}")
+                print(f"  Project has set: {hasattr(self.project, 'set')}")
+                print(f"  Project has value: {hasattr(self.project, 'value')}")
+                if hasattr(self.project, 'set'):
+                    self.project.set(projectId)
+                    print(f"  Called project.set({projectId})")
+                elif hasattr(self.project, 'value'):
+                    self.project.value = projectId
+                    print(f"  Set project.value = {projectId}")
+            logger.debug(f"[setOutputPath] Set project = {projectId}")
+
+        # Set relPath
+        if relPath:
+            print(f"  Has relPath attr: {hasattr(self, 'relPath')}")
+            if hasattr(self, 'relPath'):
+                print(f"  relPath has set: {hasattr(self.relPath, 'set')}")
+                if hasattr(self.relPath, 'set'):
+                    self.relPath.set(str(relPath))
+                    print(f"  Called relPath.set({relPath})")
+                elif hasattr(self.relPath, 'value'):
+                    self.relPath.value = str(relPath)
+                    print(f"  Set relPath.value = {relPath}")
+            logger.debug(f"[setOutputPath] Set relPath = {relPath}")
+
+        # Generate baseName from object name if not already set
+        if hasattr(self, 'baseName'):
+            # Check if baseName is already explicitly set
+            basename_is_set = False
+            if hasattr(self.baseName, 'isSet'):
+                basename_is_set = self.baseName.isSet('value') and bool(str(self.baseName).strip())
+
+            print(f"  baseName is already set: {basename_is_set}")
+            if not basename_is_set:
+                # Generate from object name
+                obj_name = self.objectName() if hasattr(self, 'objectName') else (self.name if hasattr(self, 'name') else 'output')
+                print(f"  obj_name from objectName/name: {obj_name}")
+
+                # Add job prefix if provided
+                if jobName:
+                    filename = f"{jobName}{obj_name}"
+                else:
+                    filename = obj_name
+
+                # Add extension if missing
+                if not any(filename.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml', '.txt']):
+                    filename += '.mtz'  # Default extension
+
+                print(f"  Generated filename: {filename}")
+                if hasattr(self.baseName, 'set'):
+                    self.baseName.set(filename)
+                    print(f"  Called baseName.set({filename})")
+                elif hasattr(self.baseName, 'value'):
+                    self.baseName.value = filename
+                    print(f"  Set baseName.value = {filename}")
+                else:
+                    self.baseName = filename
+                    print(f"  Set baseName directly = {filename}")
+
+                logger.debug(f"[setOutputPath] Set baseName = {filename}")
+
+        print(f"[setOutputPath] Done!")
 
     def getFullPath(self) -> str:
         """Get the full file path as a string.
@@ -282,20 +420,77 @@ class CDataFile(CData):
         if relpath_value:
             relpath_str = str(relpath_value).strip()
             if relpath_str:
-                # Get workDirectory from plugin parent
+                # Determine base directory: PROJECT root for imported files, workDirectory for job outputs
                 plugin = self._find_plugin_parent()
-                if plugin and hasattr(plugin, 'workDirectory'):
-                    work_dir = Path(plugin.workDirectory)
-                    # Construct: workDirectory / relPath / baseName
-                    if basename_value:
-                        full_path = work_dir / relpath_str / str(basename_value)
-                        logger.debug("Constructed path from workDir + relPath + baseName: %s", full_path)
-                        return str(full_path)
-                    else:
-                        # Just workDirectory / relPath (no baseName)
-                        full_path = work_dir / relpath_str
-                        logger.debug("Constructed path from workDir + relPath: %s", full_path)
-                        return str(full_path)
+                if plugin:
+                    # For CCP4_IMPORTED_FILES, use project directory as base
+                    if relpath_str == 'CCP4_IMPORTED_FILES' or relpath_str.startswith('CCP4_IMPORTED_FILES/'):
+                        # Need to get project directory
+                        # Get project UUID from self.project or plugin._dbProjectId
+                        project_id = None
+                        if hasattr(self, 'project') and self.project is not None:
+                            if hasattr(self.project, 'value'):
+                                project_id = self.project.value
+                            else:
+                                project_id = str(self.project)
+                        elif hasattr(plugin, '_dbProjectId'):
+                            project_id = plugin._dbProjectId
+
+                        if project_id:
+                            # Try to get project directory from database handler
+                            db_handler = self._get_db_handler()
+                            if db_handler and hasattr(db_handler, 'getProjectDirectory'):
+                                try:
+                                    project_dir = db_handler.getProjectDirectory(project_id)
+                                    if project_dir:
+                                        base_dir = Path(project_dir)
+                                        if basename_value:
+                                            full_path = base_dir / relpath_str / str(basename_value)
+                                            logger.debug("Constructed imported file path from db: %s", full_path)
+                                            return str(full_path)
+                                        else:
+                                            full_path = base_dir / relpath_str
+                                            logger.debug("Constructed imported dir path from db: %s", full_path)
+                                            return str(full_path)
+                                except Exception as e:
+                                    logger.debug(f"Failed to get project directory from db: {e}")
+
+                            # Fallback: infer project directory from workDirectory
+                            # workDirectory is like: /path/to/project/CCP4_JOBS/job_X/job_Y
+                            # We need to go up to the project root
+                            if hasattr(plugin, 'workDirectory'):
+                                work_dir = Path(plugin.workDirectory)
+                                # Walk up until we find a directory containing CCP4_IMPORTED_FILES
+                                current = work_dir
+                                for _ in range(10):  # Max 10 levels up
+                                    imported_dir = current / 'CCP4_IMPORTED_FILES'
+                                    if imported_dir.exists():
+                                        # Found project root
+                                        if basename_value:
+                                            full_path = current / relpath_str / str(basename_value)
+                                            logger.debug("Constructed imported file path (inferred): %s", full_path)
+                                            return str(full_path)
+                                        else:
+                                            full_path = current / relpath_str
+                                            logger.debug("Constructed imported dir path (inferred): %s", full_path)
+                                            return str(full_path)
+                                    current = current.parent
+                                    if current == current.parent:  # Reached root
+                                        break
+
+                    # For other relPaths (e.g., CCP4_JOBS/job_X), use workDirectory as base
+                    if hasattr(plugin, 'workDirectory'):
+                        work_dir = Path(plugin.workDirectory)
+                        # Construct: workDirectory / relPath / baseName
+                        if basename_value:
+                            full_path = work_dir / relpath_str / str(basename_value)
+                            logger.debug("Constructed path from workDir + relPath + baseName: %s", full_path)
+                            return str(full_path)
+                        else:
+                            # Just workDirectory / relPath (no baseName)
+                            full_path = work_dir / relpath_str
+                            logger.debug("Constructed path from workDir + relPath: %s", full_path)
+                            return str(full_path)
 
         # Return baseName as-is (may be relative path, or empty)
         if basename_value is not None:

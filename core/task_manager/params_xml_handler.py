@@ -137,6 +137,14 @@ class ParamsXmlHandler:
                 print(f"[DEBUG] Searched in: {params_xml_path}")
                 return False
 
+            # Legacy format: <body><container><inputData>...
+            # Modern format: <ccp4i2_body><inputData>...
+            # If body has a <container> child, skip the wrapper
+            container_elem = body.find("container")
+            if container_elem is not None:
+                print(f"[DEBUG] Skipping legacy <container> wrapper")
+                body = container_elem
+
             # Import all parameter values
             imported_count = self._import_container_values(body, task)
 
@@ -279,7 +287,7 @@ class ParamsXmlHandler:
     def _export_file_data(self, file_obj: CData, elem: ET.Element):
         """Export file object data in the structured format."""
         # For file objects, we need to export structured data
-        # This is a placeholder - you'd need to implement based on your file object structure
+        # Only export attributes that have been explicitly set (non-empty values)
         file_attrs = [
             "project",
             "baseName",
@@ -292,10 +300,22 @@ class ParamsXmlHandler:
 
         for attr in file_attrs:
             if hasattr(file_obj, attr):
-                value = getattr(file_obj, attr)
-                if value is not None:
-                    sub_elem = ET.SubElement(elem, attr)
-                    sub_elem.text = str(value)
+                attr_obj = getattr(file_obj, attr)
+                if attr_obj is not None:
+                    # Get the string value
+                    value_str = str(attr_obj)
+
+                    # Only export if:
+                    # 1. It's a non-empty string, OR
+                    # 2. It's a numeric value (subType, contentFlag)
+                    # This prevents exporting empty <project />, <baseName />, etc.
+                    if value_str and len(value_str.strip()) > 0:
+                        sub_elem = ET.SubElement(elem, attr)
+                        sub_elem.text = value_str
+                    elif attr in ["subType", "contentFlag"]:
+                        # Always export numeric flags even if 0
+                        sub_elem = ET.SubElement(elem, attr)
+                        sub_elem.text = value_str
 
     def _export_complex_object(self, obj: CData, elem: ET.Element):
         """Export complex objects with multiple attributes."""
@@ -388,25 +408,47 @@ class ParamsXmlHandler:
                     if hasattr(param, attr_name):
                         # Convert to appropriate type if needed
                         try:
-                            existing_value = getattr(param, attr_name)
-                            if isinstance(existing_value, bool):
-                                setattr(
-                                    param,
-                                    attr_name,
-                                    value.lower() in ("true", "1", "yes"),
-                                )
-                            elif isinstance(existing_value, int):
-                                setattr(param, attr_name, int(value))
-                            elif isinstance(existing_value, float):
-                                setattr(param, attr_name, float(value))
+                            existing_attr = getattr(param, attr_name)
+
+                            # Use .set() method if available to ensure ValueState.EXPLICITLY_SET
+                            # This is critical for parameter overlay - when we load from XML,
+                            # we need to mark values as explicitly set so they get saved again
+                            if hasattr(existing_attr, 'set'):
+                                # It's a CData object with .set() method
+                                if isinstance(existing_attr, bool):
+                                    existing_attr.set(value.lower() in ("true", "1", "yes"))
+                                elif hasattr(existing_attr, 'value'):
+                                    # Check the type of the value to convert appropriately
+                                    if isinstance(existing_attr.value, bool):
+                                        existing_attr.set(value.lower() in ("true", "1", "yes"))
+                                    elif isinstance(existing_attr.value, int):
+                                        existing_attr.set(int(value))
+                                    elif isinstance(existing_attr.value, float):
+                                        existing_attr.set(float(value))
+                                    else:
+                                        existing_attr.set(value)
+                                else:
+                                    existing_attr.set(value)
                             else:
-                                setattr(param, attr_name, value)
+                                # Fallback to setattr for non-CData attributes
+                                if isinstance(existing_attr, bool):
+                                    setattr(param, attr_name, value.lower() in ("true", "1", "yes"))
+                                elif isinstance(existing_attr, int):
+                                    setattr(param, attr_name, int(value))
+                                elif isinstance(existing_attr, float):
+                                    setattr(param, attr_name, float(value))
+                                else:
+                                    setattr(param, attr_name, value)
 
                             imported_any = True
 
                         except (ValueError, TypeError):
                             # Just set as string if conversion fails
-                            setattr(param, attr_name, value)
+                            attr = getattr(param, attr_name)
+                            if hasattr(attr, 'set'):
+                                attr.set(value)
+                            else:
+                                setattr(param, attr_name, value)
                             imported_any = True
 
             return imported_any

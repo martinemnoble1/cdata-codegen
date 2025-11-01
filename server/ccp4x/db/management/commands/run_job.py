@@ -3,8 +3,9 @@ import os
 import subprocess
 import platform
 from django.core.management.base import BaseCommand
+from asgiref.sync import async_to_sync
 from ccp4x.db.models import Job, Project
-from ccp4x.lib.job_utils.run_job import run_job
+from ccp4x.lib.async_run_job import run_job_async
 
 
 class Command(BaseCommand):
@@ -78,7 +79,8 @@ class Command(BaseCommand):
                 stdout_fd = stdout_file.fileno()
                 os.dup2(stdout_fd, 1)  # Redirect stdout
                 os.dup2(stdout_fd, 2)  # Redirect stderr
-                run_job(str(the_job.uuid))
+                # Use modern async run_job with proper async/sync bridging
+                async_to_sync(run_job_async)(the_job.uuid)
 
     def get_job(self, options):
         if options["jobid"] is not None:

@@ -38,13 +38,17 @@ def set_output_file_names(
         else ""
     )
     dataList = container.outputData.dataOrder()
+    logger.info(f"set_output_file_names: Found {len(dataList)} output objects: {dataList}")
     for objectName in dataList:
         try:
             dobj = container.outputData.find(objectName)
+            logger.info(f"  Processing {objectName}: type={type(dobj).__name__}, isinstance(CDataFile)={isinstance(dobj, CCP4File.CDataFile)}")
             if isinstance(dobj, CCP4File.CDataFile) and (force or not dobj.isSet()):
+                logger.info(f"    Calling setOutputPath for {objectName}")
                 dobj.setOutputPath(
                     jobName=jobName, projectId=projectId, relPath=str(relPath)
                 )
+                logger.info(f"    setOutputPath completed for {objectName}")
             if isinstance(dobj, CCP4ModelData.CPdbDataFile):
                 oldBaseName = str(Path(str(dobj.baseName)).stem)
                 if (

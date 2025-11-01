@@ -29,7 +29,6 @@ from core.CCP4Container import CContainer
 
 from ..db import models
 from ..db.async_db_handler import AsyncDatabaseHandler
-from .job_utils.save_params_for_job import save_params_for_job
 from .job_utils.patch_output_file_paths import patch_output_file_paths
 
 
@@ -305,7 +304,7 @@ async def _clone_plugin_with_params(
         # Instantiate plugin with new work directory
         plugin = plugin_class(workDirectory=str(new_job_dir))
 
-        # Load parameters from original job's XML file
+        # Load parameters from original job's XML file using modern ParamsXmlHandler
         old_params_file = Path(old_job.directory) / "input_params.xml"
         if not old_params_file.exists():
             logger.warning(
@@ -313,10 +312,14 @@ async def _clone_plugin_with_params(
                 f"Using default parameters."
             )
         else:
-            # Load parameters into new plugin's container
-            container: CContainer = plugin.container
-            container.loadDataFromXml(str(old_params_file))
-            logger.debug(f"Loaded parameters from {old_params_file}")
+            # Use modern CPluginScript.loadDataFromXml() which uses ParamsXmlHandler
+            # This properly loads inputData, outputData, and all file attributes
+            logger.debug(f"Loading parameters from {old_params_file} using modern ParamsXmlHandler")
+            error = plugin.loadDataFromXml(str(old_params_file))
+            if error and hasattr(error, 'hasError') and error.hasError():
+                logger.warning(f"Failed to load parameters: {error}")
+            else:
+                logger.debug(f"✅ Successfully loaded parameters with inputData preserved")
 
         # Patch output file paths to new job directory
         # This ensures outputs go to the new job's directory, not the old one
@@ -333,21 +336,27 @@ async def _save_cloned_parameters(
     mode: str = "JOB_INPUT",
 ):
     """
-    Save cloned parameters to XML file in new job directory.
+    Save cloned parameters to XML file in new job directory using modern ParamsXmlHandler.
 
     Args:
         plugin: Plugin instance with cloned parameters
         job: New job model instance
         mode: Parameter file mode (default: "JOB_INPUT")
     """
+    from pathlib import Path
+
+    # Use modern CPluginScript.saveDataToXml() which uses ParamsXmlHandler
+    # This properly preserves inputData, outputData, and all file attributes
+    input_params_path = Path(job.directory) / "input_params.xml"
+
     @sync_to_async
     def _save():
-        save_params_for_job(
-            the_job_plugin=plugin,
-            the_job=job,
-            mode=mode,
-            exclude_unset=False,  # Include all parameters when cloning
-        )
+        logger.info(f"Saving cloned parameters to {input_params_path} using modern ParamsXmlHandler")
+        error = plugin.saveDataToXml(str(input_params_path))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            logger.error(f"Failed to save cloned parameters: {error}")
+            raise RuntimeError(f"Failed to save cloned parameters: {error}")
+        logger.info(f"✅ Successfully saved cloned parameters with inputData preserved")
 
     await _save()
 

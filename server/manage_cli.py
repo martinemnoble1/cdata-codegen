@@ -308,11 +308,75 @@ For help on any command:
         delete_cmd.add_argument('--force', action='store_true',
                                help='Skip confirmation')
 
+        # jobs clone
+        clone_cmd = jobs_sub.add_parser('clone', aliases=['copy', 'duplicate'],
+                                        help='Clone a job with identical parameters')
+        clone_cmd.add_argument('project', help='Project name or UUID')
+        clone_cmd.add_argument('job', help='Job number or UUID to clone')
+        clone_cmd.add_argument('--json', action='store_true',
+                              help='Output result as JSON')
+
+        # jobs files
+        files_cmd = jobs_sub.add_parser('files', aliases=['list-files'],
+                                        help='List files used by a job')
+        files_cmd.add_argument('project', help='Project name or UUID')
+        files_cmd.add_argument('job', help='Job number or UUID')
+        files_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                              default='table', help='Output format')
+
+        # jobs file-uses
+        uses_cmd = jobs_sub.add_parser('file-uses', aliases=['uses'],
+                                       help='List file uses for a job')
+        uses_cmd.add_argument('project', help='Project name or UUID')
+        uses_cmd.add_argument('job', help='Job number or UUID')
+        uses_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                             default='table', help='Output format')
+
+        # jobs file-imports
+        imports_cmd = jobs_sub.add_parser('file-imports', aliases=['imports'],
+                                          help='List file imports for a job')
+        imports_cmd.add_argument('project', help='Project name or UUID')
+        imports_cmd.add_argument('job', help='Job number or UUID')
+        imports_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                                 default='table', help='Output format')
+
     def _add_files_commands(self, subparsers):
         """Add file-related commands."""
         files = subparsers.add_parser('files', aliases=['file', 'f'],
                                       help='File operations')
         files_sub = files.add_subparsers(dest='action', help='File action')
+
+        # files list
+        list_cmd = files_sub.add_parser('list', aliases=['ls'],
+                                        help='List files in database')
+        list_cmd.add_argument('--project', type=str,
+                             help='Project name or UUID')
+        list_cmd.add_argument('--job', type=str,
+                             help='Job UUID')
+        list_cmd.add_argument('--all', action='store_true',
+                             help='List all files across all projects')
+        list_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                             default='table', help='Output format')
+        list_cmd.add_argument('--filter', type=str,
+                             help='Filter by filename')
+
+        # files uses
+        uses_cmd = files_sub.add_parser('uses', aliases=['file-uses'],
+                                        help='List file uses (file-job relationships)')
+        uses_cmd.add_argument('--job', type=str, help='Job UUID')
+        uses_cmd.add_argument('--file', type=str, help='File UUID')
+        uses_cmd.add_argument('--project', type=str, help='Project name or UUID')
+        uses_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                             default='table', help='Output format')
+
+        # files imports
+        imports_cmd = files_sub.add_parser('imports', aliases=['file-imports'],
+                                           help='List file imports')
+        imports_cmd.add_argument('--job', type=str, help='Job UUID')
+        imports_cmd.add_argument('--file', type=str, help='File UUID')
+        imports_cmd.add_argument('--project', type=str, help='Project name or UUID')
+        imports_cmd.add_argument('--format', choices=['table', 'csv', 'json'],
+                                 default='table', help='Output format')
 
         # files preview
         preview_cmd = files_sub.add_parser('preview', aliases=['show', 'cat'],
@@ -320,13 +384,6 @@ For help on any command:
         preview_cmd.add_argument('path', help='File path')
         preview_cmd.add_argument('--lines', type=int, default=50,
                                 help='Number of lines to show')
-
-        # files list (future)
-        list_cmd = files_sub.add_parser('list', aliases=['ls'],
-                                        help='List files in project/job')
-        list_cmd.add_argument('project', help='Project name or UUID')
-        list_cmd.add_argument('--job', type=str,
-                             help='Job number or UUID (optional)')
 
     def _add_plugins_commands(self, subparsers):
         """Add plugin-related commands."""
@@ -692,6 +749,68 @@ For help on any command:
             call_command(*cmd_args)
             return 0
 
+        elif action in ('clone', 'copy', 'duplicate'):
+            # Build command arguments for clone_job
+            cmd_args = ['clone_job']
+
+            # Determine if project is UUID or name
+            if self._is_uuid(args.project):
+                cmd_args.extend(['--projectuuid', args.project])
+            else:
+                cmd_args.extend(['--projectname', args.project])
+
+            # Determine if job is UUID or number
+            if self._is_uuid(args.job):
+                cmd_args.extend(['--jobuuid', args.job])
+            else:
+                cmd_args.extend(['--jobnumber', args.job])
+
+            # Add JSON flag if requested
+            if hasattr(args, 'json') and args.json:
+                cmd_args.append('--json')
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('files', 'list-files'):
+            # Get job UUID to pass to list_files
+            job_uuid = self._resolve_job_uuid(args.project, args.job)
+            if not job_uuid:
+                return 1
+
+            cmd_args = ['list_files', '--job', str(job_uuid)]
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('file-uses', 'uses'):
+            # Get job UUID
+            job_uuid = self._resolve_job_uuid(args.project, args.job)
+            if not job_uuid:
+                return 1
+
+            cmd_args = ['list_file_uses', '--job', str(job_uuid)]
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('file-imports', 'imports'):
+            # Get job UUID
+            job_uuid = self._resolve_job_uuid(args.project, args.job)
+            if not job_uuid:
+                return 1
+
+            cmd_args = ['list_file_imports', '--job', str(job_uuid)]
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+
+            call_command(*cmd_args)
+            return 0
+
         elif action in ('delete', 'rm', 'remove'):
             print("Error: Job deletion not yet implemented", file=sys.stderr)
             return 1
@@ -708,17 +827,57 @@ For help on any command:
             print("Error: No action specified for files", file=sys.stderr)
             return 1
 
-        if action in ('preview', 'show', 'cat'):
+        if action in ('list', 'ls'):
+            cmd_args = ['list_files']
+            if hasattr(args, 'project') and args.project:
+                cmd_args.extend(['--project', args.project])
+            if hasattr(args, 'job') and args.job:
+                cmd_args.extend(['--job', args.job])
+            if hasattr(args, 'all') and args.all:
+                cmd_args.append('--all')
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+            if hasattr(args, 'filter') and args.filter:
+                cmd_args.extend(['--filter', args.filter])
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('uses', 'file-uses'):
+            cmd_args = ['list_file_uses']
+            if hasattr(args, 'job') and args.job:
+                cmd_args.extend(['--job', args.job])
+            if hasattr(args, 'file') and args.file:
+                cmd_args.extend(['--file', args.file])
+            if hasattr(args, 'project') and args.project:
+                cmd_args.extend(['--project', args.project])
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('imports', 'file-imports'):
+            cmd_args = ['list_file_imports']
+            if hasattr(args, 'job') and args.job:
+                cmd_args.extend(['--job', args.job])
+            if hasattr(args, 'file') and args.file:
+                cmd_args.extend(['--file', args.file])
+            if hasattr(args, 'project') and args.project:
+                cmd_args.extend(['--project', args.project])
+            if hasattr(args, 'format') and args.format:
+                cmd_args.extend(['--format', args.format])
+
+            call_command(*cmd_args)
+            return 0
+
+        elif action in ('preview', 'show', 'cat'):
             cmd_args = ['preview_file', args.path]
             if hasattr(args, 'lines'):
                 cmd_args.extend(['--lines', str(args.lines)])
 
             call_command(*cmd_args)
             return 0
-
-        elif action in ('list', 'ls'):
-            print("Error: File listing not yet implemented", file=sys.stderr)
-            return 1
 
         else:
             print(f"Unknown action: {action}", file=sys.stderr)
@@ -801,6 +960,29 @@ For help on any command:
             return True
         except (ValueError, AttributeError):
             return False
+
+    def _resolve_job_uuid(self, project_identifier: str, job_identifier: str):
+        """Resolve project + job identifiers to job UUID."""
+        from ccp4x.db.models import Job, Project
+        import uuid
+
+        try:
+            # If job is already a UUID, use it directly
+            if self._is_uuid(job_identifier):
+                return uuid.UUID(job_identifier)
+
+            # Otherwise, need to get project first, then job by number
+            if self._is_uuid(project_identifier):
+                project = Project.objects.get(uuid=uuid.UUID(project_identifier))
+            else:
+                project = Project.objects.get(name=project_identifier)
+
+            job = Job.objects.get(number=job_identifier, project=project)
+            return job.uuid
+
+        except (Job.DoesNotExist, Project.DoesNotExist) as e:
+            print(f"Error: Job or project not found: {e}", file=sys.stderr)
+            return None
 
 
 def main():

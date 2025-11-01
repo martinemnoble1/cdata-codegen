@@ -45,7 +45,9 @@ async def import_input_files_async(job, plugin, db_handler):
     files_imported = 0
 
     # Find all input files using modern hierarchical traversal
-    input_files = find_all_files(plugin.inputData)
+    # plugin.container.inputData contains the input file objects
+    input_data = plugin.container.inputData if hasattr(plugin.container, 'inputData') else plugin.container
+    input_files = find_all_files(input_data)
     logger.info(f"Found {len(input_files)} input file objects")
 
     for file_obj in input_files:
@@ -78,6 +80,17 @@ async def import_input_files_async(job, plugin, db_handler):
 
         except Exception as e:
             logger.exception(f"Error importing file {file_obj.name}: {e}")
+
+    # Save updated parameters to input_params.xml
+    # This preserves the dbFileId, relPath, baseName changes made during import
+    if files_imported > 0:
+        input_params_file = job.directory / "input_params.xml"
+        logger.info(f"Saving updated parameters to {input_params_file}")
+        error = await sync_to_async(plugin.saveDataToXml)(str(input_params_file))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            logger.error(f"Failed to save parameters: {error}")
+        else:
+            logger.info("Successfully saved updated input_params.xml with imported file paths")
 
     logger.info(f"Imported {files_imported} input files")
     return files_imported
@@ -120,15 +133,21 @@ async def import_external_file_async(job, file_obj, db_handler):
         await sync_to_async(file_obj.loadFile)()
 
     if hasattr(file_obj, 'setContentFlag'):
-        await sync_to_async(file_obj.setContentFlag)(reset=True)
+        await sync_to_async(file_obj.setContentFlag)()
 
-    # Calculate checksum if available
+    # Calculate checksum using MD5
     checksum = None
-    if hasattr(file_obj, 'checksum'):
-        try:
-            checksum = await sync_to_async(file_obj.checksum)()
-        except Exception as e:
-            logger.debug(f"Could not calculate checksum: {e}")
+    try:
+        import hashlib
+        md5_hash = hashlib.md5()
+        async def compute_checksum(path):
+            with open(path, 'rb') as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    md5_hash.update(chunk)
+            return md5_hash.hexdigest()
+        checksum = await sync_to_async(compute_checksum)(dest_path)
+    except Exception as e:
+        logger.debug(f"Could not calculate checksum: {e}")
 
     # Register in database
     file_record = await db_handler.register_imported_file(
@@ -159,7 +178,7 @@ async def import_external_file_async(job, file_obj, db_handler):
         await sync_to_async(file_obj.loadFile)()
 
     if hasattr(file_obj, 'setContentFlag'):
-        await sync_to_async(file_obj.setContentFlag)(reset=True)
+        await sync_to_async(file_obj.setContentFlag)()
 
     logger.info(f"Successfully imported {file_obj.name}")
 

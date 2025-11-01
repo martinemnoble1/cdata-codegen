@@ -208,6 +208,7 @@ class CPluginScript(CData):
                 # UUID without hyphens - restore them
                 jobId = f"{jobId[0:8]}-{jobId[8:12]}-{jobId[12:16]}-{jobId[16:20]}-{jobId[20:]}"
             self.set_db_job_id(jobId)
+            print(f"[DEBUG setDbData] After set_db_job_id: self._dbJobId = {self._dbJobId}, get_db_job_id() = {self.get_db_job_id()}")
 
     def _ensure_standard_containers(self):
         """
@@ -508,6 +509,26 @@ class CPluginScript(CData):
             self.errorReport.extend(error)
             # Don't fail - checkOutputData should fix issues
 
+        # Save params.xml after setting output file attributes
+        # This ensures output files have project/relPath/baseName set before execution
+        # NOTE: We save to params.xml (not input_params.xml) to preserve the original inputs
+        has_method = hasattr(self, 'get_db_job_id')
+        job_id = self.get_db_job_id() if has_method else None
+        print(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
+        if has_method and job_id:
+            try:
+                params_path = os.path.join(self.workDirectory, "params.xml")
+                print(f"[DEBUG process] About to call saveDataToXml({params_path})")
+                save_error = self.saveDataToXml(params_path)
+                if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
+                    print(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
+                else:
+                    print(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
+            except Exception as e:
+                print(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
+        else:
+            print(f"[DEBUG process] Skipping params save (no database context)")
+
         # Pre-process input files if needed
         result = self.processInputFiles()
         # Handle both modern API (CErrorReport) and legacy API (int)
@@ -634,6 +655,11 @@ class CPluginScript(CData):
         from core.base_object.base_classes import CDataFile
         from core.base_object.fundamental_types import CList
 
+        print(f"[DEBUG checkOutputData] Called for task: {self.TASKNAME if hasattr(self, 'TASKNAME') else 'unknown'}")
+        print(f"[DEBUG checkOutputData] _dbProjectId = {getattr(self, '_dbProjectId', 'NOT SET')}")
+        print(f"[DEBUG checkOutputData] _dbJobNumber = {getattr(self, '_dbJobNumber', 'NOT SET')}")
+        print(f"[DEBUG checkOutputData] workDirectory = {self.workDirectory}")
+
         error = CErrorReport()
 
         if not hasattr(self.container, 'outputData'):
@@ -713,25 +739,37 @@ class CPluginScript(CData):
                             print(f'[DEBUG checkOutputData]     baseName.value={child.baseName.value}')
 
                     if not basename_is_set:
-                        # Generate path from objectName
-                        obj_name = child.objectName()
-                        if not obj_name:
-                            obj_name = child.name if hasattr(child, 'name') and child.name else 'output'
+                        # Use setOutputPath if available (database-aware method)
+                        # Otherwise fall back to setFullPath
+                        if hasattr(child, 'setOutputPath') and self._dbProjectId and self._dbJobNumber:
+                            from pathlib import Path
+                            # Calculate relPath from job number (e.g., "CCP4_JOBS/job_36" for job 36)
+                            relPath = Path("CCP4_JOBS").joinpath(
+                                *[f"job_{num}" for num in str(self._dbJobNumber).split(".")]
+                            )
+                            print(f'[DEBUG checkOutputData] Calling setOutputPath with projectId={self._dbProjectId}, relPath={relPath}')
+                            child.setOutputPath(
+                                jobName="",  # No prefix
+                                projectId=str(self._dbProjectId),
+                                relPath=str(relPath)
+                            )
+                            retrieved_path = child.getFullPath()
+                            print(f'[DEBUG checkOutputData] Retrieved path after setOutputPath: {retrieved_path}')
+                        else:
+                            # Fallback: generate simple local path
+                            obj_name = child.objectName()
+                            if not obj_name:
+                                obj_name = child.name if hasattr(child, 'name') and child.name else 'output'
 
-                        # Slugify to create valid filename
-                        file_name = slugify(obj_name)
+                            file_name = slugify(obj_name)
+                            if not any(file_name.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml']):
+                                file_name += '.mtz'
 
-                        # Add appropriate extension if not present
-                        if not any(file_name.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml']):
-                            file_name += '.mtz'  # Default extension
-
-                        # Combine with workDirectory
-                        file_path = os.path.join(self.workDirectory, file_name)
-                        print(f'[DEBUG checkOutputData] Setting path for {obj_name}: {file_path}')
-                        child.setFullPath(file_path)
-                        # Verify it was set
-                        retrieved_path = child.getFullPath()
-                        print(f'[DEBUG checkOutputData] Retrieved path: {retrieved_path}')
+                            file_path = os.path.join(self.workDirectory, file_name)
+                            print(f'[DEBUG checkOutputData] Setting path for {obj_name}: {file_path}')
+                            child.setFullPath(file_path)
+                            retrieved_path = child.getFullPath()
+                            print(f'[DEBUG checkOutputData] Retrieved path: {retrieved_path}')
 
                 # Handle CList - pre-populate if it contains CDataFiles
                 elif isinstance(child, CList):
@@ -767,6 +805,22 @@ class CPluginScript(CData):
                 code=50,
                 details=f"Error setting output file paths: {str(e)}"
             )
+
+        # Save params.xml after setting output file attributes
+        # Do this in checkOutputData() rather than process() because some plugins
+        # (like demo_copycell) override process() and bypass the base implementation
+        # NOTE: We save to params.xml (not input_params.xml) to preserve the original inputs
+        if self.get_db_job_id():
+            try:
+                params_path = os.path.join(self.workDirectory, "params.xml")
+                print(f"[DEBUG checkOutputData] Saving params.xml to {params_path}")
+                save_error = self.saveDataToXml(params_path)
+                if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
+                    print(f"[DEBUG checkOutputData] Warning: Failed to save params.xml: {save_error}")
+                else:
+                    print(f"[DEBUG checkOutputData] ✅ Saved params.xml with output file attributes")
+            except Exception as e:
+                print(f"[DEBUG checkOutputData] Warning: Exception saving params.xml: {e}")
 
         return error
 
@@ -1465,6 +1519,21 @@ class CPluginScript(CData):
 
             actual_name = plugin_kwargs['name']
             actual_workdir = plugin_kwargs['workDirectory']
+
+            # Save params.xml BEFORE creating the nested plugin
+            # This ensures the nested job can load the parent's current parameters
+            if self.get_db_job_id():
+                try:
+                    params_path = os.path.join(self.workDirectory, "params.xml")
+                    print(f"[DEBUG makePluginObject] Saving parent params.xml to {params_path}")
+                    save_error = self.saveDataToXml(params_path)
+                    if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
+                        print(f"[DEBUG makePluginObject] Warning: Failed to save params.xml: {save_error}")
+                    else:
+                        print(f"[DEBUG makePluginObject] ✅ Saved params.xml for nested job to load")
+                except Exception as e:
+                    print(f"[DEBUG makePluginObject] Warning: Exception saving params.xml: {e}")
+
             plugin_instance = plugin_class(**plugin_kwargs)
             print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance

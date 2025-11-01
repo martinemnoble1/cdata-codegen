@@ -63,8 +63,8 @@ def clone_job(jobId: str = None) -> Result[models.Job]:
         new_job_dir.mkdir(exist_ok=True, parents=True)
         the_job_plugin: CContainer = plugin_class(workDirectory=str(new_job_dir))
 
-        # Load cloned parameters
-        the_job_container: CContainer = the_job_plugin.container
+        # Load cloned parameters using ParamsXmlHandler
+        # This properly overlays parameters from input_params.xml onto the .def.xml defaults
         params_file = old_job.directory / "input_params.xml"
 
         if not params_file.exists():
@@ -73,7 +73,13 @@ def clone_job(jobId: str = None) -> Result[models.Job]:
                 details={"params_file": str(params_file), "source_job_id": str(jobId)}
             )
 
-        the_job_container.loadDataFromXml(str(params_file))
+        # Use the plugin's loadDataFromXml which uses ParamsXmlHandler for proper overlay
+        error = the_job_plugin.loadDataFromXml(str(params_file))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            return Result.fail(
+                f"Failed to load parameters: {error}",
+                details={"params_file": str(params_file), "error": str(error)}
+            )
 
         # Create new job record
         new_job = models.Job(

@@ -49,11 +49,11 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
     from .async_import_files import import_input_files_async
     from .job_utils.get_job_plugin import get_job_plugin
 
-    # Get job from database
-    job = await sync_to_async(models.Job.objects.get)(uuid=job_uuid)
+    # Get job from database with related project
+    job = await sync_to_async(models.Job.objects.select_related('project').get)(uuid=job_uuid)
     logger.info(f"Running job {job.number} ({job.task_name}) in {job.directory}")
 
-    # Determine project UUID
+    # Determine project UUID (project is prefetched via select_related)
     if project_uuid is None:
         project_uuid = job.project.uuid
 
@@ -72,6 +72,41 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
         files_imported = await import_input_files_async(job, plugin, db_handler)
         logger.info(f"Imported {files_imported} input files")
 
+        # Set output file names (guaranteed step, even if plugin overrides process())
+        # This ensures output files have project/relPath/baseName set
+        from .job_utils.set_output_file_names import set_output_file_names
+
+        logger.info("Setting output file names...")
+        await sync_to_async(set_output_file_names)(
+            container=plugin.container,
+            projectId=str(job.project.uuid),
+            jobNumber=job.number,
+            force=True
+        )
+        logger.info("Output file names set")
+
+        # Save params.xml with all file attributes before execution
+        # This ensures nested jobs can load parent parameters
+        logger.info("Saving params.xml before execution...")
+
+        # DEBUG: Check what's in inputData before saving
+        if hasattr(plugin.container, 'inputData'):
+            input_files = []
+            for attr_name in dir(plugin.container.inputData):
+                if not attr_name.startswith('_'):
+                    try:
+                        attr = getattr(plugin.container.inputData, attr_name)
+                        if hasattr(attr, 'baseName'):
+                            basename = str(attr.baseName) if hasattr(attr, 'baseName') else ''
+                            input_files.append(f"{attr_name}={basename}")
+                    except:
+                        pass
+            print(f"[DEBUG async_run_job] inputData before save: {input_files}")
+            logger.info(f"[DEBUG] inputData before save: {input_files}")
+
+        await sync_to_async(plugin.saveDataToXml)(str(job.directory / "params.xml"))
+        logger.info("Saved params.xml")
+
         # Execute plugin with automatic tracking
         logger.info("Executing plugin...")
         async with db_handler.track_job(plugin):
@@ -79,7 +114,11 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
             # - Updates status via signals
             # - Gleans files on completion
             # - Gleans KPIs on completion
-            result = await plugin.execute()
+
+            # Call process() in a thread since it's not async
+            # process() handles: checkInputData, makeCommandAndScript, startProcess
+            # (checkOutputData may or may not be called if plugin overrides process)
+            result = await sync_to_async(plugin.process)()
 
         logger.info(f"Job {job.number} completed successfully")
         return result
@@ -117,34 +156,45 @@ async def create_plugin_for_job(job, db_handler):
         name=job.title,
     )
 
-    # Set database attributes
-    plugin._dbHandler = db_handler
-    plugin._dbProjectId = job.project.uuid
-    plugin._dbJobId = job.uuid
-    plugin._dbJobNumber = job.number
+    # Set database context using the proper API
+    plugin.setDbData(
+        handler=db_handler,
+        projectId=str(job.project.uuid),
+        jobNumber=job.number,
+        jobId=str(job.uuid)
+    )
+    logger.info(f"Set plugin database context: jobId={plugin.get_db_job_id()}, projectId={plugin._dbProjectId}, jobNumber={plugin._dbJobNumber}")
 
     # Load parameters if they exist
-    params_file = job.directory / "job_params.xml"
+    params_file = job.directory / "input_params.xml"
     if params_file.exists():
         await load_plugin_params(plugin, params_file)
+        logger.info(f"After loading params: _dbJobId={plugin._dbJobId}")
 
     return plugin
 
 
 async def load_plugin_params(plugin, params_file: Path):
     """
-    Load plugin parameters from XML file.
+    Load plugin parameters from XML file using modern ParamsXmlHandler.
 
     Args:
         plugin: CPluginScript instance
         params_file: Path to parameters XML file
     """
     try:
-        if hasattr(plugin.container, 'loadContents'):
-            await sync_to_async(plugin.container.loadContents)(str(params_file))
-            logger.info(f"Loaded parameters from {params_file}")
+        # Use modern CPluginScript.loadDataFromXml() which uses ParamsXmlHandler
+        # This properly loads inputData, outputData, and all file attributes
+        logger.info(f"Loading parameters from {params_file} using modern ParamsXmlHandler")
+        error = await sync_to_async(plugin.loadDataFromXml)(str(params_file))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            logger.error(f"Failed to load parameters: {error}")
+        else:
+            logger.info(f"✅ Successfully loaded parameters with inputData preserved")
     except Exception as e:
         logger.warning(f"Could not load parameters: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @asynccontextmanager

@@ -175,3 +175,28 @@ class CCP4i2DjangoDbHandler:
         except Exception as err:
             logger.error("Issue in reportStatus %s %s", err, the_job, exc_info=err)
         return CPluginScript.SUCCEEDED
+
+    def getProjectDirectory(self, projectId):
+        """
+        Get the directory path for a project.
+
+        Args:
+            projectId: Project UUID (string, with or without hyphens)
+
+        Returns:
+            str: Absolute path to the project directory, or None if not found
+        """
+        try:
+            # Normalize projectId to UUID
+            if isinstance(projectId, str):
+                # Remove hyphens if present, then add them back in standard format
+                clean_id = projectId.replace('-', '')
+                if len(clean_id) == 32:
+                    projectId = f"{clean_id[0:8]}-{clean_id[8:12]}-{clean_id[12:16]}-{clean_id[16:20]}-{clean_id[20:]}"
+
+            project_uuid = uuid.UUID(str(projectId))
+            project = models.Project.objects.get(uuid=project_uuid)
+            return str(project.directory)
+        except Exception as err:
+            logger.debug(f"Could not get project directory for {projectId}: {err}")
+            return None
