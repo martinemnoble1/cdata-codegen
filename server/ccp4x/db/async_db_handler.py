@@ -746,6 +746,31 @@ class AsyncDatabaseHandler:
             logger.debug(f"Error getting file path: {e}")
             return None
 
+    def getProjectDirectory(self, project_id: str) -> Optional[str]:
+        """
+        Get the directory path for a project by its UUID.
+
+        Used by CDataFile.getFullPath() to construct full file paths from
+        project/relPath/baseName components.
+
+        Args:
+            project_id: UUID of the project (as string)
+
+        Returns:
+            Full path to the project directory, or None if not found
+        """
+        try:
+            import uuid as uuid_module
+            project_uuid = uuid_module.UUID(str(project_id))
+            project = models.Project.objects.get(uuid=project_uuid)
+            return str(project.directory) if project.directory else None
+        except models.Project.DoesNotExist:
+            logger.debug(f"Project not found: {project_id}")
+            return None
+        except Exception as e:
+            logger.debug(f"Error getting project directory: {e}")
+            return None
+
 
 def plugin_status_to_job_status(finish_status: int) -> int:
     """

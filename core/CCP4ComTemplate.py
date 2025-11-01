@@ -181,8 +181,28 @@ class CComTemplate:
 
         # Convert to string
         try:
-            # Handle CData objects with .value attribute
-            if hasattr(current, 'value'):
+            # Special handling for CDataFile: use str(current) to get full path
+            # CDataFile.__str__() returns getFullPath() which computes the absolute path
+            # from project/relPath/baseName using dbHandler
+            from core.base_object.cdata_file import CDataFile
+            if isinstance(current, CDataFile):
+                # Temporarily set the file's plugin reference so it can find dbHandler
+                # The template's parent is the plugin that owns the container
+                if hasattr(self, 'parent') and self.parent is not None:
+                    # Store plugin reference on the file object temporarily
+                    current._temp_plugin_ref = self.parent
+
+                try:
+                    full_path = str(current)
+                    if not full_path or len(full_path.strip()) == 0:
+                        raise ValueError(f"CDataFile '{var_path}' has no path set")
+                    return full_path
+                finally:
+                    # Clean up temporary reference
+                    if hasattr(current, '_temp_plugin_ref'):
+                        delattr(current, '_temp_plugin_ref')
+            # Handle other CData objects with .value attribute
+            elif hasattr(current, 'value'):
                 value = current.value
                 if value is None:
                     raise ValueError(f"Variable '{var_path}' has no value set")

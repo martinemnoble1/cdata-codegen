@@ -1535,6 +1535,15 @@ class CPluginScript(CData):
                     print(f"[DEBUG makePluginObject] Warning: Exception saving params.xml: {e}")
 
             plugin_instance = plugin_class(**plugin_kwargs)
+
+            # Propagate database context to nested plugin so it can resolve file paths
+            # Nested plugins need the dbHandler to lookup files via dbFileId
+            if hasattr(self, '_dbHandler') and self._dbHandler is not None:
+                plugin_instance._dbHandler = self._dbHandler
+                print(f"[DEBUG makePluginObject] Propagated dbHandler to nested plugin")
+            if hasattr(self, '_dbProjectId') and self._dbProjectId is not None:
+                plugin_instance._dbProjectId = self._dbProjectId
+                print(f"[DEBUG makePluginObject] Propagated dbProjectId to nested plugin")
             print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance
         except Exception as e:

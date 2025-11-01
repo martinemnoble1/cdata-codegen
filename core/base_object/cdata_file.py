@@ -126,6 +126,12 @@ class CDataFile(CData):
     def _find_plugin_parent(self):
         """Walk up the parent hierarchy to find the CPluginScript parent."""
         from core.CCP4PluginScript import CPluginScript
+
+        # Check for temporary plugin reference (set during template expansion)
+        if hasattr(self, '_temp_plugin_ref'):
+            return self._temp_plugin_ref
+
+        # Walk up parent hierarchy
         current = self.parent
         while current:
             if isinstance(current, CPluginScript):
@@ -136,8 +142,13 @@ class CDataFile(CData):
     def _get_db_handler(self):
         """Get the database handler from the plugin parent, if available."""
         plugin = self._find_plugin_parent()
-        if plugin and hasattr(plugin, '_dbHandler'):
-            return plugin._dbHandler
+        print(f"[DEBUG _get_db_handler] Found plugin: {plugin}")
+        if plugin:
+            print(f"[DEBUG _get_db_handler] Plugin name: {plugin.name if hasattr(plugin, 'name') else 'unknown'}")
+            print(f"[DEBUG _get_db_handler] Has _dbHandler: {hasattr(plugin, '_dbHandler')}")
+            if hasattr(plugin, '_dbHandler'):
+                print(f"[DEBUG _get_db_handler] _dbHandler value: {plugin._dbHandler}")
+                return plugin._dbHandler
         return None
 
     def _update_from_database(self, path: str, plugin):
@@ -396,16 +407,21 @@ class CDataFile(CData):
                 db_file_id = self.dbFileId
 
             if db_file_id:
+                print(f"[DEBUG getFullPath] Have dbFileId: {db_file_id}")
                 db_handler = self._get_db_handler()
+                print(f"[DEBUG getFullPath] db_handler: {db_handler}")
                 if db_handler:
                     try:
                         import uuid
                         file_uuid = uuid.UUID(str(db_file_id))
+                        print(f"[DEBUG getFullPath] Calling get_file_path_sync for UUID: {file_uuid}")
                         path = db_handler.get_file_path_sync(file_uuid)
+                        print(f"[DEBUG getFullPath] Database returned path: {path}")
                         if path:
                             logger.debug("Retrieved path from database via dbFileId: %s", path)
                             return path
                     except Exception as e:
+                        print(f"[DEBUG getFullPath] Exception during database lookup: {e}")
                         logger.debug(f"Failed to retrieve path from database: {e}")
 
         # Standard path construction: workDirectory + relPath + baseName
