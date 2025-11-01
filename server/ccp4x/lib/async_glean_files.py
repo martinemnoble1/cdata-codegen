@@ -66,6 +66,14 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
                     logger.debug(f"Skipping non-existent file: {file_obj.name}")
                 continue
 
+            # For CPdbDataFile, introspect the file to set contentFlag
+            # This determines if it's PDB (1) or mmCIF (2) format
+            from core.CCP4ModelData import CPdbDataFile
+            if isinstance(file_obj, CPdbDataFile):
+                if hasattr(file_obj, 'setContentFlag'):
+                    logger.debug(f"Setting contentFlag for {file_obj.name}")
+                    await sync_to_async(file_obj.setContentFlag)()
+
             # Extract metadata using modern CData system
             metadata = extract_file_metadata(file_obj)
 

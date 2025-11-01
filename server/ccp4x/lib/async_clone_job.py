@@ -29,7 +29,7 @@ from core.CCP4Container import CContainer
 
 from ..db import models
 from ..db.async_db_handler import AsyncDatabaseHandler
-from .job_utils.patch_output_file_paths import patch_output_file_paths
+from .job_utils.set_output_file_names import set_output_file_names
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
@@ -321,9 +321,14 @@ async def _clone_plugin_with_params(
             else:
                 logger.debug(f"✅ Successfully loaded parameters with inputData preserved")
 
-        # Patch output file paths to new job directory
-        # This ensures outputs go to the new job's directory, not the old one
-        patch_output_file_paths(plugin, new_job)
+        # Set output file names using modern approach
+        # This uses fileExtensions() method on each file class to determine extension
+        set_output_file_names(
+            container=plugin.container,
+            projectId=str(new_job.project.uuid),
+            jobNumber=str(new_job.number),
+            force=True
+        )
 
         return plugin
 

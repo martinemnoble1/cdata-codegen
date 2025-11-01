@@ -646,6 +646,108 @@ class CPdbDataFile(CPdbDataFileStub):
         except Exception:
             return None
 
+    def setContentFlag(self):
+        """
+        Introspect the PDB/mmCIF file using gemmi to determine the format type.
+
+        Sets self.contentFlag to:
+        - 1 (CONTENT_FLAG_PDB): PDB format
+        - 2 (CONTENT_FLAG_MMCIF): mmCIF format
+        - 0: If content type cannot be determined
+
+        Returns:
+            int: The detected content flag value
+        """
+        import gemmi
+        from pathlib import Path
+
+        input_path = self.getFullPath()
+        if not input_path or not Path(input_path).exists():
+            self.contentFlag.set(0)
+            return 0
+
+        try:
+            # Use gemmi to read the structure - it auto-detects format
+            structure = gemmi.read_structure(input_path)
+
+            # Check the file extension to determine format
+            path = Path(input_path)
+            suffix = path.suffix.lower()
+
+            # mmCIF files
+            if suffix in ['.cif', '.mmcif']:
+                self.contentFlag.set(self.CONTENT_FLAG_MMCIF)
+                return self.CONTENT_FLAG_MMCIF
+            # PDB files
+            elif suffix in ['.pdb', '.ent']:
+                self.contentFlag.set(self.CONTENT_FLAG_PDB)
+                return self.CONTENT_FLAG_PDB
+            else:
+                # Default to PDB if ambiguous
+                self.contentFlag.set(self.CONTENT_FLAG_PDB)
+                return self.CONTENT_FLAG_PDB
+
+        except Exception as e:
+            # If gemmi fails, fall back to simple text introspection
+            try:
+                with open(input_path, 'r') as f:
+                    first_line = f.readline().strip()
+                    if first_line.startswith('data_') or first_line.startswith('loop_'):
+                        self.contentFlag.set(self.CONTENT_FLAG_MMCIF)
+                        return self.CONTENT_FLAG_MMCIF
+                    else:
+                        self.contentFlag.set(self.CONTENT_FLAG_PDB)
+                        return self.CONTENT_FLAG_PDB
+            except Exception:
+                self.contentFlag.set(0)
+                return 0
+
+    def fileExtensions(self):
+        """
+        Return appropriate file extension(s) for CPdbDataFile.
+
+        CPdbDataFile can be either PDB or mmCIF format. We determine which by:
+        1. If file exists: introspect using gemmi
+        2. If contentFlag is set: use that (2 = mmCIF, other = PDB)
+        3. Default: PDB
+
+        Returns:
+            list: [primary_extension] - either ['pdb'] or ['mmcif']
+        """
+        from pathlib import Path
+
+        # Check if file exists and introspect it
+        full_path = self.getFullPath()
+        if full_path and Path(full_path).exists():
+            try:
+                # Use gemmi to determine format from actual file
+                import gemmi
+                structure = gemmi.read_structure(full_path)
+
+                # Check file extension to determine format
+                suffix = Path(full_path).suffix.lower()
+                if suffix in ['.cif', '.mmcif']:
+                    return ['mmcif']
+                else:
+                    return ['pdb']
+            except Exception:
+                # If gemmi fails, default to pdb
+                return ['pdb']
+
+        # For new files (not yet created), check contentFlag if set
+        content_flag = 0
+        if hasattr(self, 'contentFlag') and self.contentFlag is not None:
+            if hasattr(self.contentFlag, 'value'):
+                content_flag = self.contentFlag.value if self.contentFlag.value is not None else 0
+            else:
+                content_flag = int(self.contentFlag) if self.contentFlag else 0
+
+        # contentFlag: 2 = mmCIF, anything else = PDB (default)
+        if content_flag == self.CONTENT_FLAG_MMCIF:
+            return ['mmcif']
+        else:
+            return ['pdb']
+
 
 class CPdbDataFileList(CPdbDataFileListStub):
     """

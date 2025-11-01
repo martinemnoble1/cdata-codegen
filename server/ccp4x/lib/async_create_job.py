@@ -29,7 +29,7 @@ from ..db import models
 from ..db.async_db_handler import AsyncDatabaseHandler
 from .job_utils.remove_container_default_values import remove_container_default_values
 from .job_utils.save_params_for_job import save_params_for_job
-from .job_utils.patch_output_file_paths import patch_output_file_paths
+from .job_utils.set_output_file_names import set_output_file_names
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
@@ -313,8 +313,14 @@ async def _create_plugin_instance(
         # Remove default values from container
         remove_container_default_values(plugin.container)
 
-        # Patch output file paths to job directory
-        patch_output_file_paths(plugin, job)
+        # Set output file names using modern approach
+        # This uses fileExtensions() method on each file class to determine extension
+        set_output_file_names(
+            container=plugin.container,
+            projectId=str(job.project.uuid),
+            jobNumber=str(job.number),
+            force=True
+        )
 
         return plugin
 

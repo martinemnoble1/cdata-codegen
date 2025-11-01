@@ -50,15 +50,24 @@ def set_output_file_names(
                 )
                 logger.info(f"    setOutputPath completed for {objectName}")
             if isinstance(dobj, CCP4ModelData.CPdbDataFile):
+                logger.info(f"    [DEBUG] CPdbDataFile detected: {objectName}")
+                logger.info(f"    [DEBUG] Current baseName: {dobj.baseName}")
                 oldBaseName = str(Path(str(dobj.baseName)).stem)
-                if (
-                    dobj.contentFlag is None
-                    or dobj.contentFlag._value is None
-                    or int(dobj.contentFlag) == 1
-                ):
+                logger.info(f"    [DEBUG] oldBaseName (stem): {oldBaseName}")
+                # Use fileExtensions() method which returns extensions based on contentFlag
+                # This indirects through the class's extension array
+                if hasattr(dobj, 'fileExtensions'):
+                    extensions = dobj.fileExtensions()
+                    logger.info(f"    [DEBUG] fileExtensions() returned: {extensions}")
+                    if extensions and len(extensions) > 0:
+                        primary_ext = extensions[0]
+                        logger.info(f"    [DEBUG] primary_ext: {primary_ext}")
+                        dobj.baseName.set(f"{oldBaseName}.{primary_ext}")
+                        logger.info(f"    Set baseName to {oldBaseName}.{primary_ext} based on fileExtensions()")
+                else:
+                    # Fallback: default to .pdb
+                    logger.info(f"    [DEBUG] No fileExtensions method, using fallback .pdb")
                     dobj.baseName.set(f"{oldBaseName}.pdb")
-                elif int(dobj.contentFlag) == 2:
-                    dobj.baseName.set(f"{oldBaseName}.cif")
 
         except Exception as err:
             logger.exception(

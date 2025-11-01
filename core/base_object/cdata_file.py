@@ -339,7 +339,18 @@ class CDataFile(CData):
 
                 # Add extension if missing
                 if not any(filename.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml', '.txt']):
-                    filename += '.mtz'  # Default extension
+                    # Use fileExtensions() method to get appropriate extension for this file type
+                    if hasattr(self, 'fileExtensions') and callable(self.fileExtensions):
+                        try:
+                            extensions = self.fileExtensions()
+                            if extensions and len(extensions) > 0:
+                                filename += f'.{extensions[0]}'
+                            else:
+                                filename += '.mtz'  # Fallback default
+                        except Exception:
+                            filename += '.mtz'  # Fallback on error
+                    else:
+                        filename += '.mtz'  # Default extension for files without fileExtensions() method
 
                 print(f"  Generated filename: {filename}")
                 if hasattr(self.baseName, 'set'):
@@ -494,19 +505,53 @@ class CDataFile(CData):
                                     if current == current.parent:  # Reached root
                                         break
 
-                    # For other relPaths (e.g., CCP4_JOBS/job_X), use workDirectory as base
+                    # For CCP4_JOBS paths: relPath is ALWAYS relative to PROJECT directory, not workDirectory
+                    # Get project directory and construct: project_dir / relPath / baseName
+                    project_id = None
+                    if hasattr(self, 'project') and self.project is not None:
+                        if hasattr(self.project, 'value'):
+                            project_id = self.project.value
+                        else:
+                            project_id = str(self.project)
+                    elif hasattr(plugin, '_dbProjectId'):
+                        project_id = plugin._dbProjectId
+
+                    if project_id:
+                        # Get project directory from database
+                        db_handler = self._get_db_handler()
+                        if db_handler and hasattr(db_handler, 'getProjectDirectory'):
+                            try:
+                                project_dir = db_handler.getProjectDirectory(project_id)
+                                if project_dir:
+                                    base_dir = Path(project_dir)
+                                    if basename_value:
+                                        full_path = base_dir / relpath_str / str(basename_value)
+                                        print(f"[DEBUG getFullPath] Using project_dir + relPath + baseName: {full_path}")
+                                        logger.debug("Constructed path from project + relPath + baseName: %s", full_path)
+                                        return str(full_path)
+                                    else:
+                                        full_path = base_dir / relpath_str
+                                        logger.debug("Constructed path from project + relPath: %s", full_path)
+                                        return str(full_path)
+                            except Exception as e:
+                                logger.debug(f"Failed to get project directory: {e}")
+
+                    # Fallback: if we can't get project directory, try using workDirectory
+                    # and walking up to find project root
                     if hasattr(plugin, 'workDirectory'):
                         work_dir = Path(plugin.workDirectory)
-                        # Construct: workDirectory / relPath / baseName
-                        if basename_value:
-                            full_path = work_dir / relpath_str / str(basename_value)
-                            logger.debug("Constructed path from workDir + relPath + baseName: %s", full_path)
-                            return str(full_path)
-                        else:
-                            # Just workDirectory / relPath (no baseName)
-                            full_path = work_dir / relpath_str
-                            logger.debug("Constructed path from workDir + relPath: %s", full_path)
-                            return str(full_path)
+                        # Walk up to find project root (directory containing CCP4_JOBS)
+                        current = work_dir
+                        for _ in range(10):
+                            if (current / 'CCP4_JOBS').exists():
+                                # Found project root
+                                if basename_value:
+                                    full_path = current / relpath_str / str(basename_value)
+                                    logger.debug("Constructed path from inferred project + relPath + baseName: %s", full_path)
+                                    return str(full_path)
+                            current = current.parent
+                            if current == current.parent:  # Reached filesystem root
+                                break
 
         # Return baseName as-is (may be relative path, or empty)
         if basename_value is not None:

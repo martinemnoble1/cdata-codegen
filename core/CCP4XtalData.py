@@ -793,6 +793,17 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
             # File reading error or gemmi not available
             return ''
 
+    def fileExtensions(self):
+        """
+        Return file extension for MTZ files.
+
+        All MTZ files (CMiniMtzDataFile and derivatives) use the .mtz extension.
+
+        Returns:
+            list: ['mtz']
+        """
+        return ['mtz']
+
 
 class CMiniMtzDataFileList(CMiniMtzDataFileListStub):
     """
@@ -1175,6 +1186,17 @@ class CMtzDataFile(CMtzDataFileStub):
         self.set_qualifier('guiLabel', 'Experimental data')
         self.set_qualifier('toolTip', 'MTZ format reflection data file')
         self.set_qualifier('fileExtensions', ['mtz'])
+
+    def fileExtensions(self):
+        """
+        Return file extension for MTZ files.
+
+        All MTZ files (CMtzDataFile and derivatives) use the .mtz extension.
+
+        Returns:
+            list: ['mtz']
+        """
+        return ['mtz']
 
 
 class CMtzDataset(CMtzDatasetStub):
