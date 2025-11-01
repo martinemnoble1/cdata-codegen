@@ -266,6 +266,60 @@ class AsyncDatabaseHandler:
 
         await _register()
 
+    async def find_imported_file_by_checksum(
+        self,
+        checksum: str,
+        file_type: str,
+    ) -> Optional[models.File]:
+        """
+        Find an existing imported file with matching checksum and type.
+
+        This is used to deduplicate imported files - if the same file
+        has already been imported, we can reuse it instead of copying again.
+
+        IMPORTANT: This ONLY applies to imported files (FileImport records).
+        Generated output files are never deduplicated, even if checksums match.
+
+        Args:
+            checksum: MD5 checksum of the file
+            file_type: File type name (e.g., "application/CCP4-mtz")
+
+        Returns:
+            Existing File instance if found, None otherwise
+        """
+        @sync_to_async
+        def _find():
+            try:
+                # Look for FileImport with matching checksum
+                file_import = models.FileImport.objects.filter(
+                    checksum=checksum,
+                    file__type__name=file_type,
+                    file__directory=models.File.Directory.IMPORT_DIR,
+                ).select_related('file', 'file__type', 'file__job__project').first()
+
+                if file_import:
+                    # Verify file still exists on disk
+                    file_path = file_import.file.path
+                    if file_path.exists():
+                        logger.info(
+                            f"Found existing imported file with checksum {checksum[:8]}... "
+                            f"at {file_path}"
+                        )
+                        return file_import.file
+                    else:
+                        logger.warning(
+                            f"Found FileImport with checksum {checksum[:8]}... "
+                            f"but file doesn't exist: {file_path}"
+                        )
+
+                return None
+
+            except Exception as e:
+                logger.debug(f"Error finding file by checksum: {e}")
+                return None
+
+        return await _find()
+
     async def register_imported_file(
         self,
         job_uuid: uuid.UUID,

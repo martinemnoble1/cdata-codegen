@@ -100,6 +100,10 @@ async def import_external_file_async(job, file_obj, db_handler):
     """
     Import an external file to CCP4_IMPORTED_FILES using modern CData introspection.
 
+    This function implements checksum-based deduplication for imported files:
+    - If a file with the same checksum and type already exists, reuse it
+    - Otherwise, copy the file and create new File/FileImport records
+
     Args:
         job: Django Job model instance
         file_obj: CDataFile object
@@ -114,51 +118,71 @@ async def import_external_file_async(job, file_obj, db_handler):
         logger.warning(f"Source file does not exist: {source_path}")
         return
 
-    # Determine destination path in CCP4_IMPORTED_FILES
-    import_dir = Path(job.project.directory) / "CCP4_IMPORTED_FILES"
-    dest_path = import_dir / source_path.name
-
-    # Ensure unique filename
-    dest_path = await ensure_unique_path(dest_path)
-
-    # Ensure import directory exists
-    await sync_to_async(import_dir.mkdir)(parents=True, exist_ok=True)
-
-    # Copy file asynchronously
-    await async_copy_file(source_path, dest_path)
-    logger.info(f"Copied {source_path} to {dest_path}")
-
-    # Load file to set content flag
-    if hasattr(file_obj, 'loadFile'):
-        await sync_to_async(file_obj.loadFile)()
-
-    if hasattr(file_obj, 'setContentFlag'):
-        await sync_to_async(file_obj.setContentFlag)()
-
-    # Calculate checksum using MD5
+    # Calculate checksum from SOURCE file (before copying)
+    # This allows us to check for duplicates without copying first
     checksum = None
     try:
         import hashlib
-        md5_hash = hashlib.md5()
         async def compute_checksum(path):
+            md5_hash = hashlib.md5()
             with open(path, 'rb') as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     md5_hash.update(chunk)
             return md5_hash.hexdigest()
-        checksum = await sync_to_async(compute_checksum)(dest_path)
+        checksum = await sync_to_async(compute_checksum)(source_path)
+        logger.debug(f"Calculated checksum for {source_path.name}: {checksum[:8]}...")
     except Exception as e:
-        logger.debug(f"Could not calculate checksum: {e}")
+        logger.warning(f"Could not calculate checksum for {source_path}: {e}")
 
-    # Register in database
-    file_record = await db_handler.register_imported_file(
-        job_uuid=job.uuid,
-        file_path=dest_path,
-        file_type=metadata['file_type'],
-        param_name=metadata['name'],
-        source_path=source_path,
-        annotation=metadata.get('annotation', f"Imported from {source_path.name}"),
-        checksum=checksum,
-    )
+    # Check if file with same checksum and type already exists
+    existing_file = None
+    if checksum and hasattr(db_handler, 'find_imported_file_by_checksum'):
+        existing_file = await db_handler.find_imported_file_by_checksum(
+            checksum=checksum,
+            file_type=metadata['file_type']
+        )
+
+    if existing_file:
+        # Reuse existing file - no copy needed!
+        logger.info(
+            f"Deduplicating import: reusing existing file {existing_file.name} "
+            f"(checksum {checksum[:8]}...) instead of copying {source_path.name}"
+        )
+        file_record = existing_file
+        dest_path = existing_file.path
+
+        # Create FileUse record to track that this job uses the existing file
+        await db_handler.register_input_file(
+            job_uuid=job.uuid,
+            file_uuid=file_record.uuid,
+            param_name=metadata['name'],
+        )
+    else:
+        # No duplicate found - proceed with normal import
+        # Determine destination path in CCP4_IMPORTED_FILES
+        import_dir = Path(job.project.directory) / "CCP4_IMPORTED_FILES"
+        dest_path = import_dir / source_path.name
+
+        # Ensure unique filename
+        dest_path = await ensure_unique_path(dest_path)
+
+        # Ensure import directory exists
+        await sync_to_async(import_dir.mkdir)(parents=True, exist_ok=True)
+
+        # Copy file asynchronously
+        await async_copy_file(source_path, dest_path)
+        logger.info(f"Copied {source_path} to {dest_path}")
+
+        # Register in database
+        file_record = await db_handler.register_imported_file(
+            job_uuid=job.uuid,
+            file_path=dest_path,
+            file_type=metadata['file_type'],
+            param_name=metadata['name'],
+            source_path=source_path,
+            annotation=metadata.get('annotation', f"Imported from {source_path.name}"),
+            checksum=checksum,
+        )
 
     # Update container to reflect new location
     if hasattr(file_obj, 'dbFileId'):
