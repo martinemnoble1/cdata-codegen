@@ -1,4 +1,4 @@
-from ...db import models
+from ccp4x.db import models
 import logging
 import uuid
 from pytz import timezone

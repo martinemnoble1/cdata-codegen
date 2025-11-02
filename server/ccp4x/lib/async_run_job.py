@@ -47,7 +47,7 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
     from ..db import models
     from ..db.async_db_handler import AsyncDatabaseHandler
     from .async_import_files import import_input_files_async
-    from .job_utils.get_job_plugin import get_job_plugin
+    from .utils.plugins.get_plugin import get_job_plugin
 
     # Get job from database with related project
     job = await sync_to_async(models.Job.objects.select_related('project').get)(uuid=job_uuid)
@@ -74,7 +74,7 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
 
         # Set output file names (guaranteed step, even if plugin overrides process())
         # This ensures output files have project/relPath/baseName set
-        from .job_utils.set_output_file_names import set_output_file_names
+        from .utils.files.set_names import set_output_file_names
 
         logger.info("Setting output file names...")
         await sync_to_async(set_output_file_names)(
@@ -144,7 +144,7 @@ async def create_plugin_for_job(job, db_handler):
         CPluginScript instance
     """
     from core import CCP4TaskManager
-    from .job_utils.get_job_plugin import get_job_plugin
+    from .utils.plugins.get_plugin import get_job_plugin
 
     # Get plugin class
     task_manager = CCP4TaskManager.CTaskManager()

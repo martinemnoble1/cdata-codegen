@@ -2,7 +2,7 @@ import uuid
 import logging
 from .create_job import create_job
 from .set_input_by_context_job import set_input_by_context_job
-from ...db import models
+from ccp4x.db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

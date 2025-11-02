@@ -1,6 +1,6 @@
 import pathlib
 import subprocess
-from .open_terminal_in_directory import open_terminal_in_directory
+from ..helpers.terminal import open_terminal_in_directory
 
 
 def preview_job(viewer: str = None, file_path: pathlib.Path = None):

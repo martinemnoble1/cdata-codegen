@@ -6,8 +6,8 @@ from core.CCP4TaskManager import TASKMANAGER
 from core import CCP4PluginScript
 from PySide2 import QtCore
 
-from ...db import models
-from ...db.ccp4i2_django_db_handler import CCP4i2DjangoDbHandler
+from ccp4x.db import models
+from ccp4x.db.ccp4i2_django_db_handler import CCP4i2DjangoDbHandler
 from ..files.import_files import import_files
 from ..plugins.get_plugin import get_job_plugin
 from ..parameters.save_params import save_params_for_job

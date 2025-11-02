@@ -8,8 +8,8 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from ..lib.utils.files.digest import digest_file
 from ..lib.utils.containers.json_encoder import CCP4i2JsonEncoder
 
-# Legacy utilities (to be modernized)
-from ..lib.job_utils.preview_file import preview_file
+# Modern utilities
+from ..lib.utils.files.preview import preview_file
 from xml.etree import ElementTree as ET
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.viewsets import ModelViewSet

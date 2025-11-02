@@ -701,7 +701,7 @@ class AsyncDatabaseHandler:
                     # Save params.xml with updated dbFileId values
                     if len(files_gleaned) > 0:
                         print(f"[DEBUG track_job] Saving params.xml after gleaning...")
-                        from ..lib.job_utils.save_params_for_job import save_params_for_job
+                        from ..lib.utils.parameters.save_params import save_params_for_job
                         job = await sync_to_async(models.Job.objects.get)(uuid=job_uuid)
                         await sync_to_async(save_params_for_job)(plugin, job, mode="PARAMS")
                         logger.info(f"Saved params.xml with gleaned file IDs")

@@ -5,7 +5,7 @@ from core import CCP4ErrorHandling
 from core import CCP4Container
 from core import CCP4File
 from core import CCP4ModelData
-from ...db import models
+from ccp4x.db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -38,23 +38,36 @@ def set_output_file_names(
         else ""
     )
     dataList = container.outputData.dataOrder()
+    logger.info(f"set_output_file_names: Found {len(dataList)} output objects: {dataList}")
     for objectName in dataList:
         try:
             dobj = container.outputData.find(objectName)
+            logger.info(f"  Processing {objectName}: type={type(dobj).__name__}, isinstance(CDataFile)={isinstance(dobj, CCP4File.CDataFile)}")
             if isinstance(dobj, CCP4File.CDataFile) and (force or not dobj.isSet()):
+                logger.info(f"    Calling setOutputPath for {objectName}")
                 dobj.setOutputPath(
                     jobName=jobName, projectId=projectId, relPath=str(relPath)
                 )
+                logger.info(f"    setOutputPath completed for {objectName}")
             if isinstance(dobj, CCP4ModelData.CPdbDataFile):
+                logger.info(f"    [DEBUG] CPdbDataFile detected: {objectName}")
+                logger.info(f"    [DEBUG] Current baseName: {dobj.baseName}")
                 oldBaseName = str(Path(str(dobj.baseName)).stem)
-                if (
-                    dobj.contentFlag is None
-                    or dobj.contentFlag._value is None
-                    or int(dobj.contentFlag) == 1
-                ):
+                logger.info(f"    [DEBUG] oldBaseName (stem): {oldBaseName}")
+                # Use fileExtensions() method which returns extensions based on contentFlag
+                # This indirects through the class's extension array
+                if hasattr(dobj, 'fileExtensions'):
+                    extensions = dobj.fileExtensions()
+                    logger.info(f"    [DEBUG] fileExtensions() returned: {extensions}")
+                    if extensions and len(extensions) > 0:
+                        primary_ext = extensions[0]
+                        logger.info(f"    [DEBUG] primary_ext: {primary_ext}")
+                        dobj.baseName.set(f"{oldBaseName}.{primary_ext}")
+                        logger.info(f"    Set baseName to {oldBaseName}.{primary_ext} based on fileExtensions()")
+                else:
+                    # Fallback: default to .pdb
+                    logger.info(f"    [DEBUG] No fileExtensions method, using fallback .pdb")
                     dobj.baseName.set(f"{oldBaseName}.pdb")
-                elif int(dobj.contentFlag) == 2:
-                    dobj.baseName.set(f"{oldBaseName}.cif")
 
         except Exception as err:
             logger.exception(

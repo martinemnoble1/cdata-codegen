@@ -6,24 +6,37 @@ from core import CCP4ErrorHandling
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
+# Mapping from severity codes to text
+SEVERITY_TEXT = {
+    CCP4ErrorHandling.SEVERITY_OK: "OK",
+    CCP4ErrorHandling.SEVERITY_UNDEFINED: "UNDEFINED",
+    CCP4ErrorHandling.SEVERITY_WARNING: "WARNING",
+    CCP4ErrorHandling.SEVERITY_UNDEFINED_ERROR: "UNDEFINED_ERROR",
+    CCP4ErrorHandling.SEVERITY_ERROR: "ERROR"
+}
+
 
 def getEtree(error_report: CCP4ErrorHandling.CErrorReport):
     element = ET.Element("errorReportList")
-    for item in error_report._reports:
+    # Use getErrors() public API instead of accessing _reports directly
+    for item in error_report.getErrors():
         try:
             ele = ET.Element("errorReport")
             e = ET.Element("className")
-            e.text = item["class"].__name__
+            # In new API, 'class' is a string, not a class object
+            class_name = item["class"] if isinstance(item["class"], str) else item["class"].__name__
+            e.text = class_name
             ele.append(e)
             e = ET.Element("code")
             e.text = str(item["code"])
             ele.append(e)
             e = ET.Element("description")
-            desc, severity = error_report.description(item)
-            e.text = desc
+            # Description is in 'details' field in new API
+            e.text = item["details"]
             ele.append(e)
             e = ET.Element("severity")
-            e.text = CCP4ErrorHandling.SEVERITY_TEXT[severity]
+            severity = item["severity"]
+            e.text = SEVERITY_TEXT.get(severity, f"UNKNOWN({severity})")
             ele.append(e)
             if item["details"] is not None:
                 e = ET.Element("details")

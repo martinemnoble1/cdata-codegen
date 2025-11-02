@@ -16,10 +16,10 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 # Modern utilities
 from ..lib.async_create_job import create_job_async
 
-# Legacy utilities (to be modernized)
-from ..lib.job_utils.list_project import list_project
-from ..lib.job_utils.get_task_tree import get_task_tree
-from ..lib.job_utils.preview_file import preview_file
+# Modern utilities
+from ..lib.utils.navigation.list_project import list_project
+from ..lib.utils.navigation.task_tree import get_task_tree
+from ..lib.utils.files.preview import preview_file
 
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.viewsets import ModelViewSet
@@ -27,7 +27,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from . import serializers
 from ..db import models
-from ..lib.job_utils.find_dependent_jobs import delete_job_and_dependents
+from ..lib.utils.navigation.dependencies import delete_job_and_dependents
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils.text import slugify

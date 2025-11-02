@@ -11,7 +11,7 @@ from xml.etree import ElementTree as ET
 from ccp4x.db import models
 from ccp4x.lib.response import Result
 from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
-from ccp4x.lib.job_utils.validate_container import validate_container
+from ..containers.validate import validate_container
 
 logger = logging.getLogger(__name__)
 

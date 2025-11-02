@@ -1,6 +1,6 @@
 import logging
 import uuid
-from ...db import models
+from ccp4x.db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

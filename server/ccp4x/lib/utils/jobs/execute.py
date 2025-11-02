@@ -7,7 +7,7 @@ Provides environment-aware job execution (local or remote).
 import logging
 from ccp4x.db import models
 from ccp4x.lib.response import Result
-from ccp4x.lib.job_utils.context_dependent_run import run_job_context_aware
+from .context_run import run_job_context_aware
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

@@ -10,7 +10,7 @@ from core.CCP4Container import CContainer as CContainer
 from core.base_object.cdata_file import CDataFile as CDataFile
 from core.CCP4File import CI2XmlDataFile as CI2XmlDataFile
 from core.CCP4PerformanceData import CPerformanceIndicator
-from ...db import models
+from ccp4x.db import models
 from ..containers.find_objects import find_objects
 
 logger = logging.getLogger(f"ccp4x:{__name__}")

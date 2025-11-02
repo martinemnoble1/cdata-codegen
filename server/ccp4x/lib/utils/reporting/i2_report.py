@@ -9,9 +9,9 @@ from core.base_object.fundamental_types import CList
 from core.CCP4TaskManager import CTaskManager
 from report.CCP4ReportParser import ReportClass
 from core import CCP4File
-from ...db.models import Job, FileUse, File
+from ccp4x.db.models import Job, FileUse, File
 from ..plugins.get_plugin import get_job_plugin
-from ...db.ccp4i2_static_data import PATH_FLAG_JOB_DIR, PATH_FLAG_IMPORT_DIR, FILETYPES_CLASS, FILETYPES_TEXT
+from ccp4x.db.ccp4i2_static_data import PATH_FLAG_JOB_DIR, PATH_FLAG_IMPORT_DIR, FILETYPES_CLASS, FILETYPES_TEXT
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")

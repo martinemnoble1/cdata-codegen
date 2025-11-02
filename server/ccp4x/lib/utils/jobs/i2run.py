@@ -6,8 +6,8 @@ from core import CCP4File
 from core import CCP4Data
 from core import CCP4Container
 
-from ...db import models
-from .get_job_container import get_job_container
+from ccp4x.db import models
+from ..containers.get_container import get_job_container
 from ..containers.find_objects import find_objects
 
 

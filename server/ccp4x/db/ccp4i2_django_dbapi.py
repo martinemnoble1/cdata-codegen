@@ -3,11 +3,11 @@ import logging
 import traceback
 import uuid
 
-from ..lib.job_utils.glean_job_files import glean_job_files
-from ..lib.job_utils.get_file_by_job_context import get_file_by_job_context
+from ..lib.utils.files.glean_files import glean_job_files
+from ..lib.utils.files.get_by_context import get_file_by_job_context
 from . import models
 from .ccp4i2_static_data import FILETYPELIST
-from ..lib.job_utils.job_directory import job_directory
+from ..lib.utils.jobs.directory import job_directory
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

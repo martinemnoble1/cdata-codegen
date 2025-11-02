@@ -10,7 +10,7 @@ from core import CCP4Data
 from core.base_object.fundamental_types import CList
 from core.base_object.cdata_file import CDataFile
 
-from ...db import models
+from ccp4x.db import models
 from ..plugins.get_plugin import get_job_plugin
 from .save_params import save_params_for_job
 from ..files.get_by_context import get_file_by_job_context

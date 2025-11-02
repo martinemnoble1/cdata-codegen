@@ -23,11 +23,11 @@ def get_job_container(the_job: models.Job):
         CCP4Container.CContainer: The loaded job container.
     """
     defFile = CCP4TaskManager.CTaskManager().locate_def_xml(
-        name=the_job.task_name, version=None
+        task_name=the_job.task_name, version=None
     )
     # print 'CProjectDirToDb.globJobs defFile',defFile
     container = CCP4Container.CContainer()
-    container.loadContentsFromXml(defFile, guiAdmin=True)
+    container.loadContentsFromXml(defFile)
 
     params_path = the_job.directory / "params.xml"
     fallback_params_path = the_job.directory / "input_params.xml"

@@ -9,7 +9,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from ccp4x.db import models
 from ccp4x.lib.response import Result
-from ccp4x.lib.job_utils.ccp4i2_report import make_old_report
+from ..reporting.i2_report import make_old_report
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

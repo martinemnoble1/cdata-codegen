@@ -1,5 +1,5 @@
 from typing import List
-from ...db import models
+from ccp4x.db import models
 from ..plugins.get_plugin import get_job_plugin
 from ..containers.find_objects import find_object_by_path
 

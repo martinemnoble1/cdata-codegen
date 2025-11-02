@@ -1,6 +1,6 @@
 import uuid
 import os
-from ...db import models
+from ccp4x.db import models
 
 
 def get_directory_tree(

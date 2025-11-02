@@ -954,3 +954,25 @@ class CDataFile(CData):
         """
         self.loadFile()
         return self.fileContent
+
+    def checksum(self) -> str:
+        """
+        Compute MD5 checksum of the file.
+
+        Returns:
+            32-character hexadecimal MD5 checksum string, or empty string if file doesn't exist.
+        """
+        import hashlib
+        from pathlib import Path
+
+        file_path = self.getFullPath()
+        if not file_path or not Path(file_path).exists():
+            return ""
+
+        md5_hash = hashlib.md5()
+        with open(file_path, "rb") as f:
+            # Read in chunks to handle large files efficiently
+            for chunk in iter(lambda: f.read(4096), b""):
+                md5_hash.update(chunk)
+
+        return md5_hash.hexdigest()

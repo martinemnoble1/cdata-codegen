@@ -8,7 +8,7 @@ from core import CCP4File
 from core import CCP4Data
 from core import CCP4Container
 from core.CCP4Container import CContainer
-from ...db import models
+from ccp4x.db import models
 from ..plugins.get_plugin import get_job_plugin
 from ..containers.json_encoder import CCP4i2JsonEncoder
 

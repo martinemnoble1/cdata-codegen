@@ -14,7 +14,7 @@ from ..containers.find_objects import find_object_by_path
 from ..plugins.get_plugin import get_job_plugin
 from ..containers.json_encoder import CCP4i2JsonEncoder
 from .value_dict import value_dict_for_object
-from ...db import models
+from ccp4x.db import models
 import xml.etree.ElementTree as ET
 
 
@@ -73,6 +73,8 @@ def set_parameter_container(
     try:
         object_element = find_object_by_path(the_container, object_path)
     except AttributeError as err:
+        import traceback
+        logger.error("AttributeError in find_object_by_path, full traceback:\n%s", traceback.format_exc())
         # A possible explanation is that we have the key (the last path element)
         # of a dictionary item here.  Test if that is the case and proceed acordingly
         parent_path = ".".join(object_path.split(".")[:-1])
@@ -101,6 +103,8 @@ def set_parameter_container(
             )
             raise
     except Exception as err:
+        import traceback
+        logger.error("Exception in set_parameter_container, full traceback:\n%s", traceback.format_exc())
         logger.exception(
             "Failed to set parameter with name %s with value %s",
             object_path,
@@ -124,7 +128,12 @@ def set_parameter_container(
         logger.debug("Setting file with string %s", object_element)
         object_element.set(value)
         logger.debug("Set file with string %s", object_element)
-    elif hasattr(object_element, "update"):
+    elif hasattr(object_element, "value") and not isinstance(value, dict):
+        # For fundamental types (CInt, CFloat, CString, CBoolean), set the value directly
+        logger.debug("Setting fundamental type value: %s = %s", object_element.objectName(), value)
+        object_element.value = value
+    elif hasattr(object_element, "update") and isinstance(value, dict):
+        # Only call update() if value is a dict (for container/structured types)
         object_element.update(value)
         logger.debug(
             "Updating parameter %s with dict %s",

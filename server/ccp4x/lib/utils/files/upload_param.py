@@ -20,7 +20,7 @@ from ..containers.json_encoder import CCP4i2JsonEncoder
 from ..parameters.value_dict import value_dict_for_object
 from .detect_type import detect_file_type
 from ..parameters.set_parameter import set_parameter, set_parameter_container
-from ...db import models
+from ccp4x.db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -139,7 +139,8 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
 
     param_object.setFullPath(str(imported_file_path))
     param_object.loadFile()
-    param_object.setContentFlag(reset=True)
+    # Modern CDataFile.setContentFlag() auto-detects content, no reset parameter needed
+    param_object.setContentFlag()
 
     # Note deliberate explicit for != None instead of is not None
     try:
@@ -152,7 +153,9 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         contentFlag = 0
 
     try:
-        type = models.FileType.objects.get(name=param_object.QUALIFIERS["mimeTypeName"])
+        # Use modern CData API: get_qualifier() instead of QUALIFIERS dict
+        mime_type_name = param_object.get_qualifier("mimeTypeName")
+        type = models.FileType.objects.get(name=mime_type_name)
     except models.FileType.DoesNotExist:
         type = models.FileType.objects.get(name="Unknown")
 

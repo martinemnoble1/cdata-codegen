@@ -14,7 +14,7 @@ from pathlib import Path
 from ccp4x.db import models
 from ccp4x.lib.response import Result
 from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
-from ccp4x.lib.job_utils.set_parameter import set_parameter_container
+from ..parameters.set_parameter import set_parameter_container
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,12 @@ def set_parameter(
             object_path, value, job.uuid, job.task_name
         )
 
-        set_parameter_container(plugin.container, object_path, value)
+        try:
+            set_parameter_container(plugin.container, object_path, value)
+        except Exception as e:
+            import traceback
+            logger.error("Exception from set_parameter_container:\n%s", traceback.format_exc())
+            raise
 
         # Save parameters to input_params.xml (user control stage)
         # Use CPluginScript.saveDataToXml which uses ParamsXmlHandler for proper filtering

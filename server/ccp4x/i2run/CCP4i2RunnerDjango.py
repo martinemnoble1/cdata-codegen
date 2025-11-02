@@ -8,9 +8,9 @@ from django.utils.text import slugify
 from .CCP4i2RunnerBase import CCP4i2RunnerBase
 from ..db import models
 from ..api import serializers
-from ..lib.job_utils.create_job import create_job
-from ..lib.job_utils.run_job import run_job
-from ..lib.job_utils.save_params_for_job import save_params_for_job
+from ..lib.utils.jobs.create import create_job
+from ..lib.utils.jobs.run import run_job
+from ..lib.utils.parameters.save_params import save_params_for_job
 
 # Get an instance of a logger
 logger = logging.getLogger(f"ccp4x:{__name__}")

@@ -312,8 +312,8 @@ async def save_params_after_gleaning(plugin, job):
         plugin: CPluginScript instance
         job: Django Job model instance
     """
-    # Import save_params_for_job from legacy utilities
-    from .job_utils.save_params_for_job import save_params_for_job
+    # Import save_params_for_job from modern utilities
+    from .utils.parameters.save_params import save_params_for_job
 
     # Run synchronously (it's a quick operation)
     await sync_to_async(save_params_for_job)(plugin, job, mode="PARAMS")

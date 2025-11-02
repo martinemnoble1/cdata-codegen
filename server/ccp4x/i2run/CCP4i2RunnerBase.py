@@ -15,9 +15,9 @@ import sys
 import logging
 import shlex
 import numpy
-from ..lib.job_utils.set_parameter import set_parameter_container
-from ..lib.job_utils.find_objects import find_object_by_path
-from ..lib.job_utils.gemmi_split_mtz import gemmi_split_mtz
+from ..lib.utils.parameters.set_parameter import set_parameter_container
+from ..lib.utils.containers.find_objects import find_object_by_path
+from ..lib.utils.formats.gemmi_split_mtz import gemmi_split_mtz
 
 # Get an instance of a logger
 logger = logging.getLogger("root")

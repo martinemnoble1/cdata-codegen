@@ -27,9 +27,9 @@ from core.CCP4PluginScript import CPluginScript
 
 from ..db import models
 from ..db.async_db_handler import AsyncDatabaseHandler
-from .job_utils.remove_container_default_values import remove_container_default_values
-from .job_utils.save_params_for_job import save_params_for_job
-from .job_utils.set_output_file_names import set_output_file_names
+from .utils.containers.remove_defaults import remove_container_default_values
+from .utils.parameters.save_params import save_params_for_job
+from .utils.files.set_names import set_output_file_names
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")

@@ -29,7 +29,7 @@ from core.CCP4Container import CContainer
 
 from ..db import models
 from ..db.async_db_handler import AsyncDatabaseHandler
-from .job_utils.set_output_file_names import set_output_file_names
+from .utils.files.set_names import set_output_file_names
 
 
 logger = logging.getLogger(f"ccp4x:{__name__}")

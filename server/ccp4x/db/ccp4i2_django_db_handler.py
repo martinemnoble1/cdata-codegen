@@ -6,7 +6,7 @@ import uuid
 from core.CCP4PluginScript import CPluginScript
 
 from . import models
-from ..lib.job_utils.create_job import create_job
+from ..lib.utils.jobs.create import create_job
 from .ccp4i2_django_dbapi import CCP4i2DjangoDbApi
 from .ccp4i2_static_data import (
     JOB_STATUS_FAILED,

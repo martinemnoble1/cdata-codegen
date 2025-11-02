@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional, Union, List, Type
 from pathlib import Path
 import json
 import re
+import sys
 
 from ..base_object.base_classes import CData, CContainer, ValueState
 from ..base_object.fundamental_types import (
@@ -21,6 +22,14 @@ from ..base_object.fundamental_types import (
 from ..base_object.metadata_system import (
     FieldMetadata, ClassMetadata, MetadataRegistry
 )
+
+# Import load_nested_xml for handling .def.xml inheritance
+# Add server path to sys.path if not already present to import from server module
+server_path = Path(__file__).parent.parent.parent / 'server'
+if str(server_path) not in sys.path:
+    sys.path.insert(0, str(server_path))
+
+from ccp4x.lib.utils.parameters.load_xml import load_nested_xml
 
 
 class DefXmlParser:
@@ -98,6 +107,9 @@ class DefXmlParser:
         """
         Parse a .def.xml file and create the corresponding CData hierarchy.
 
+        This method handles .def.xml inheritance by expanding <file> tags that reference
+        parent .def.xml files (e.g., prosmart_refmac inheriting from refmac).
+
         Args:
             xml_path: Path to the .def.xml file
 
@@ -111,6 +123,10 @@ class DefXmlParser:
         # Parse XML
         tree = ET.parse(xml_path)
         root = tree.getroot()
+
+        # Expand file references (inheritance) using load_nested_xml
+        # This handles cases like prosmart_refmac inheriting from refmac
+        root = load_nested_xml(root)
 
         # Extract task name from ccp4i2_body id or filename
         task_name = self._extract_task_name(root, xml_path)

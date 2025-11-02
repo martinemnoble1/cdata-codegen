@@ -13,7 +13,7 @@ from core import CCP4PluginScript
 from core.base_object.fundamental_types import CList
 from core.CCP4File import CI2XmlDataFile as CI2XmlDataFile
 
-from ...db import models
+from ccp4x.db import models
 from ..parameters.save_params import save_params_for_job
 from ..containers.find_objects import find_objects
 

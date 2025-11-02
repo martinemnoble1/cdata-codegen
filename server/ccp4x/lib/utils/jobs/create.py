@@ -5,7 +5,7 @@ import uuid
 from core import CCP4TaskManager
 from core.CCP4Container import CContainer
 
-from ...db import models
+from ccp4x.db import models
 from ..containers.remove_defaults import remove_container_default_values
 from ..parameters.save_params import save_params_for_job
 from ..files.patch_paths import patch_output_file_paths

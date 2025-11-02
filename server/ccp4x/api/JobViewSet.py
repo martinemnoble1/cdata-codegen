@@ -40,13 +40,13 @@ from core import CCP4TaskManager
 from core.CCP4TaskManager import CTaskManager
 from core.CCP4Container import CContainer
 from core import CCP4ErrorHandling
-from ..lib.job_utils.i2run_for_job import i2run_for_job
-from ..lib.job_utils.load_nested_xml import load_nested_xml
+from ..lib.utils.jobs.i2run import i2run_for_job
+from ..lib.utils.parameters.load_xml import load_nested_xml
 # validate_container no longer used - validation/ endpoint now uses unified validate_job utility
-from ..lib.job_utils.digest_file import digest_param_file
-from ..lib.job_utils.validate_container import getEtree  # Still used for error handling in other endpoints
-from ..lib.job_utils.set_input_by_context_job import set_input_by_context_job
-from ..lib.job_utils.preview_job import preview_job
+from ..lib.utils.files.digest import digest_param_file
+from ..lib.utils.containers.validate import getEtree  # Still used for error handling in other endpoints
+from ..lib.utils.parameters.set_input_by_context import set_input_by_context_job
+from ..lib.utils.jobs.preview import preview_job
 import tempfile
 from pathlib import Path
 from django.http import FileResponse
@@ -60,19 +60,19 @@ from rest_framework.response import Response
 from rest_framework import status
 from . import serializers
 from ..db import models
-from ..lib.job_utils.ccp4i2_report import make_old_report
+from ..lib.utils.reporting.i2_report import make_old_report
 from ..lib.utils.jobs.clone import clone_job  # Modern clone utility with Result pattern
-from ..lib.job_utils.find_dependent_jobs import find_dependent_jobs
-from ..lib.job_utils.find_dependent_jobs import delete_job_and_dependents
+from ..lib.utils.navigation.dependencies import find_dependent_jobs
+from ..lib.utils.navigation.dependencies import delete_job_and_dependents
 # Modern utilities
 from ..lib.utils.plugins.get_plugin import get_job_plugin
 from ..lib.utils.containers.json_encoder import CCP4i2JsonEncoder
 
-# Legacy imports - kept for endpoints not yet refactored
-from ..lib.job_utils.upload_file_param import upload_file_param
-from ..lib.job_utils.get_job_container import get_job_container
-from ..lib.job_utils.object_method import object_method
-from ..lib.job_utils.get_what_next import get_what_next
+# Modern imports - all now using modern utilities
+from ..lib.utils.files.upload_param import upload_file_param
+from ..lib.utils.containers.get_container import get_job_container
+from ..lib.utils.helpers.object_method import object_method
+from ..lib.utils.navigation.what_next import get_what_next
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils.text import slugify
@@ -656,7 +656,7 @@ class JobViewSet(ModelViewSet):
             CCP4: Path to CCP4 installation (for local mode)
         """
         try:
-            from ..lib.job_utils.context_dependent_run import run_job_context_aware
+            from ..lib.utils.jobs.context_run import run_job_context_aware
 
             job = models.Job.objects.get(id=pk)
 
@@ -717,7 +717,7 @@ class JobViewSet(ModelViewSet):
             - Frontend can selectively use this for specific task types
         """
         try:
-            from ..lib.job_utils.context_dependent_run import run_job_context_aware
+            from ..lib.utils.jobs.context_run import run_job_context_aware
 
             job = models.Job.objects.get(id=pk)
 
@@ -1729,7 +1729,7 @@ class JobViewSet(ModelViewSet):
 
         print(f"About to call utility function with pk={pk}, export_mode={export_mode}")
         # Import the utility function locally to avoid unused import lint error
-        from ..lib.job_utils.export_job_file import export_job_file
+        from ..lib.utils.jobs.export import export_job_file
 
         # Use the refactored utility function
         file_response, error_response = export_job_file(pk, export_mode)

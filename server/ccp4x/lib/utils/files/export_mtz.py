@@ -3,8 +3,8 @@ import logging
 from core import CCP4TaskManager
 from core import CCP4XtalData
 from .get_source_reflection_file import get_source_reflection_file
-from ...db import models
-from ...db.ccp4i2_static_data import FILETYPES_TEXT
+from ccp4x.db import models
+from ccp4x.db.ccp4i2_static_data import FILETYPES_TEXT
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 

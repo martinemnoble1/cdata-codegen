@@ -62,13 +62,19 @@ class CData(HierarchicalObject):
         if hasattr(cls, 'qualifiers'):
             class_qualifiers = getattr(cls, 'qualifiers')
             logger.debug("%s.qualifiers type: %s, value: %s", cls.__name__, type(class_qualifiers), class_qualifiers)
-            if not isinstance(class_qualifiers, dict):
-                logger.warning("Class-level qualifiers for %s is not a dict: %s", cls.__name__, type(class_qualifiers))
+
+            # Handle case where qualifiers is a dict-like object
             if isinstance(class_qualifiers, dict):
                 self.qualifiers = dict(class_qualifiers)
-            elif hasattr(class_qualifiers, 'items'):
-                self.qualifiers = dict(class_qualifiers.items())
+            elif hasattr(class_qualifiers, 'items') and callable(getattr(class_qualifiers, 'items', None)):
+                try:
+                    self.qualifiers = dict(class_qualifiers.items())
+                except (AttributeError, TypeError) as e:
+                    logger.error("Error calling .items() on qualifiers for %s: %s (type: %s)", cls.__name__, e, type(class_qualifiers))
+                    self.qualifiers = {}
             else:
+                # Not a dict and doesn't have .items() - set to empty dict
+                logger.warning("Class-level qualifiers for %s is not dict-like: %s, setting to empty dict", cls.__name__, type(class_qualifiers))
                 self.qualifiers = {}
         # Qualifiers order
         if hasattr(cls, 'qualifiers_order'):
