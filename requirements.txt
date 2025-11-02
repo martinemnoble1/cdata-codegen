@@ -26,6 +26,12 @@ autopep8>=2.0.0
 # Django REST Framework for API
 djangorestframework>=3.14.0
 
+# Django extensions and utilities
+django-cors-headers>=4.0.0
+django-filter>=23.0
+whitenoise>=6.5.0
+pytz>=2023.3
+
 # Type checking
 mypy>=1.0.0
 
