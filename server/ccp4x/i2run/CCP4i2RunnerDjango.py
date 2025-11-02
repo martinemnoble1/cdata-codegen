@@ -1,5 +1,4 @@
 import os
-import glob
 import shlex
 import logging
 from pathlib import Path
@@ -9,7 +8,6 @@ from .CCP4i2RunnerBase import CCP4i2RunnerBase
 from ..db import models
 from ..api import serializers
 from ..lib.utils.jobs.create import create_job
-from ..lib.utils.jobs.run import run_job
 from ..lib.utils.parameters.save_params import save_params_for_job
 
 # Get an instance of a logger
@@ -140,9 +138,35 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         return created_job_uuid.replace("-", "")
 
     def pluginWithArgs(self, parsed_args, workDirectory=None, jobId=None):
-        result = super().pluginWithArgs(parsed_args, workDirectory, jobId)
-        save_params_for_job(result, the_job=models.Job.objects.get(uuid=jobId))
-        return result
+        """
+        Create plugin instance and populate with command-line arguments.
+
+        Override base class to use Django models instead of CCP4Modules.PROJECTSMANAGER.
+        """
+        # Get work directory from job if jobId provided
+        if jobId is not None and workDirectory is None:
+            job = models.Job.objects.get(uuid=jobId)
+            workDirectory = job.directory
+
+        # Create plugin with modern approach (parent=None)
+        from core.CCP4TaskManager import TASKMANAGER
+        thePlugin = TASKMANAGER().get_plugin_class(
+            parsed_args.task_name
+        )(jobId=jobId, workDirectory=workDirectory, parent=None)
+
+        self.work_directory = workDirectory
+
+        # Set parameters from command line
+        allKeywords = self.keywordsOfTaskName(parsed_args.task_name)
+        for kw in allKeywords:
+            minpath = kw["minimumPath"]
+            val = getattr(parsed_args, minpath, None)
+            if val is not None:
+                self.handleItem(thePlugin, kw["path"], val)
+
+        # Save params to database
+        save_params_for_job(thePlugin, the_job=models.Job.objects.get(uuid=jobId))
+        return thePlugin
 
     def execute(self):
         thePlugin = self.getPlugin(arguments_parsed=True)
@@ -151,9 +175,39 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         thePlugin.saveParams()
         print(self.jobId)
 
-        def do_run():
-            return run_job(self.jobId)
+        # Validate plugin configuration before execution
+        from core.base_object.error_reporting import Severity
 
-        exitStatus = do_run()
+        # Check input data validity (files exist, parameters valid)
+        validation_error = thePlugin.checkInputData()
 
-        return self.jobId, exitStatus
+        if validation_error.maxSeverity() >= Severity.ERROR:
+            # Blocking errors found - format and display them
+            print("\n" + "=" * 80)
+            print("❌ VALIDATION FAILED - Cannot execute job")
+            print("=" * 80)
+            print(validation_error.report(severity_threshold=Severity.WARNING))
+            print("=" * 80 + "\n")
+            logger.error("Job %s validation failed: %s", self.jobId,
+                        validation_error.report(severity_threshold=Severity.ERROR))
+            return self.jobId, 1  # Failure
+
+        elif validation_error.maxSeverity() >= Severity.WARNING:
+            # Warnings found - display but continue
+            print("\n" + "⚠️  VALIDATION WARNINGS:")
+            print(validation_error.report(severity_threshold=Severity.WARNING))
+            print()
+
+        # Execute job synchronously using the same mechanism as './ccp4i2 job run'
+        # This uses the modern async_run_job with proper async/sync bridging
+        from asgiref.sync import async_to_sync
+        from ccp4x.lib.async_run_job import run_job_async
+
+        try:
+            # Run job synchronously (not detached, like the CLI job run command)
+            async_to_sync(run_job_async)(self.jobId)
+            logger.info("Job %s executed successfully via i2run", self.jobId)
+            return self.jobId, 0  # Success
+        except Exception as e:
+            logger.error("Job %s execution failed: %s", self.jobId, str(e))
+            return self.jobId, 1  # Failure

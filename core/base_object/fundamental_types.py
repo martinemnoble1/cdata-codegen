@@ -1071,6 +1071,66 @@ class CList(CData):
     def __str__(self) -> str:
         return f"CList({len(self._items)} items)"
 
+    def makeItem(self) -> CData:
+        """
+        Create a new item for this list based on the subItem qualifier.
+
+        This method provides backward compatibility with legacy CCP4i2 code.
+        The subItem qualifier should contain:
+            {
+                'class': SomeClass,  # The class to instantiate
+                'qualifiers': {...}  # Qualifiers for the new item
+            }
+
+        Returns:
+            A new instance of the item class with qualifiers applied
+
+        Raises:
+            ValueError: If subItem qualifier is not properly configured
+
+        Example:
+            >>> my_list = CList(name="numbers")
+            >>> my_list.set_qualifier("subItem", {
+            ...     'class': CInt,
+            ...     'qualifiers': {'min': 0, 'max': 100, 'default': 50}
+            ... })
+            >>> new_item = my_list.makeItem()
+            >>> my_list.append(new_item)
+        """
+        # Get subItem qualifier
+        sub_item_def = self.get_qualifier('subItem')
+
+        if not sub_item_def:
+            raise ValueError(
+                f"CList '{self.objectName()}' has no 'subItem' qualifier defined. "
+                "Cannot create new item without knowing the type."
+            )
+
+        if not isinstance(sub_item_def, dict):
+            raise ValueError(
+                f"CList '{self.objectName()}' subItem qualifier must be a dict, "
+                f"got {type(sub_item_def).__name__}"
+            )
+
+        # Extract class and qualifiers
+        item_class = sub_item_def.get('class')
+        item_qualifiers = sub_item_def.get('qualifiers', {})
+
+        if not item_class:
+            raise ValueError(
+                f"CList '{self.objectName()}' subItem qualifier missing 'class' key"
+            )
+
+        # Instantiate the item with qualifiers
+        # The item will be added to the list by the caller using append()
+        item = item_class(parent=None, name=f"temp_item_{len(self._items)}")
+
+        # Apply qualifiers if provided
+        if item_qualifiers and hasattr(item, 'qualifiers'):
+            item.qualifiers.update(item_qualifiers)
+
+        return item
+
 
 # NOTE: Type aliases removed - all custom types now have proper stub classes
 # in core/cdata_stubs/ and implementation classes in core/

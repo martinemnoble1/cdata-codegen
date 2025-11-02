@@ -162,11 +162,11 @@ class ParamsXmlHandler:
         """Recursively export container contents, only including explicitly set values."""
         # Get all attributes that are CData objects
         for attr_name in sorted(dir(container)):
+            # Skip private, signal, and special attributes
             if (
-                not attr_name.startswith("_")
-                and not callable(getattr(container, attr_name))
-                and attr_name
-                not in [
+                attr_name.startswith("_")
+                or attr_name in [
+                    "CONTENTS",  # Class-level metadata, not an instance attribute
                     "child_added",
                     "child_removed",
                     "destroyed",
@@ -177,32 +177,39 @@ class ParamsXmlHandler:
                     "state",
                 ]
             ):
+                continue
 
-                try:
-                    attr = getattr(container, attr_name)
-                    if hasattr(attr, "name"):  # It's a CData object
+            # Try to get the attribute - may not exist or may be callable
+            try:
+                attr = getattr(container, attr_name)
 
-                        if isinstance(attr, CContainer):
-                            # Create container element and recurse
-                            container_elem = ET.SubElement(parent_elem, attr_name)
-                            self._export_container(attr, container_elem)
-
-                            # Remove empty containers EXCEPT for standard sub-containers
-                            # Legacy code expects inputData, outputData, and controlParameters
-                            # to always be present, even if empty
-                            standard_containers = {'inputData', 'outputData', 'controlParameters'}
-                            if len(container_elem) == 0 and attr_name not in standard_containers:
-                                parent_elem.remove(container_elem)
-
-                        else:
-                            # Check if this parameter has been explicitly set
-                            if self._is_explicitly_set(attr):
-                                param_elem = ET.SubElement(parent_elem, attr_name)
-                                self._export_parameter_value(attr, param_elem)
-
-                except Exception as e:
-                    print(f"Warning: Error processing {attr_name}: {e}")
+                # Skip callables
+                if callable(attr):
                     continue
+
+                if hasattr(attr, "name"):  # It's a CData object
+
+                    if isinstance(attr, CContainer):
+                        # Create container element and recurse
+                        container_elem = ET.SubElement(parent_elem, attr_name)
+                        self._export_container(attr, container_elem)
+
+                        # Remove empty containers EXCEPT for standard sub-containers
+                        # Legacy code expects inputData, outputData, and controlParameters
+                        # to always be present, even if empty
+                        standard_containers = {'inputData', 'outputData', 'controlParameters'}
+                        if len(container_elem) == 0 and attr_name not in standard_containers:
+                            parent_elem.remove(container_elem)
+
+                    else:
+                        # Check if this parameter has been explicitly set
+                        if self._is_explicitly_set(attr):
+                            param_elem = ET.SubElement(parent_elem, attr_name)
+                            self._export_parameter_value(attr, param_elem)
+
+            except Exception as e:
+                print(f"Warning: Error processing {attr_name}: {e}")
+                continue
 
     def _is_explicitly_set(self, param: CData) -> bool:
         """Check if a parameter has been explicitly set by the user."""

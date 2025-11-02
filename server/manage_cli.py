@@ -101,6 +101,9 @@ For help on any command:
         # Shortcuts
         self._add_shortcut_commands(subparsers)
 
+        # Legacy i2run compatibility
+        self._add_i2run_command(subparsers)
+
         return parser
 
     def _add_projects_commands(self, subparsers):
@@ -436,9 +439,37 @@ For help on any command:
         status_cmd.add_argument('project', nargs='?',
                                help='Project name or UUID (optional, shows all if omitted)')
 
+    def _add_i2run_command(self, subparsers):
+        """Add legacy i2run compatibility command."""
+        i2run_cmd = subparsers.add_parser('i2run',
+                                          help='Legacy i2run command-line runner')
+        i2run_cmd.add_argument('task_name', type=str,
+                              help='Task name (e.g., prosmart_refmac)')
+        i2run_cmd.add_argument('--project_name', type=str, required=True,
+                              help='Project name or UUID')
+        i2run_cmd.add_argument('--project_path', type=str,
+                              help='Project path (optional)')
+        # All other arguments are passed through to the plugin
+
     def run(self, args: Optional[List[str]] = None):
         """Run the CLI with the given arguments."""
-        parsed_args = self.parser.parse_args(args)
+        # For i2run, use parse_known_args to allow plugin-specific parameters
+        # First, peek at the command to see if it's i2run
+        import sys
+        argv_to_check = args if args is not None else sys.argv[1:]
+
+        # Check if 'i2run' is in the arguments (may be after global flags like -v)
+        is_i2run = 'i2run' in argv_to_check
+
+        if is_i2run:
+            # Use parse_known_args to preserve unknown arguments for plugin
+            parsed_args, unknown_args = self.parser.parse_known_args(args)
+            # Store unknown args for i2run handler
+            parsed_args.unknown_args = unknown_args
+        else:
+            # Normal parsing for other commands
+            parsed_args = self.parser.parse_args(args)
+            parsed_args.unknown_args = []
 
         # Handle no command
         if not parsed_args.resource:
@@ -482,6 +513,8 @@ For help on any command:
             return self._handle_run_shortcut(args)
         elif resource in ('status', 'st'):
             return self._handle_status_shortcut(args)
+        elif resource == 'i2run':
+            return self._handle_i2run(args)
         else:
             print(f"Unknown resource: {resource}", file=sys.stderr)
             return 1
@@ -951,6 +984,62 @@ For help on any command:
             # Show all projects
             call_command('list_projects')
         return 0
+
+    def _handle_i2run(self, args):
+        """
+        Handle legacy i2run command.
+
+        This dispatches to CCP4i2RunnerDjango which:
+        1. Creates or resolves project and job in database
+        2. Parses task-specific parameters from command line
+        3. Creates and configures plugin instance
+        4. Saves parameters to database
+        5. Executes the job via run_job_context_aware
+        """
+        import sys
+
+        # Reconstruct sys.argv for i2run parser
+        # Format: manage.py i2run task_name --project_name foo --param1 val1 --param2 val2
+        i2run_argv = ['manage.py', 'i2run', args.task_name]
+
+        # Add recognized i2run arguments
+        i2run_argv.extend(['--project_name', args.project_name])
+
+        if hasattr(args, 'project_path') and args.project_path:
+            i2run_argv.extend(['--project_path', args.project_path])
+
+        # Add plugin-specific parameters (unknown args from parse_known_args)
+        if hasattr(args, 'unknown_args') and args.unknown_args:
+            i2run_argv.extend(args.unknown_args)
+
+        # Update sys.argv for i2run's parser (it reads sys.argv directly)
+        original_sys_argv = sys.argv
+        try:
+            sys.argv = i2run_argv
+
+            # Import and run the i2run command directly
+            from ccp4x.db.management.commands.i2run import Command as I2RunCommand
+            cmd = I2RunCommand()
+
+            # Create a parser and let i2run add its arguments
+            from argparse import ArgumentParser
+            parser = ArgumentParser()
+            cmd.add_arguments(parser)
+
+            # Execute the command
+            # Note: add_arguments already parses and sets up the runner
+            # handle() just executes it
+            cmd.handle()
+            return 0
+
+        except Exception as e:
+            print(f"Error running i2run: {e}", file=sys.stderr)
+            if hasattr(args, 'verbose') and args.verbose:
+                import traceback
+                traceback.print_exc()
+            return 1
+        finally:
+            sys.argv = original_sys_argv
 
     def _is_uuid(self, value: str) -> bool:
         """Check if a string looks like a UUID."""

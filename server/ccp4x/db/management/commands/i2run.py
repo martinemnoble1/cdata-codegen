@@ -3,7 +3,6 @@ import logging
 
 from django.core.management.base import BaseCommand
 from ....i2run import CCP4i2RunnerDjango
-from core.CCP4TaskManager import TASKMANAGER
 
 # Get an instance of a logger
 logger = logging.getLogger("root")
@@ -17,16 +16,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         logger.info("sys.argv is [%s]", sys.argv)
+        # Modern approach: No Qt parent needed
         self.i2_runner = CCP4i2RunnerDjango.CCP4i2RunnerDjango(
             the_args=sys.argv[2:],
             parser=parser,
-            parent=CCP4Modules.QTAPPLICATION(graphical=False),
+            parent=None,  # No Qt spoof needed - using modern async approach
         )
         self.i2_runner.parseArgs()
 
     def handle(self, *args, **options):
-        def execute():
-            self.i2_runner.execute()
-
-        execute()
+        # Direct execution - no Qt event loop wrapper needed
+        self.i2_runner.execute()
         return

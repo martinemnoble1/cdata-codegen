@@ -37,11 +37,13 @@ def get_leaf_paths(container):
             if isinstance(child, (CContainer, CCP4Container.CContainer)):
                 leaf_paths.extend(traverse(child, path_parts + [child.objectName()]))
             else:
+                # Get qualifiers dict from modern CData (attribute, not method)
+                qualifiers_dict = getattr(child, 'qualifiers', {})
                 leaf_paths.append(
                     {
                         "path": child.objectPath(),
                         "minimumPath": child.objectPath(),
-                        "qualifiers": child.qualifiers(),
+                        "qualifiers": qualifiers_dict if isinstance(qualifiers_dict, dict) else {},
                         "className": type(child).__name__,
                         "object": child,
                     }
@@ -116,9 +118,18 @@ class CCP4i2RunnerBase(object):
         return self.keywordsOfTaskName(self.task_name)
 
     def parseArgs(self, arguments_parsed=False):
+        """
+        Parse command-line arguments for the task.
+
+        Args:
+            arguments_parsed: If True, skip adding task arguments (already done)
+
+        Returns:
+            Parsed arguments namespace
+        """
         if not arguments_parsed:
             CCP4i2RunnerBase.addTaskArguments(
-                self.parser, self.task_name, parent=self.parent
+                self.parser, self.task_name, parent=None
             )
         if self.parsed_args is None:
             self.parsed_args = self.parser.parse_args(self.args)
@@ -169,27 +180,45 @@ class CCP4i2RunnerBase(object):
 
     @staticmethod
     def keywordsOfTaskName(task_name, parent=None):
-        theContainer: CContainer = CCP4Container.CContainer(parent=parent)
-        xmlLocation = TASKMANAGER().locate_def_xml(
-            name=task_name, version=None
-        )
-        try:
-            if not xmlLocation:
-                raise FileNotFoundError(
-                    f"Task definition file for {task_name} not found."
-                )
-            theContainer.loadContentsFromXml(xmlLocation)
-        except CException as e:
-            raise FileNotFoundError(f"Task definition file for {task_name} not found.")
-        except FileNotFoundError as e:
-            raise FileNotFoundError(f"Task definition file for {task_name} not found.")
-        allKeywords = CCP4i2RunnerBase.keywordsOfContainer(theContainer, [])
-        # print(CCP4i2RunnerBase.minimisePaths(allKeywords))
+        """
+        Get all keywords (parameters) for a task by instantiating its plugin.
+
+        Modern approach: Instantiate CPluginScript which automatically:
+        - Locates and loads .def.xml (with inheritance support via DefXmlParser)
+        - Creates container hierarchy (inputData, outputData, controlParameters)
+        - Sets up all parameters with qualifiers
+
+        Args:
+            task_name: Name of the task/plugin
+            parent: Parent object (unused in modern approach, kept for compatibility)
+
+        Returns:
+            List of keyword dicts with paths, minimumPaths, qualifiers, etc.
+        """
+        # Get plugin class from task manager
+        plugin_class = TASKMANAGER().get_plugin_class(task_name)
+
+        # Instantiate plugin - this automatically loads .def.xml with modern DefXmlParser
+        # (which includes inheritance support we added in Phase 1)
+        thePlugin = plugin_class(parent=None, workDirectory=None)
+
+        # Extract keywords from the loaded container
+        allKeywords = CCP4i2RunnerBase.keywordsOfContainer(thePlugin.container, [])
+
+        # Compute minimum paths for concise CLI arguments
         return CCP4i2RunnerBase.minimisePaths(allKeywords)
 
     @staticmethod
     def addTaskArguments(theParser, task_name, parent=None):
-        keywords = CCP4i2RunnerBase.keywordsOfTaskName(task_name, parent=parent)
+        """
+        Add command-line arguments to parser based on task parameters.
+
+        Args:
+            theParser: argparse.ArgumentParser instance
+            task_name: Name of the task/plugin
+            parent: Unused (kept for backward compatibility)
+        """
+        keywords = CCP4i2RunnerBase.keywordsOfTaskName(task_name, parent=None)
         logger.debug(str(keywords))
 
         for keyword in keywords:
@@ -259,7 +288,30 @@ class CCP4i2RunnerBase(object):
         return str(final_dest)
 
     def handleItem(self, thePlugin: CPluginScript, objectPath, value):
-        the_object = find_object_by_path(thePlugin.container, objectPath)
+        """
+        Set a parameter value on the plugin container.
+
+        Args:
+            thePlugin: Plugin instance
+            objectPath: Full object path (e.g., "prosmart_refmac.container.controlParameters.WEIGHT")
+            value: Value to set
+
+        Note:
+            The objectPath from keywords includes the full hierarchy, but find_object_by_path
+            expects a path relative to the container. We need to strip the task name and
+            "container" prefix.
+        """
+        # Strip task name and "container" from path
+        # e.g., "prosmart_refmac.container.controlParameters.WEIGHT" -> "controlParameters.WEIGHT"
+        path_parts = objectPath.split(".")
+        if len(path_parts) >= 3 and path_parts[1] == "container":
+            # Remove task name (path_parts[0]) and "container" (path_parts[1])
+            relative_path = ".".join(path_parts[2:])
+        else:
+            # Fallback: use path as-is
+            relative_path = objectPath
+
+        the_object = find_object_by_path(thePlugin.container, relative_path)
         if the_object is None:
             return
         is_complex_object = (
@@ -272,32 +324,56 @@ class CCP4i2RunnerBase(object):
             # Intercept some things to do with (e.g.) columnLabels
             if subPath == "columnLabels":
                 theObject = find_object_by_path(
-                    thePlugin.container, objectPath
-                )  # PluginUtils.locateElement(thePlugin.container, objectPath)
+                    thePlugin.container, relative_path
+                )  # PluginUtils.locateElement(thePlugin.container, relative_path)
                 splitFilePath = CCP4i2RunnerBase.gemmiSplitMTZ(
                     input_path_str=theObject.fullPath.__str__(),
                     inputColumnPath=subValue,
                     intoDirectory=thePlugin.workDirectory,
                 )
                 print(f"Post split file path is {splitFilePath}")
-                set_parameter_container(thePlugin.container, objectPath, splitFilePath)
+                set_parameter_container(thePlugin.container, relative_path, splitFilePath)
             elif subPath == "fileUse":
-                # print(f'In handleItem fileUse {objectPath}')
+                # print(f'In handleItem fileUse {relative_path}')
                 sys.stdout.flush()
                 fileUseDict = CCP4i2RunnerBase.parseFileUse(subValue)
                 fileUseDict["projectId"] = thePlugin.projectId()
                 fileDict = self.fileForFileUse(**fileUseDict)
-                set_parameter_container(thePlugin.container, objectPath, fileDict)
+                set_parameter_container(thePlugin.container, relative_path, fileDict)
             elif subPath == "fullPath":
-                logger.info("Setting parameter to %s %s", objectPath, subValue)
-                set_parameter_container(thePlugin.container, objectPath, subValue)
+                logger.info("Setting parameter to %s %s", relative_path, subValue)
+                set_parameter_container(thePlugin.container, relative_path, subValue)
             else:
-                compositePath = ".".join(objectPath.split(".") + subPath.split("/"))
+                # For composite paths, also strip the task.container prefix from the base
+                compositePath = ".".join(relative_path.split(".") + subPath.split("/"))
                 logger.info("Setting parameter to %s %s", compositePath, subValue)
                 set_parameter_container(thePlugin.container, compositePath, subValue)
         elif value is not None:
-            logger.info("Setting parameter to %s %s", objectPath, value)
-            set_parameter_container(thePlugin.container, objectPath, value)
+            # Handle Python lists being set on CList objects (from argparse nargs)
+            from core.base_object.fundamental_types import CList
+
+            if isinstance(the_object, CList) and isinstance(value, list):
+                # For CList objects, populate with items from the Python list
+                the_object.clear()
+                for item_value in value:
+                    new_item = the_object.makeItem()
+                    new_item.value = item_value
+                    the_object.append(new_item)
+                logger.info("Setting CList parameter %s with %d items", relative_path, len(value))
+            elif not isinstance(the_object, CList) and isinstance(value, list):
+                # For non-CList objects, if argparse returned a list (nargs), unwrap it
+                # This happens when argparse uses nargs for a simple parameter
+                if len(value) == 1:
+                    actual_value = value[0]
+                    logger.info("Setting parameter to %s %s (unwrapped from list)", relative_path, actual_value)
+                    set_parameter_container(thePlugin.container, relative_path, actual_value)
+                else:
+                    # Multiple values for non-list parameter - this shouldn't happen
+                    logger.warning("Got multiple values %s for non-list parameter %s, using first", value, relative_path)
+                    set_parameter_container(thePlugin.container, relative_path, value[0])
+            else:
+                logger.info("Setting parameter to %s %s", relative_path, value)
+                set_parameter_container(thePlugin.container, relative_path, value)
 
     def fileForFileUse(
         self,
@@ -320,11 +396,25 @@ class CCP4i2RunnerBase(object):
             self.handleItem(thePlugin, objectPath, value)
 
     def pluginWithArgs(self, parsed_args, workDirectory=None, jobId=None):
+        """
+        Create plugin instance and populate with command-line arguments.
+
+        Modern approach: Plugin instantiation with parent=None (no Qt dependency).
+
+        Args:
+            parsed_args: Parsed command-line arguments
+            workDirectory: Working directory for the plugin
+            jobId: Optional job ID for database integration
+
+        Returns:
+            Configured plugin instance
+        """
         if jobId is not None:
             workDirectory = CCP4Modules.PROJECTSMANAGER().jobDirectory(jobId=jobId)
+        # Modern approach: No Qt parent needed
         thePlugin = TASKMANAGER().get_plugin_class(
             parsed_args.task_name
-        )(jobId=jobId, workDirectory=workDirectory, parent=self.parent)
+        )(jobId=jobId, workDirectory=workDirectory, parent=None)
         self.work_directory = workDirectory
         if jobId is not None:
             jobInfo = (
