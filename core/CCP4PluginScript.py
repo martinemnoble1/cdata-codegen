@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import Optional
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import logging
+import os
 
 from core.base_object.base_classes import CData, CContainer
 from core.base_object.error_reporting import CErrorReport, SEVERITY_ERROR, SEVERITY_WARNING
@@ -17,6 +19,9 @@ from core.task_manager.def_xml_handler import DefXmlParser
 from core.task_manager.params_xml_handler import ParamsXmlHandler
 from core.CCP4TaskManager import TASKMANAGER
 from core.base_object.class_metadata import cdata_class
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 @cdata_class(
@@ -74,6 +79,7 @@ class CPluginScript(CData):
     SUCCEEDED = 0
     FAILED = 1
     RUNNING = 2
+    UNSATISFACTORY = 3  # Job completed but with warnings/issues
 
     def __init__(self,
                  parent=None,
@@ -113,6 +119,13 @@ class CPluginScript(CData):
         # Process management
         self._process = None
         self._status = None
+
+        # Asynchronous execution control (legacy API)
+        # Set to True to run plugin asynchronously (non-blocking)
+        # Set to False for synchronous (blocking) execution
+        self.doAsync = False
+        # waitForFinished = -1 also triggers async mode (legacy compatibility)
+        self.waitForFinished = 0
 
         # Child job counter for sub-plugins (follows legacy convention)
         self._childJobCounter = 0
@@ -208,7 +221,7 @@ class CPluginScript(CData):
                 # UUID without hyphens - restore them
                 jobId = f"{jobId[0:8]}-{jobId[8:12]}-{jobId[12:16]}-{jobId[16:20]}-{jobId[20:]}"
             self.set_db_job_id(jobId)
-            print(f"[DEBUG setDbData] After set_db_job_id: self._dbJobId = {self._dbJobId}, get_db_job_id() = {self.get_db_job_id()}")
+            logger.debug(f"[DEBUG setDbData] After set_db_job_id: self._dbJobId = {self._dbJobId}, get_db_job_id() = {self.get_db_job_id()}")
 
     def _ensure_standard_containers(self):
         """
@@ -289,24 +302,18 @@ class CPluginScript(CData):
             parsed_container = self._def_parser.parse_def_xml(fileName)
 
             # The parsed container has the full hierarchy
-            # We need to extract the sub-containers and attach them to our
+            # We need to extract ALL sub-containers and attach them to our
             # container (which is parented to this CPluginScript instance)
-            if hasattr(parsed_container, 'inputData'):
-                self.container.inputData = parsed_container.inputData
+            # This includes standard containers (inputData, outputData, controlParameters, guiAdmin)
+            # AND any custom containers (e.g., prosmartProtein, prosmartNucleicAcid for pipelines)
+
+            # Iterate through all children of the parsed container
+            for child in parsed_container.children():
+                child_name = child.name
+                # Attach the child to our container using __setattr__
+                setattr(self.container, child_name, child)
                 # Update parent to be our container (which is parented to self)
-                self.container.inputData.set_parent(self.container)
-
-            if hasattr(parsed_container, 'outputData'):
-                self.container.outputData = parsed_container.outputData
-                self.container.outputData.set_parent(self.container)
-
-            if hasattr(parsed_container, 'controlParameters'):
-                self.container.controlParameters = parsed_container.controlParameters
-                self.container.controlParameters.set_parent(self.container)
-
-            if hasattr(parsed_container, 'guiAdmin'):
-                self.container.guiAdmin = parsed_container.guiAdmin
-                self.container.guiAdmin.set_parent(self.container)
+                child.set_parent(self.container)
 
             self.defFile = fileName
 
@@ -475,7 +482,8 @@ class CPluginScript(CData):
             CErrorReport indicating success or failure
         """
         if fileName is None:
-            fileName = str(self.workDirectory / f"{self.name}.params.xml")
+            # Use TASKNAME (not self.name which may contain spaces/special chars from job title)
+            fileName = str(self.workDirectory / f"{self.TASKNAME}.params.xml")
 
         return self.saveDataToXml(fileName)
 
@@ -514,20 +522,20 @@ class CPluginScript(CData):
         # NOTE: We save to params.xml (not input_params.xml) to preserve the original inputs
         has_method = hasattr(self, 'get_db_job_id')
         job_id = self.get_db_job_id() if has_method else None
-        print(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
+        logger.debug(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
         if has_method and job_id:
             try:
                 params_path = os.path.join(self.workDirectory, "params.xml")
-                print(f"[DEBUG process] About to call saveDataToXml({params_path})")
+                logger.debug(f"[DEBUG process] About to call saveDataToXml({params_path})")
                 save_error = self.saveDataToXml(params_path)
                 if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
-                    print(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
+                    logger.debug(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
                 else:
-                    print(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
+                    logger.debug(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
             except Exception as e:
-                print(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
+                logger.debug(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
         else:
-            print(f"[DEBUG process] Skipping params save (no database context)")
+            logger.debug(f"[DEBUG process] Skipping params save (no database context)")
 
         # Pre-process input files if needed
         result = self.processInputFiles()
@@ -542,17 +550,31 @@ class CPluginScript(CData):
             return self.FAILED
 
         # Generate command and script
-        print(f"[DEBUG process] Calling makeCommandAndScript() for {self.TASKNAME}")
         error = self.makeCommandAndScript()
-        print(f"[DEBUG process] makeCommandAndScript() returned, commandLine has {len(self.commandLine)} items")
         if error:
             self.errorReport.extend(error)
             return self.FAILED
 
         # Start the process
-        error = self.startProcess()
-        if error:
-            self.errorReport.extend(error)
+        # Legacy compatibility: some plugins override startProcess with a processId parameter
+        # Try calling with processId first, fall back to no args
+        import inspect
+        sig = inspect.signature(self.startProcess)
+        if len(sig.parameters) > 0:
+            # Legacy signature: startProcess(self, processId)
+            result = self.startProcess(processId=0)
+        else:
+            # Modern signature: startProcess(self)
+            result = self.startProcess()
+
+        # Handle both modern API (CErrorReport) and legacy API (int)
+        if isinstance(result, int):
+            # Legacy API: returns SUCCEEDED (0) or FAILED (1)
+            if result != self.SUCCEEDED:
+                return result
+        elif result:
+            # Modern API: returns CErrorReport (truthy if has errors)
+            self.errorReport.extend(result)
             return self.FAILED
 
         # For synchronous execution (subprocess.run), process is complete when startProcess returns
@@ -655,10 +677,10 @@ class CPluginScript(CData):
         from core.base_object.base_classes import CDataFile
         from core.base_object.fundamental_types import CList
 
-        print(f"[DEBUG checkOutputData] Called for task: {self.TASKNAME if hasattr(self, 'TASKNAME') else 'unknown'}")
-        print(f"[DEBUG checkOutputData] _dbProjectId = {getattr(self, '_dbProjectId', 'NOT SET')}")
-        print(f"[DEBUG checkOutputData] _dbJobNumber = {getattr(self, '_dbJobNumber', 'NOT SET')}")
-        print(f"[DEBUG checkOutputData] workDirectory = {self.workDirectory}")
+        logger.debug(f"[DEBUG checkOutputData] Called for task: {self.TASKNAME if hasattr(self, 'TASKNAME') else 'unknown'}")
+        logger.debug(f"[DEBUG checkOutputData] _dbProjectId = {getattr(self, '_dbProjectId', 'NOT SET')}")
+        logger.debug(f"[DEBUG checkOutputData] _dbJobNumber = {getattr(self, '_dbJobNumber', 'NOT SET')}")
+        logger.debug(f"[DEBUG checkOutputData] workDirectory = {self.workDirectory}")
 
         error = CErrorReport()
 
@@ -716,11 +738,11 @@ class CPluginScript(CData):
 
         def process_container(container, parent_path: str = ""):
             """Recursively process container to set output file paths."""
-            print(f'[DEBUG checkOutputData] Processing container: {container.name if hasattr(container, "name") else "unknown"}')
+            logger.debug(f'[DEBUG checkOutputData] Processing container: {container.name if hasattr(container, "name") else "unknown"}')
             children = list(container.children())
-            print(f'[DEBUG checkOutputData] Found {len(children)} children')
+            logger.debug(f'[DEBUG checkOutputData] Found {len(children)} children')
             for child in children:
-                print(f'[DEBUG checkOutputData] Processing child: {child.name if hasattr(child, "name") else "unknown"} (type: {type(child).__name__})')
+                logger.debug(f'[DEBUG checkOutputData] Processing child: {child.name if hasattr(child, "name") else "unknown"} (type: {type(child).__name__})')
                 # Handle CDataFile
                 if isinstance(child, CDataFile):
                     # Only set path if baseName has not been set by the user
@@ -731,12 +753,12 @@ class CPluginScript(CData):
                         basename_is_set = child.baseName.isSet('value') and bool(str(child.baseName).strip())
 
                     obj_name = child.objectName() if hasattr(child, 'objectName') else (child.name if hasattr(child, 'name') else 'unknown')
-                    print(f'[DEBUG checkOutputData]   {obj_name}: basename_is_set={basename_is_set}, baseName={str(child.baseName) if hasattr(child, "baseName") else "N/A"}')
+                    logger.debug(f'[DEBUG checkOutputData]   {obj_name}: basename_is_set={basename_is_set}, baseName={str(child.baseName) if hasattr(child, "baseName") else "N/A"}')
                     if hasattr(child, 'baseName'):
                         if hasattr(child.baseName, '_value_states'):
-                            print(f'[DEBUG checkOutputData]     baseName._value_states={child.baseName._value_states}')
+                            logger.debug(f'[DEBUG checkOutputData]     baseName._value_states={child.baseName._value_states}')
                         if hasattr(child.baseName, 'value'):
-                            print(f'[DEBUG checkOutputData]     baseName.value={child.baseName.value}')
+                            logger.debug(f'[DEBUG checkOutputData]     baseName.value={child.baseName.value}')
 
                     if not basename_is_set:
                         # Use setOutputPath if available (database-aware method)
@@ -747,14 +769,14 @@ class CPluginScript(CData):
                             relPath = Path("CCP4_JOBS").joinpath(
                                 *[f"job_{num}" for num in str(self._dbJobNumber).split(".")]
                             )
-                            print(f'[DEBUG checkOutputData] Calling setOutputPath with projectId={self._dbProjectId}, relPath={relPath}')
+                            logger.debug(f'[DEBUG checkOutputData] Calling setOutputPath with projectId={self._dbProjectId}, relPath={relPath}')
                             child.setOutputPath(
                                 jobName="",  # No prefix
                                 projectId=str(self._dbProjectId),
                                 relPath=str(relPath)
                             )
                             retrieved_path = child.getFullPath()
-                            print(f'[DEBUG checkOutputData] Retrieved path after setOutputPath: {retrieved_path}')
+                            logger.debug(f'[DEBUG checkOutputData] Retrieved path after setOutputPath: {retrieved_path}')
                         else:
                             # Fallback: generate simple local path
                             obj_name = child.objectName()
@@ -766,10 +788,10 @@ class CPluginScript(CData):
                                 file_name += '.mtz'
 
                             file_path = os.path.join(self.workDirectory, file_name)
-                            print(f'[DEBUG checkOutputData] Setting path for {obj_name}: {file_path}')
+                            logger.debug(f'[DEBUG checkOutputData] Setting path for {obj_name}: {file_path}')
                             child.setFullPath(file_path)
                             retrieved_path = child.getFullPath()
-                            print(f'[DEBUG checkOutputData] Retrieved path: {retrieved_path}')
+                            logger.debug(f'[DEBUG checkOutputData] Retrieved path: {retrieved_path}')
 
                 # Handle CList - pre-populate if it contains CDataFiles
                 elif isinstance(child, CList):
@@ -813,14 +835,14 @@ class CPluginScript(CData):
         if self.get_db_job_id():
             try:
                 params_path = os.path.join(self.workDirectory, "params.xml")
-                print(f"[DEBUG checkOutputData] Saving params.xml to {params_path}")
+                logger.debug(f"[DEBUG checkOutputData] Saving params.xml to {params_path}")
                 save_error = self.saveDataToXml(params_path)
                 if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
-                    print(f"[DEBUG checkOutputData] Warning: Failed to save params.xml: {save_error}")
+                    logger.debug(f"[DEBUG checkOutputData] Warning: Failed to save params.xml: {save_error}")
                 else:
-                    print(f"[DEBUG checkOutputData] ✅ Saved params.xml with output file attributes")
+                    logger.debug(f"[DEBUG checkOutputData] ✅ Saved params.xml with output file attributes")
             except Exception as e:
-                print(f"[DEBUG checkOutputData] Warning: Exception saving params.xml: {e}")
+                logger.debug(f"[DEBUG checkOutputData] Warning: Exception saving params.xml: {e}")
 
         return error
 
@@ -858,29 +880,29 @@ class CPluginScript(CData):
         # Use our modern CComTemplate implementation (Qt-free)
         try:
             from core import CCP4ComTemplate
-            print(f"[DEBUG makeCommandAndScript] CComTemplate imported successfully")
+            logger.debug(f"[DEBUG makeCommandAndScript] CComTemplate imported successfully")
         except ImportError as e:
             # Should never happen since CCP4ComTemplate is in our core package
-            print(f"[DEBUG makeCommandAndScript] CComTemplate import failed: {e}")
+            logger.debug(f"[DEBUG makeCommandAndScript] CComTemplate import failed: {e}")
             return error
 
         # Process COMTEMPLATE (generates stdin script)
         # The numeric prefix is stripped by CComTemplate, output goes to stdin
         if self.COMTEMPLATE is not None:
-            print(f"[DEBUG makeCommandAndScript] Processing COMTEMPLATE: {self.COMTEMPLATE}")
+            logger.debug(f"[DEBUG makeCommandAndScript] Processing COMTEMPLATE: {self.COMTEMPLATE}")
             try:
                 comTemplate = CCP4ComTemplate.CComTemplate(parent=self, template=self.COMTEMPLATE)
                 text, tmpl_err = comTemplate.makeComScript(container)
-                print(f"[DEBUG makeCommandAndScript] COMTEMPLATE expanded to: '{text}'")
+                logger.debug(f"[DEBUG makeCommandAndScript] COMTEMPLATE expanded to: '{text}'")
                 if tmpl_err and len(tmpl_err) > 0:
-                    print(f"[DEBUG makeCommandAndScript] COMTEMPLATE errors: {tmpl_err}")
+                    logger.debug(f"[DEBUG makeCommandAndScript] COMTEMPLATE errors: {tmpl_err}")
                     error.extend(tmpl_err)
                 if text and len(text) > 0:
                     # Add to commandScript (stdin) - preserve newlines
-                    print(f"[DEBUG makeCommandAndScript] Adding to commandScript (stdin)")
+                    logger.debug(f"[DEBUG makeCommandAndScript] Adding to commandScript (stdin)")
                     self.commandScript.append(text + '\n')
             except Exception as e:
-                print(f"[DEBUG makeCommandAndScript] Exception processing COMTEMPLATE: {e}")
+                logger.debug(f"[DEBUG makeCommandAndScript] Exception processing COMTEMPLATE: {e}")
                 import traceback
                 traceback.print_exc()
                 error.append(
@@ -892,22 +914,22 @@ class CPluginScript(CData):
         # Process COMLINETEMPLATE (generates command line arguments)
         # The leading numeric prefix (e.g., "1 HKLIN") is stripped by CComTemplate
         if self.COMLINETEMPLATE is not None:
-            print(f"[DEBUG makeCommandAndScript] Processing COMLINETEMPLATE: {self.COMLINETEMPLATE}")
+            logger.debug(f"[DEBUG makeCommandAndScript] Processing COMLINETEMPLATE: {self.COMLINETEMPLATE}")
             try:
                 comTemplate = CCP4ComTemplate.CComTemplate(parent=self, template=self.COMLINETEMPLATE)
                 text, tmpl_err = comTemplate.makeComScript(container)
-                print(f"[DEBUG makeCommandAndScript] Template expanded to: '{text}'")
+                logger.debug(f"[DEBUG makeCommandAndScript] Template expanded to: '{text}'")
                 if tmpl_err and len(tmpl_err) > 0:
-                    print(f"[DEBUG makeCommandAndScript] Template errors: {tmpl_err}")
+                    logger.debug(f"[DEBUG makeCommandAndScript] Template errors: {tmpl_err}")
                     error.extend(tmpl_err)
                 if text and len(text) > 0:
                     # Split the text and append each word to commandLine
                     wordList = text.split()
-                    print(f"[DEBUG makeCommandAndScript] Adding words to commandLine: {wordList}")
+                    logger.debug(f"[DEBUG makeCommandAndScript] Adding words to commandLine: {wordList}")
                     for word in wordList:
                         self.commandLine.append(word)
             except Exception as e:
-                print(f"[DEBUG makeCommandAndScript] Exception processing COMLINETEMPLATE: {e}")
+                logger.debug(f"[DEBUG makeCommandAndScript] Exception processing COMLINETEMPLATE: {e}")
                 import traceback
                 traceback.print_exc()
                 error.append(
@@ -1077,7 +1099,11 @@ class CPluginScript(CData):
             return error
 
         # Check if async execution is requested
-        if self.ASYNCHRONOUS or getattr(self, 'waitForFinished', 0) == -1:
+        # Multiple ways to request async:
+        # 1. ASYNCHRONOUS class variable (set in plugin definition)
+        # 2. doAsync instance variable (set by parent pipeline)
+        # 3. waitForFinished = -1 (legacy compatibility)
+        if self.ASYNCHRONOUS or self.doAsync or self.waitForFinished == -1:
             return self._startProcessAsync()
         else:
             return self._startProcessSync()
@@ -1429,6 +1455,200 @@ class CPluginScript(CData):
         self.reportStatus(status)
 
     # =========================================================================
+    # File watching methods (legacy API compatibility)
+    # =========================================================================
+
+    def watchedFiles(self):
+        """Get dictionary of watched files (legacy API).
+
+        Returns:
+            Dictionary mapping file paths to watch metadata
+        """
+        if not hasattr(self, "_watchedFiles"):
+            self._watchedFiles = {}
+        return self._watchedFiles
+
+    def watchedDirectories(self):
+        """Get dictionary of watched directories (legacy API).
+
+        Returns:
+            Dictionary mapping directory paths to watch metadata
+        """
+        if not hasattr(self, "_watchedDirectories"):
+            self._watchedDirectories = {}
+        return self._watchedDirectories
+
+    def watchFile(self, fileName, handler, minDeltaSize=0, unwatchWhileHandling=False):
+        """Watch a file for changes (legacy API compatibility).
+
+        In the legacy Qt-based implementation, this used QFileSystemWatcher
+        to monitor file changes. In the modern async implementation, file
+        watching is handled differently (via async file monitoring in the
+        database handler or through explicit polling).
+
+        This method is provided for backward compatibility with legacy plugins
+        that call watchFile(), but it's a no-op in the new architecture.
+
+        Args:
+            fileName: Path to file to watch
+            handler: Callback function to call when file changes
+            minDeltaSize: Minimum file size change to trigger handler
+            unwatchWhileHandling: Whether to temporarily unwatch during handling
+        """
+        import os
+        parentDirectoryPath, fileRoot = os.path.split(fileName)
+
+        # Store watch metadata for compatibility
+        self.watchedFiles()[fileName] = {
+            "parentDirectoryPath": parentDirectoryPath,
+            "handler": handler,
+            "maxSizeYet": 0,
+            "minDeltaSize": minDeltaSize,
+            "unwatchWhileHandling": unwatchWhileHandling
+        }
+
+        # Note: In the Qt-free implementation, actual file watching would be
+        # handled by the async framework or database handler, not here.
+        # This is just a compatibility stub.
+        logger.debug(f"watchFile called for {fileName} (compatibility mode - no actual watching)")
+
+    def watchDirectory(self, directoryName, handler):
+        """Watch a directory for changes (legacy API compatibility).
+
+        This is a no-op stub for backward compatibility.
+
+        Args:
+            directoryName: Path to directory to watch
+            handler: Callback function to call when directory changes
+        """
+        self.watchedDirectories()[directoryName] = {"handler": handler}
+        logger.debug(f"watchDirectory called for {directoryName} (compatibility mode - no actual watching)")
+
+    # =========================================================================
+    # Dictionary merging for crystallographic refinement
+    # =========================================================================
+
+    def joinDicts(self, outfile, infiles):
+        """Merge multiple crystallographic dictionary files into one.
+
+        This method combines multiple CIF dictionary files (geometric restraint
+        definitions for monomers) into a single dictionary file. It first tries
+        to use dictionaryAccumulator for proper merging, then falls back to
+        libcheck if that fails.
+
+        Args:
+            outfile: CDataFile object for the output merged dictionary
+            infiles: List of CDataFile objects for input dictionaries
+
+        Returns:
+            tuple: (status_code, error_code) where status_code is SUCCEEDED/FAILED
+        """
+        import os
+        import shutil
+
+        # Handle empty input
+        if len(infiles) == 0:
+            return self.SUCCEEDED, None
+
+        # Handle single input - just copy reference
+        if len(infiles) == 1:
+            outfile.set(infiles[0])
+            return self.SUCCEEDED, None
+
+        # Multiple inputs - need to merge
+        outfile_string = str(outfile.fullPath) if hasattr(outfile, 'fullPath') else str(outfile.getFullPath())
+
+        try:
+            # Build list of input file paths
+            input_cif_list = []
+            for dict_file in infiles:
+                path = str(dict_file.fullPath) if hasattr(dict_file, 'fullPath') else str(dict_file.getFullPath())
+                input_cif_list.append(path)
+
+            # Try to use dictionaryAccumulator (preferred method)
+            try:
+                from ccp4i2.utils import dictionaryAccumulator
+                dictionaryAccumulator.accumulate(input_cif_list, outfile_string)
+
+                if os.path.exists(outfile_string):
+                    outfile.setFullPath(outfile_string)
+                    logger.info(f"Merged {len(input_cif_list)} dictionaries using dictionaryAccumulator")
+                    return self.SUCCEEDED, None
+            except Exception as e:
+                logger.warning(f"dictionaryAccumulator failed: {e}, trying libcheck...")
+
+            # Fall back to libcheck
+            logger.warning("Using libcheck to merge dictionaries (output may not be self-consistent)")
+
+            # Find libcheck executable
+            import sys
+            exe = 'libcheck.exe' if sys.platform == 'win32' else 'libcheck'
+
+            # Try to find libcheck in CCP4 installation
+            # For now, just use subprocess to call libcheck if it's in PATH
+            import subprocess
+
+            # Merge dictionaries pairwise
+            outfile_string = ""
+            for idx, dict_file in enumerate(infiles):
+                dict_path = str(dict_file.fullPath) if hasattr(dict_file, 'fullPath') else str(dict_file.getFullPath())
+
+                if len(outfile_string) == 0:
+                    # First file - just use it as starting point
+                    outfile_string = dict_path
+                else:
+                    # Merge with previous result
+                    outfile_old = outfile_string
+                    outfile_string = os.path.join(self.workDirectory, f'merged_dictionary_tmp{idx}')
+
+                    logger.info(f"Merging dictionaries:")
+                    logger.info(f"  DictIn1: {outfile_old}")
+                    logger.info(f"  DictIn2: {dict_path}")
+                    logger.info(f"  DictOut: {outfile_string}")
+
+                    # Build libcheck command file
+                    comFileText = f"_N\n_FILE_L {outfile_old}\n_FILE_L2 {dict_path}\n_FILE_O {outfile_string}\n_END\n"
+
+                    # Run libcheck
+                    try:
+                        result = subprocess.run(
+                            [exe],
+                            input=comFileText,
+                            capture_output=True,
+                            text=True,
+                            cwd=str(self.workDirectory)
+                        )
+
+                        # libcheck creates .lib extension
+                        outfile_string = os.path.join(self.workDirectory, f'merged_dictionary_tmp{idx}.lib')
+
+                        if result.returncode not in [0] or not os.path.exists(outfile_string):
+                            logger.error(f"libcheck failed with return code {result.returncode}")
+                            return self.FAILED, 32
+
+                    except FileNotFoundError:
+                        logger.error("libcheck executable not found")
+                        return self.FAILED, 32
+
+            # Copy final merged dictionary to output location
+            outfile_final = os.path.join(self.workDirectory, 'merged_dictionary.lib')
+            if os.path.exists(outfile_string):
+                shutil.copyfile(outfile_string, outfile_final)
+            else:
+                return self.FAILED, 32
+
+            if os.path.exists(outfile_final):
+                outfile.setFullPath(outfile_final)
+                logger.info(f"Final merged dictionary: {outfile_final}")
+                return self.SUCCEEDED, None
+            else:
+                return self.FAILED, 32
+
+        except Exception as e:
+            logger.error(f"Failed to merge dictionaries: {e}")
+            return self.FAILED, 28
+
+    # =========================================================================
     # Utility methods for backward compatibility with old API
     # =========================================================================
 
@@ -1473,7 +1693,7 @@ class CPluginScript(CData):
         try:
             if not child_work_dir.exists():
                 child_work_dir.mkdir(parents=True, exist_ok=True)
-                print(f"[DEBUG makePluginObject] Created subdirectory: {child_work_dir}")
+                logger.debug(f"[DEBUG makePluginObject] Created subdirectory: {child_work_dir}")
         except Exception as e:
             self.errorReport.append(
                 klass=self.__class__.__name__,
@@ -1525,14 +1745,14 @@ class CPluginScript(CData):
             if self.get_db_job_id():
                 try:
                     params_path = os.path.join(self.workDirectory, "params.xml")
-                    print(f"[DEBUG makePluginObject] Saving parent params.xml to {params_path}")
+                    logger.debug(f"[DEBUG makePluginObject] Saving parent params.xml to {params_path}")
                     save_error = self.saveDataToXml(params_path)
                     if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
-                        print(f"[DEBUG makePluginObject] Warning: Failed to save params.xml: {save_error}")
+                        logger.debug(f"[DEBUG makePluginObject] Warning: Failed to save params.xml: {save_error}")
                     else:
-                        print(f"[DEBUG makePluginObject] ✅ Saved params.xml for nested job to load")
+                        logger.debug(f"[DEBUG makePluginObject] ✅ Saved params.xml for nested job to load")
                 except Exception as e:
-                    print(f"[DEBUG makePluginObject] Warning: Exception saving params.xml: {e}")
+                    logger.debug(f"[DEBUG makePluginObject] Warning: Exception saving params.xml: {e}")
 
             plugin_instance = plugin_class(**plugin_kwargs)
 
@@ -1540,11 +1760,11 @@ class CPluginScript(CData):
             # Nested plugins need the dbHandler to lookup files via dbFileId
             if hasattr(self, '_dbHandler') and self._dbHandler is not None:
                 plugin_instance._dbHandler = self._dbHandler
-                print(f"[DEBUG makePluginObject] Propagated dbHandler to nested plugin")
+                logger.debug(f"[DEBUG makePluginObject] Propagated dbHandler to nested plugin")
             if hasattr(self, '_dbProjectId') and self._dbProjectId is not None:
                 plugin_instance._dbProjectId = self._dbProjectId
-                print(f"[DEBUG makePluginObject] Propagated dbProjectId to nested plugin")
-            print(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
+                logger.debug(f"[DEBUG makePluginObject] Propagated dbProjectId to nested plugin")
+            logger.debug(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance
         except Exception as e:
             self.errorReport.append(
@@ -1602,6 +1822,25 @@ class CPluginScript(CData):
             Child job counter (starts at 0, increments with each makePluginObject call)
         """
         return self._childJobCounter
+
+    def getWorkDirectory(self, ifRelPath=False):
+        """Get the working directory path.
+
+        Args:
+            ifRelPath: If True and path contains 'CCP4_JOBS', return relative path from CCP4_JOBS onwards.
+                      If False, return absolute path.
+
+        Returns:
+            Working directory path as string (absolute or relative based on ifRelPath)
+        """
+        import os
+        work_dir = str(self.workDirectory)
+
+        if ifRelPath and 'CCP4_JOBS' in work_dir:
+            # Return relative path starting from CCP4_JOBS
+            return work_dir[work_dir.index('CCP4_JOBS'):]
+        else:
+            return work_dir
 
     # connectSignal() is now inherited from HierarchicalObject base class
     # with automatic signature adaptation for legacy int handlers
@@ -1710,9 +1949,27 @@ class CPluginScript(CData):
                     f"File object '{name}' not found in inputData or outputData"
                 )
 
+            # Debug logging
+            print(f"[DEBUG makeHklinGemmi] Processing file '{name}':")
+            print(f"  - Type: {type(file_obj).__name__}")
+            if hasattr(file_obj, 'baseName'):
+                val = file_obj.baseName.value if hasattr(file_obj.baseName, 'value') else file_obj.baseName
+                print(f"  - baseName.value: '{val}'")
+                print(f"  - baseName.isSet(): {file_obj.baseName.isSet() if hasattr(file_obj.baseName, 'isSet') else 'N/A'}")
+            if hasattr(file_obj, 'relPath'):
+                val = file_obj.relPath.value if hasattr(file_obj.relPath, 'value') else file_obj.relPath
+                print(f"  - relPath.value: '{val}'")
+            if hasattr(file_obj, 'dbFileId'):
+                val = file_obj.dbFileId.value if hasattr(file_obj.dbFileId, 'value') else file_obj.dbFileId
+                print(f"  - dbFileId.value: '{val}'")
+            if hasattr(file_obj, 'project'):
+                val = file_obj.project.value if hasattr(file_obj.project, 'value') else file_obj.project
+                print(f"  - project.value: '{val}'")
+            print(f"  - getFullPath(): '{file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}'")
+
             # Auto-detect contentFlag from file content to ensure accuracy
             if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
-                print(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
+                logger.debug(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
                 file_obj.setContentFlag()
 
             # Check if conversion is needed
@@ -1720,7 +1977,7 @@ class CPluginScript(CData):
 
             if target_content_flag is not None and current_content_flag != target_content_flag:
                 # CONVERSION NEEDED!
-                print(f"[DEBUG makeHklinGemmi] Conversion needed: {name} from contentFlag={current_content_flag} to {target_content_flag}")
+                logger.debug(f"[DEBUG makeHklinGemmi] Conversion needed: {name} from contentFlag={current_content_flag} to {target_content_flag}")
 
                 # Validate target contentFlag
                 if not hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
@@ -1748,7 +2005,7 @@ class CPluginScript(CData):
 
                 conversion_method = getattr(file_obj, method_name)
                 converted_path = conversion_method(self.workDirectory)
-                print(f"[DEBUG makeHklinGemmi] Converted {name} to {converted_path}")
+                logger.debug(f"[DEBUG makeHklinGemmi] Converted {name} to {converted_path}")
 
                 # Create a temporary file object pointing to converted file
                 temp_name = f"_converted_{name}_{file_spec_idx}"
@@ -1762,11 +2019,11 @@ class CPluginScript(CData):
 
                 # Use temp object for merging
                 file_obj = temp_file_obj
-                print(f"[DEBUG makeHklinGemmi] Using temp file object '{temp_name}' with contentFlag={target_content_flag}")
+                logger.debug(f"[DEBUG makeHklinGemmi] Using temp file object '{temp_name}' with contentFlag={target_content_flag}")
 
             # Get filesystem path
             path = file_obj.getFullPath()
-            print(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
+            logger.debug(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
 
@@ -1872,24 +2129,86 @@ class CPluginScript(CData):
             ... ])
         """
         error = CErrorReport()
+        hklin_filename = None
 
         try:
             # Translate old API to new API
+            # Legacy makeHklin() should produce standard column names (F, SIGF, etc.)
+            # not prefixed names (F_SIGF_F, F_SIGF_SIGF)
             file_objects = []
 
             for item in miniMtzsIn:
                 if isinstance(item, str):
                     # Simple name - use object's own contentFlag
-                    file_objects.append(item)
+                    # Provide identity rename map to preserve standard column names
+                    # Get the file object to determine its content signature
+                    file_obj = None
+                    if hasattr(self.container.inputData, item):
+                        file_obj = getattr(self.container.inputData, item)
+                    elif hasattr(self.container.outputData, item):
+                        file_obj = getattr(self.container.outputData, item)
+
+                    if file_obj and hasattr(file_obj, 'contentFlag'):
+                        # Auto-detect contentFlag if not set
+                        if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
+                            file_obj.setContentFlag()
+
+                        # Get content signature to determine standard column names
+                        content_flag = int(file_obj.contentFlag)
+                        if content_flag > 0 and hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
+                            # CONTENT_SIGNATURE_LIST is a list of lists: [['Iplus', ...], ['Fplus', ...], ...]
+                            columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
+                            # Create identity mapping: each column maps to itself
+                            identity_rename = {col: col for col in columns}
+
+                            file_objects.append({
+                                'name': item,
+                                'display_name': item,
+                                'rename': identity_rename  # Keep original column names
+                            })
+                        else:
+                            # Fallback if contentFlag not determined
+                            file_objects.append(item)
+                    else:
+                        # Fallback if file object not found
+                        file_objects.append(item)
 
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
                     # [name, target_contentFlag] - let makeHklinGemmi handle conversion
+                    # Also provide identity rename to preserve standard names after conversion
                     name, target_flag = item
-                    file_objects.append({
-                        'name': name,
-                        'display_name': name,
-                        'target_contentFlag': target_flag
-                    })
+
+                    # Get file object to access CONTENT_SIGNATURE_LIST
+                    file_obj = None
+                    if hasattr(self.container.inputData, name):
+                        file_obj = getattr(self.container.inputData, name)
+                    elif hasattr(self.container.outputData, name):
+                        file_obj = getattr(self.container.outputData, name)
+
+                    if file_obj and hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
+                        if target_flag > 0 and target_flag <= len(file_obj.CONTENT_SIGNATURE_LIST):
+                            # CONTENT_SIGNATURE_LIST is a list of lists
+                            columns = file_obj.CONTENT_SIGNATURE_LIST[target_flag - 1]
+                            identity_rename = {col: col for col in columns}
+
+                            file_objects.append({
+                                'name': name,
+                                'display_name': name,
+                                'target_contentFlag': target_flag,
+                                'rename': identity_rename
+                            })
+                        else:
+                            file_objects.append({
+                                'name': name,
+                                'display_name': name,
+                                'target_contentFlag': target_flag
+                            })
+                    else:
+                        file_objects.append({
+                            'name': name,
+                            'display_name': name,
+                            'target_contentFlag': target_flag
+                        })
 
                 else:
                     error.append(
@@ -1899,16 +2218,20 @@ class CPluginScript(CData):
                         name=str(item)
                     )
                     self.errorReport.extend(error)
-                    return error
+                    return (None, error)
 
             # Call new API - it handles all conversions
-            self.makeHklinGemmi(
+            output_path = self.makeHklinGemmi(
                 file_objects=file_objects,
                 output_name=hklin,
                 merge_strategy='first'
             )
 
+            # Store the output filename for legacy API compatibility
+            hklin_filename = str(output_path)
+
         except (AttributeError, ValueError, NotImplementedError, FileNotFoundError) as e:
+            hklin_filename = None
             # Map specific exceptions to error codes
             error.append(
                 klass=self.__class__.__name__,
@@ -1939,7 +2262,7 @@ class CPluginScript(CData):
             print(error.report())
             print(f"{'='*60}\n")
 
-        return error
+        return (hklin_filename, error)
 
     def makeHklInput(
         self,
@@ -2005,8 +2328,8 @@ class CPluginScript(CData):
         """
         from core.CCP4Utils import split_mtz_file, MtzSplitError
 
-        print(f'[DEBUG splitMtz] Splitting {infile} using gemmi')
-        print(f'[DEBUG splitMtz] Output specs: {outfiles}')
+        logger.debug(f'[DEBUG splitMtz] Splitting {infile} using gemmi')
+        logger.debug(f'[DEBUG splitMtz] Output specs: {outfiles}')
 
         try:
             # Process each output file
@@ -2032,8 +2355,8 @@ class CPluginScript(CData):
                 # Build column mapping dict for utility function
                 column_mapping = dict(zip(input_col_names, output_col_names))
 
-                print(f'[DEBUG splitMtz] Creating {output_path}')
-                print(f'[DEBUG splitMtz]   Column mapping: {column_mapping}')
+                logger.debug(f'[DEBUG splitMtz] Creating {output_path}')
+                logger.debug(f'[DEBUG splitMtz]   Column mapping: {column_mapping}')
 
                 # Call CData-agnostic utility function
                 result_path = split_mtz_file(
@@ -2044,7 +2367,7 @@ class CPluginScript(CData):
 
                 import os
                 file_size = os.path.getsize(result_path)
-                print(f'[DEBUG splitMtz] Created: {result_path} ({file_size} bytes)')
+                logger.debug(f'[DEBUG splitMtz] Created: {result_path} ({file_size} bytes)')
 
             return self.SUCCEEDED
 
@@ -2113,9 +2436,9 @@ class CPluginScript(CData):
             )
             return error
 
-        print(f'[DEBUG splitHklout] Splitting {inFile}')
-        print(f'[DEBUG splitHklout] Output objects: {miniMtzsOut}')
-        print(f'[DEBUG splitHklout] Column names: {programColumnNames}')
+        logger.debug(f'[DEBUG splitHklout] Splitting {inFile}')
+        logger.debug(f'[DEBUG splitHklout] Output objects: {miniMtzsOut}')
+        logger.debug(f'[DEBUG splitHklout] Column names: {programColumnNames}')
 
         # Build outfiles list for splitMtz
         outfiles = []
@@ -2146,7 +2469,7 @@ class CPluginScript(CData):
             # (input and output columns are the same)
             outfiles.append([output_path, col_string])
 
-            print(f'[DEBUG splitHklout]   {obj_name} -> {output_path} (columns: {col_string})')
+            logger.debug(f'[DEBUG splitHklout]   {obj_name} -> {output_path} (columns: {col_string})')
 
         # Return early if there were errors
         if error.count() > 0:

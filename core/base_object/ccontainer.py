@@ -148,6 +148,79 @@ class CContainer(CData):
         # Otherwise return the dynamic order
         return list(self._data_order)
 
+    def copyData(self, otherContainer, dataList: Optional[List[str]] = None):
+        """Copy data from another container into this container.
+
+        This performs a deep copy by serializing the source data to XML (via getEtree)
+        and deserializing it back into this container (via setEtree). This ensures
+        that all nested structures, qualifiers, and metadata are properly copied.
+
+        Args:
+            otherContainer: Source CContainer to copy from
+            dataList: Optional list of item names to copy. If None, copies all items
+                     from the source container.
+
+        Example:
+            # Copy all data from source to destination
+            dest.copyData(source)
+
+            # Copy specific items only (as shown in pipelines.rst documentation)
+            self.pdbset.container.inputData.copyData(self.container.inputData, ['XYZIN'])
+        """
+        if not isinstance(otherContainer, CContainer):
+            raise TypeError(f"otherContainer must be a CContainer, got {type(otherContainer).__name__}")
+
+        # Determine which items to copy
+        if dataList is None:
+            # Copy all items from source
+            # Use dataOrder() if it has items, otherwise find all CData children
+            items_from_order = otherContainer.dataOrder()
+            if items_from_order:
+                items_to_copy = items_from_order
+            else:
+                # Fallback: Find all CData attributes by iterating children
+                # This handles cases where items weren't added to _data_order
+                from core.base_object.base_classes import CData
+                items_to_copy = [child.name for child in otherContainer.children()
+                                if isinstance(child, CData)]
+        else:
+            items_to_copy = dataList
+
+        # Copy each item
+        for item_name in items_to_copy:
+            if not hasattr(otherContainer, item_name):
+                # Skip items that don't exist in source
+                continue
+
+            source_item = getattr(otherContainer, item_name)
+
+            # Serialize the source item to XML
+            # excludeUnset=False ensures we copy everything including unset values
+            source_etree = source_item.getEtree(name=item_name, excludeUnset=False)
+
+            # Check if we already have this item in the destination
+            if hasattr(self, item_name):
+                # Item exists - update it in place
+                dest_item = getattr(self, item_name)
+                dest_item.setEtree(source_etree, ignore_missing=True)
+            else:
+                # Item doesn't exist - need to create it first
+                # Get the class of the source item
+                source_class = type(source_item)
+
+                # Create a new instance
+                new_item = source_class(name=item_name)
+
+                # Add it to this container
+                setattr(self, item_name, new_item)
+                if hasattr(new_item, 'set_parent'):
+                    new_item.set_parent(self)
+                if item_name not in self._data_order:
+                    self._data_order.append(item_name)
+
+                # Now populate it with the source data
+                new_item.setEtree(source_etree, ignore_missing=True)
+
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""
         # Get list of all content items

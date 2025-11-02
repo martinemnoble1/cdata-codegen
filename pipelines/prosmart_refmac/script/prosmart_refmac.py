@@ -70,7 +70,11 @@ class prosmart_refmac(CPluginScript):
            self.executeProsmartNucleicAcid()
            self.executePlatonyzer()
            self.executeFirstRefmac()
-        except:
+        except Exception as e:
+           # Log the exception for debugging
+           import logging
+           logger = logging.getLogger(__name__)
+           logger.error(f"prosmart_refmac.startProcess() failed: {type(e).__name__}: {e}", exc_info=True)
            self.reportStatus(CPluginScript.FAILED)
            return CPluginScript.FAILED
         return CPluginScript.SUCCEEDED
@@ -214,6 +218,13 @@ class prosmart_refmac(CPluginScript):
         result = self.makePluginObject('refmac')
         #input data for this refmac instance is the same as the input data for the program
         result.container.inputData.copyData(self.container.inputData)
+
+        # WORKAROUND: Set _temp_plugin_ref on all copied files so they can find the database handler
+        # This is needed because the parent hierarchy walk doesn't work correctly after copyData
+        from core.base_object.cdata_file import CDataFile
+        for child in result.container.inputData.children():
+            if isinstance(child, CDataFile):
+                child._temp_plugin_ref = result
         #result.container.inputData = self.container.inputData
 
         #Copy over most of the control parameters

@@ -101,8 +101,8 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
                             input_files.append(f"{attr_name}={basename}")
                     except:
                         pass
-            print(f"[DEBUG async_run_job] inputData before save: {input_files}")
-            logger.info(f"[DEBUG] inputData before save: {input_files}")
+            logger.debug(f"[DEBUG async_run_job] inputData before save: {input_files}")
+            logger.debug(f"[DEBUG] inputData before save: {input_files}")
 
         await sync_to_async(plugin.saveDataToXml)(str(job.directory / "params.xml"))
         logger.info("Saved params.xml")

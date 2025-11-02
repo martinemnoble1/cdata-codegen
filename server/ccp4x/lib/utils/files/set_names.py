@@ -50,23 +50,23 @@ def set_output_file_names(
                 )
                 logger.info(f"    setOutputPath completed for {objectName}")
             if isinstance(dobj, CCP4ModelData.CPdbDataFile):
-                logger.info(f"    [DEBUG] CPdbDataFile detected: {objectName}")
-                logger.info(f"    [DEBUG] Current baseName: {dobj.baseName}")
+                logger.debug(f"    [DEBUG] CPdbDataFile detected: {objectName}")
+                logger.debug(f"    [DEBUG] Current baseName: {dobj.baseName}")
                 oldBaseName = str(Path(str(dobj.baseName)).stem)
-                logger.info(f"    [DEBUG] oldBaseName (stem): {oldBaseName}")
+                logger.debug(f"    [DEBUG] oldBaseName (stem): {oldBaseName}")
                 # Use fileExtensions() method which returns extensions based on contentFlag
                 # This indirects through the class's extension array
                 if hasattr(dobj, 'fileExtensions'):
                     extensions = dobj.fileExtensions()
-                    logger.info(f"    [DEBUG] fileExtensions() returned: {extensions}")
+                    logger.debug(f"    [DEBUG] fileExtensions() returned: {extensions}")
                     if extensions and len(extensions) > 0:
                         primary_ext = extensions[0]
-                        logger.info(f"    [DEBUG] primary_ext: {primary_ext}")
+                        logger.debug(f"    [DEBUG] primary_ext: {primary_ext}")
                         dobj.baseName.set(f"{oldBaseName}.{primary_ext}")
                         logger.info(f"    Set baseName to {oldBaseName}.{primary_ext} based on fileExtensions()")
                 else:
                     # Fallback: default to .pdb
-                    logger.info(f"    [DEBUG] No fileExtensions method, using fallback .pdb")
+                    logger.debug(f"    [DEBUG] No fileExtensions method, using fallback .pdb")
                     dobj.baseName.set(f"{oldBaseName}.pdb")
 
         except Exception as err:

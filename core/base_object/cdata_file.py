@@ -133,21 +133,30 @@ class CDataFile(CData):
 
         # Walk up parent hierarchy
         current = self.parent
+        depth = 0
+        print(f"[DEBUG _find_plugin_parent] Starting search for plugin from {self.name if hasattr(self, 'name') else 'unknown'}")
         while current:
+            print(f"[DEBUG _find_plugin_parent] Depth {depth}: {type(current).__name__}, name={current.name if hasattr(current, 'name') else 'N/A'}")
             if isinstance(current, CPluginScript):
+                print(f"[DEBUG _find_plugin_parent] Found plugin: {current.TASKNAME if hasattr(current, 'TASKNAME') else 'unknown'}")
                 return current
             current = getattr(current, 'parent', None)
+            depth += 1
+            if depth > 10:  # Safety limit
+                print(f"[DEBUG _find_plugin_parent] Depth limit reached, stopping")
+                break
+        print(f"[DEBUG _find_plugin_parent] No plugin found")
         return None
 
     def _get_db_handler(self):
         """Get the database handler from the plugin parent, if available."""
         plugin = self._find_plugin_parent()
-        print(f"[DEBUG _get_db_handler] Found plugin: {plugin}")
+        logger.debug(f"[DEBUG _get_db_handler] Found plugin: {plugin}")
         if plugin:
-            print(f"[DEBUG _get_db_handler] Plugin name: {plugin.name if hasattr(plugin, 'name') else 'unknown'}")
-            print(f"[DEBUG _get_db_handler] Has _dbHandler: {hasattr(plugin, '_dbHandler')}")
+            logger.debug(f"[DEBUG _get_db_handler] Plugin name: {plugin.name if hasattr(plugin, 'name') else 'unknown'}")
+            logger.debug(f"[DEBUG _get_db_handler] Has _dbHandler: {hasattr(plugin, '_dbHandler')}")
             if hasattr(plugin, '_dbHandler'):
-                print(f"[DEBUG _get_db_handler] _dbHandler value: {plugin._dbHandler}")
+                logger.debug(f"[DEBUG _get_db_handler] _dbHandler value: {plugin._dbHandler}")
                 return plugin._dbHandler
         return None
 
@@ -287,35 +296,35 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
-        logger.info(f"[setOutputPath] Called for {self.name if hasattr(self, 'name') else 'unknown'}")
-        logger.info(f"  jobName={jobName}, projectId={projectId}, relPath={relPath}")
+        logger.debug(f"[setOutputPath] Called for {self.name if hasattr(self, 'name') else 'unknown'}")
+        logger.debug(f"  jobName={jobName}, projectId={projectId}, relPath={relPath}")
 
         # Set project ID
         if projectId:
-            print(f"  Has project attr: {hasattr(self, 'project')}")
+            logger.debug(f"  Has project attr: {hasattr(self, 'project')}")
             if hasattr(self, 'project'):
-                print(f"  Project type: {type(self.project).__name__}")
-                print(f"  Project has set: {hasattr(self.project, 'set')}")
-                print(f"  Project has value: {hasattr(self.project, 'value')}")
+                logger.debug(f"  Project type: {type(self.project).__name__}")
+                logger.debug(f"  Project has set: {hasattr(self.project, 'set')}")
+                logger.debug(f"  Project has value: {hasattr(self.project, 'value')}")
                 if hasattr(self.project, 'set'):
                     self.project.set(projectId)
-                    print(f"  Called project.set({projectId})")
+                    logger.debug(f"  Called project.set({projectId})")
                 elif hasattr(self.project, 'value'):
                     self.project.value = projectId
-                    print(f"  Set project.value = {projectId}")
+                    logger.debug(f"  Set project.value = {projectId}")
             logger.debug(f"[setOutputPath] Set project = {projectId}")
 
         # Set relPath
         if relPath:
-            print(f"  Has relPath attr: {hasattr(self, 'relPath')}")
+            logger.debug(f"  Has relPath attr: {hasattr(self, 'relPath')}")
             if hasattr(self, 'relPath'):
-                print(f"  relPath has set: {hasattr(self.relPath, 'set')}")
+                logger.debug(f"  relPath has set: {hasattr(self.relPath, 'set')}")
                 if hasattr(self.relPath, 'set'):
                     self.relPath.set(str(relPath))
-                    print(f"  Called relPath.set({relPath})")
+                    logger.debug(f"  Called relPath.set({relPath})")
                 elif hasattr(self.relPath, 'value'):
                     self.relPath.value = str(relPath)
-                    print(f"  Set relPath.value = {relPath}")
+                    logger.debug(f"  Set relPath.value = {relPath}")
             logger.debug(f"[setOutputPath] Set relPath = {relPath}")
 
         # Generate baseName from object name if not already set
@@ -325,11 +334,11 @@ class CDataFile(CData):
             if hasattr(self.baseName, 'isSet'):
                 basename_is_set = self.baseName.isSet('value') and bool(str(self.baseName).strip())
 
-            print(f"  baseName is already set: {basename_is_set}")
+            logger.debug(f"  baseName is already set: {basename_is_set}")
             if not basename_is_set:
                 # Generate from object name
                 obj_name = self.objectName() if hasattr(self, 'objectName') else (self.name if hasattr(self, 'name') else 'output')
-                print(f"  obj_name from objectName/name: {obj_name}")
+                logger.debug(f"  obj_name from objectName/name: {obj_name}")
 
                 # Add job prefix if provided
                 if jobName:
@@ -352,20 +361,20 @@ class CDataFile(CData):
                     else:
                         filename += '.mtz'  # Default extension for files without fileExtensions() method
 
-                print(f"  Generated filename: {filename}")
+                logger.debug(f"  Generated filename: {filename}")
                 if hasattr(self.baseName, 'set'):
                     self.baseName.set(filename)
-                    print(f"  Called baseName.set({filename})")
+                    logger.debug(f"  Called baseName.set({filename})")
                 elif hasattr(self.baseName, 'value'):
                     self.baseName.value = filename
-                    print(f"  Set baseName.value = {filename}")
+                    logger.debug(f"  Set baseName.value = {filename}")
                 else:
                     self.baseName = filename
-                    print(f"  Set baseName directly = {filename}")
+                    logger.debug(f"  Set baseName directly = {filename}")
 
                 logger.debug(f"[setOutputPath] Set baseName = {filename}")
 
-        print(f"[setOutputPath] Done!")
+        logger.debug(f"[setOutputPath] Done!")
 
     def getFullPath(self) -> str:
         """Get the full file path as a string.
@@ -429,7 +438,7 @@ class CDataFile(CData):
                         path = db_handler.get_file_path_sync(file_uuid)
                         print(f"[DEBUG getFullPath] Database returned path: {path}")
                         if path:
-                            logger.debug("Retrieved path from database via dbFileId: %s", path)
+                            print(f"[DEBUG getFullPath] Retrieved path from database via dbFileId: {path}")
                             return path
                     except Exception as e:
                         print(f"[DEBUG getFullPath] Exception during database lookup: {e}")
@@ -526,7 +535,7 @@ class CDataFile(CData):
                                     base_dir = Path(project_dir)
                                     if basename_value:
                                         full_path = base_dir / relpath_str / str(basename_value)
-                                        print(f"[DEBUG getFullPath] Using project_dir + relPath + baseName: {full_path}")
+                                        logger.debug(f"[DEBUG getFullPath] Using project_dir + relPath + baseName: {full_path}")
                                         logger.debug("Constructed path from project + relPath + baseName: %s", full_path)
                                         return str(full_path)
                                     else:

@@ -56,7 +56,7 @@ def save_params_for_job(
     old_job_container: CCP4Container.CContainer = the_job_plugin.container
 
     # DEBUG: Check if file attributes are set before saving
-    logger.info(f"[DEBUG save_params] Checking file attributes before save...")
+    logger.debug(f"[DEBUG save_params] Checking file attributes before save...")
     try:
         if hasattr(old_job_container, 'inputData'):
             input_data = old_job_container.inputData
@@ -64,12 +64,12 @@ def save_params_for_job(
                 if hasattr(input_data, attr_name):
                     file_obj = getattr(input_data, attr_name)
                     if hasattr(file_obj, 'baseName') and hasattr(file_obj.baseName, 'value'):
-                        logger.info(f"[DEBUG save_params]   {attr_name}.baseName = '{file_obj.baseName.value}'")
+                        logger.debug(f"[DEBUG save_params]   {attr_name}.baseName = '{file_obj.baseName.value}'")
                     if hasattr(file_obj, 'project') and hasattr(file_obj.project, 'value'):
-                        logger.info(f"[DEBUG save_params]   {attr_name}.project = '{file_obj.project.value}'")
+                        logger.debug(f"[DEBUG save_params]   {attr_name}.project = '{file_obj.project.value}'")
     except Exception as e:
         logger.warning(f"[DEBUG save_params] Error checking file attributes: {e}")
 
     body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
     f.saveFile(bodyEtree=body_etree)
-    logger.info(f"[DEBUG save_params] Saved params for job {the_job.number}")
+    logger.debug(f"[DEBUG save_params] Saved params for job {the_job.number}")

@@ -479,6 +479,57 @@ def writeXML(file, xml_string):
     file.write(xml_string)
 
 
+def openFileToEtree(fileName: Union[str, Path], printout: bool = False, useLXML: bool = True):
+    """
+    Parse an XML file and return an ElementTree element.
+
+    Legacy compatibility function used by plugins to read XML files.
+    Reads the file content and parses it to avoid segfaults that can occur
+    with direct etree.parse() on some systems.
+
+    Args:
+        fileName: Path to XML file to read
+        printout: If True, print the parsed XML tree
+        useLXML: If True, use lxml parser; if False, use xml.etree.ElementTree
+
+    Returns:
+        ElementTree element representing the parsed XML
+
+    Raises:
+        Exception: If file cannot be read or parsed
+    """
+    import os
+
+    # Normalize path and read file
+    file_path = os.path.normpath(str(fileName))
+    with open(file_path, 'r', encoding='utf-8') as f:
+        xml_content = f.read()
+
+    # Parse using appropriate parser
+    if useLXML:
+        try:
+            from lxml import etree
+            xml_bytes = xml_content.encode('utf-8')
+            tree = etree.fromstring(xml_bytes)
+        except ImportError:
+            # Fall back to standard library if lxml not available
+            import xml.etree.ElementTree as ET
+            tree = ET.fromstring(xml_content)
+    else:
+        import xml.etree.ElementTree as ET
+        tree = ET.fromstring(xml_content)
+
+    if printout:
+        try:
+            from lxml import etree
+            print(etree.tostring(tree, pretty_print=True, encoding='unicode'))
+        except ImportError:
+            import xml.etree.ElementTree as ET
+            print(ET.tostring(tree, encoding='unicode'))
+
+    return tree
+
+
 def backupFile(file_path: Union[str, Path], delete: bool = True) -> Optional[Path]:
     """
     Backup a file by renaming it with a numeric suffix.

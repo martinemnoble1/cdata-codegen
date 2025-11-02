@@ -12,7 +12,7 @@ from core import CCP4Data
 from core.base_object.cdata_file import CDataFile
 from core.CCP4Container import CContainer
 
-logger = logging.getLogger(f"ccp4x:{__name__}")
+logger = logging.getLogger(__name__)
 
 
 def get_file_type_from_class(file_obj: CDataFile) -> str:
@@ -72,18 +72,18 @@ def find_all_files(container) -> List[CDataFile]:
         ...     print(f"Found {file_obj.name}: {file_obj.object_path()}")
     """
     files = []
-    print(f"[DEBUG find_all_files] Starting search from {container}")
-    print(f"[DEBUG find_all_files] Container type: {type(container)}")
+    logger.debug(f"[DEBUG find_all_files] Starting search from {container}")
+    logger.debug(f"[DEBUG find_all_files] Container type: {type(container)}")
 
     def traverse(obj, depth=0):
         """Recursively traverse the CData hierarchy"""
         indent = "  " * depth
-        print(f"{indent}[DEBUG traverse] obj={obj.name if hasattr(obj, 'name') else 'unnamed'}, type={type(obj).__name__}")
+        logger.debug(f"{indent}[DEBUG traverse] obj={obj.name if hasattr(obj, 'name') else 'unnamed'}, type={type(obj).__name__}")
 
         # Check if this object itself is a file
         if isinstance(obj, CDataFile):
             files.append(obj)
-            print(f"{indent}  -> IS A FILE! Added to list")
+            logger.debug(f"{indent}  -> IS A FILE! Added to list")
 
         # Traverse children - CContainer needs special handling
         if isinstance(obj, CContainer):
@@ -94,26 +94,26 @@ def find_all_files(container) -> List[CDataFile]:
             try:
                 # First try get_items() for direct items
                 items = obj.get_items() if hasattr(obj, 'get_items') else []
-                print(f"{indent}  CContainer get_items() returned {len(items)} items")
+                logger.debug(f"{indent}  CContainer get_items() returned {len(items)} items")
 
                 # Then check dataOrder() for items added via addContent/addObject
                 if hasattr(obj, 'dataOrder'):
                     data_order = obj.dataOrder()
-                    print(f"{indent}  CContainer dataOrder() returned {len(data_order)} names: {data_order}")
+                    logger.debug(f"{indent}  CContainer dataOrder() returned {len(data_order)} names: {data_order}")
                     for item_name in data_order:
                         item = getattr(obj, item_name, None)
                         if item is not None:
-                            print(f"{indent}    Found item by name: {item_name}")
+                            logger.debug(f"{indent}    Found item by name: {item_name}")
                             traverse(item, depth + 1)
 
                 # Also check HierarchicalObject children
                 if hasattr(obj, 'children'):
                     children = obj.children()
-                    print(f"{indent}  CContainer children() returned {len(children)} children")
+                    logger.debug(f"{indent}  CContainer children() returned {len(children)} children")
                     for child in children:
                         if child is not None:
                             child_name = child.name if hasattr(child, 'name') else 'unnamed'
-                            print(f"{indent}    Child from hierarchy: {child_name}")
+                            logger.debug(f"{indent}    Child from hierarchy: {child_name}")
                             traverse(child, depth + 1)
 
                 # Also iterate direct items from get_items (if any)
@@ -121,24 +121,24 @@ def find_all_files(container) -> List[CDataFile]:
                     if item is not None:
                         traverse(item, depth + 1)
             except Exception as e:
-                print(f"{indent}  EXCEPTION: {e}")
+                logger.debug(f"{indent}  EXCEPTION: {e}")
                 import traceback
-                traceback.print_exc()
+                logger.debug(traceback.format_exc())
                 logger.debug(f"Error traversing container {obj}: {e}")
         elif hasattr(obj, 'children'):
             # Regular CData object - use children() method
             try:
                 children = obj.children()
-                print(f"{indent}  CData object has {len(children)} children")
+                logger.debug(f"{indent}  CData object has {len(children)} children")
                 for child in children:
                     if child is not None:
                         child_name = child.name if hasattr(child, 'name') else 'unnamed'
-                        print(f"{indent}    Child: {child_name}")
+                        logger.debug(f"{indent}    Child: {child_name}")
                         traverse(child, depth + 1)
             except Exception as e:
-                print(f"{indent}  EXCEPTION: {e}")
+                logger.debug(f"{indent}  EXCEPTION: {e}")
                 import traceback
-                traceback.print_exc()
+                logger.debug(traceback.format_exc())
                 logger.debug(f"Error traversing {obj.object_path() if hasattr(obj, 'object_path') else obj}: {e}")
 
     traverse(container)
@@ -521,7 +521,7 @@ def debug_print_container_structure(container, max_depth: int = 5, current_depth
     if hasattr(container, 'isSet'):
         is_set = " [SET]" if container.isSet() else " [NOT_SET]"
 
-    print(f"{indent}{obj_name} ({obj_type}){is_set}")
+    logger.debug(f"{indent}{obj_name} ({obj_type}){is_set}")
 
     # Print children
     if hasattr(container, 'childNames'):
@@ -531,7 +531,7 @@ def debug_print_container_structure(container, max_depth: int = 5, current_depth
                 child = getattr(container, child_name, None)
                 if child is not None:
                     prefix = "├─" if i < len(child_names) - 1 else "└─"
-                    print(f"{indent}{prefix} ", end="")
+                    logger.debug(f"{indent}{prefix} {child_name}")
                     debug_print_container_structure(child, max_depth, current_depth + 1)
         except Exception as e:
-            print(f"{indent}  [Error: {e}]")
+            logger.debug(f"{indent}  [Error: {e}]")

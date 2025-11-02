@@ -17,9 +17,12 @@ from pathlib import Path
 from datetime import datetime
 import socket
 import os
+import logging
 
 from ..base_object.base_classes import CData, CContainer
 from ..base_object.fundamental_types import *
+
+logger = logging.getLogger(__name__)
 
 
 class ParamsXmlHandler:
@@ -107,13 +110,13 @@ class ParamsXmlHandler:
             root = tree.getroot()
 
             # Debug: show what we have
-            print(f"[DEBUG] Root tag: {root.tag}")
-            print(f"[DEBUG] Root children: {[child.tag for child in root]}")
+            logger.debug(f"[DEBUG] Root tag: {root.tag}")
+            logger.debug(f"[DEBUG] Root children: {[child.tag for child in root]}")
 
             # Find the body element (handle both with and without namespace)
             # Check if root itself is the container (legacy format)
             if 'container' in root.tag.lower():
-                print(f"[DEBUG] Legacy format detected - root is container")
+                logger.debug(f"[DEBUG] Legacy format detected - root is container")
                 body = root
             else:
                 # Try with namespace first
@@ -129,12 +132,12 @@ class ParamsXmlHandler:
                     for child in root:
                         if 'body' in child.tag.lower():
                             body = child
-                            print(f"[DEBUG] Found body via direct iteration: {child.tag}")
+                            logger.debug(f"[DEBUG] Found body via direct iteration: {child.tag}")
                             break
 
             if body is None:
                 print("❌ No ccp4i2_body, body, or container found in params XML")
-                print(f"[DEBUG] Searched in: {params_xml_path}")
+                logger.debug(f"[DEBUG] Searched in: {params_xml_path}")
                 return False
 
             # Legacy format: <body><container><inputData>...
@@ -142,7 +145,7 @@ class ParamsXmlHandler:
             # If body has a <container> child, skip the wrapper
             container_elem = body.find("container")
             if container_elem is not None:
-                print(f"[DEBUG] Skipping legacy <container> wrapper")
+                logger.debug(f"[DEBUG] Skipping legacy <container> wrapper")
                 body = container_elem
 
             # Import all parameter values

@@ -603,6 +603,32 @@ class CPdbDataFile(CPdbDataFileStub):
         # Set the content class name qualifier
         self.set_qualifier('fileContentClassName', 'CPdbData')
 
+    def isSelectionSet(self) -> bool:
+        """Check if an atom selection is defined for this PDB file.
+
+        Returns True if the selection.text attribute is set and contains
+        non-whitespace content after stripping leading/trailing whitespace.
+
+        Returns:
+            bool: True if selection is set and non-empty, False otherwise
+        """
+        # Check if selection attribute exists
+        if not hasattr(self, 'selection'):
+            return False
+
+        # Check if text attribute exists
+        if not hasattr(self.selection, 'text'):
+            return False
+
+        # Get the text value
+        text_value = self.selection.text.value
+        if text_value is None:
+            return False
+
+        # Check if text has non-whitespace content
+        stripped = str(text_value).strip()
+        return len(stripped) > 0
+
     def _introspect_content_flag(self) -> Optional[int]:
         """Auto-detect contentFlag by determining if file is PDB or mmCIF format.
 

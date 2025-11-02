@@ -21,8 +21,7 @@ from core.CCP4PluginScript import CPluginScript
 
 from . import models
 
-
-logger = logging.getLogger(f"ccp4x:{__name__}")
+logger = logging.getLogger(__name__)
 
 
 class AsyncDatabaseHandler:
@@ -486,7 +485,7 @@ class AsyncDatabaseHandler:
         # Use modern hierarchical traversal to find all files
         output_files = find_all_files(container)
         logger.info(f"Found {len(output_files)} files in output container")
-        print(f"[DEBUG glean_job_files] Found {len(output_files)} files in output container")
+        logger.debug(f"[DEBUG glean_job_files] Found {len(output_files)} files in output container")
 
         for file_obj in output_files:
             # Set temporary plugin reference so file can access dbHandler
@@ -495,7 +494,7 @@ class AsyncDatabaseHandler:
                 file_obj._temp_plugin_ref = plugin
 
             try:
-                print(f"[DEBUG glean_job_files] Processing {file_obj.name}:")
+                logger.debug(f"[DEBUG glean_job_files] Processing {file_obj.name}:")
                 print(f"  isSet(): {file_obj.isSet() if hasattr(file_obj, 'isSet') else 'N/A'}")
                 print(f"  exists(): {file_obj.exists() if hasattr(file_obj, 'exists') else 'N/A'}")
                 print(f"  getFullPath(): {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}")
@@ -522,7 +521,7 @@ class AsyncDatabaseHandler:
             try:
                 metadata = extract_file_metadata(file_obj)
 
-                print(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.name}:")
+                logger.debug(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.name}:")
                 print(f"  file_type (mimeTypeName): {metadata['file_type']}")
                 print(f"  content_flag: {metadata.get('content_flag', 'NOT SET')}")
                 print(f"  sub_type: {metadata.get('sub_type', 'NOT SET')}")
@@ -682,34 +681,34 @@ class AsyncDatabaseHandler:
                 logger.info(f"Job {job_uuid} status updated to {db_status}")
 
             # After execution, glean output files and KPIs if finished successfully
-            print(f"[DEBUG track_job] plugin_status = {plugin_status}, SUCCEEDED = {CPluginScript.SUCCEEDED}")
+            logger.debug(f"[DEBUG track_job] plugin_status = {plugin_status}, SUCCEEDED = {CPluginScript.SUCCEEDED}")
             if plugin_status == CPluginScript.SUCCEEDED:
-                print(f"[DEBUG track_job] Status is SUCCEEDED, gleaning files...")
+                logger.debug(f"[DEBUG track_job] Status is SUCCEEDED, gleaning files...")
                 output_container = plugin.container.outputData if hasattr(plugin.container, 'outputData') else None
-                print(f"[DEBUG track_job] output_container = {output_container}")
-                print(f"[DEBUG track_job] output_container is not None = {output_container is not None}")
+                logger.debug(f"[DEBUG track_job] output_container = {output_container}")
+                logger.debug(f"[DEBUG track_job] output_container is not None = {output_container is not None}")
                 if output_container is not None:
                     # Pass plugin so file objects can access dbHandler during gleaning
                     files_gleaned = await self.glean_job_files(job_uuid, output_container, plugin=plugin)
                     logger.info(f"Gleaned {len(files_gleaned)} output files")
-                    print(f"[DEBUG track_job] Gleaned {len(files_gleaned)} output files")
+                    logger.debug(f"[DEBUG track_job] Gleaned {len(files_gleaned)} output files")
 
                     kpis_gleaned = await self.glean_performance_indicators(job_uuid, output_container)
                     logger.info(f"Gleaned {kpis_gleaned} performance indicators")
-                    print(f"[DEBUG track_job] Gleaned {kpis_gleaned} performance indicators")
+                    logger.debug(f"[DEBUG track_job] Gleaned {kpis_gleaned} performance indicators")
 
                     # Save params.xml with updated dbFileId values
                     if len(files_gleaned) > 0:
-                        print(f"[DEBUG track_job] Saving params.xml after gleaning...")
+                        logger.debug(f"[DEBUG track_job] Saving params.xml after gleaning...")
                         from ..lib.utils.parameters.save_params import save_params_for_job
                         job = await sync_to_async(models.Job.objects.get)(uuid=job_uuid)
                         await sync_to_async(save_params_for_job)(plugin, job, mode="PARAMS")
                         logger.info(f"Saved params.xml with gleaned file IDs")
-                        print(f"[DEBUG track_job] Saved params.xml with {len(files_gleaned)} file IDs")
+                        logger.debug(f"[DEBUG track_job] Saved params.xml with {len(files_gleaned)} file IDs")
                 else:
-                    print(f"[DEBUG track_job] No output container found!")
+                    logger.debug(f"[DEBUG track_job] No output container found!")
             else:
-                print(f"[DEBUG track_job] Status is NOT SUCCEEDED, skipping gleaning")
+                logger.debug(f"[DEBUG track_job] Status is NOT SUCCEEDED, skipping gleaning")
 
         finally:
             # Cleanup if needed

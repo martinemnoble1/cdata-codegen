@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ccp4:ccp4i2 xmlns:ccp4="http://www.ccp4.ac.uk/ccp4ns">
+  <ccp4i2_header>
+    <function>PARAMS</function>
+    <pluginName>prosmart_refmac</pluginName>
+  </ccp4i2_header>
+  <ccp4i2_body id="prosmart_refmac">
+    <container id="inputData">
+      <content id="F_SIGF">
+        <subType>
+          <value>1</value>
+        </subType>
+        <annotation>
+          <value></value>
+        </annotation>
+        <contentFlag>
+          <value>1</value>
+        </contentFlag>
+        <path>
+          <value>/Users/nmemn/Developer/cdata-codegen/demo_data/toxd_cut.mtz</value>
+        </path>
+      </content>
+      <content id="XYZIN">
+        <subType>
+          <value>1</value>
+        </subType>
+        <annotation>
+          <value></value>
+        </annotation>
+        <contentFlag>
+          <value>1</value>
+        </contentFlag>
+        <path>
+          <value>/Users/nmemn/Developer/cdata-codegen/demo_data/toxd_cut.pdb</value>
+        </path>
+      </content>
+    </container>
+  </ccp4i2_body>
+</ccp4:ccp4i2>
