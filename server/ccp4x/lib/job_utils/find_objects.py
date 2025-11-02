@@ -97,9 +97,11 @@ def find_object_by_path(base_element: CData, object_path: str):
             current = list_obj[index]
         else:
             # Simple attribute access
-            next_obj = getattr(current, elem, None)
-            if next_obj is None:
+            # Check if attribute exists first (hasattr), then get it
+            if not hasattr(current, elem):
                 raise AttributeError(f"Element '{elem}' not found in '{current}'")
+            next_obj = getattr(current, elem)
+            # In modern CData, unset attributes may return None - that's okay
             # print(f"Successfully found '{elem}' in '{current.objectName()}'")
             current = next_obj
     return current

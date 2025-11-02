@@ -2,9 +2,7 @@ import logging
 import traceback
 
 from core import CCP4TaskManager
-
-# from ...db.ccp4i2_django_db_handler import CCP4i2DjangoDbHandler
-from ...db.models import Job
+from ccp4x.db.models import Job
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -50,7 +48,13 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
         if not params_file.exists():
             # logger.info('No params.xml at %s', defFile1)
             raise Exception("No params file found")
-    pluginInstance.container.loadDataFromXml(
-        str(params_file), check=False, loadHeader=False
-    )
+    # Load parameters from XML file
+    # Note: loadDataFromXml signature varies by CContainer version
+    try:
+        pluginInstance.container.loadDataFromXml(
+            str(params_file), check=False, loadHeader=False
+        )
+    except TypeError:
+        # Fallback for older API without 'check' parameter
+        pluginInstance.container.loadDataFromXml(str(params_file))
     return pluginInstance

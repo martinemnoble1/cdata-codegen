@@ -18,8 +18,8 @@ from ..containers.get_container import get_job_container
 from ..containers.json_encoder import CCP4i2JsonEncoder
 from ..formats.cif_ligand import parse_cif_ligand_summary
 from ..parameters.value_dict import value_dict_for_object
-from ...db import models
-from ..parse import identify_data_type
+from ....db import models
+from ...parse import identify_data_type
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -241,7 +241,7 @@ def digest_file_object(file_object: CDataFile):
 def digest_other_file_object(file_object: CDataFile):
     try:
         file_object.loadFile()
-        file_object.setContentFlag(reset=True)
+        file_object.setContentFlag()
         contents = file_object.getFileContent()
         content_dict = value_dict_for_object(contents)
         return content_dict
@@ -262,26 +262,12 @@ def digest_cpdbdata_file_object(file_object: CPdbDataFile):
         return {"status": "Failed", "reason": "File object is not set", "digest": {}}
     try:
         file_object.loadFile()
-        file_object.setContentFlag(reset=True)
+        file_object.setContentFlag()
         contents = file_object.getFileContent()
-        contents.loadFile(file_object.fullPath)
-        contents.loadSequences(contents.molHnd)
-        content_dict = {
-            "sequences": contents.sequences,
-            "composition": {
-                key: getattr(contents.composition, key)
-                for key in [
-                    "chains",
-                    "peptides",
-                    "nucleics",
-                    "solventChains",
-                    "monomers",
-                    "nresSolvent",
-                    "moleculeType",
-                    "containsHydrogen",
-                ]
-            },
-        }
+        content_dict = value_dict_for_object(contents)
+        # If value_dict returns None, return empty dict
+        if content_dict is None:
+            content_dict = {}
         return content_dict
     except Exception as err:
         logger.exception("Error digesting file %s", file_object, exc_info=err)
@@ -300,7 +286,7 @@ def digest_cseqdata_file_object(file_object: CPdbDataFile):
         return {"status": "Failed", "reason": "File object is not set", "digest": {}}
     try:
         file_object.loadFile()
-        file_object.setContentFlag(reset=True)
+        file_object.setContentFlag()
         contents = file_object.getFileContent()
         content_dict = value_dict_for_object(contents)
         return content_dict
@@ -336,7 +322,7 @@ def digest_cgenericrefldatafile_file_object(file_object: CGenericReflDataFile):
         return {"status": "Failed", "reason": "File object is not set", "digest": {}}
     try:
         file_object.loadFile()
-        file_object.setContentFlag(reset=True)
+        file_object.setContentFlag()
         contents = file_object.getFileContent()
         content_dict = value_dict_for_object(contents)
         content_dict["format"] = file_object.getFormat()

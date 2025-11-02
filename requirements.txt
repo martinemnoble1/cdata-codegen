@@ -47,6 +47,10 @@ PyYAML>=6.0
 # For async database operations
 asgiref>=3.7.0
 
+# Scientific computing (required by some crystallography plugins)
+scipy>=1.10.0
+numpy>=1.24.0
+
 # CCTBX/iotbx - Computational Crystallography Toolbox (optional)
 # Note: These are larger packages with compiled components
 # Installation: pip install cctbx-base

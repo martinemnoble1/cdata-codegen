@@ -4,6 +4,7 @@ import json
 import pathlib
 import os
 import subprocess
+from asgiref.sync import async_to_sync
 from pytz import timezone
 from django.http import Http404
 from django.http import FileResponse
@@ -11,9 +12,13 @@ from django.core.management import call_command
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, JSONParser
+
+# Modern utilities
+from ..lib.async_create_job import create_job_async
+
+# Legacy utilities (to be modernized)
 from ..lib.job_utils.list_project import list_project
 from ..lib.job_utils.get_task_tree import get_task_tree
-from ..lib.job_utils.create_task import create_task
 from ..lib.job_utils.preview_file import preview_file
 
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -509,10 +514,76 @@ class ProjectViewSet(ModelViewSet):
         serializer_class=serializers.ProjectSerializer,
     )
     def create_task(self, request, pk=None):
-        the_project = models.Project.objects.get(pk=pk)
-        new_job = create_task(the_project, json.loads(request.body.decode("utf-8")))
-        serializer = serializers.JobSerializer(new_job)
-        return JsonResponse({"status": "Success", "new_job": serializer.data})
+        """
+        Create a new task/job in the project.
+
+        Modern implementation using async_create_job (same as management command).
+
+        Request body should contain:
+            - task_name: Plugin name (required, e.g., "ctruncate", "refmac")
+            - title: Job title (optional)
+            - parent_job_uuid: Parent job UUID for nested jobs (optional)
+            - input_params: Dict of input parameters (optional)
+
+        Returns:
+            JSON with status and new job details
+        """
+        try:
+            the_project = models.Project.objects.get(pk=pk)
+
+            # Parse request body
+            body = json.loads(request.body.decode("utf-8"))
+            task_name = body.get("task_name")
+
+            if not task_name:
+                return Response(
+                    {"status": "Failed", "reason": "task_name is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Extract optional parameters
+            title = body.get("title")
+            parent_job_uuid = body.get("parent_job_uuid")
+            input_params = body.get("input_params")
+
+            # Use modern async job creation (same as management command)
+            # Use async_to_sync to properly handle Django database connections
+            result = async_to_sync(create_job_async)(
+                project_uuid=the_project.uuid,
+                task_name=task_name,
+                title=title,
+                parent_job_uuid=parent_job_uuid,
+                save_params=True,
+                input_params=input_params
+            )
+
+            # Get the created job from database
+            new_job = models.Job.objects.get(uuid=result['job_uuid'])
+            serializer = serializers.JobSerializer(new_job)
+
+            return Response({
+                "status": "Success",
+                "new_job": serializer.data
+            })
+
+        except models.Project.DoesNotExist:
+            logger.exception("Project %s not found", pk)
+            return Response(
+                {"status": "Failed", "reason": "Project not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except KeyError as e:
+            logger.exception("Missing required field: %s", e)
+            return Response(
+                {"status": "Failed", "reason": f"Missing required field: {e}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.exception("Failed to create task", exc_info=e)
+            return Response(
+                {"status": "Failed", "reason": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(
         detail=True,

@@ -57,16 +57,20 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework import status
 from . import serializers
 from ..db import models
 from ..lib.job_utils.ccp4i2_report import make_old_report
-from ..lib.job_utils.clone_job import clone_job
+from ..lib.utils.jobs.clone import clone_job  # Modern clone utility with Result pattern
 from ..lib.job_utils.find_dependent_jobs import find_dependent_jobs
 from ..lib.job_utils.find_dependent_jobs import delete_job_and_dependents
-# Legacy imports - kept for other endpoints that haven't been refactored yet
+# Modern utilities
+from ..lib.utils.plugins.get_plugin import get_job_plugin
+from ..lib.utils.containers.json_encoder import CCP4i2JsonEncoder
+
+# Legacy imports - kept for endpoints not yet refactored
 from ..lib.job_utils.upload_file_param import upload_file_param
 from ..lib.job_utils.get_job_container import get_job_container
-from ..lib.job_utils.json_for_job_container import json_for_job_container
 from ..lib.job_utils.object_method import object_method
 from ..lib.job_utils.get_what_next import get_what_next
 from django.http import JsonResponse
@@ -789,17 +793,47 @@ class JobViewSet(ModelViewSet):
         """
         try:
             the_job = models.Job.objects.get(id=pk)
-            container = json_for_job_container(the_job)
-            return Response({"status": "Success", "result": container})
-        except (ValueError, models.Job.DoesNotExist) as err:
-            logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+
+            # Modern approach: Use CPluginScript architecture
+            plugin = get_job_plugin(the_job)
+
+            # Serialize container to JSON using modern encoder
+            container_json = json.dumps(
+                plugin.container,
+                cls=CCP4i2JsonEncoder
+            )
+
+            return Response({
+                "status": "Success",
+                "result": json.loads(container_json)
+            })
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Job %s not found", pk, exc_info=err)
+            return Response(
+                {"status": "Failed", "reason": "Job not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
         except FileNotFoundError as err:
             logger.exception(
-                "Failed to find or encode json for job container",
+                "Failed to find parameters for job %s",
+                pk,
                 exc_info=err,
             )
-            return Response({"status": "Failed", "reason": str(err)})
+            return Response(
+                {"status": "Failed", "reason": "Job parameters not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as err:
+            logger.exception(
+                "Failed to get container for job %s",
+                pk,
+                exc_info=err,
+            )
+            return Response(
+                {"status": "Failed", "reason": str(err)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(
         detail=True,
@@ -1048,7 +1082,7 @@ class JobViewSet(ModelViewSet):
         try:
             the_job = models.Job.objects.get(id=pk)
             def_xml_path = CCP4TaskManager.TASKMANAGER().locate_def_xml(
-                name=the_job.task_name, version=None
+                task_name=the_job.task_name, version=None
             )
             with open(def_xml_path, "r") as def_xml_file:
                 def_xml = def_xml_file.read()
@@ -1606,9 +1640,18 @@ class JobViewSet(ModelViewSet):
             # Get the task manager instance and retrieve menu data
             task_manager: CTaskManager = CCP4TaskManager.TASKMANAGER()
 
-            menu_result = task_manager.exportJobFiles(
-                taskName=task_name, jobId=job.uuid, mode="menu"
-            )
+            # TODO: Modernize exportJobFiles - legacy method not available in modern TaskManager
+            # For now, return empty menu structure
+            if hasattr(task_manager, 'exportJobFiles'):
+                menu_result = task_manager.exportJobFiles(
+                    taskName=task_name, jobId=job.uuid, mode="menu"
+                )
+            else:
+                # Return stub menu structure for modern code
+                logger.warning(
+                    "exportJobFiles not available in TaskManager - returning empty menu"
+                )
+                menu_result = []
 
             # The task manager should return menu data - exact structure depends on CCP4 implementation
             # This might need adjustment based on the actual return type from TASKMANAGER

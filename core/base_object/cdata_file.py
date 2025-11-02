@@ -923,3 +923,34 @@ class CDataFile(CData):
         """
         # Base implementation: no introspection capability
         return None
+
+    @property
+    def fileContent(self):
+        """
+        Property to access the file content object.
+
+        Returns:
+            The CDataFileContent instance (e.g., CPdbData for CPdbDataFile),
+            or None if not yet loaded.
+        """
+        return self.content
+
+    def getFileContent(self):
+        """
+        Load and return the file content object.
+
+        This method:
+        1. Calls loadFile() to ensure the file is loaded
+        2. Returns the fileContent property (the CDataFileContent instance)
+
+        Returns:
+            The loaded CDataFileContent object (e.g., CPdbData for CPdbDataFile)
+
+        Example:
+            >>> pdb_file = CPdbDataFile()
+            >>> pdb_file.setFullPath("/path/to/structure.pdb")
+            >>> content = pdb_file.getFileContent()  # Returns CPdbData instance
+            >>> content.sequences  # Access sequences from the loaded content
+        """
+        self.loadFile()
+        return self.fileContent

@@ -286,6 +286,59 @@ class CData(HierarchicalObject):
         """
         return getattr(self, 'name', '')
 
+    @property
+    def CONTENTS(self):
+        """
+        Get list of child CData objects or attributes.
+
+        For CContainer: Returns list of child CData objects (children)
+        For other CData types: Returns list of attribute names that are CData objects
+
+        This provides a unified interface for navigating the CData hierarchy,
+        similar to legacy CCP4i2's CONTENTS pattern.
+
+        Returns:
+            List of CData objects (for CContainer) or list of attribute names (for other CData)
+        """
+        # Import CContainer here to avoid circular imports
+        from .ccontainer import CContainer
+
+        # For CContainer, return actual children objects
+        if isinstance(self, CContainer):
+            return list(self.get_children())
+
+        # For other CData types, return list of CData attribute names
+        cdata_attributes = []
+
+        # Try metadata-aware approach first
+        try:
+            from .metadata_system import MetadataRegistry
+            metadata = MetadataRegistry.get_class_metadata(self.__class__.__name__)
+            if metadata:
+                for field_name, field_meta in metadata.fields.items():
+                    if hasattr(self, field_name):
+                        value = getattr(self, field_name)
+                        if isinstance(value, CData):
+                            cdata_attributes.append(field_name)
+                return cdata_attributes
+        except Exception:
+            pass
+
+        # Fallback: inspect actual attributes
+        for attr_name in dir(self):
+            if attr_name.startswith('_'):
+                continue
+            if attr_name in ['parent', 'name', 'children', 'signals', 'content', 'CONTENTS']:
+                continue
+            try:
+                value = getattr(self, attr_name)
+                if isinstance(value, CData):
+                    cdata_attributes.append(attr_name)
+            except Exception:
+                continue
+
+        return cdata_attributes
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if a field has been explicitly set.

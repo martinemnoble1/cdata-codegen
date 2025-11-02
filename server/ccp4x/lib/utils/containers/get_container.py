@@ -2,12 +2,12 @@ import logging
 
 from core import CCP4TaskManager
 from core import CCP4Container
-from ...db.models import Job
+from ....db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-def get_job_container(the_job: Job):
+def get_job_container(the_job: models.Job):
     """
     Retrieves and loads a job container for the given job.
 
@@ -31,7 +31,7 @@ def get_job_container(the_job: Job):
 
     params_path = the_job.directory / "params.xml"
     fallback_params_path = the_job.directory / "input_params.xml"
-    if the_job.status in [Job.Status.UNKNOWN, Job.Status.PENDING]:
+    if the_job.status in [models.Job.Status.UNKNOWN, models.Job.Status.PENDING]:
         params_path = the_job.directory / "input_params.xml"
         fallback_params_path = the_job.directory / "params.xml"
     if (params_path).exists():

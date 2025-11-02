@@ -22,12 +22,22 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
+    "django.contrib.auth",  # Required by DRF
+    "rest_framework",  # Django REST Framework
     "ccp4x.db.config.DbConfig",  # Our database app
 ]
 
 MIDDLEWARE = []
 
-ROOT_URLCONF = None
+# REST Framework settings for tests
+REST_FRAMEWORK = {
+    "UNAUTHENTICATED_USER": None,  # Allow anonymous access in tests
+    "UNAUTHENTICATED_TOKEN": None,
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": [],
+}
+
+ROOT_URLCONF = "ccp4x.api.urls"  # Set default URL conf for API tests
 
 TEMPLATES = []
 
