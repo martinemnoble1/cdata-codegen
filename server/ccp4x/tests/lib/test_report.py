@@ -5,11 +5,11 @@ from django.conf import settings
 from xml.etree import ElementTree as ET
 from ...db.models import Job
 from ...db.import_i2xml import import_ccp4_project_zip
-from ...lib.job_utils.ccp4i2_report import (
+from ...lib.utils.reporting.i2_report import (
     get_report_job_info,
     make_old_report,
 )
-from ...lib.job_utils.get_job_container import get_job_container
+from ...lib.utils.jobs.get_container import get_job_container
 from ...db.ccp4i2_django_projects_manager import CCP4i2DjangoProjectsManager
 
 

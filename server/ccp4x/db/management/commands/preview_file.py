@@ -3,7 +3,7 @@ import subprocess
 import pathlib
 from django.core.management.base import BaseCommand
 from ccp4x.db.models import Project, File
-from ccp4x.lib.job_utils.preview_file import preview_file
+from ccp4x.lib.utils.files.preview import preview_file
 
 
 class Command(BaseCommand):

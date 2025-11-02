@@ -7,22 +7,22 @@ from django.test import TestCase, override_settings
 from core import CCP4Container
 from core.CCP4ModelData import CDictDataFile
 from core.base_object.cdata_file import CDataFile
-from ...lib.job_utils.i2run_for_job import i2run_for_job
+from ...lib.utils.jobs.i2run import i2run_for_job
 from ...db.import_i2xml import import_ccp4_project_zip
 from ...db.ccp4i2_django_projects_manager import CCP4i2DjangoProjectsManager
 from ...db import models
-from ...lib.job_utils.clone_job import clone_job
-from ...lib.job_utils.run_job import run_job
-from ...lib.job_utils.glean_job_files import glean_job_files
-from ...lib.job_utils.get_job_container import get_job_container
-from ...lib.job_utils.get_file_by_job_context import get_file_by_job_context
-from ...lib.job_utils.find_dependent_jobs import find_dependent_jobs
-from ...lib.job_utils.get_what_next import get_what_next
-from ...lib.job_utils.object_method import object_method
-from ...lib.job_utils.detect_file_type import detect_file_type
-from ...lib.job_utils.export_job_file import export_job_file
+from ...lib.utils.jobs.clone import clone_job
+from ...lib.utils.jobs.run import run_job
+from ...lib.utils.files.glean_files import glean_job_files
+from ...lib.utils.jobs.get_container import get_job_container
+from ...lib.utils.files.get_by_context import get_file_by_job_context
+from ...lib.utils.navigation.dependencies import find_dependent_jobs
+from ...lib.utils.navigation.what_next import get_what_next
+from ...lib.utils.helpers.object_method import object_method
+from ...lib.utils.files.detect_type import detect_file_type
+from ...lib.utils.files.export import export_job_file
 from ...db.project_json import project_json
-from ...lib.job_utils.digest_file import digest_file_object
+from ...lib.utils.files.digest import digest_file_object
 
 
 @override_settings(

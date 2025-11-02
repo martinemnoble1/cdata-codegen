@@ -2,7 +2,7 @@
 Modern async job creation using AsyncDatabaseHandler and CData system.
 
 This module provides typesafe async job creation following patterns from async_run_job.py
-and logic from job_utils/create_job.py.
+and logic from lib/utils/jobs/create.py.
 
 Key features:
 - Full async/await with type hints

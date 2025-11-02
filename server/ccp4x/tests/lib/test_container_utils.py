@@ -15,21 +15,21 @@ from core import CCP4TaskManager
 from ...db.models import Job, File
 from ...db.import_i2xml import import_ccp4_project_zip
 
-from ...lib.job_utils.get_job_plugin import get_job_plugin
-from ...lib.job_utils.mtz_as_dict import mtz_as_dict
-from ...lib.job_utils.unset_output_data import unset_output_data
-from ...lib.job_utils.remove_container_default_values import (
+from ...lib.utils.plugins.get_plugin import get_job_plugin
+from ...lib.utils.formats.mtz import mtz_as_dict
+from ...lib.utils.parameters.unset_output_data import unset_output_data
+from ...lib.utils.containers.remove_defaults import (
     remove_container_default_values,
 )
-from ...lib.job_utils.find_objects import find_objects
-from ...lib.job_utils.load_nested_xml import load_nested_xml
-from ...lib.job_utils.validate_container import validate_container
-from ...lib.job_utils.clone_job import clone_job
-from ...lib.job_utils.create_job import create_job
-from ...lib.job_utils.json_for_job_container import json_for_job_container
-from ...lib.job_utils.get_task_tree import get_task_tree
-from ...lib.job_utils.ccp4i2_report import get_report_job_info
-from ...lib.job_utils.gemmi_split_mtz import gemmi_split_mtz
+from ...lib.utils.containers.find_objects import find_objects
+from ...lib.utils.parameters.load_xml import load_nested_xml
+from ...lib.utils.containers.validate import validate_container
+from ...lib.utils.jobs.clone import clone_job
+from ...lib.utils.jobs.create import create_job
+from ...lib.utils.containers.json_for_container import json_for_job_container
+from ...lib.utils.navigation.task_tree import get_task_tree
+from ...lib.utils.reporting.i2_report import get_report_job_info
+from ...lib.utils.formats.gemmi_split_mtz import gemmi_split_mtz
 
 
 @override_settings(

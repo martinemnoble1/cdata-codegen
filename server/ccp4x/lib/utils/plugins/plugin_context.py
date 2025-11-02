@@ -47,8 +47,8 @@ def get_plugin_with_context(
             plugin = result.data
 
             # Set parameter through plugin's container
-            from ccp4x.lib.job_utils.set_parameter import set_object_value
-            set_object_value(plugin.container, "inputData.XYZIN", "/path/to/file.pdb")
+            from ccp4x.lib.utils.parameters.set_parameter import set_parameter
+            set_parameter(job, "inputData.XYZIN", "/path/to/file.pdb")
 
             # Save parameters
             plugin.container.saveDataToXml(str(job.directory / "params.xml"))

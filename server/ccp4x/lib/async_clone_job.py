@@ -2,7 +2,7 @@
 Modern async job cloning using AsyncDatabaseHandler and CData system.
 
 This module provides typesafe async job cloning following patterns from async_create_job.py
-and logic from job_utils/clone_job.py.
+and logic from lib/utils/jobs/clone.py.
 
 Key features:
 - Full async/await with type hints
