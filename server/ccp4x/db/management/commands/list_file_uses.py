@@ -143,7 +143,8 @@ class Command(BaseCommand):
             job_desc = f"{fu.job.number} ({task_name})"
             job_desc = job_desc[:job_width]
             param_name = str(fu.job_param_name or "N/A")[:param_width]
-            role = str(fu.role or "Unknown")[:15]
+            role = fu.get_role_display() if fu.role is not None else "Unknown"
+            role = str(role)[:15]
             created = "N/A"  # FileUse doesn't have created_at
 
             row = (
@@ -173,7 +174,7 @@ class Command(BaseCommand):
                 str(fu.job.uuid),
                 fu.job.number,
                 fu.job_param_name or '',
-                fu.role or ''
+                fu.get_role_display() if fu.role is not None else ''
             ])
 
     def _output_json(self, file_uses):
@@ -190,7 +191,8 @@ class Command(BaseCommand):
                     'task_name': fu.job.task_name,
                 },
                 'param_name': fu.job_param_name,
-                'role': fu.role,
+                'role': fu.get_role_display() if fu.role is not None else None,
+                'role_code': fu.role,
             }
             for fu in file_uses
         ]
