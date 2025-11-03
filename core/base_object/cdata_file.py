@@ -334,6 +334,9 @@ class CDataFile(CData):
         # Pattern 3: Absolute path outside project structure
         # In this case, we keep the full path in baseName and leave relPath empty
         logger.debug("  Path is outside project structure, keeping full path in baseName")
+        if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
+            self.baseName.set(path_str)
+            logger.debug("  Set baseName = %s (full external path)", path_str)
 
     def setOutputPath(self, jobName: str = "", projectId: str = None, relPath: str = None):
         """Set output file path using project/relPath/baseName structure (legacy API).
@@ -613,6 +616,37 @@ class CDataFile(CData):
                             current = current.parent
                             if current == current.parent:  # Reached filesystem root
                                 break
+
+        # FINAL FALLBACK: Try to construct path without plugin
+        # This handles cases where files were imported but plugin hierarchy isn't available
+        # (e.g., after loading from XML during job execution)
+        if relpath_value and basename_value:
+            relpath_str = str(relpath_value).strip()
+            if relpath_str:
+                # Try to find project directory from CCP4I2_PROJECTS_DIR + project UUID
+                import os
+                if 'CCP4I2_PROJECTS_DIR' in os.environ:
+                    projects_dir = Path(os.environ['CCP4I2_PROJECTS_DIR'])
+                    # Get project UUID from self.project
+                    project_uuid = None
+                    if hasattr(self, 'project') and self.project is not None:
+                        if hasattr(self.project, 'value'):
+                            project_uuid = str(self.project.value).strip()
+                        else:
+                            project_uuid = str(self.project).strip()
+
+                    if project_uuid:
+                        # Find project directory by UUID (might have different case in name)
+                        if projects_dir.exists():
+                            for project_dir in projects_dir.iterdir():
+                                if project_dir.is_dir():
+                                    # Check if this directory belongs to our project
+                                    # Project dirs typically named like "tmp_XyZ123" or custom names
+                                    # We need to match by checking if CCP4_IMPORTED_FILES or similar exists
+                                    test_path = project_dir / relpath_str / str(basename_value)
+                                    if test_path.exists():
+                                        logger.debug(f"Found imported file via CCP4I2_PROJECTS_DIR search: {test_path}")
+                                        return str(test_path)
 
         # Return baseName as-is (may be relative path, or empty)
         if basename_value is not None:

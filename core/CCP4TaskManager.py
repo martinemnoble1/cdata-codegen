@@ -90,6 +90,13 @@ class CTaskManager:
         Returns:
             Path to the .def.xml file if found, None otherwise
         """
+        # Get CCP4I2_ROOT for resolving paths
+        ccp4i2_root = os.environ.get("CCP4I2_ROOT")
+        if not ccp4i2_root:
+            # Fallback: try to detect from current file location
+            # core/CCP4TaskManager.py -> core/../ = project root
+            ccp4i2_root = str(Path(__file__).parent.parent)
+
         for entry in self.defxml_lookup:
             plugin_name = entry.get("pluginName", "")
             plugin_version = entry.get("pluginVersion", "")
@@ -100,12 +107,21 @@ class CTaskManager:
                 if version is not None and plugin_version != version:
                     continue
 
-                # Get relative path and convert to absolute
+                # Get relative path from entry
                 rel_path = entry.get("file_path", "")
                 if rel_path:
-                    # Path is relative to task_manager directory
-                    abs_path = Path(self.task_manager_dir) / rel_path
-                    abs_path = abs_path.resolve()  # Resolve any .. in the path
+                    # Legacy paths may point to ccp4i2 structure: ../../../ccp4i2/wrappers/...
+                    # Convert to our structure: wrappers/...
+                    # Replace ../../../ccp4i2/ with nothing, or ../../../ with nothing
+                    if "../../../ccp4i2/" in rel_path:
+                        rel_path = rel_path.replace("../../../ccp4i2/", "")
+                    elif "../../../" in rel_path:
+                        # Assume it's a legacy path pointing to ccp4i2 root
+                        rel_path = rel_path.replace("../../../", "")
+
+                    # Resolve relative to CCP4I2_ROOT
+                    abs_path = Path(ccp4i2_root) / rel_path
+                    abs_path = abs_path.resolve()  # Resolve any remaining .. in the path
 
                     if abs_path.exists():
                         return abs_path

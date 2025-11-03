@@ -31,6 +31,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ccp4x.config.settings')
 SERVER_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SERVER_DIR))
 
+# Ensure CCP4I2_ROOT is set for plugin discovery
+# The ccp4i2 wrapper script should set this, but if not, detect it
+if 'CCP4I2_ROOT' not in os.environ:
+    # Server is in cdata-codegen/server, so project root is parent
+    project_root = SERVER_DIR.parent
+    os.environ['CCP4I2_ROOT'] = str(project_root)
+    print(f"DEBUG: Auto-detected CCP4I2_ROOT={os.environ['CCP4I2_ROOT']}", file=sys.stderr)
+
 import django
 django.setup()
 
@@ -1021,14 +1029,7 @@ For help on any command:
             from ccp4x.db.management.commands.i2run import Command as I2RunCommand
             cmd = I2RunCommand()
 
-            # Create a parser and let i2run add its arguments
-            from argparse import ArgumentParser
-            parser = ArgumentParser()
-            cmd.add_arguments(parser)
-
-            # Execute the command
-            # Note: add_arguments already parses and sets up the runner
-            # handle() just executes it
+            # Execute the command - handle() reads sys.argv directly
             cmd.handle()
             return 0
 

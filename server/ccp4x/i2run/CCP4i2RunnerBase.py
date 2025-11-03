@@ -113,6 +113,7 @@ class CCP4i2RunnerBase(object):
         self.job_id = None
         self.project_id = None
         self.list_map = {}
+        self._plugin = None
 
     def keywordsOfTask(self):
         return self.keywordsOfTaskName(self.task_name)
@@ -136,6 +137,8 @@ class CCP4i2RunnerBase(object):
         return self.parsed_args
 
     def getPlugin(self, jobId=None, arguments_parsed=False):
+        if self._plugin is not None:
+            return self._plugin
         parsed_args = self.parseArgs(arguments_parsed)
         logger.debug(f"parsed_args is {parsed_args}")
         sys.stdout.flush()
@@ -147,7 +150,8 @@ class CCP4i2RunnerBase(object):
                 projectId=self.projectId, task_name=self.task_name
             )
             jobId = self.jobId
-        return self.pluginWithArgs(parsed_args=parsed_args, jobId=jobId)
+        self._plugin = self.pluginWithArgs(parsed_args=parsed_args, jobId=jobId)
+        return self._plugin
 
     def projectWithName(self, project_name):
         raise Exception(
@@ -361,16 +365,12 @@ class CCP4i2RunnerBase(object):
                     the_object.append(new_item)
                 logger.info("Setting CList parameter %s with %d items", relative_path, len(value))
             elif not isinstance(the_object, CList) and isinstance(value, list):
-                # For non-CList objects, if argparse returned a list (nargs), unwrap it
-                # This happens when argparse uses nargs for a simple parameter
-                if len(value) == 1:
-                    actual_value = value[0]
-                    logger.info("Setting parameter to %s %s (unwrapped from list)", relative_path, actual_value)
-                    set_parameter_container(thePlugin.container, relative_path, actual_value)
-                else:
-                    # Multiple values for non-list parameter - this shouldn't happen
-                    logger.warning("Got multiple values %s for non-list parameter %s, using first", value, relative_path)
-                    set_parameter_container(thePlugin.container, relative_path, value[0])
+                # For non-CList objects, if argparse returned a list (nargs), process each item
+                # This allows multiple subValue arguments like: --XYZIN fullPath=/path selection/text=A/
+                # Each item in the list might be a subValue expression (with =) that needs parsing
+                for item in value:
+                    # Recursively call handleItem to process subValue expressions
+                    self.handleItem(thePlugin, objectPath, item)
             else:
                 logger.info("Setting parameter to %s %s", relative_path, value)
                 set_parameter_container(thePlugin.container, relative_path, value)
@@ -409,74 +409,7 @@ class CCP4i2RunnerBase(object):
         Returns:
             Configured plugin instance
         """
-        if jobId is not None:
-            workDirectory = CCP4Modules.PROJECTSMANAGER().jobDirectory(jobId=jobId)
-        # Modern approach: No Qt parent needed
-        thePlugin = TASKMANAGER().get_plugin_class(
-            parsed_args.task_name
-        )(jobId=jobId, workDirectory=workDirectory, parent=None)
-        self.work_directory = workDirectory
-        if jobId is not None:
-            jobInfo = (
-                CCP4Modules.PROJECTSMANAGER()
-                .db()
-                .getJobInfo(
-                    mode=["projectname", "projectid", "jobnumber"],
-                    jobId=jobId,
-                    returnType=dict,
-                )
-            )
-            # print('jobInfo', jobInfo)
-            thePlugin.setDbData(
-                jobId=jobId,
-                projectName=jobInfo["projectname"],
-                projectId=jobInfo["projectid"],
-                jobNumber=jobInfo["jobnumber"],
-            )
-        # PluginUtils.removeDefaults(thePlugin.container)
-        allKeywords = CCP4i2RunnerBase.keywordsOfContainer(thePlugin.container, [])
-
-        def predicate(item):
-            return (
-                f"{parsed_args.task_name}.inputData.temporary" not in item["path"]
-                and f"{parsed_args.task_name}.outputData" not in item["path"]
-            )
-
-        allKeywords = list(filter(predicate, allKeywords))
-        mappedKeywords = {
-            taskKeyword["minimumPath"]: taskKeyword
-            for taskKeyword in CCP4i2RunnerBase.minimisePaths(allKeywords)
-        }
-        for keyword, value in vars(parsed_args).items():
-            if value is not NotImplemented and keyword in mappedKeywords:
-                theObject = mappedKeywords[keyword]["object"]
-                try:
-                    if isinstance(theObject, CCP4Data.CList):
-                        # Here handling lists that might or might not start out with a "dummy" entry
-                        if theObject.objectPath() not in self.list_map:
-                            self.list_map[theObject.objectPath()] = 1
-                            if len(theObject) == 0:
-                                theObject.append(theObject.makeItem())
-                        else:
-                            theObject.append(theObject.makeItem())
-                        theItem = theObject[-1]
-                        if value is not None:
-                            for iItem, item in enumerate(value):
-                                self.handleItemOrList(
-                                    thePlugin, theItem.objectPath(), item
-                                )
-                                if iItem < len(value) - 1:
-                                    theObject.append(theObject.makeItem())
-                                    theItem = theObject[-1]
-                        # Delete known unset exemplars
-                        theObject.removeUnsetListItems()
-                    elif value is not None:
-                        self.handleItemOrList(thePlugin, theObject.objectPath(), value)
-                except Exception as err:
-                    print(
-                        f"Failed to set {theObject.objectPath()} to {value} with err {err}"
-                    )
-                    traceback.print_exc()
+        raise NotImplementedError("pluginWithArgs must be implemented in subclasses")
         return thePlugin
 
     @staticmethod

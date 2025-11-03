@@ -150,14 +150,14 @@ def set_parameter_container(
             value = corrected_spacegroup[0]
         else:
             value = corrected_spacegroup
-    elif isinstance(object_element.parent(), CCP4ModelData.CPdbEnsembleItem):
+    elif isinstance(object_element.parent, CCP4ModelData.CPdbEnsembleItem):
         if (
-            not object_element.parent().identity_to_target.isSet()
-            and not object_element.parent().rms_to_target.isSet()
+            not object_element.parent.identity_to_target.isSet()
+            and not object_element.parent.rms_to_target.isSet()
         ):
-            object_element.parent().identity_to_target.set(0.9)
+            object_element.parent.identity_to_target.set(0.9)
         logger.error(
-            f"CPdbEnsembleItem baseElement is {str(object_element)}, {str(object_element.parent())} {value}"
+            f"CPdbEnsembleItem baseElement is {str(object_element)}, {str(object_element.parent)} {value}"
         )
     try:
         object_element.set(value)

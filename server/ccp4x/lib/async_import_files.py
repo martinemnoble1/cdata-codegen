@@ -123,13 +123,14 @@ async def import_external_file_async(job, file_obj, db_handler):
     checksum = None
     try:
         import hashlib
-        async def compute_checksum(path):
+        def compute_checksum_sync(path):
+            """Synchronous checksum computation to be wrapped with sync_to_async."""
             md5_hash = hashlib.md5()
             with open(path, 'rb') as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     md5_hash.update(chunk)
             return md5_hash.hexdigest()
-        checksum = await sync_to_async(compute_checksum)(source_path)
+        checksum = await sync_to_async(compute_checksum_sync)(source_path)
         logger.debug(f"Calculated checksum for {source_path.name}: {checksum[:8]}...")
     except Exception as e:
         logger.warning(f"Could not calculate checksum for {source_path}: {e}")

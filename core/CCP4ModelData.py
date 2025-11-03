@@ -1067,6 +1067,171 @@ class CPdbData(CPdbDataStub):
         """
         return getattr(self, '_composition', None)
 
+    def isMMCIF(self) -> bool:
+        """
+        Check if the loaded coordinate file is in mmCIF format.
+
+        This method checks the gemmi structure's input format to determine
+        if the file was mmCIF (vs PDB).
+
+        Returns:
+            bool: True if file is mmCIF format, False otherwise (including if not loaded)
+
+        Example:
+            >>> pdb_data = CPdbData()
+            >>> pdb_data.loadFile('/path/to/model.cif')
+            >>> if pdb_data.isMMCIF():
+            ...     print("File is in mmCIF format")
+        """
+        # Check if gemmi structure is loaded
+        gemmi_structure = getattr(self, '_gemmi_structure', None)
+        if gemmi_structure is None:
+            return False
+
+        # Try to determine format from gemmi structure metadata
+        # gemmi.Structure has an 'input_format' attribute that indicates the original format
+        if hasattr(gemmi_structure, 'input_format'):
+            import gemmi
+            # gemmi.CoorFormat.Mmcif indicates mmCIF format
+            return gemmi_structure.input_format == gemmi.CoorFormat.Mmcif
+
+        # Fallback: check file name if parent file exists
+        parent = self.get_parent()
+        if parent is not None and hasattr(parent, 'getFullPath'):
+            file_path = parent.getFullPath()
+            if file_path:
+                from pathlib import Path
+                suffix = Path(file_path).suffix.lower()
+                return suffix in ['.cif', '.mmcif']
+
+        return False
+
+    def interpretSelection(self, selection_string: str):
+        """
+        Parse and apply a coordinate selection string.
+
+        This method parses an mmdb-style CID selection string and returns
+        the selected atoms from the loaded structure.
+
+        Args:
+            selection_string: Selection string (e.g., "A/27.A", "{A/ or B/} and {(ALA)}")
+
+        Returns:
+            Tuple of (num_atoms, selected_atoms_list)
+            where selected_atoms_list is list of (model, chain, residue, atom) tuples
+
+        Raises:
+            ValueError: If selection string is invalid or structure not loaded
+
+        Example:
+            >>> pdb_data = CPdbData()
+            >>> pdb_data.loadFile('/path/to/model.pdb')
+            >>> n_atoms, atoms = pdb_data.interpretSelection("A/27.A")
+            >>> print(f"Selected {n_atoms} atoms")
+        """
+        # Ensure structure is loaded
+        gemmi_structure = getattr(self, '_gemmi_structure', None)
+        if gemmi_structure is None:
+            raise ValueError("Structure not loaded - call loadFile() first")
+
+        try:
+            # Parse and evaluate selection using our coordinate_selection module
+            from core.coordinate_selection import parse_selection, evaluate_selection
+
+            ast = parse_selection(selection_string)
+            selected_atoms = evaluate_selection(ast, gemmi_structure)
+
+            return (len(selected_atoms), selected_atoms)
+
+        except Exception as e:
+            raise ValueError(f"Failed to interpret selection '{selection_string}': {e}")
+
+    def writeSelection(self, selected_atoms, file_path: str):
+        """
+        Write selected atoms to a PDB or mmCIF file.
+
+        Args:
+            selected_atoms: List of (model, chain, residue, atom) tuples from interpretSelection()
+            file_path: Output file path (.pdb or .cif extension)
+
+        Returns:
+            0 on success, non-zero on failure
+
+        Example:
+            >>> n_atoms, atoms = pdb_data.interpretSelection("A/")
+            >>> pdb_data.writeSelection(atoms, "/tmp/chain_A.pdb")
+        """
+        import gemmi
+        from pathlib import Path
+
+        try:
+            # Create a new structure for output
+            output_structure = gemmi.Structure()
+
+            # Copy metadata from original structure
+            gemmi_structure = getattr(self, '_gemmi_structure', None)
+            if gemmi_structure:
+                output_structure.name = gemmi_structure.name
+                output_structure.cell = gemmi_structure.cell
+                output_structure.spacegroup_hm = gemmi_structure.spacegroup_hm
+
+            # Group atoms by model and chain for efficient writing
+            from collections import defaultdict
+            by_model_chain = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+            for model, chain, residue, atom in selected_atoms:
+                model_idx = 0  # Use first model for simplicity
+                for idx, m in enumerate(gemmi_structure):
+                    if m == model:
+                        model_idx = idx
+                        break
+
+                chain_id = chain.name
+                res_key = (residue.seqid.num, residue.seqid.icode, residue.name)
+                by_model_chain[model_idx][chain_id][res_key].append(atom)
+
+            # Build output structure
+            for model_idx in sorted(by_model_chain.keys()):
+                output_model = output_structure.add_model(gemmi.Model(str(model_idx + 1)))
+
+                for chain_id in sorted(by_model_chain[model_idx].keys()):
+                    output_chain = output_model.add_chain(gemmi.Chain(chain_id))
+
+                    for res_key in sorted(by_model_chain[model_idx][chain_id].keys()):
+                        seq_num, ins_code, res_name = res_key
+                        seqid = gemmi.SeqId(seq_num, ins_code if ins_code else ' ')
+                        output_residue = output_chain.add_residue(gemmi.Residue())
+                        output_residue.name = res_name
+                        output_residue.seqid = seqid
+
+                        for atom in by_model_chain[model_idx][chain_id][res_key]:
+                            # Create a copy of the atom
+                            new_atom = gemmi.Atom()
+                            new_atom.name = atom.name
+                            new_atom.element = atom.element
+                            new_atom.pos = atom.pos
+                            new_atom.occ = atom.occ
+                            new_atom.b_iso = atom.b_iso
+                            new_atom.charge = atom.charge
+                            new_atom.altloc = atom.altloc
+                            output_residue.add_atom(new_atom)
+
+            # Determine output format from extension
+            suffix = Path(file_path).suffix.lower()
+            if suffix in ['.cif', '.mmcif']:
+                output_structure.make_mmcif_document().write_file(str(file_path))
+            else:
+                # Default to PDB format
+                output_structure.write_pdb(str(file_path))
+
+            return 0
+
+        except Exception as e:
+            print(f"Error writing selection to {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
+
 
 class CPdbDataFile(CPdbDataFileStub):
     """
@@ -1090,22 +1255,28 @@ class CPdbDataFile(CPdbDataFileStub):
         Returns:
             bool: True if selection is set and non-empty, False otherwise
         """
+        import sys
         # Check if selection attribute exists
         if not hasattr(self, 'selection'):
+            print(f"DEBUG isSelectionSet: No selection attribute", file=sys.stderr)
             return False
 
         # Check if text attribute exists
         if not hasattr(self.selection, 'text'):
+            print(f"DEBUG isSelectionSet: selection has no text attribute", file=sys.stderr)
             return False
 
         # Get the text value
         text_value = self.selection.text.value
         if text_value is None:
+            print(f"DEBUG isSelectionSet: text_value is None", file=sys.stderr)
             return False
 
         # Check if text has non-whitespace content
         stripped = str(text_value).strip()
-        return len(stripped) > 0
+        result = len(stripped) > 0
+        print(f"DEBUG isSelectionSet: text_value='{text_value}', stripped='{stripped}', result={result}", file=sys.stderr)
+        return result
 
     def _introspect_content_flag(self) -> Optional[int]:
         """Auto-detect contentFlag by determining if file is PDB or mmCIF format.
@@ -1251,6 +1422,113 @@ class CPdbDataFile(CPdbDataFileStub):
             return ['mmcif']
         else:
             return ['pdb']
+
+    def isMMCIF(self) -> bool:
+        """
+        Check if this coordinate file is in mmCIF format.
+
+        This method loads the file content if necessary and checks the format.
+        It provides a convenient API for plugins to detect mmCIF files.
+
+        Returns:
+            bool: True if file is mmCIF format, False otherwise
+
+        Example:
+            >>> pdb_file = CPdbDataFile()
+            >>> pdb_file.setFullPath('/path/to/model.cif')
+            >>> if pdb_file.isMMCIF():
+            ...     print("File is in mmCIF format")
+        """
+        # First, try quick check based on file extension
+        full_path = self.getFullPath()
+        if full_path:
+            from pathlib import Path
+            suffix = Path(full_path).suffix.lower()
+            if suffix in ['.cif', '.mmcif']:
+                return True
+            elif suffix in ['.pdb', '.ent']:
+                return False
+
+        # If file content is already loaded, delegate to it
+        if hasattr(self, 'fileContent') and self.fileContent is not None:
+            if hasattr(self.fileContent, 'isMMCIF'):
+                return self.fileContent.isMMCIF()
+
+        # Otherwise, load the file and check
+        if full_path:
+            from pathlib import Path
+            if Path(full_path).exists():
+                # Ensure fileContent exists
+                self.loadFile()
+                if hasattr(self, 'fileContent') and self.fileContent is not None:
+                    if hasattr(self.fileContent, 'isMMCIF'):
+                        return self.fileContent.isMMCIF()
+
+        # Fallback: check contentFlag
+        if hasattr(self, 'contentFlag') and self.contentFlag is not None:
+            if hasattr(self.contentFlag, 'value'):
+                content_flag = self.contentFlag.value if self.contentFlag.value is not None else 0
+            else:
+                content_flag = int(self.contentFlag) if self.contentFlag else 0
+            return content_flag == self.CONTENT_FLAG_MMCIF
+
+        return False
+
+    def getSelectedAtomsPdbFile(self, fileName=None):
+        """
+        Apply atom selection and write selected atoms to file.
+
+        This method replicates the legacy mmdb-based selection behavior,
+        using our modern gemmi-based selection system.
+
+        Args:
+            fileName: Output file path (required)
+
+        Returns:
+            0 on success, non-zero on failure
+
+        Example:
+            >>> pdb_file = CPdbDataFile()
+            >>> pdb_file.setFullPath('/path/to/model.pdb')
+            >>> pdb_file.selection.text.set("A/27-50")
+            >>> pdb_file.getSelectedAtomsPdbFile("/tmp/selected.pdb")
+        """
+        import shutil
+        from pathlib import Path
+
+        if fileName is None:
+            raise ValueError("fileName parameter is required")
+
+        # If no selection is set, just copy the file
+        if not self.isSelectionSet():
+            input_path = self.getFullPath()
+            if input_path and Path(input_path).exists():
+                shutil.copyfile(input_path, fileName)
+                return 0
+            else:
+                print(f"Error: Input file does not exist: {input_path}")
+                return 1
+
+        # Load the file if not already loaded
+        self.loadFile()
+
+        # Get the selection string
+        selection_string = str(self.selection.text.value) if hasattr(self.selection.text, 'value') else str(self.selection.text)
+
+        try:
+            # Interpret the selection
+            n_atoms, selected_atoms = self.fileContent.interpretSelection(selection_string)
+
+            # Write the selection to file
+            rc = self.fileContent.writeSelection(selected_atoms, fileName)
+
+            return rc
+
+        except Exception as e:
+            print(f"Error applying selection '{selection_string}': {e}")
+            import traceback
+            traceback.print_exc()
+            return 1
 
 
 class CPdbDataFileList(CPdbDataFileListStub):

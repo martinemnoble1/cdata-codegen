@@ -23,6 +23,94 @@ from .cdata_utils import (
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
+def _fix_coordinate_file_extension(file_obj):
+    """
+    Fix the file extension on disk and in baseName if it doesn't match the detected format.
+
+    This handles cases where .def.xml assigned a default extension (e.g., .pdb, .mtz)
+    that doesn't match the actual file format. For example, if a coordinate file was
+    written as mmCIF but has baseName="XYZOUT.pdb", this will:
+    1. Rename the physical file from XYZOUT.pdb to XYZOUT.cif
+    2. Update baseName to match
+
+    Args:
+        file_obj: CPdbDataFile instance with contentFlag already set
+    """
+    from pathlib import Path
+    import shutil
+
+    # Only fix coordinate files (CPdbDataFile)
+    from core.CCP4ModelData import CPdbDataFile
+    if not isinstance(file_obj, CPdbDataFile):
+        return
+
+    # Get the detected format from contentFlag
+    content_flag = None
+    if hasattr(file_obj, 'contentFlag') and hasattr(file_obj.contentFlag, 'value'):
+        content_flag = file_obj.contentFlag.value
+
+    if content_flag is None:
+        return
+
+    # Determine correct extension based on contentFlag
+    # 1 = PDB, 2 = mmCIF
+    if content_flag == 2:  # CONTENT_FLAG_MMCIF
+        correct_extension = '.cif'
+    elif content_flag == 1:  # CONTENT_FLAG_PDB
+        correct_extension = '.pdb'
+    else:
+        return  # Unknown format, don't change
+
+    # Get current file path
+    current_path_str = file_obj.getFullPath()
+    if not current_path_str:
+        return
+
+    current_path = Path(current_path_str)
+    if not current_path.exists():
+        return
+
+    # Check if extension needs fixing
+    if current_path.suffix.lower() == correct_extension:
+        return  # Already correct
+
+    # Compute new path with correct extension
+    new_path = current_path.with_suffix(correct_extension)
+
+    # Rename physical file
+    try:
+        shutil.move(str(current_path), str(new_path))
+        logger.info(
+            f"Renamed coordinate file to match format: "
+            f"{current_path.name} -> {new_path.name} "
+            f"(contentFlag={content_flag}, format={'mmCIF' if content_flag == 2 else 'PDB'})"
+        )
+    except Exception as e:
+        logger.warning(f"Failed to rename file {current_path} to {new_path}: {e}")
+        return
+
+    # Update baseName to match new filename
+    # If baseName contains a directory path (external files), preserve it
+    # If baseName is just a filename (project files), use just the new name
+    if hasattr(file_obj, 'baseName'):
+        current_basename = str(file_obj.baseName.value if hasattr(file_obj.baseName, 'value') else file_obj.baseName)
+        current_basename_path = Path(current_basename)
+
+        # If baseName is an absolute path, preserve the directory
+        if current_basename_path.is_absolute():
+            new_basename = str(new_path)  # Full path
+        else:
+            new_basename = new_path.name  # Just filename
+
+        if hasattr(file_obj.baseName, 'set'):
+            file_obj.baseName.set(new_basename)
+        elif hasattr(file_obj.baseName, 'value'):
+            file_obj.baseName.value = new_basename
+        else:
+            file_obj.baseName = new_basename
+        logger.debug(f"Updated baseName from {current_basename} to {new_basename}")
+
+
 async def glean_output_files_async(job, container, db_handler, unset_missing=True) -> List:
     """
     Glean output files from a container using modern async operations.
@@ -73,6 +161,10 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
                 if hasattr(file_obj, 'setContentFlag'):
                     logger.debug(f"Setting contentFlag for {file_obj.name}")
                     await sync_to_async(file_obj.setContentFlag)()
+
+                    # After detecting format, fix file extension if needed
+                    # This handles cases where .def.xml gave wrong default extension
+                    await sync_to_async(_fix_coordinate_file_extension)(file_obj)
 
             # Extract metadata using modern CData system
             metadata = extract_file_metadata(file_obj)

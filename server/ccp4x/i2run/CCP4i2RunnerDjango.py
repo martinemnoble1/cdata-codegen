@@ -130,9 +130,9 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             return newProject.uuid
 
     def projectJobWithTask(self, projectId, task_name=None):
-        logger.info(f"Creating task {task_name} in project with id {projectId}")
+        logger.warning(f"Creating task {task_name} in project with id {projectId}")
         created_job_uuid = create_job(projectId=str(projectId), taskName=task_name)
-        logger.info(
+        logger.warning(
             f"Created task {task_name} in project with id {projectId} uuid {created_job_uuid}"
         )
         return created_job_uuid.replace("-", "")
@@ -147,7 +147,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         if jobId is not None and workDirectory is None:
             job = models.Job.objects.get(uuid=jobId)
             workDirectory = job.directory
-
+        logger.warning(f"Work directory is {workDirectory}")
         # Create plugin with modern approach (parent=None)
         from core.CCP4TaskManager import TASKMANAGER
         thePlugin = TASKMANAGER().get_plugin_class(

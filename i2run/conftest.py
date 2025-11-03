@@ -12,7 +12,11 @@ sys.path.insert(0, str(server_path))
 sys.path.insert(0, str(project_root))
 
 # Configure Django settings
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ccp4x.config.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ccp4x.config.test_settings")
+
+# Set up CCP4I2_ROOT for plugin discovery (.def.xml files)
+if "CCP4I2_ROOT" not in os.environ:
+    os.environ["CCP4I2_ROOT"] = str(project_root)
 
 # Set up test projects directory
 TEST_PROJECTS_DIR = Path(__file__).parent / "test_projects"

@@ -254,13 +254,39 @@ class CPluginScript(CData):
         DefXmlParser to load the structure into containers.
         """
         # Locate DEF file using CTaskManager
+        logger.info(f"[DEBUG _loadDefFile] Looking for .def.xml for task: {self.TASKNAME}")
         def_path = self._locateDefFile()
 
         if def_path and def_path.exists():
+            logger.info(f"[DEBUG _loadDefFile] Found .def.xml at: {def_path}")
             # Load using DefXmlParser
             error = self.loadContentsFromXml(str(def_path))
             if error:
-                self.errorReport.extend(error)
+                logger.error(f"[FATAL] Failed to load .def.xml for task '{self.TASKNAME}': {error}")
+                raise RuntimeError(f"Failed to load .def.xml for task '{self.TASKNAME}': {error}")
+            else:
+                logger.info(f"[DEBUG _loadDefFile] Successfully loaded .def.xml")
+        else:
+            # FATAL ERROR: .def.xml is required for all plugins
+            error_msg = (
+                f"\n{'='*80}\n"
+                f"FATAL ERROR: Cannot load plugin '{self.TASKNAME}'\n"
+                f"{'='*80}\n"
+                f"The .def.xml file is required but could not be found.\n\n"
+                f"Task name: {self.TASKNAME}\n"
+                f"Looked for .def.xml at: {def_path}\n\n"
+                f"This usually means:\n"
+                f"  1. CCP4I2_ROOT environment variable is not set correctly\n"
+                f"     Current CCP4I2_ROOT: {os.environ.get('CCP4I2_ROOT', 'NOT SET')}\n\n"
+                f"  2. The plugin is not in the expected location:\n"
+                f"     Expected: $CCP4I2_ROOT/wrappers/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n"
+                f"     or: $CCP4I2_ROOT/wrappers2/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n"
+                f"     or: $CCP4I2_ROOT/pipelines/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n\n"
+                f"  3. The defxml_lookup.json registry is out of date\n"
+                f"{'='*80}\n"
+            )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
     def _locateDefFile(self) -> Optional[Path]:
         """
@@ -274,10 +300,11 @@ class CPluginScript(CData):
 
         task_manager = TASKMANAGER()
 
-        # Treat '0.0' (string or float) and empty string as "no version"
+        # Treat '0.0', '0.1' (string or float) and empty string as "no version"
         # for compatibility with defxml_lookup.json which uses empty strings
+        # Many plugins have version 0.0 or 0.1 which means "unversioned"
         version = self.TASKVERSION
-        if version in ('0.0', '0', '', None, 0.0, 0):
+        if version in ('0.0', '0.1', '0', '', None, 0.0, 0.1, 0):
             version = None
 
         # Use CTaskManager's locate_def_xml method
@@ -298,6 +325,7 @@ class CPluginScript(CData):
         """
         error = CErrorReport()
         try:
+            logger.info(f"[DEBUG loadContentsFromXml] Parsing .def.xml file: {fileName}")
             # Use DefXmlParser to parse the .def.xml file
             parsed_container = self._def_parser.parse_def_xml(fileName)
 
@@ -308,16 +336,28 @@ class CPluginScript(CData):
             # AND any custom containers (e.g., prosmartProtein, prosmartNucleicAcid for pipelines)
 
             # Iterate through all children of the parsed container
+            logger.info(f"[DEBUG loadContentsFromXml] Attaching children to self.container:")
             for child in parsed_container.children():
                 child_name = child.name
+                logger.info(f"[DEBUG loadContentsFromXml]   - {child_name} (type={type(child).__name__})")
                 # Attach the child to our container using __setattr__
                 setattr(self.container, child_name, child)
                 # Update parent to be our container (which is parented to self)
                 child.set_parent(self.container)
 
+                # DEBUG: Show structure of inputData
+                if child_name == 'inputData' and hasattr(child, 'children'):
+                    logger.info(f"[DEBUG loadContentsFromXml]     inputData children:")
+                    for grandchild in child.children():
+                        logger.info(f"[DEBUG loadContentsFromXml]       - {grandchild.name} (type={type(grandchild).__name__})")
+
             self.defFile = fileName
+            logger.info(f"[DEBUG loadContentsFromXml] Successfully loaded .def.xml and attached all children")
 
         except Exception as e:
+            logger.error(f"[DEBUG loadContentsFromXml] Exception loading .def.xml: {e}")
+            import traceback
+            logger.error(f"[DEBUG loadContentsFromXml] Traceback:\n{traceback.format_exc()}")
             error.append(
                 klass=self.__class__.__name__,
                 code=100,
@@ -556,16 +596,29 @@ class CPluginScript(CData):
             return self.FAILED
 
         # Start the process
-        # Legacy compatibility: some plugins override startProcess with a processId parameter
-        # Try calling with processId first, fall back to no args
+        # Legacy compatibility: plugins have various startProcess signatures
+        # Inspect the signature and call with appropriate arguments
         import inspect
         sig = inspect.signature(self.startProcess)
-        if len(sig.parameters) > 0:
-            # Legacy signature: startProcess(self, processId)
-            result = self.startProcess(processId=0)
-        else:
+        params = list(sig.parameters.keys())
+
+        if len(params) == 0:
             # Modern signature: startProcess(self)
             result = self.startProcess()
+        elif 'processId' in params:
+            # Legacy signature: startProcess(self, processId, ...)
+            result = self.startProcess(processId=0)
+        elif 'comList' in params or (len(params) > 0 and params[0] == 'comList'):
+            # Legacy signature: startProcess(self, comList, **kw)
+            # Pass empty list for comList
+            result = self.startProcess([])
+        else:
+            # Unknown signature - try with empty args and let **kwargs catch extras
+            try:
+                result = self.startProcess()
+            except TypeError:
+                # If that fails, try passing None for the first positional param
+                result = self.startProcess(None)
 
         # Handle both modern API (CErrorReport) and legacy API (int)
         if isinstance(result, int):
