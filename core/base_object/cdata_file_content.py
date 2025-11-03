@@ -92,3 +92,51 @@ class CDataFileContent(CData):
 
         # Call parent implementation
         super().set_qualifier(key, value)
+
+    def loadFile(self, file_path: str = None):
+        """
+        Load file content from a file path.
+
+        This base method implements the flexible loading pattern:
+        - If file_path is provided, use it directly
+        - If file_path is None, get it from parent CDataFile
+
+        Subclasses should override this method to provide file-type-specific loading.
+
+        Args:
+            file_path: Optional path to file. If None, gets path from parent CDataFile.
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            # Load from parent file's path
+            >>> mtz_file = CMtzDataFile()
+            >>> mtz_file.setFullPath('/path/to/data.mtz')
+            >>> mtz_file.fileContent.loadFile()
+
+            # Load from explicit path (legacy pattern)
+            >>> mtz_file.fileContent.loadFile('/path/to/data.mtz')
+        """
+        from core.base_object.error_reporting import CErrorReport
+
+        error = CErrorReport()
+
+        # If no path provided, try to get it from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
+
+            if not file_path:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=100,
+                    details="No file path provided and cannot get path from parent",
+                    name=self.object_name() if hasattr(self, 'object_name') else ''
+                )
+                return error
+
+        # Subclasses should override to provide actual loading logic
+        # Base implementation just returns success
+        return error

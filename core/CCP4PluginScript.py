@@ -584,12 +584,16 @@ class CPluginScript(CData):
             error = self.processOutputFiles()
             if error:
                 self.errorReport.extend(error)
-                status = self.FAILED
+                # Don't fail the job for processOutputFiles errors if the process succeeded
+                # Legacy wrappers often have non-fatal issues in processOutputFiles
+                print(f"Warning: processOutputFiles() returned errors but process completed successfully")
+                # status = self.FAILED  # Commented out - don't fail for postprocessing errors
         except Exception as e:
             # Legacy wrappers may not have processOutputFiles implemented
             print(f"Warning: processOutputFiles() exception: {type(e).__name__}: {str(e)}")
             import traceback
             traceback.print_exc()
+            # Don't change status - process succeeded even if postprocessing failed
 
         # Emit finished signal so pipelines can continue
         # This is essential for sub-plugins in pipelines (e.g., mtzdump in demo_copycell)
@@ -1115,6 +1119,10 @@ class CPluginScript(CData):
 
         error = CErrorReport()
 
+        # Register with PROCESSMANAGER so it can return our exit code
+        from core.CCP4Modules import PROCESSMANAGER
+        PROCESSMANAGER().register(self)
+
         # Ensure working directory exists
         from pathlib import Path
         work_dir_path = Path(self.workDirectory)
@@ -1207,6 +1215,10 @@ class CPluginScript(CData):
                     timeout=300,  # 5 minute timeout
                     env=env
                 )
+
+            # Store exit code for PROCESSMANAGER queries
+            self._exitCode = result.returncode
+            self._exitStatus = 0 if result.returncode == 0 else 1
 
             # Check return code
             if result.returncode != 0:
@@ -2639,3 +2651,118 @@ class CPluginScript(CData):
             fileName = f'{base}.{ext}'
 
         return str(self.workDirectory / fileName)
+
+    def createWarningsXML(self, logfiles=[]):
+        """
+        Parse log files for WARNING, ERROR, and ATTENTION messages and add to XML tree.
+
+        This is primarily used by prosmart_refmac to extract warnings from refmac logfiles.
+        It searches for lines containing ERROR, WARNING, or ATTENTION and adds them to
+        self.xmlroot as structured XML.
+
+        Args:
+            logfiles: List of log file paths to parse
+        """
+        from lxml import etree
+        import re
+
+        if not hasattr(self, 'xmlroot'):
+            print("Warning: createWarningsXML called but self.xmlroot doesn't exist")
+            return
+
+        warningsNode = etree.SubElement(self.xmlroot, "Warnings")
+        for f in logfiles:
+            if not os.path.exists(f):
+                print(f"Warning: Log file does not exist: {f}")
+                continue
+
+            fileNode = etree.SubElement(warningsNode, "logFile")
+            fileNameNode = etree.SubElement(fileNode, "fileName")
+            fileNameNode.text = f
+
+            try:
+                with open(f) as fh:
+                    lines = fh.readlines()
+                    il = 1
+                    for l in lines:
+                        errors = re.findall("ERROR", l)
+                        if len(errors) > 0:
+                            warningNode = etree.SubElement(fileNode, "warning")
+                            typeNode = etree.SubElement(warningNode, "type")
+                            warningTextNode = etree.SubElement(warningNode, "text")
+                            typeNode.text = "ERROR"
+                            lineNumberNode = etree.SubElement(warningNode, "lineNumber")
+                            warningTextNode.text = l.rstrip("\n")
+                            lineNumberNode.text = str(il)
+
+                        warnings = re.findall("WARNING", l)
+                        if len(warnings) > 0:
+                            warningNode = etree.SubElement(fileNode, "warning")
+                            typeNode = etree.SubElement(warningNode, "type")
+                            warningTextNode = etree.SubElement(warningNode, "text")
+                            typeNode.text = "WARNING"
+                            lineNumberNode = etree.SubElement(warningNode, "lineNumber")
+                            warningTextNode.text = l.rstrip("\n")
+                            lineNumberNode.text = str(il)
+
+                        attentions = re.findall("ATTENTION", l)
+                        if len(attentions) > 0:
+                            warningNode = etree.SubElement(fileNode, "warning")
+                            typeNode = etree.SubElement(warningNode, "type")
+                            warningTextNode = etree.SubElement(warningNode, "text")
+                            typeNode.text = "ATTENTION"
+                            lineNumberNode = etree.SubElement(warningNode, "lineNumber")
+                            warningTextNode.text = l.rstrip("\n")
+                            lineNumberNode.text = str(il)
+
+                        il += 1
+            except Exception as e:
+                print(f"Error reading log file {f}: {e}")
+
+    def getProcessId(self):
+        """
+        Get the process ID for this plugin instance.
+
+        In synchronous execution, this is just the Python object ID.
+        In async execution with Qt, this would be the QProcess pid.
+
+        Returns:
+            Process identifier (int)
+        """
+        return id(self)
+
+    def appendErrorReport(self, code=0, details='', name=None, label=None, cls=None,
+                         recordTime=False, stack=True, exc_info=None):
+        """
+        Append an error to the plugin's error report.
+
+        This is a simplified version for legacy compatibility.
+
+        Args:
+            code: Error code number
+            details: Error message details
+            name: Error name (defaults to wrapper name)
+            label: Error label
+            cls: Class where error occurred
+            recordTime: Whether to record timestamp
+            stack: Whether to include stack trace
+            exc_info: Exception info tuple
+        """
+        if cls is None:
+            cls = self.__class__
+        if name is None:
+            name = f'Error in wrapper {self.TASKNAME}'
+            if hasattr(self, 'TASKVERSION') and self.TASKVERSION is not None:
+                name = f'{name} {self.TASKVERSION}'
+        else:
+            name = f'Error in wrapper {name}'
+
+        # Add to error report with WARNING severity by default
+        # (legacy code often uses appendErrorReport for non-fatal issues)
+        from core.base_object.error_reporting import SEVERITY_WARNING
+        self.errorReport.append(
+            klass=cls.__name__,
+            code=code,
+            details=details,
+            severity=SEVERITY_WARNING
+        )

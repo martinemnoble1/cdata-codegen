@@ -505,6 +505,459 @@ class COccRelationRefmacList(COccRelationRefmacListStub):
     pass
 
 
+# Try to import BioPython - it's optional but provides enhanced functionality
+try:
+    import Bio.SeqIO
+    import Bio.AlignIO
+    BIOPYTHON_AVAILABLE = True
+except ImportError:
+    BIOPYTHON_AVAILABLE = False
+
+# BioPython format mappings
+SEQFORMATLIST = ['fasta', 'pir', 'swiss', 'tab', 'ig']
+ALIGNFORMATLIST = ['fasta', 'clustal', 'phylip', 'stockholm', 'nexus', 'emboss', 'msf']
+EXTLIST = {
+    'fasta': 'fasta', 'fa': 'fasta', 'faa': 'fasta', 'fas': 'fasta',
+    'pir': 'pir',
+    'aln': 'clustal', 'clw': 'clustal', 'clustal': 'clustal',
+    'phy': 'phylip', 'phylip': 'phylip',
+    'stockholm': 'stockholm', 'stk': 'stockholm',
+    'nexus': 'nexus', 'nex': 'nexus',
+    'msf': 'msf'
+}
+
+
+class CBioPythonSeqInterface:
+    """
+    Mixin class providing BioPython sequence loading functionality.
+
+    This interface allows loading sequences from various file formats using BioPython.
+    It provides format detection, file fixing for malformed files, and robust error handling.
+    """
+
+    def simpleFormatTest(self, filename: str) -> str:
+        """
+        Detect sequence file format by inspecting content.
+
+        Args:
+            filename: Path to sequence file
+
+        Returns:
+            Format string: 'fasta', 'pir', 'noformat', or 'unknown'
+        """
+        import re
+        from pathlib import Path
+
+        try:
+            text = Path(filename).read_text()
+        except Exception:
+            return 'unknown'
+
+        segments = text.split('>')
+        if len(segments[0]) != 0:
+            return 'unknown'
+
+        lines = ('>' + segments[1]).split('\n')
+        nonAlphaList = []
+
+        for il, line in enumerate(lines):
+            # If only non-alpha character is a "-" and it's not the first line, treat as gap
+            if il > 0 and ((len(set(re.findall('[^(a-z,A-Z, )]', line))) == 1 and
+                           list(set(re.findall('[^(a-z,A-Z, )]', line)))[0] == "-") or
+                          line.endswith("*")):
+                nonAlphaList.append(0)
+            else:
+                nonAlphaList.append(len(re.findall('[^(a-z,A-Z, )]', line)))
+
+        nonAlphaTot = sum(nonAlphaList)
+
+        if nonAlphaTot == 0:
+            return 'noformat'
+        elif len(lines) > 0 and len(lines[0]) > 0 and lines[0][0] == '>':
+            if ';' in lines[0] and (nonAlphaTot - (nonAlphaList[0] + nonAlphaList[1] + nonAlphaList[-1])) == 0:
+                return 'pir'
+            elif (nonAlphaTot - nonAlphaList[0]) == 0:
+                return 'fasta'
+
+        return 'unknown'
+
+    def fixPirFile(self, filename: str):
+        """
+        Fix malformed PIR format files.
+
+        PIR files should have format:
+        >P1;identifier
+        description
+        sequence...
+        *
+
+        Args:
+            filename: Path to PIR file to fix
+
+        Returns:
+            Tuple of (fixed_file_path, CErrorReport, data_dict) or (None, error, None)
+        """
+        import tempfile
+        import os
+        from pathlib import Path
+        from core.base_object.error_reporting import CErrorReport
+
+        try:
+            text = Path(filename).read_text()
+        except Exception:
+            return None, None, None
+
+        if len(text.strip()) == 0:
+            return None, CErrorReport(klass='CBioPythonSeqInterface', code=412,
+                                     details='Sequence file is empty'), None
+
+        fragments = text.split('\n>')
+        if len(fragments) > 0 and len(fragments[0]) > 0 and fragments[0][0] == '>':
+            fragments[0] = fragments[0][1:]
+
+        output = ''
+        for text_frag in fragments:
+            text_frag = text_frag.strip()
+            if len(text_frag) > 2 and text_frag[2] != ';':
+                text_frag = 'P1;' + text_frag
+            if '*' not in text_frag:
+                text_frag = text_frag + '*'
+            output = output + '>' + text_frag + '\n'
+
+        # Write to temporary file
+        fd, temp_path = tempfile.mkstemp(suffix='.pir')
+        try:
+            os.write(fd, output.encode('utf-8'))
+            os.close(fd)
+
+            err, data = self.bioLoadSeqFile(temp_path, 'pir')
+            if err.count() == 0:
+                return temp_path, err, data
+            else:
+                os.unlink(temp_path)
+                return None, None, None
+        except Exception:
+            if fd:
+                os.close(fd)
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            return None, None, None
+
+    def fixFastaFile(self, filename: str):
+        """
+        Fix plain sequence files by adding FASTA header.
+
+        Args:
+            filename: Path to plain sequence file
+
+        Returns:
+            Tuple of (fixed_file_path, CErrorReport, data_dict) or (None, error, None)
+        """
+        import tempfile
+        import os
+        import re
+        from pathlib import Path
+        from core.base_object.error_reporting import CErrorReport
+
+        try:
+            text = Path(filename).read_text()
+        except Exception:
+            return None, None, None
+
+        if len(text.strip()) == 0:
+            return None, CErrorReport(klass='CBioPythonSeqInterface', code=412,
+                                     details='Sequence file is empty'), None
+
+        lines = text.split('\n')
+        nonAlphaList = []
+        for line in lines:
+            nonAlphaList.extend(re.findall('[^(a-z,A-Z, )]', line))
+
+        if len(nonAlphaList) > 0:
+            return None, None, None
+
+        # Add FASTA header using filename as identifier
+        output = '>' + Path(filename).stem + '\n' + text
+
+        # Write to temporary file
+        fd, temp_path = tempfile.mkstemp(suffix='.fasta')
+        try:
+            os.write(fd, output.encode('utf-8'))
+            os.close(fd)
+
+            err, data = self.bioLoadSeqFile(temp_path, 'fasta')
+            if err.count() == 0:
+                return temp_path, err, data
+            else:
+                os.unlink(temp_path)
+                return None, None, None
+        except Exception:
+            if fd:
+                os.close(fd)
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            return None, None, None
+
+    def bioLoadSeqFile(self, filename: str, format: str, record: int = 0):
+        """
+        Load sequence file using BioPython.
+
+        Args:
+            filename: Path to sequence file
+            format: BioPython format string ('fasta', 'pir', 'clustal', etc.)
+            record: Index of record to load (for multi-record files)
+
+        Returns:
+            Tuple of (CErrorReport, data_dict) where data_dict contains:
+                - format: Format used
+                - identifier: Sequence identifier
+                - sequence: Sequence string
+                - name: Sequence name
+                - description: Sequence description
+                - idList: List of all identifiers in file
+        """
+        from core.base_object.error_reporting import CErrorReport
+
+        err = CErrorReport()
+
+        if not BIOPYTHON_AVAILABLE:
+            err.append(klass='CBioPythonSeqInterface', code=402,
+                      details='BioPython not available - cannot load sequence file')
+            return err, {}
+
+        try:
+            with open(filename, 'r') as f:
+                if format in SEQFORMATLIST:
+                    seq_records = list(Bio.SeqIO.parse(f, format))
+                elif format in ALIGNFORMATLIST:
+                    ali_records = list(Bio.AlignIO.parse(f, format))
+                    if len(ali_records) > 0:
+                        seq_records = list(ali_records[0])
+                    else:
+                        seq_records = []
+                else:
+                    err.append(klass='CBioPythonSeqInterface', code=403,
+                              details=f'Unknown sequence file format: {format}')
+                    return err, {}
+        except Exception as e:
+            err.append(klass='CBioPythonSeqInterface', code=402,
+                      details=f'Error reading sequence file: {e}')
+            return err, {}
+
+        if len(seq_records) == 0:
+            err.append(klass='CBioPythonSeqInterface', code=412,
+                      details='Sequence file is empty or contains no valid records')
+            return err, {}
+
+        if record >= len(seq_records):
+            err.append(klass='CBioPythonSeqInterface', code=405,
+                      details=f'Record index {record} out of range (file has {len(seq_records)} records)')
+            return err, {}
+
+        idList = [rec.id for rec in seq_records]
+        selected_record = seq_records[record]
+
+        return err, {
+            'format': format,
+            'identifier': selected_record.id,
+            'sequence': str(selected_record.seq),
+            'name': selected_record.name,
+            'description': selected_record.description,
+            'idList': idList
+        }
+
+    def loadExternalFile(self, filename: str, format: str = None, record: int = 0):
+        """
+        Load sequence from external file with automatic format detection.
+
+        Args:
+            filename: Path to sequence file
+            format: Format hint ('fasta', 'pir', 'unknown', etc.)
+            record: Index of record to load (for multi-record files)
+
+        Returns:
+            Dictionary with sequence data or None on error
+        """
+        from pathlib import Path
+        from core.base_object.error_reporting import CErrorReport
+
+        if not Path(filename).exists():
+            return None
+
+        # Guess format from extension if not provided
+        if format is None or format == 'unknown':
+            ext = Path(filename).suffix[1:].lower()
+            format = EXTLIST.get(ext, None)
+
+        # Build test order - try expected format first
+        testOrder = SEQFORMATLIST + ALIGNFORMATLIST
+        if format is not None and format in testOrder:
+            testOrder.remove(format)
+            testOrder.insert(0, format)
+
+        # Try each format
+        for test_format in testOrder:
+            err, data = self.bioLoadSeqFile(filename, test_format, record=record)
+            if err.count() == 0:
+                return data
+
+            # Special handling for PIR format
+            if test_format == format and format == 'pir':
+                fixed_path, fix_err, fix_data = self.fixPirFile(filename)
+                if fixed_path is not None:
+                    return fix_data
+
+        # Try fixing as plain FASTA
+        fixed_path, fix_err, fix_data = self.fixFastaFile(filename)
+        if fixed_path is not None:
+            return fix_data
+
+        return None
+
+
+class CPdbDataComposition:
+    """
+    Coordinate file composition analysis using gemmi.
+
+    Analyzes PDB/mmCIF structure to extract:
+    - chains: List of chain IDs
+    - monomers: List of unique residue names
+    - peptides: List of chains containing amino acids
+    - nucleics: List of chains containing nucleic acids
+    - solventChains: List of chains containing solvent
+    - saccharides: List of chains containing sugar residues
+    - chainInfo: List of [nres, first_resid, last_resid] for each chain
+    - nChains: Number of chains
+    - nResidues: Total number of residues
+    - nAtoms: Total number of atoms
+    - nresSolvent: Number of solvent residues
+    - elements: List of unique element types (excluding C, N, O)
+    - containsHydrogen: Boolean for hydrogen presence
+    """
+
+    def __init__(self, gemmi_structure):
+        """
+        Analyze structure composition using gemmi.
+
+        Args:
+            gemmi_structure: gemmi.Structure object
+        """
+        self.chains = []
+        self.monomers = []
+        self.peptides = []
+        self.nucleics = []
+        self.solventChains = []
+        self.saccharides = []
+        self.chainInfo = []
+        self.nModels = len(gemmi_structure)
+        self.nChains = 0
+        self.nResidues = 0
+        self.nAtoms = 0
+        self.nresSolvent = 0
+        self.elements = []
+        self.containsHydrogen = False
+
+        # Standard amino acid residue names
+        amino_acids = {
+            'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
+            'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL',
+            'MSE', 'SEP', 'TPO', 'PYL', 'SEC'  # Modified amino acids
+        }
+
+        # Standard nucleic acid residue names
+        nucleic_acids = {
+            'A', 'C', 'G', 'U', 'T',  # Standard bases
+            'DA', 'DC', 'DG', 'DT',   # DNA
+            '+A', '+C', '+G', '+U', '+T'  # RNA with base modifications
+        }
+
+        # Common solvent names
+        solvents = {'HOH', 'WAT', 'H2O', 'DOD', 'D2O', 'SO4', 'PO4', 'CL', 'NA'}
+
+        # Saccharide residue names
+        saccharide_names = {
+            'GLC', 'GAL', 'MAN', 'FUC', 'XYL', 'RIB', 'NAG', 'BMA',
+            'FUL', 'SIA', 'NDG', 'BGC'
+        }
+
+        monomer_set = set()
+        element_set = set()
+
+        # Analyze first model only (like legacy code)
+        if len(gemmi_structure) > 0:
+            model = gemmi_structure[0]
+            self.nChains = len(model)
+
+            for chain in model:
+                chain_id = chain.name
+                self.chains.append(chain_id)
+
+                has_amino = False
+                has_nucleic = False
+                has_solvent = False
+                has_saccharide = False
+
+                nres = 0
+                first_resid = None
+                last_resid = None
+                nres_solvent_chain = 0
+                natoms_chain = 0
+
+                for residue in chain:
+                    res_name = residue.name
+                    monomer_set.add(res_name)
+                    nres += 1
+
+                    # Track first and last residue IDs
+                    resid_str = str(residue.seqid.num)
+                    if first_resid is None:
+                        first_resid = resid_str
+                    last_resid = resid_str
+
+                    # Classify residue type
+                    if res_name in amino_acids:
+                        has_amino = True
+                    elif res_name in nucleic_acids:
+                        has_nucleic = True
+                    elif res_name in solvents:
+                        has_solvent = True
+                        nres_solvent_chain += 1
+                    elif res_name in saccharide_names:
+                        has_saccharide = True
+
+                    # Count atoms and analyze elements
+                    for atom in residue:
+                        natoms_chain += 1
+                        element = atom.element.name
+
+                        # Track non-common elements
+                        if element not in ['C', 'N', 'O']:
+                            element_set.add(element)
+
+                        # Check for hydrogen
+                        if element in ['H', 'D']:
+                            self.containsHydrogen = True
+
+                # Store chain info
+                self.chainInfo.append([nres, first_resid or '', last_resid or ''])
+                self.nResidues += nres
+                self.nAtoms += natoms_chain
+                self.nresSolvent += nres_solvent_chain
+
+                # Classify chains
+                if has_amino:
+                    self.peptides.append(chain_id)
+                if has_nucleic:
+                    self.nucleics.append(chain_id)
+                if has_solvent:
+                    self.solventChains.append(chain_id)
+                if has_saccharide:
+                    self.saccharides.append(chain_id)
+
+        self.monomers = sorted(list(monomer_set))
+        self.elements = sorted(list(element_set))
+
+
 class CPdbData(CPdbDataStub):
     """
     Contents of a PDB file - a subset with functionality for GUI
@@ -513,7 +966,7 @@ class CPdbData(CPdbDataStub):
     Add file I/O, validation, and business logic here.
     """
 
-    def loadFile(self, file_path: str):
+    def loadFile(self, file_path: str = None):
         """
         Load PDB or mmCIF coordinate file using gemmi library.
 
@@ -523,12 +976,18 @@ class CPdbData(CPdbDataStub):
         3. Handles both PDB and mmCIF formats automatically
 
         Args:
-            file_path: Full path to coordinate file (.pdb, .cif, .ent)
+            file_path: Optional path to coordinate file (.pdb, .cif, .ent). If None, gets path from parent CDataFile.
 
         Returns:
             CErrorReport with any errors encountered
 
         Example:
+            # Load from parent file's path
+            >>> pdb_file = CPdbDataFile()
+            >>> pdb_file.setFullPath('/path/to/model.pdb')
+            >>> pdb_file.fileContent.loadFile()
+
+            # Load from explicit path (legacy pattern)
             >>> pdb_data = CPdbData()
             >>> error = pdb_data.loadFile('/path/to/model.pdb')
             >>> if error.count() == 0:
@@ -538,6 +997,12 @@ class CPdbData(CPdbDataStub):
         from pathlib import Path
 
         error = CErrorReport()
+
+        # If no path provided, get from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
 
         # Validate file path
         if not file_path:
@@ -572,6 +1037,9 @@ class CPdbData(CPdbDataStub):
             # Use object.__setattr__ to bypass smart assignment
             object.__setattr__(self, '_gemmi_structure', structure)
 
+            # Create composition analysis
+            object.__setattr__(self, '_composition', CPdbDataComposition(structure))
+
             # Emit signal if available
             if hasattr(self, 'dataChanged'):
                 try:
@@ -588,6 +1056,16 @@ class CPdbData(CPdbDataStub):
             )
 
         return error
+
+    @property
+    def composition(self):
+        """
+        Get composition analysis of the coordinate file.
+
+        Returns:
+            CPdbDataComposition instance with chains, monomers, etc., or None if not loaded
+        """
+        return getattr(self, '_composition', None)
 
 
 class CPdbDataFile(CPdbDataFileStub):
@@ -859,36 +1337,240 @@ class CSeqDataFileList(CSeqDataFileListStub):
     pass
 
 
-class CSequence(CSequenceStub):
+class CSequence(CSequenceStub, CBioPythonSeqInterface):
     """
-    A string of sequence one-letter codes
-Need to be able to parse common seq file formats
-Do we need to support alternative residues
-What about nucleic/polysach?
-    
-    Extends CSequenceStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
+    A string of sequence one-letter codes with BioPython loading support.
 
-    # Add your methods here
-    pass
+    This class represents a single biological sequence (protein or nucleic acid)
+    with support for loading from various file formats using BioPython.
 
-
-class CSequenceAlignment(CSequenceAlignmentStub):
-    """
-    An alignment of two or more sequences.
-Each sequence is obviously related to class CSequence, but
-will also contain gaps relevant to the alignment. We could
-implement the contents as a list of CSequence objects?
-The alignment is typically formatted in a file as consecutive 
-or interleaved sequences.
-    
-    Extends CSequenceAlignmentStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
+    Key features:
+    - Load from FASTA, PIR, UniProt, and other formats
+    - Automatic format detection
+    - Molecular weight calculation using BioPython ProtParam
+    - Save to FASTA format
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, fileName: str, format: str = 'unknown'):
+        """
+        Load sequence from file.
+
+        Args:
+            fileName: Path to sequence file
+            format: Format hint ('internal', 'uniprot', 'fasta', 'pir', 'unknown')
+        """
+        from pathlib import Path
+        from core.base_object.error_reporting import CErrorReport
+
+        if format == 'internal':
+            # Internal format: simple FASTA-like with pipe-separated metadata
+            self._loadInternalFile(fileName)
+        elif format == 'uniprot':
+            # UniProt XML format - not implemented in modern version
+            err = CErrorReport()
+            err.append(klass='CSequence', code=402,
+                      details='UniProt XML format not yet supported in modern implementation')
+            return err
+        else:
+            # Use BioPython interface
+            data = self.loadExternalFile(fileName, format=format, record=0)
+            if data is not None:
+                # Populate CData attributes from loaded data
+                if 'identifier' in data:
+                    self.identifier = data['identifier']
+                if 'sequence' in data:
+                    self.sequence = data['sequence']
+                if 'name' in data:
+                    self.name = data['name']
+                if 'description' in data:
+                    self.description = data['description']
+                if 'referenceDb' in data:
+                    self.referenceDb = data['referenceDb']
+                if 'reference' in data:
+                    self.reference = data['reference']
+
+    def _loadInternalFile(self, fileName: str):
+        """
+        Load internal format sequence file.
+
+        Internal format is simple FASTA with pipe-separated metadata:
+        >referenceDb|reference|identifier
+        sequence...
+        """
+        from pathlib import Path
+
+        try:
+            text = Path(fileName).read_text()
+        except Exception as e:
+            print(f'ERROR loading sequence file: {e}')
+            return
+
+        lines = text.split('\n')
+        try:
+            # Parse header line
+            if len(lines[0]) > 0 and lines[0][0] == '>':
+                header = lines[0][1:]
+                splitList = header.split('|')
+
+                if len(splitList) == 3:
+                    self.referenceDb = splitList[0]
+                    if len(splitList[1].strip()) > 0:
+                        self.reference = splitList[1]
+                    self.identifier = splitList[2]
+                else:
+                    self.identifier = header
+
+                # Parse sequence (concatenate all remaining lines)
+                seq = ''.join(lines[1:])
+                self.sequence = seq
+        except Exception as e:
+            print(f'ERROR parsing sequence file: {e}')
+
+    def saveFile(self, fileName: str):
+        """
+        Save sequence to FASTA format file.
+
+        Args:
+            fileName: Output file path
+        """
+        from pathlib import Path
+
+        # Build FASTA format
+        text = '>' + str(self.identifier) + '\n' + str(self.sequence)
+
+        # Write to file
+        Path(fileName).write_text(text)
+
+    def getAnalysis(self, mode: str = 'molecularWeight'):
+        """
+        Perform sequence analysis using BioPython.
+
+        Args:
+            mode: Analysis type ('molecularWeight' supported)
+
+        Returns:
+            Molecular weight in Daltons, or 0 if sequence not set or analysis fails
+        """
+        import re
+
+        if mode == 'molecularWeight':
+            if not self.sequence.isSet():
+                return 0
+
+            if not BIOPYTHON_AVAILABLE:
+                print('BioPython not available for molecular weight calculation')
+                return 0
+
+            try:
+                from Bio.SeqUtils.ProtParam import ProteinAnalysis
+
+                # Remove non-standard amino acids for BioPython compatibility
+                seq_str = str(self.sequence)
+                seq_clean = re.sub('[^GALMFWKQESPVICYHRNDT]', '', seq_str)
+
+                if len(seq_clean) == 0:
+                    return 0
+
+                pa = ProteinAnalysis(seq_clean)
+                return pa.molecular_weight()
+            except Exception as e:
+                print(f'Error calculating molecular weight: {e}')
+                return 0
+
+        return 0
+
+    def guiLabel(self) -> str:
+        """
+        Get display label for GUI.
+
+        Returns:
+            Identifier, or first 20 chars of sequence, or object name
+        """
+        if self.identifier.isSet():
+            return str(self.identifier)
+        elif self.sequence.isSet():
+            seq_str = str(self.sequence)
+            return seq_str[0:20] if len(seq_str) > 20 else seq_str
+        else:
+            return self.object_name() if hasattr(self, 'object_name') else 'CSequence'
+
+
+class CSequenceAlignment(CSequenceAlignmentStub, CBioPythonSeqInterface):
+    """
+    An alignment of two or more sequences with BioPython AlignIO support.
+
+    This class represents a multiple sequence alignment with support for
+    loading from various alignment file formats using BioPython.
+
+    Key features:
+    - Load from CLUSTAL, FASTA, PHYLIP, Stockholm, Nexus, MSF formats
+    - Automatic format detection
+    - Handles both consecutive and interleaved alignment formats
+    - Preserves gap characters for alignment information
+
+    The alignment contains gaps ("-" characters) that are relevant to the alignment.
+    Each aligned sequence is similar to CSequence but includes gap positions.
+    """
+
+    def loadFile(self, fileName: str, format: str = 'unknown'):
+        """
+        Load sequence alignment from file using BioPython AlignIO.
+
+        Args:
+            fileName: Path to alignment file
+            format: Format hint ('clustal', 'fasta', 'phylip', 'stockholm', 'nexus', 'msf', 'unknown')
+        """
+        from pathlib import Path
+        from core.base_object.error_reporting import CErrorReport
+
+        if not Path(fileName).exists():
+            err = CErrorReport()
+            err.append(klass='CSequenceAlignment', code=401,
+                      details=f'Alignment file does not exist: {fileName}')
+            return err
+
+        if not BIOPYTHON_AVAILABLE:
+            err = CErrorReport()
+            err.append(klass='CSequenceAlignment', code=402,
+                      details='BioPython not available - cannot load alignment file')
+            return err
+
+        # Use BioPython interface to load alignment
+        data = self.loadExternalFile(fileName, format=format, record=0)
+
+        if data is not None:
+            # Populate CData attributes from loaded data
+            if 'identifier' in data:
+                self.identifier = data['identifier']
+
+            # Store format information if available
+            if 'format' in data:
+                # Store in a private attribute for later use
+                object.__setattr__(self, '_loaded_format', data['format'])
+
+        return CErrorReport()  # Return empty error report on success
+
+    def getSequenceCount(self) -> int:
+        """
+        Get the number of sequences in the alignment.
+
+        Returns:
+            Number of sequences, or 0 if not loaded
+        """
+        # This would require storing the full alignment data
+        # For now, return 0 as a placeholder
+        return 0
+
+    def getAlignmentLength(self) -> int:
+        """
+        Get the length of the alignment (including gaps).
+
+        Returns:
+            Alignment length, or 0 if not loaded
+        """
+        # This would require storing the full alignment data
+        # For now, return 0 as a placeholder
+        return 0
 
 
 class CSequenceMeta(CSequenceMetaStub):

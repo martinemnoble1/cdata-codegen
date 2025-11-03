@@ -827,7 +827,7 @@ specific to coordinates, reflections or geometry data.
     Add file I/O, validation, and business logic here.
     """
 
-    def loadFile(self, file_path: str):
+    def loadFile(self, file_path: str = None):
         """
         Load mmCIF reflection file using gemmi library.
 
@@ -838,12 +838,18 @@ specific to coordinates, reflections or geometry data.
         4. Uses proper CData setters (NO __dict__ manipulation)
 
         Args:
-            file_path: Full path to mmCIF file
+            file_path: Optional path to mmCIF file. If None, gets path from parent CDataFile.
 
         Returns:
             CErrorReport with any errors encountered
 
         Example:
+            # Load from parent file's path
+            >>> cif_file = CMmcifReflDataFile()
+            >>> cif_file.setFullPath('/path/to/reflections.cif')
+            >>> cif_file.fileContent.loadFile()
+
+            # Load from explicit path (legacy pattern)
             >>> cif_data = CMmcifReflData()
             >>> error = cif_data.loadFile('/path/to/reflections.cif')
             >>> if error.count() == 0:
@@ -853,6 +859,12 @@ specific to coordinates, reflections or geometry data.
         from pathlib import Path
 
         error = CErrorReport()
+
+        # If no path provided, get from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
 
         # Validate file path
         if not file_path:
@@ -1042,7 +1054,7 @@ class CMtzData(CMtzDataStub):
     Add file I/O, validation, and business logic here.
     """
 
-    def loadFile(self, file_path: str):
+    def loadFile(self, file_path: str = None):
         """
         Load MTZ file using gemmi library.
 
@@ -1053,12 +1065,18 @@ class CMtzData(CMtzDataStub):
         4. Stores gemmi Mtz object for advanced queries
 
         Args:
-            file_path: Full path to MTZ file
+            file_path: Optional path to MTZ file. If None, gets path from parent CDataFile.
 
         Returns:
             CErrorReport with any errors encountered
 
         Example:
+            # Load from parent file's path
+            >>> mtz_file = CMtzDataFile()
+            >>> mtz_file.setFullPath('/path/to/data.mtz')
+            >>> mtz_file.fileContent.loadFile()
+
+            # Load from explicit path (legacy pattern)
             >>> mtz_data = CMtzData()
             >>> error = mtz_data.loadFile('/path/to/data.mtz')
             >>> if error.count() == 0:
@@ -1068,6 +1086,12 @@ class CMtzData(CMtzDataStub):
         from pathlib import Path
 
         error = CErrorReport()
+
+        # If no path provided, get from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
 
         # Validate file path
         if not file_path:
@@ -1117,10 +1141,19 @@ class CMtzData(CMtzDataStub):
                 self.resolutionRange.low = mtz.resolution_low()
                 self.resolutionRange.high = mtz.resolution_high()
 
-            # Extract column names
+            # Extract column information as CMtzColumn objects
             if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
-                column_names = [col.label for col in mtz.columns]
-                self.listOfColumns = column_names
+                # Create CMtzColumn objects with columnLabel and columnType
+                mtz_columns = []
+                for col in mtz.columns:
+                    mtz_col = CMtzColumn(name=col.label)
+                    mtz_col.columnLabel = col.label
+                    mtz_col.columnType = col.type
+                    # Get dataset name if available
+                    if col.dataset:
+                        mtz_col.dataset = col.dataset.dataset_name
+                    mtz_columns.append(mtz_col)
+                self.listOfColumns = mtz_columns
 
             # Extract dataset information
             if hasattr(self, 'datasets') and self.datasets is not None:
@@ -1621,7 +1654,7 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
     Add file I/O, validation, and business logic here.
     """
 
-    def loadFile(self, file_path: str):
+    def loadFile(self, file_path: str = None):
         """
         Load unmerged reflection file using gemmi library.
 
@@ -1631,12 +1664,18 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
         - Other formats detected by extension
 
         Args:
-            file_path: Full path to reflection file
+            file_path: Optional path to reflection file. If None, gets path from parent CDataFile.
 
         Returns:
             CErrorReport with any errors encountered
 
         Example:
+            # Load from parent file's path
+            >>> unmerged_file = CUnmergedDataFile()
+            >>> unmerged_file.setFullPath('/path/to/unmerged.mtz')
+            >>> unmerged_file.fileContent.loadFile()
+
+            # Load from explicit path (legacy pattern)
             >>> unmerged = CUnmergedDataContent()
             >>> error = unmerged.loadFile('/path/to/unmerged.mtz')
             >>> if error.count() == 0:
@@ -1647,6 +1686,12 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
         from pathlib import Path
 
         error = CErrorReport()
+
+        # If no path provided, get from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
 
         # Validate file path
         if not file_path:

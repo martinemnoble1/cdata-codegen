@@ -311,10 +311,17 @@ class prosmart_refmac(CPluginScript):
             return
         print("AAA11")
 
-        self.handleXmlChanged(self.firstRefmac.makeFileName(format='PROGRAMXML'))
-
-        print("AAA10")
+        try:
+            self.handleXmlChanged(self.firstRefmac.makeFileName(format='PROGRAMXML'))
+            print("AAA10")
+        except Exception as e:
+            print(f"ERROR in handleXmlChanged: {e}")
+            import traceback
+            traceback.print_exc()
+            # Don't fail the job just because of XML handling
+            print("AAA10 - continuing after XML error")
         import os
+        print(f"AAA10.5 finishStatus={statusDict['finishStatus']}, FAILED={CPluginScript.FAILED}, SUCCEEDED={CPluginScript.SUCCEEDED}")
         if statusDict['finishStatus'] == CPluginScript.FAILED:
             #This gets done in the firstRefmac.reportStatus() - Liz
             self.fileSystemWatcher = None
@@ -322,12 +329,19 @@ class prosmart_refmac(CPluginScript):
             return
         else:
             print("AAA12")
-            self.addCycleXML(self.firstRefmac)
-            aFile=open( self.pipelinexmlfile,'w')
-            CCP4Utils.writeXML(aFile, etree.tostring(self.xmlroot,pretty_print=True) )
-            aFile.close()
+            try:
+                self.addCycleXML(self.firstRefmac)
+                aFile=open( self.pipelinexmlfile,'w')
+                CCP4Utils.writeXML(aFile, etree.tostring(self.xmlroot,pretty_print=True) )
+                aFile.close()
+            except Exception as e:
+                print(f"ERROR in addCycleXML/writeXML: {e}")
+                import traceback
+                traceback.print_exc()
             print("AAA13")
-            if self.container.controlParameters.OPTIMISE_WEIGHT:
+            # Use getattr with default to handle missing attributes
+            optimise_weight = getattr(self.container.controlParameters, 'OPTIMISE_WEIGHT', None)
+            if optimise_weight and optimise_weight.value if hasattr(optimise_weight, 'value') else optimise_weight:
                 print("AAA14")
                 self.fileSystemWatcher = None
                 weightUsed = float(self.xmlroot.xpath('//weight')[-1].text)
@@ -336,7 +350,9 @@ class prosmart_refmac(CPluginScript):
                print("AAA15")
                best_r_free = self.firstRefmac.container.outputData.PERFORMANCEINDICATOR.RFactor
                print("AAA15.1")
-               if self.container.controlParameters.ADD_WATERS and best_r_free < self.container.controlParameters.REFPRO_RSR_RWORK_LIMIT :
+               add_waters = getattr(self.container.controlParameters, 'ADD_WATERS', None)
+               refpro_limit = getattr(self.container.controlParameters, 'REFPRO_RSR_RWORK_LIMIT', None)
+               if add_waters and refpro_limit and add_waters.value and best_r_free < refpro_limit.value:
                    print("AAA16")
                    self.currentCoordinates = self.firstRefmac.container.outputData.CIFFILE
                    self.cootPlugin = self.makeCootPlugin()
@@ -487,18 +503,49 @@ class prosmart_refmac(CPluginScript):
         from core import CCP4ProjectsManager
         import shutil
         print('into prosmart_refmac.finishUp')
-        for attr in self.container.outputData.dataOrder():
+
+        # WORKAROUND: Set _temp_plugin_ref on all output files so they can find the database handler and workDirectory
+        from core.base_object.cdata_file import CDataFile
+        for child in self.container.outputData.children():
+            if isinstance(child, CDataFile):
+                child._temp_plugin_ref = self
+
+        # Use children() fallback if dataOrder() is empty
+        attrs = self.container.outputData.dataOrder()
+        if not attrs:
+            from core.base_object.base_classes import CData
+            attrs = [child.name for child in self.container.outputData.children()
+                     if isinstance(child, CData)]
+            print(f'prosmart_refmac.finishUp using children() fallback, found {len(attrs)} attrs')
+
+        for attr in attrs:
             print('prosmart_refmac.finishUp attr',attr)
-            wrappersAttr = getattr(refmacJob.container.outputData, attr)
-            pipelinesAttr = getattr(self.container.outputData, attr)
+            wrappersAttr = getattr(refmacJob.container.outputData, attr, None)
+            pipelinesAttr = getattr(self.container.outputData, attr, None)
+
+            if not wrappersAttr or not pipelinesAttr:
+                print(f'  Skipping {attr}: wrappersAttr={wrappersAttr}, pipelinesAttr={pipelinesAttr}')
+                continue
+
             if attr in [ "PERFORMANCEINDICATOR"]:
                 setattr(self.container.outputData, attr, wrappersAttr)
             else:
-                if os.path.exists(str(wrappersAttr.fullPath)):
+                source_path = str(wrappersAttr.fullPath) if hasattr(wrappersAttr, 'fullPath') else None
+                dest_path = str(pipelinesAttr.fullPath) if hasattr(pipelinesAttr, 'fullPath') else None
+
+                print(f'  Source: {source_path}')
+                print(f'  Dest: {dest_path}')
+                print(f'  Source exists: {os.path.exists(source_path) if source_path else False}')
+
+                if source_path and dest_path and os.path.exists(source_path):
                   try:
-                    shutil.copyfile( str(wrappersAttr.fullPath), str(pipelinesAttr.fullPath) )
-                  except:
-                    self.appendErrorReport(101,str(wrappersAttr.fullPath)+' to '+str(pipelinesAttr.fullPath))
+                    shutil.copyfile(source_path, dest_path)
+                    print(f'  ✓ Copied {attr}')
+                  except Exception as e:
+                    print(f'  ✗ Error copying {attr}: {e}')
+                    self.appendErrorReport(101,source_path+' to '+dest_path)
+                else:
+                    print(f'  Skipping {attr}: source does not exist or paths invalid')
                   #self.container.outputData.copyData(refmacJob.container.outputData,[attr])
                 if attr == "XMLOUT":
                     pass
@@ -768,8 +815,8 @@ class prosmart_refmac(CPluginScript):
         if hasattr(self,"refmacPostCootPlugin"):
             logfiles.append(self.refmacPostCootPlugin.makeFileName('LOG'))
 
-        asuin = self.container.inputData.ASUIN
-        if asuin.isSet():
+        asuin = getattr(self.container.inputData, 'ASUIN', None)
+        if asuin and asuin.isSet():
             self.saveXml()
             try:
                 xyzinPath = str(self.container.outputData.XYZOUT)

@@ -1,6 +1,8 @@
 from __future__ import print_function
 
+import sys
 from lxml import etree
+
 class logScraper(object):
     
     def __init__(self, *args, **kws):

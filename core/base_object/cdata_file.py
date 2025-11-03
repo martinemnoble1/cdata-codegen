@@ -55,6 +55,58 @@ class CDataFile(CData):
         if file_path is not None:
             self.setFullPath(file_path)
 
+    @property
+    def fileContent(self):
+        """
+        Get or auto-create the file content object.
+
+        This property provides fault-tolerant access to file content:
+        - If content already exists, return it
+        - If content is None, auto-create it based on fileContentClassName qualifier
+
+        This supports legacy code patterns like:
+            file.fileContent.loadFile(path)
+
+        Returns:
+            CDataFileContent instance or None if content class not configured
+        """
+        if self.content is None:
+            # Auto-create content object
+            content_class_name = self.get_qualifier('fileContentClassName')
+            if content_class_name:
+                try:
+                    # Import the content class
+                    content_class = None
+                    for module_name in ['core.CCP4XtalData', 'core.CCP4ModelData', 'core.CCP4CootData']:
+                        try:
+                            module = __import__(module_name, fromlist=[content_class_name])
+                            content_class = getattr(module, content_class_name, None)
+                            if content_class is not None:
+                                break
+                        except (ImportError, AttributeError):
+                            continue
+
+                    if content_class is not None:
+                        # Create content instance
+                        self.content = content_class(parent=self, name='fileContent')
+                        logger.debug(
+                            "[fileContent property] Auto-created content for %s: %s",
+                            self.name if hasattr(self, 'name') else 'unnamed',
+                            content_class_name
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "[fileContent property] Failed to auto-create content '%s': %s",
+                        content_class_name, e
+                    )
+
+        return self.content
+
+    @fileContent.setter
+    def fileContent(self, value):
+        """Set the file content object."""
+        self.content = value
+
     def setFullPath(self, path: str):
         """Set the full path of the file.
 
@@ -932,17 +984,6 @@ class CDataFile(CData):
         """
         # Base implementation: no introspection capability
         return None
-
-    @property
-    def fileContent(self):
-        """
-        Property to access the file content object.
-
-        Returns:
-            The CDataFileContent instance (e.g., CPdbData for CPdbDataFile),
-            or None if not yet loaded.
-        """
-        return self.content
 
     def getFileContent(self):
         """
