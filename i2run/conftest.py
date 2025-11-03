@@ -22,6 +22,42 @@ if "CCP4I2_ROOT" not in os.environ:
 TEST_PROJECTS_DIR = Path(__file__).parent / "test_projects"
 os.environ["CCP4I2_PROJECTS_DIR"] = str(TEST_PROJECTS_DIR)
 
+# Source CCP4 environment if available
+CCP4_SETUP_SCRIPT = "/Applications/ccp4-9/bin/ccp4.setup-sh"
+if Path(CCP4_SETUP_SCRIPT).exists():
+    import subprocess
+    # Source the setup script and export environment variables
+    # Use bash to source the script and print all environment variables
+    result = subprocess.run(
+        f'source {CCP4_SETUP_SCRIPT} && env',
+        shell=True,
+        executable='/bin/bash',
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        # Parse the environment variables and add to os.environ
+        ccp4_vars = {}
+        for line in result.stdout.splitlines():
+            if '=' in line:
+                key, _, value = line.partition('=')
+                # Only set CCP4-related variables and PATH to avoid polluting environment
+                if key.startswith('CCP4') or key in ['CBIN', 'CLIB', 'CCP4_SCR', 'PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH']:
+                    ccp4_vars[key] = value
+
+        # Update os.environ with CCP4 variables
+        for key, value in ccp4_vars.items():
+            os.environ[key] = value
+
+        print(f"CCP4 environment loaded from {CCP4_SETUP_SCRIPT}")
+        print(f"  CCP4={os.environ.get('CCP4', 'NOT SET')}")
+        print(f"  CBIN={os.environ.get('CBIN', 'NOT SET')}")
+        print(f"  PATH includes CBIN: {os.environ.get('CBIN', '') in os.environ.get('PATH', '')}")
+    else:
+        print(f"Warning: Failed to source CCP4 setup script: {result.stderr}")
+else:
+    print(f"Warning: CCP4 setup script not found at {CCP4_SETUP_SCRIPT}")
+
 # Initialize Django
 django.setup()
 

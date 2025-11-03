@@ -48,9 +48,14 @@ def download(url: str):
 @contextmanager
 def i2run(args: list[str], project_name: str = None):
     """
-    Run a task through modern cdata-codegen ./ccp4i2 CLI with the given arguments,
-    check the diagnostic.xml file does not contain any error reports
-    and yield a Path object to the job directory (CCP4_JOBS/job_1).
+    Run a task by calling Django management command directly (in-process).
+
+    This runs in the same process as the test, preserving:
+    - Django database setup and transactions
+    - Test fixtures
+    - Environment configuration
+
+    Yields a Path object to the job directory (CCP4_JOBS/job_1).
     Use in a with statement and the project will be cleaned up
     as long as an error is not raised.
 
@@ -73,36 +78,58 @@ def i2run(args: list[str], project_name: str = None):
         # Normal mode: place project in current directory
         project_path = Path(project_name)
 
-    # Find the ccp4i2 executable (should be in parent directory)
-    ccp4i2_path = Path(__file__).parent.parent / "ccp4i2"
-    if not ccp4i2_path.exists():
-        raise FileNotFoundError(f"Could not find ccp4i2 executable at {ccp4i2_path}")
+    # Build command-line arguments for i2run management command
+    # Format: manage.py i2run task_name --project_name foo --param1 val1 --param2 val2
+    i2run_argv = ['manage.py', 'i2run', args[0]]  # args[0] is task name
+    i2run_argv.extend(['--project_name', project_name])
+    i2run_argv.extend(args[1:])  # Add plugin-specific parameters
 
-    # Use modern CLI: ./ccp4i2 i2run <task_name> --project_name <name> [task args...]
-    # args[0] is the task name, args[1:] are the task parameters
-    # Note: We don't pass --project_path; it's auto-detected from CCP4I2_PROJECTS_DIR
-    cmd = [
-        str(ccp4i2_path),
-        "i2run",
-        args[0],  # task name
-        "--project_name", project_name,
-    ] + args[1:]  # task parameters (--HKLIN, --SPACEGROUP, etc.)
+    # Save original sys.argv
+    original_sys_argv = sys.argv
 
-    # Run the command
     try:
-        result = run(cmd, capture_output=True, text=True, check=True)
-        print("=== i2run stdout ===")
-        print(result.stdout)
-        if result.stderr:
-            print("=== i2run stderr ===")
-            print(result.stderr)
-    except CalledProcessError as e:
-        print(f"Error running i2run: {e}")
-        print(f"=== stdout ===")
-        print(e.stdout)
-        print(f"=== stderr ===")
-        print(e.stderr)
-        raise
+        # Update sys.argv for the management command parser
+        # The i2run command uses sys.argv[2:] directly, so we need to set it properly
+        sys.argv = i2run_argv
+
+        # Import and run the i2run command directly (same process, preserves test database)
+        from django.core.management import call_command
+        from io import StringIO
+
+        # Capture stdout/stderr
+        stdout_capture = StringIO()
+        stderr_capture = StringIO()
+
+        try:
+            # Call the management command directly without additional arguments
+            # The command will read sys.argv[2:] which we've already set
+            call_command(
+                'i2run',
+                stdout=stdout_capture,
+                stderr=stderr_capture
+            )
+
+            # Print captured output
+            stdout_val = stdout_capture.getvalue()
+            stderr_val = stderr_capture.getvalue()
+            if stdout_val:
+                print("=== i2run stdout ===")
+                print(stdout_val)
+            if stderr_val:
+                print("=== i2run stderr ===")
+                print(stderr_val)
+
+        except Exception as e:
+            print(f"Error running i2run: {e}")
+            print(f"=== stdout ===")
+            print(stdout_capture.getvalue())
+            print(f"=== stderr ===")
+            print(stderr_capture.getvalue())
+            raise
+
+    finally:
+        # Restore original sys.argv
+        sys.argv = original_sys_argv
 
     directory = project_path / "CCP4_JOBS" / "job_1"
 

@@ -37,10 +37,11 @@ from .class_metadata import cdata_class, attribute, AttributeType
     gui_label="CInt",
 )
 class CInt(CData):
-    def __hash__(self):
-        return hash(self.value)
-
     """Integer value type."""
+
+    def __hash__(self):
+        """Make CInt hashable by object identity for use in sets and as dict keys."""
+        return hash(id(self))
 
     def __init__(self, value: int = None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)
@@ -366,10 +367,11 @@ class CInt(CData):
     gui_label="CFloat",
 )
 class CFloat(CData):
-    def __hash__(self):
-        return hash(self.value)
-
     """Float value type."""
+
+    def __hash__(self):
+        """Make CFloat hashable by object identity for use in sets and as dict keys."""
+        return hash(id(self))
 
     def __init__(self, value: float = None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)

@@ -746,7 +746,11 @@ class CData(HierarchicalObject):
             setattr(self, key, value)
 
     def _smart_assign_from_cdata(self, source: "CData"):
-        """Handle smart assignment from another CData object."""
+        """Handle smart assignment from another CData object.
+
+        For containers, this merges children from source into self.
+        For value types, this copies the value.
+        """
         if self._is_value_type() and source._is_value_type():
             # Value assignment: copy the underlying value
             # For simple types, copy their primary value attribute
@@ -766,17 +770,45 @@ class CData(HierarchicalObject):
                 ]:
                     setattr(self, key, value)
         else:
-            # Reference assignment for complex types
-            # This would typically involve replacing this object with the source
-            # For now, copy all attributes
-            for key, value in source.__dict__.items():
-                if not key.startswith("_") and key not in [
-                    "parent",
-                    "name",
-                    "children",
-                    "signals",
-                ]:
-                    setattr(self, key, value)
+            # Complex type assignment (like containers)
+            # For containers, merge attributes from source instead of replacing
+            from .ccontainer import CContainer
+            if isinstance(self, CContainer) and isinstance(source, CContainer):
+                # Container merging: iterate over source's public attributes (those added via setattr)
+                # These may not be in children() yet if they're being parsed
+                for key in dir(source):
+                    if not key.startswith("_") and key[0].isupper():  # Skip private and methods
+                        try:
+                            child = getattr(source, key)
+                            # Only copy CData objects (skip methods)
+                            if isinstance(child, CData):
+                                # Check if we already have an attribute with this name
+                                if hasattr(self, key):
+                                    # Attribute already exists - recursively merge if both are containers
+                                    existing_child = getattr(self, key)
+                                    if isinstance(existing_child, CContainer) and isinstance(child, CContainer):
+                                        existing_child._smart_assign_from_cdata(child)
+                                    else:
+                                        # Not containers - replace with new one
+                                        setattr(self, key, child)
+                                else:
+                                    # New attribute - add it
+                                    # Need to reparent the child from source to self
+                                    child.set_parent(self)
+                                    setattr(self, key, child)
+                        except:
+                            # Skip attributes that can't be accessed
+                            pass
+            else:
+                # Non-container complex type: copy all attributes
+                for key, value in source.__dict__.items():
+                    if not key.startswith("_") and key not in [
+                        "parent",
+                        "name",
+                        "children",
+                        "signals",
+                    ]:
+                        setattr(self, key, value)
 
     def __setattr__(self, name: str, value: Any):
         """Override setattr to handle smart assignment and hierarchical relationships."""

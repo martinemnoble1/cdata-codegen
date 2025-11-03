@@ -223,7 +223,7 @@ class DefXmlParser:
         for nested_body in container.findall("./ccp4i2_body"):
             self._parse_body(nested_body, container_obj)
 
-        # Add to parent
+        # Add to parent - setattr will trigger hierarchy setup via __setattr__
         setattr(parent, container_id, container_obj)
 
     def _parse_content(self, content: ET.Element, parent: CData) -> None:
@@ -256,7 +256,7 @@ class DefXmlParser:
                     obj._item_type = class_name_str
                     obj._item_qualifiers = sub_qualifiers
 
-            # Add to parent
+            # Add to parent - setattr will trigger hierarchy setup via __setattr__
             setattr(parent, content_id, obj)
 
     def _parse_qualifiers(self, qualifiers: Optional[ET.Element]) -> Dict[str, Any]:

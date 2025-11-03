@@ -13,3 +13,4 @@ __pycache__/
 *.swo
 *.DS_Store  
 **/job_utils_legacy
+i2run/test_projects
