@@ -2198,15 +2198,14 @@ class CPluginScript(CData):
 
         try:
             # Translate old API to new API
-            # Legacy makeHklin() should produce standard column names (F, SIGF, etc.)
-            # not prefixed names (F_SIGF_F, F_SIGF_SIGF)
+            # Legacy makeHklin() should produce prefixed column names (F_SIGF_F, F_SIGF_SIGF, etc.)
+            # by using the parameter name as the display_name
             file_objects = []
 
             for item in miniMtzsIn:
                 if isinstance(item, str):
                     # Simple name - use object's own contentFlag
-                    # Provide identity rename map to preserve standard column names
-                    # Get the file object to determine its content signature
+                    # Don't provide rename map - let makeHklinGemmi use default prefixing
                     file_obj = None
                     if hasattr(self.container.inputData, item):
                         file_obj = getattr(self.container.inputData, item)
@@ -2218,62 +2217,21 @@ class CPluginScript(CData):
                         if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
                             file_obj.setContentFlag()
 
-                        # Get content signature to determine standard column names
-                        content_flag = int(file_obj.contentFlag)
-                        if content_flag > 0 and hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
-                            # CONTENT_SIGNATURE_LIST is a list of lists: [['Iplus', ...], ['Fplus', ...], ...]
-                            columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
-                            # Create identity mapping: each column maps to itself
-                            identity_rename = {col: col for col in columns}
-
-                            file_objects.append({
-                                'name': item,
-                                'display_name': item,
-                                'rename': identity_rename  # Keep original column names
-                            })
-                        else:
-                            # Fallback if contentFlag not determined
-                            file_objects.append(item)
-                    else:
-                        # Fallback if file object not found
-                        file_objects.append(item)
+                    # Just pass the name - makeHklinGemmi will handle prefixing
+                    file_objects.append(item)
 
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
-                    # [name, target_contentFlag] - let makeHklinGemmi handle conversion
-                    # Also provide identity rename to preserve standard names after conversion
+                    # [name, target_contentFlag] - let makeHklinGemmi handle prefixing
+                    # Don't provide rename map - let makeHklinGemmi use default prefixing
                     name, target_flag = item
 
-                    # Get file object to access CONTENT_SIGNATURE_LIST
-                    file_obj = None
-                    if hasattr(self.container.inputData, name):
-                        file_obj = getattr(self.container.inputData, name)
-                    elif hasattr(self.container.outputData, name):
-                        file_obj = getattr(self.container.outputData, name)
-
-                    if file_obj and hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
-                        if target_flag > 0 and target_flag <= len(file_obj.CONTENT_SIGNATURE_LIST):
-                            # CONTENT_SIGNATURE_LIST is a list of lists
-                            columns = file_obj.CONTENT_SIGNATURE_LIST[target_flag - 1]
-                            identity_rename = {col: col for col in columns}
-
-                            file_objects.append({
-                                'name': name,
-                                'display_name': name,
-                                'target_contentFlag': target_flag,
-                                'rename': identity_rename
-                            })
-                        else:
-                            file_objects.append({
-                                'name': name,
-                                'display_name': name,
-                                'target_contentFlag': target_flag
-                            })
-                    else:
-                        file_objects.append({
-                            'name': name,
-                            'display_name': name,
-                            'target_contentFlag': target_flag
-                        })
+                    # Just pass the name and target_contentFlag
+                    # makeHklinGemmi will handle column prefixing automatically
+                    file_objects.append({
+                        'name': name,
+                        'display_name': name,
+                        'target_contentFlag': target_flag
+                    })
 
                 else:
                     error.append(
@@ -2354,10 +2312,11 @@ class CPluginScript(CData):
             Tuple of (outfile_path, column_names, error_report)
         """
         # Call the modern API
-        error = self.makeHklin(miniMtzsIn, hklin)
+        outfile, error = self.makeHklin(miniMtzsIn, hklin)
 
-        # Construct the output path
-        outfile = str(self.workDirectory / f"{hklin}.mtz")
+        # outfile might be None if there was an error
+        if outfile is None:
+            outfile = str(self.workDirectory / f"{hklin}.mtz")
 
         # For now, return empty column names string
         # (Full column introspection would require reading the merged MTZ)
@@ -2521,13 +2480,43 @@ class CPluginScript(CData):
 
             # Get output file path
             output_path = file_obj.getFullPath()
-            if not output_path:
-                error.append(
-                    klass=self.__class__.__name__,
-                    code=303,
-                    details=f"Output object '{obj_name}' has no path set"
-                )
-                continue
+            print(f"[DEBUG splitHklout] {obj_name}.getFullPath() returned: '{output_path}'")
+
+            # Convert relative paths to absolute paths in work directory
+            # This handles legacy wrappers that set baseName to just a filename
+            from pathlib import Path
+            if output_path:
+                path_obj = Path(output_path)
+                if not path_obj.is_absolute():
+                    # Relative path - make it absolute relative to workDirectory
+                    output_path = str(self.workDirectory / output_path)
+                    print(f"[DEBUG splitHklout]   Converted to absolute: {output_path}")
+            else:
+                # Path not set at all - construct default path
+                print(f"[DEBUG splitHklout] Auto-setting path for {obj_name}")
+
+                # Get file extension
+                extension = '.mtz'  # Default
+                if hasattr(file_obj, 'fileExtensions') and callable(file_obj.fileExtensions):
+                    try:
+                        extensions = file_obj.fileExtensions()
+                        if extensions and len(extensions) > 0:
+                            extension = f'.{extensions[0]}'
+                    except Exception:
+                        pass
+
+                # Construct path: workDirectory/OBJECTNAME.ext
+                filename = f"{obj_name}{extension}"
+                output_path = str(self.workDirectory / filename)
+                print(f"[DEBUG splitHklout]   Created path: {output_path}")
+
+                # Set the baseName so getFullPath() will work next time
+                if hasattr(file_obj.baseName, 'set'):
+                    file_obj.baseName.set(output_path)
+                elif hasattr(file_obj.baseName, 'value'):
+                    file_obj.baseName.value = output_path
+                else:
+                    file_obj.baseName = output_path
 
             # col_string is already comma-separated (e.g., 'F,SIGF')
             # Add to outfiles list: [output_path, input_columns]

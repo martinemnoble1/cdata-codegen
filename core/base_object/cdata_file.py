@@ -70,6 +70,33 @@ class CDataFile(CData):
         Returns:
             CDataFileContent instance or None if content class not configured
         """
+        # If content already exists but appears unloaded, try to load it
+        if self.content is not None and hasattr(self.content, 'loadFile'):
+            # Check if the content appears to be unloaded (e.g., resolutionRange.high is not set for MTZ files)
+            if hasattr(self.content, 'resolutionRange') and self.content.resolutionRange is not None:
+                high_val = self.content.resolutionRange.high
+                is_unloaded = (high_val is None or
+                             (hasattr(high_val, 'value') and high_val.value is None) or
+                             (hasattr(high_val, 'isSet') and not high_val.isSet()))
+                if is_unloaded:
+                    try:
+                        error = self.content.loadFile()
+                        if error and hasattr(error, 'count') and error.count() > 0:
+                            logger.debug(
+                                "[fileContent property] loadFile() returned errors: %s",
+                                error
+                            )
+                        else:
+                            logger.debug(
+                                "[fileContent property] Successfully loaded existing content for %s",
+                                self.name if hasattr(self, 'name') else 'unnamed'
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            "[fileContent property] Failed to load existing content: %s",
+                            e
+                        )
+
         if self.content is None:
             # Auto-create content object
             content_class_name = self.get_qualifier('fileContentClassName')
@@ -94,6 +121,27 @@ class CDataFile(CData):
                             self.name if hasattr(self, 'name') else 'unnamed',
                             content_class_name
                         )
+
+                        # Auto-load by calling loadFile() without a path
+                        # Let loadFile() get the path from the parent CDataFile
+                        if hasattr(self.content, 'loadFile'):
+                            try:
+                                logger.debug("[fileContent property] Calling loadFile() to get path from parent")
+                                error = self.content.loadFile()  # loadFile will call self.get_parent().getFullPath()
+                                if error and hasattr(error, 'count') and error.count() > 0:
+                                    logger.warning(
+                                        "[fileContent property] loadFile() returned errors: %s",
+                                        error
+                                    )
+                                else:
+                                    logger.debug(
+                                        "[fileContent property] Successfully auto-loaded file content"
+                                    )
+                            except Exception as load_error:
+                                logger.warning(
+                                    "[fileContent property] Failed to auto-load: %s",
+                                    load_error
+                                )
                 except Exception as e:
                     logger.warning(
                         "[fileContent property] Failed to auto-create content '%s': %s",

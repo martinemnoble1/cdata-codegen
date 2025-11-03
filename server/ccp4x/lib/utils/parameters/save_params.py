@@ -97,9 +97,9 @@ def save_params_for_job(
         if hasattr(xyzin_obj, 'selection') and hasattr(xyzin_obj.selection, 'text'):
             print(f"DEBUG save_params [{timestamp}]: selection.text id={id(xyzin_obj.selection.text)}, value='{xyzin_obj.selection.text.value}'", file=sys.stderr)
 
-    # FORCE exclude_unset to False for debugging
-    logger.info(f"[DEBUG save_params] Calling getEtree with excludeUnset=False (FORCED)")
-    body_etree = old_job_container.getEtree(excludeUnset=False)
+    # Use the exclude_unset parameter passed to this function
+    logger.info(f"[DEBUG save_params] Calling getEtree with excludeUnset={exclude_unset}")
+    body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
 
     # Log the XML structure
     import xml.etree.ElementTree as ET

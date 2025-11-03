@@ -338,6 +338,11 @@ class CFreeRDataFile(CFreeRDataFileStub):
     Add file I/O, validation, and business logic here.
     """
 
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier (same as CMiniMtzDataFile)
+        self.set_qualifier('fileContentClassName', 'CMtzData')
+
     def _introspect_content_flag(self) -> Optional[int]:
         """
         Auto-detect content flag by reading MTZ columns and matching against
@@ -547,6 +552,11 @@ class CPhsDataFile(CPhsDataFileStub):
     between different phase data representations.
     """
 
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier (same as CMiniMtzDataFile)
+        self.set_qualifier('fileContentClassName', 'CMtzData')
+
     def setContentFlag(self):
         """
         Introspect the MTZ file to determine the phase data content type.
@@ -689,6 +699,11 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
     Extends CMiniMtzDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Set the content class name qualifier (inherited by all subclasses)
+        self.set_qualifier('fileContentClassName', 'CMtzData')
 
     # Note: _get_conversion_output_path() is now in CDataFile base class
 
@@ -1053,6 +1068,19 @@ class CMtzData(CMtzDataStub):
     Extends CMtzDataStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Initialize sub-objects required for loadFile()
+        if self.cell is None:
+            from core.cdata_stubs.CCP4XtalData import CCellStub
+            self.cell = CCellStub(parent=self, name='cell')
+        if self.spaceGroup is None:
+            from core.cdata_stubs.CCP4XtalData import CSpaceGroupStub
+            self.spaceGroup = CSpaceGroupStub(parent=self, name='spaceGroup')
+        if self.resolutionRange is None:
+            from core.cdata_stubs.CCP4XtalData import CResolutionRangeStub
+            self.resolutionRange = CResolutionRangeStub(parent=self, name='resolutionRange')
 
     def loadFile(self, file_path: str = None):
         """

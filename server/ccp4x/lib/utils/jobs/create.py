@@ -93,6 +93,9 @@ def create_job(
 
     if title is None:
         title = task_manager.getTitle(taskName)
+        # Fallback to taskName if getTitle returns None
+        if title is None:
+            title = taskName
     arg_dict = dict(
         uuid=new_job_id,
         number=str(next_job_number),
@@ -108,7 +111,7 @@ def create_job(
     if saveParams:
         remove_container_default_values(new_job_plugin.container)
         patch_output_file_paths(new_job_plugin, new_job)
-        save_params_for_job(new_job_plugin, new_job)
+        save_params_for_job(new_job_plugin, new_job, exclude_unset=True)
     new_job.save()
 
     return str(new_job.uuid)
