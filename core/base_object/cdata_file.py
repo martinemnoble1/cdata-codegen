@@ -226,14 +226,14 @@ class CDataFile(CData):
         """Walk up the parent hierarchy to find the CPluginScript parent."""
         from core.CCP4PluginScript import CPluginScript
 
-        # Check for temporary plugin reference (set during template expansion)
+        # Check for temporary plugin reference (set during template expansion or pipeline finishUp)
         if hasattr(self, '_temp_plugin_ref'):
             return self._temp_plugin_ref
 
         # Walk up parent hierarchy
         current = self.parent
         depth = 0
-        while current:
+        while current is not None:
             if isinstance(current, CPluginScript):
                 return current
             current = getattr(current, 'parent', None)
@@ -627,7 +627,6 @@ class CDataFile(CData):
                                     base_dir = Path(project_dir)
                                     if basename_value:
                                         full_path = base_dir / relpath_str / str(basename_value)
-                                        logger.debug(f"[DEBUG getFullPath] Using project_dir + relPath + baseName: {full_path}")
                                         logger.debug("Constructed path from project + relPath + baseName: %s", full_path)
                                         return str(full_path)
                                     else:

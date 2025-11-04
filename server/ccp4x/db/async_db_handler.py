@@ -840,6 +840,8 @@ class AsyncDatabaseHandler:
         Used by CDataFile.getFullPath() to construct full file paths from
         project/relPath/baseName components.
 
+        This is a synchronous method that safely handles both sync and async contexts.
+
         Args:
             project_id: UUID of the project (as string)
 
@@ -848,9 +850,35 @@ class AsyncDatabaseHandler:
         """
         try:
             import uuid as uuid_module
+            import asyncio
+
+            # Check if we're in an async context
+            try:
+                asyncio.get_running_loop()
+                is_async = True
+            except RuntimeError:
+                is_async = False
+
             project_uuid = uuid_module.UUID(str(project_id))
-            project = models.Project.objects.get(uuid=project_uuid)
-            return str(project.directory) if project.directory else None
+
+            if is_async:
+                # We're in async context - need to run query in a thread pool
+                def _get_project():
+                    try:
+                        proj = models.Project.objects.get(uuid=project_uuid)
+                        return str(proj.directory) if proj.directory else None
+                    except models.Project.DoesNotExist:
+                        return None
+
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(_get_project)
+                    return future.result(timeout=5.0)
+            else:
+                # Synchronous context - safe to query directly
+                project = models.Project.objects.get(uuid=project_uuid)
+                return str(project.directory) if project.directory else None
+
         except models.Project.DoesNotExist:
             logger.debug(f"Project not found: {project_id}")
             return None

@@ -274,30 +274,6 @@ class CCP4i2RunnerBase(object):
         variable = variable.strip("-")
         return variable
 
-    @staticmethod
-    def gemmiSplitMTZ(
-        input_path_str: str = None,
-        inputColumnPath: str = None,
-        output_path_str: str = None,
-        intoDirectory: str = None,
-    ):
-        """
-        Split MTZ file using gemmi.
-
-        Delegates to gemmi_split_mtz utility.
-        """
-        if output_path_str is not None and intoDirectory is not None:
-            raise Exception(
-                "CCP4i2RunnerBase.gemmiSplitMTZ: Can't provide both output_path_str and intoDirectory"
-            )
-
-        return gemmi_split_mtz(
-            inputPath=input_path_str,
-            inputColumnPath=inputColumnPath,
-            outputPath=output_path_str,
-            intoDirectory=intoDirectory,
-        )
-
     # ========================================================================
     # Plugin population methods
     # ========================================================================

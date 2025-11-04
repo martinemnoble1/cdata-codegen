@@ -67,7 +67,16 @@ python migration/CData/generate_new_files.py
 
 ### Testing
 ```bash
-# Run all tests
+# IMPORTANT: Always use ./run_test.sh for i2run tests to ensure CCP4 environment is set
+./run_test.sh i2run/test_file.py::test_name
+
+# i2run test examples (MUST use run_test.sh)
+./run_test.sh i2run/test_csymmatch.py::test_8xfm
+./run_test.sh i2run/test_parrot.py::test_parrot
+./run_test.sh i2run/test_mrbump.py::test_mrbump
+./run_test.sh i2run/test_servalcat.py::test_8xfm
+
+# Run all tests (non-i2run)
 pytest tests/
 
 # Run specific test file
@@ -79,6 +88,14 @@ pytest tests/test_stubs.py::TestStubs::test_basic_import -v
 # Run with output
 pytest tests/ -v -s
 ```
+
+**CRITICAL**: i2run tests MUST be run with `./run_test.sh` which:
+- Sources CCP4 environment (`/Applications/ccp4-9/bin/ccp4.setup-sh`)
+- Sets required environment variables ($CLIBD, $CCP4I2_ROOT, etc.)
+- Activates the Python virtual environment
+- Sets DJANGO_SETTINGS_MODULE
+
+Running i2run tests directly with pytest will fail due to missing CCP4 environment variables.
 
 ### Code Quality
 ```bash

@@ -735,15 +735,12 @@ class servalcat_pipe(CPluginScript):
 
     def finishUp(self, servalcatJob):
         from core import CCP4ProjectsManager
-        print('into servalcat_pipe.finishUp')
         for attr in self.container.outputData.dataOrder():
             try:
                 wrappersAttr = getattr(servalcatJob.container.outputData, attr)
                 pipelinesAttr = getattr(self.container.outputData, attr)
             except:
-                print('servalcat_pipe.finishUp attr', attr, 'not copied from wrapper to pipeline')
                 continue
-            print('servalcat_pipe.finishUp attr', attr)
             if attr in ["PERFORMANCEINDICATOR"]:
                 setattr(self.container.outputData, attr, wrappersAttr)
             else:
@@ -754,7 +751,6 @@ class servalcat_pipe(CPluginScript):
                     self.appendErrorReport(101,str(wrappersAttr.fullPath)+' to '+str(pipelinesAttr.fullPath))
                 if attr == "XMLOUT":
                     pass
-        print('servalcat_pipe.finishUp 1')
         # Apply database annotations
         self.container.outputData.XYZOUT.annotation.set(servalcatJob.container.outputData.XYZOUT.annotation)
         self.container.outputData.CIFFILE.annotation.set(servalcatJob.container.outputData.CIFFILE.annotation)

@@ -11,9 +11,8 @@ This refactored architecture separates concerns for better maintainability:
 """
 
 import logging
-import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from core.CCP4Container import CContainer
 from core.CCP4PluginScript import CPluginScript
@@ -437,9 +436,67 @@ class PluginPopulator:
 
         Example: --XYZIN fullPath=/path selection/text=(A)
 
+        Special handling: If an MTZ file is provided with columnLabels,
+        automatically splits the MTZ using gemmi_split_mtz and imports
+        the split version with standardized column names.
+
         Args:
             target: CDataFile instance
             values: List of key=value strings
         """
+        from core.CCP4File import CDataFile
+
+        # Parse all key=value pairs first to check for MTZ splitting opportunity
+        parsed_values = {}
+        has_key_value_syntax = False
         for value in values:
-            PluginPopulator._handle_single_value(target, value)
+            if "=" in value:
+                key, val = value.split("=", 1)
+                parsed_values[key] = val
+                has_key_value_syntax = True
+
+        # Special handling for MTZ files with columnLabels
+        if has_key_value_syntax and "fullPath" in parsed_values and "columnLabels" in parsed_values:
+            file_path = Path(parsed_values["fullPath"])
+            if file_path.suffix.lower() == ".mtz" and file_path.exists():
+                try:
+                    from ccp4x.lib.utils.formats.gemmi_split_mtz import gemmi_split_mtz
+
+                    logger.info(
+                        f"MTZ file with columnLabels detected: {file_path.name}, "
+                        f"columns={parsed_values['columnLabels']}"
+                    )
+
+                    # Determine destination directory
+                    # Prefer target's dbHandler project import dir, fallback to file's parent
+                    if hasattr(target, "_dbHandler") and target._dbHandler:
+                        dest_dir = Path(target._dbHandler.project_import_dir)
+                    else:
+                        dest_dir = file_path.parent
+
+                    # Split the MTZ with specified columns
+                    split_file = gemmi_split_mtz(
+                        input_file_path=file_path,
+                        input_column_path=parsed_values["columnLabels"],
+                        preferred_dest=dest_dir / f"{file_path.stem}_split.mtz"
+                    )
+
+                    # Use the split file instead of original
+                    parsed_values["fullPath"] = str(split_file)
+                    logger.info(f"Using split MTZ file with standardized columns: {split_file.name}")
+
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to split MTZ file {file_path}: {e}. "
+                        f"Continuing with original file."
+                    )
+
+        # Now apply all values using original behavior
+        # If we modified parsed_values (MTZ splitting), reconstruct the values list
+        if has_key_value_syntax and parsed_values:
+            for key, val in parsed_values.items():
+                PluginPopulator._handle_single_value(target, f"{key}={val}")
+        else:
+            # No key=value syntax or no modifications - use original behavior
+            for value in values:
+                PluginPopulator._handle_single_value(target, value)
