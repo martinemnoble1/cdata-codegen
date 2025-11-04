@@ -30,11 +30,31 @@ The following directories contain **locked legacy code** from ccp4i2 and should 
 - **`pipelines/`** - Multi-step pipeline plugins
 - **`demo_data/`** - Test data files from legacy ccp4i2
 
-**Plugin Registry Files (LOCKED - do not regenerate):**
-- `core/task_manager/plugin_registry.py` (344KB, 148 plugins)
-- `core/task_manager/plugin_lookup.json` (449KB, 148 plugins)
+**Plugin Registry Files (can be regenerated):**
+- `core/task_manager/plugin_registry.py` (~67KB, 144 plugins)
+- `core/task_manager/plugin_lookup.json` (~460KB, 144 plugins)
 
-These were pre-generated from a full ccp4i2 environment and should remain unchanged. See `core/task_manager/README.md` for details.
+These files are generated from the local plugins in `wrappers/`, `wrappers2/`, and `pipelines/` directories. They can be safely regenerated:
+
+```bash
+export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
+.venv/bin/python core/task_manager/plugin_lookup.py
+```
+
+**Important Notes:**
+- The registry contains ~145 plugins that can be successfully imported
+- Legacy ccp4-python dependencies (`ccp4mg`, `mmdb2`, `ccp4srs`) are provided as minimal stubs in `stubs/` directory
+- Plugins requiring Qt GUI components (`qtgui`) are skipped during import
+- The registry automatically handles module paths relative to CCP4I2_ROOT
+- See `core/task_manager/README.md` for full details on plugin discovery and registration
+
+**Stub Modules:**
+The `stubs/` directory contains minimal stub implementations for legacy ccp4-python modules:
+- `ccp4mg.py` - CCP4 Molecular Graphics (imported but not used by acedrgNew)
+- `mmdb2.py` - Macromolecular Database (provides constants and stub classes)
+- `ccp4srs.py` - Structure Refinement Suite (provides stub Manager, Graph, GraphMatch)
+
+These stubs allow plugins like `acedrgNew` to import successfully. The stubs raise `NotImplementedError` if their methods are actually called, which is acceptable since most tests don't exercise the atom matching functionality that requires them.
 
 ### CCP4I2_ROOT Environment Variable
 
@@ -275,6 +295,37 @@ await obj.my_signal.emit_async({"status": "complete"})
 5. **Value state semantics** - Check `isSet()` before assuming a field has a value
 6. **Qualifier inheritance** - Subclasses inherit and can override parent qualifiers
 7. **Import paths** - Generated stubs use absolute imports from `core.base_object`
+
+## Known Limitations and Missing Dependencies
+
+### Legacy CCP4-Python Dependencies
+
+**Stub Modules Solution:**
+Legacy ccp4-python dependencies are provided as minimal stubs in the `stubs/` directory, allowing plugins like `acedrgNew` to import successfully:
+- `ccp4mg` - CCP4 Molecular Graphics (imported but not actually used)
+- `mmdb2` - Macromolecular Database (stub constants and classes)
+- `ccp4srs` - Structure Refinement Suite (stub Manager, Graph, GraphMatch)
+
+The stubs are sufficient for basic plugin operation but raise `NotImplementedError` if atom-matching functionality is actually invoked.
+
+**Plugins requiring `qtgui` (Qt GUI components):**
+- Various GUI-related plugins are skipped during registry generation
+- These were only needed for the Qt-based CCP4i2 GUI
+- Backend functionality works without them
+
+**Plugins requiring `mmut` (mmCIF utilities):**
+- Some phasing pipelines (`phaser_rnp_pipeline`, `phaser_simple`)
+- Use alternative wrappers or pipelines when available
+
+### Known Test Limitations
+
+1. **Wrapper-specific issues** - Some wrappers may have legacy code assumptions
+   - Example: `freerflag` writing invalid `RESOL 0.0` for unset parameters causing segfaults
+   - Status: Legacy wrapper behavior - cannot modify locked code
+
+2. **Atom matching functionality** - Tests that use acedrgNew's atom matching features will fail
+   - The stub modules allow import but don't implement full ccp4srs graph matching
+   - Most basic acedrg tests work fine without atom matching
 
 ## Testing Patterns
 

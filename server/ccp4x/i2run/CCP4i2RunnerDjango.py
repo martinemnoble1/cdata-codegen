@@ -239,7 +239,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
 
         # Save params to database (creates input_params.xml)
         if job is not None:
-            save_params_for_job(thePlugin, the_job=job)
+            save_params_for_job(thePlugin, the_job=job, exclude_unset=True)
 
         return thePlugin
 

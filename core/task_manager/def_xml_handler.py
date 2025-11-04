@@ -249,12 +249,20 @@ class DefXmlParser:
 
             # Handle subItem for lists
             sub_item = content.find("./subItem")
-            if sub_item is not None and hasattr(obj, "_item_type"):
-                sub_class_name = sub_item.find("./className")
+            if sub_item is not None and isinstance(obj, CList):
+                sub_class_name_elem = sub_item.find("./className")
                 sub_qualifiers = self._parse_qualifiers(sub_item.find("./qualifiers"))
-                if sub_class_name is not None:
-                    obj._item_type = class_name_str
-                    obj._item_qualifiers = sub_qualifiers
+                if sub_class_name_elem is not None and sub_class_name_elem.text:
+                    # Get the actual class object from registry
+                    sub_class_name = sub_class_name_elem.text
+                    sub_class = self.class_registry.get(sub_class_name)
+
+                    # Set the subItem qualifier that makeItem() expects
+                    if sub_class:
+                        obj.set_qualifier('subItem', {
+                            'class': sub_class,
+                            'qualifiers': sub_qualifiers
+                        })
 
             # Add to parent - setattr will trigger hierarchy setup via __setattr__
             setattr(parent, content_id, obj)
