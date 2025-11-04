@@ -5,6 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.utils.text import slugify
 from .CCP4i2RunnerBase import CCP4i2RunnerBase
+from .i2run_components import PluginPopulator
 from ..db import models
 from ..api import serializers
 from ..lib.utils.jobs.create import create_job
@@ -141,6 +142,8 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         """
         Create plugin instance and populate with command-line arguments.
 
+        Uses PluginPopulator component for clean separation of concerns.
+
         Override base class to use Django models instead of CCP4Modules.PROJECTSMANAGER.
         """
         # Get work directory from job if jobId provided
@@ -148,6 +151,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             job = models.Job.objects.get(uuid=jobId)
             workDirectory = job.directory
         logger.warning(f"Work directory is {workDirectory}")
+
         # Create plugin with modern approach (parent=None)
         from core.CCP4TaskManager import TASKMANAGER
         thePlugin = TASKMANAGER().get_plugin_class(
@@ -156,13 +160,9 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
 
         self.work_directory = workDirectory
 
-        # Set parameters from command line
+        # Populate plugin using PluginPopulator component
         allKeywords = self.keywordsOfTaskName(parsed_args.task_name)
-        for kw in allKeywords:
-            minpath = kw["minimumPath"]
-            val = getattr(parsed_args, minpath, None)
-            if val is not None:
-                self.handleItem(thePlugin, kw["path"], val)
+        PluginPopulator.populate(thePlugin, parsed_args, allKeywords)
 
         # Save params to database
         save_params_for_job(thePlugin, the_job=models.Job.objects.get(uuid=jobId))
