@@ -94,7 +94,30 @@ def load_nested_xml(src: ET.Element, dest: Optional[ET.Element] = None) -> ET.El
         if child.tag != "file":
             child_copy = ET.Element(child.tag)
             child_copy = load_nested_xml(child, child_copy)
-            dest.append(child_copy)
+
+            # Check if this is a container with an id attribute that might need merging
+            child_id = child_copy.get('id')
+            if child_copy.tag == 'container' and child_id:
+                # Look for existing container with same id in destination
+                existing = None
+                for dest_child in dest:
+                    if dest_child.tag == 'container' and dest_child.get('id') == child_id:
+                        existing = dest_child
+                        break
+
+                if existing is not None:
+                    # Merge children from child_copy into existing container
+                    child_count = len(list(child_copy))
+                    logger.info(f"[load_nested_xml] Merging container[@id='{child_id}'] with {child_count} children into existing container")
+                    for subchild in child_copy:
+                        existing.append(subchild)
+                else:
+                    # No existing container with this id, append as new
+                    logger.debug(f"[load_nested_xml] Appending new container[@id='{child_id}'] to destination")
+                    dest.append(child_copy)
+            else:
+                # Not a container or no id, just append
+                dest.append(child_copy)
         else:
             # Process file node but don't add it to destination
             _handle_file_node(child, dest)
@@ -226,10 +249,16 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
         logger.debug(f"Found {len(ccp4i2_body_nodes)} ccp4i2_body node(s)")
 
         # Find or create ccp4i2_body in destination
-        dest_ccp4i2_body = _find_or_create_ccp4i2_body(dest_root)
+        # If dest_root is already a ccp4i2_body, use it directly (avoid nesting)
+        if dest_root.tag == "ccp4i2_body":
+            dest_ccp4i2_body = dest_root
+            logger.debug("Destination root is already ccp4i2_body, using it directly")
+        else:
+            dest_ccp4i2_body = _find_or_create_ccp4i2_body(dest_root)
 
         # Merge children from all ccp4i2_body nodes
         total_merged = 0
+        total_appended = 0
         for i, body_node in enumerate(ccp4i2_body_nodes):
             children_count = len(list(body_node))
             logger.debug(
@@ -240,11 +269,34 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
             # This will also remove any nested file nodes while processing their content
             for child in body_node:
                 child_copy = load_nested_xml(child)
-                dest_ccp4i2_body.append(child_copy)
-                total_merged += 1
+
+                # Check if this is a container with an id attribute
+                child_id = child_copy.get('id')
+                if child_copy.tag == 'container' and child_id:
+                    # Look for existing container with same id in destination
+                    existing = None
+                    for dest_child in dest_ccp4i2_body:
+                        if dest_child.tag == 'container' and dest_child.get('id') == child_id:
+                            existing = dest_child
+                            break
+
+                    if existing is not None:
+                        # Merge children from child_copy into existing container
+                        logger.debug(f"Merging container[@id='{child_id}'] children into existing container")
+                        for subchild in child_copy:
+                            existing.append(subchild)
+                            total_merged += 1
+                    else:
+                        # No existing container with this id, append as new
+                        dest_ccp4i2_body.append(child_copy)
+                        total_appended += 1
+                else:
+                    # Not a container or no id, just append
+                    dest_ccp4i2_body.append(child_copy)
+                    total_appended += 1
 
         logger.debug(
-            f"Successfully merged {total_merged} children into destination ccp4i2_body"
+            f"Successfully merged {total_merged} children into existing containers, appended {total_appended} new elements"
         )
 
     except ET.ParseError as e:

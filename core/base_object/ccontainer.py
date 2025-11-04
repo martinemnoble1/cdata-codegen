@@ -145,8 +145,14 @@ class CContainer(CData):
         if hasattr(self, 'CONTENT_ORDER') and self.CONTENT_ORDER:
             return list(self.CONTENT_ORDER)
 
-        # Otherwise return the dynamic order
-        return list(self._data_order)
+        # If _data_order is populated, use it
+        if self._data_order:
+            return list(self._data_order)
+
+        # Backward compatibility: if _data_order is empty but we have children,
+        # return names from children. This handles the case where parameters
+        # were loaded from def.xml rather than added via addContent().
+        return [child.objectName() for child in self.children()]
 
     def copyData(self, otherContainer, dataList: Optional[List[str]] = None):
         """Copy data from another container into this container.
