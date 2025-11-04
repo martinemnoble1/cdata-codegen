@@ -117,6 +117,19 @@ pytest tests/ -v -s
 
 Running i2run tests directly with pytest will fail due to missing CCP4 environment variables.
 
+**Test Directory Structure - Sub-jobs:**
+Pipelines create sub-jobs with nested directory structures:
+```
+CCP4_JOBS/job_1/           # Main pipeline job
+  job_1/                   # First sub-job (e.g., acedrgNew called by LidiaAcedrgNew)
+    MOLOUT.mol            # Sub-job output files
+  job_2/                   # Second sub-job (if any)
+  input_params.xml         # Main job parameters
+  params.xml
+```
+
+**IMPORTANT for debugging**: Paths like `/job_1/job_1/MOLOUT.mol` are CORRECT - not a bug! The first `job_1` is the pipeline, the second `job_1` is the sub-job created by `makePluginObject()`. Don't be confused by the apparent duplication when debugging file-not-found errors.
+
 ### Code Quality
 ```bash
 # Format generated code (automatically run by generate_new_files.py)

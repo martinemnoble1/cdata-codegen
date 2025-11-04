@@ -448,25 +448,31 @@ class CHhpredItem(CHhpredItemStub):
 class CMDLMolDataFile(CMDLMolDataFileStub):
     """
     A molecule definition file (MDL)
-    
+
     Extends CMDLMolDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default file extension for MDL MOL files
+        self.set_qualifier('fileExtensions', ['mol'])
+        self.set_qualifier('mimeTypeName', 'chemical/x-mdl-molfile')
 
 
 class CMol2DataFile(CMol2DataFileStub):
     """
     A molecule definition file (MOL2)
-    
+
     Extends CMol2DataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default file extension for MOL2 files
+        self.set_qualifier('fileExtensions', ['mol2'])
+        self.set_qualifier('mimeTypeName', 'chemical/x-mol2')
 
 
 class CMonomer(CMonomerStub):
