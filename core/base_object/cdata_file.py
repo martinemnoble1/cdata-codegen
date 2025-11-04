@@ -176,52 +176,51 @@ class CDataFile(CData):
         if hasattr(self, 'baseName'):
             logger.debug("  baseName type: %s, has .value: %s", type(self.baseName), hasattr(self.baseName, 'value'))
 
-        # Always set baseName first (basic functionality)
-        if hasattr(self, 'baseName'):
-            # If baseName is a CFilePath or similar, set its value
-            if hasattr(self.baseName, 'value'):
-                self.baseName.value = path
-                logger.debug("  Set baseName.value = %s", path)
-            else:
-                # Otherwise set it directly
-                self.baseName = path
-                logger.debug("  Set baseName = %s", path)
-        else:
-            # baseName doesn't exist yet - store in file_path for now
-            object.__setattr__(self, 'file_path', path)
-            logger.debug("  Set file_path = %s (baseName doesn't exist)", path)
-
-        # After setting, check the result
-        if hasattr(self, 'baseName'):
-            if hasattr(self.baseName, 'value'):
-                logger.debug("  AFTER: baseName.value = %s", self.baseName.value)
-                # Check value state
-                if hasattr(self.baseName, '_value_states'):
-                    logger.debug("  AFTER: baseName._value_states = %s", self.baseName._value_states)
-                logger.debug("  AFTER: baseName.isSet('value') = %s",
-                           self.baseName.isSet('value') if hasattr(self.baseName, 'isSet') else 'N/A')
-            else:
-                logger.debug("  AFTER: baseName = %s", self.baseName)
-
-        logger.debug("  AFTER: dbFileId = %s",
-                    self.dbFileId.value if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value') else 'N/A')
-        logger.debug("  AFTER: relPath = %s",
-                    self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A')
-        logger.debug("  AFTER: project = %s",
-                    self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A')
-
-        # Database-aware logic: check if we're in a database context
+        # Check if we're in database-aware mode FIRST, before setting baseName
         plugin = self._find_plugin_parent()
-        if plugin and hasattr(plugin, 'get_db_job_id') and plugin.get_db_job_id():
-            logger.debug("  DB-aware mode: plugin job ID = %s", plugin.get_db_job_id())
+        is_db_mode = False
+        if plugin and hasattr(plugin, '_dbProjectId') and plugin._dbProjectId:
+            is_db_mode = True
+            logger.debug("  DB-aware mode: will parse path into project/relPath/baseName")
             try:
                 # Parse path into project/relPath/baseName for output files
+                # This will set baseName to just the filename
                 self._parse_output_path_database(path, plugin)
             except Exception as e:
-                # Don't fail on database errors - just log and continue
+                # Don't fail on database errors - fall back to simple mode
                 logger.debug("Failed to parse output path for database: %s", e)
-        else:
-            logger.debug("  Non-DB mode")
+                is_db_mode = False
+
+        # If not in database mode, or if parsing failed, use simple path storage
+        if not is_db_mode:
+            logger.debug("  Non-DB mode: setting baseName to full path")
+            if hasattr(self, 'baseName'):
+                # If baseName is a CFilePath or similar, set its value
+                if hasattr(self.baseName, 'value'):
+                    self.baseName.value = path
+                    logger.debug("  Set baseName.value = %s", path)
+                else:
+                    # Otherwise set it directly
+                    self.baseName = path
+                    logger.debug("  Set baseName = %s", path)
+            else:
+                # baseName doesn't exist yet - store in file_path for now
+                object.__setattr__(self, 'file_path', path)
+                logger.debug("  Set file_path = %s (baseName doesn't exist)", path)
+
+        # Log final state
+        if hasattr(self, 'baseName'):
+            if hasattr(self.baseName, 'value'):
+                logger.debug("  FINAL: baseName.value = %s", self.baseName.value)
+            else:
+                logger.debug("  FINAL: baseName = %s", self.baseName)
+
+        logger.debug("  FINAL: dbFileId = %s",
+                    self.dbFileId.value if hasattr(self, 'dbFileId') and hasattr(self.dbFileId, 'value') else 'N/A')
+        logger.debug("  FINAL: relPath = %s",
+                    self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A')
+        logger.debug("  FINAL: project = %s",
+                    self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A')
 
     def _find_plugin_parent(self):
         """Walk up the parent hierarchy to find the CPluginScript parent."""
@@ -234,30 +233,21 @@ class CDataFile(CData):
         # Walk up parent hierarchy
         current = self.parent
         depth = 0
-        print(f"[DEBUG _find_plugin_parent] Starting search for plugin from {self.name if hasattr(self, 'name') else 'unknown'}")
         while current:
-            print(f"[DEBUG _find_plugin_parent] Depth {depth}: {type(current).__name__}, name={current.name if hasattr(current, 'name') else 'N/A'}")
             if isinstance(current, CPluginScript):
-                print(f"[DEBUG _find_plugin_parent] Found plugin: {current.TASKNAME if hasattr(current, 'TASKNAME') else 'unknown'}")
                 return current
             current = getattr(current, 'parent', None)
             depth += 1
             if depth > 10:  # Safety limit
-                print(f"[DEBUG _find_plugin_parent] Depth limit reached, stopping")
+                logger.debug("_find_plugin_parent: Depth limit reached")
                 break
-        print(f"[DEBUG _find_plugin_parent] No plugin found")
         return None
 
     def _get_db_handler(self):
         """Get the database handler from the plugin parent, if available."""
         plugin = self._find_plugin_parent()
-        logger.debug(f"[DEBUG _get_db_handler] Found plugin: {plugin}")
-        if plugin:
-            logger.debug(f"[DEBUG _get_db_handler] Plugin name: {plugin.name if hasattr(plugin, 'name') else 'unknown'}")
-            logger.debug(f"[DEBUG _get_db_handler] Has _dbHandler: {hasattr(plugin, '_dbHandler')}")
-            if hasattr(plugin, '_dbHandler'):
-                logger.debug(f"[DEBUG _get_db_handler] _dbHandler value: {plugin._dbHandler}")
-                return plugin._dbHandler
+        if plugin and hasattr(plugin, '_dbHandler'):
+            return plugin._dbHandler
         return None
 
     def _update_from_database(self, path: str, plugin):
@@ -534,21 +524,16 @@ class CDataFile(CData):
                 db_file_id = self.dbFileId
 
             if db_file_id:
-                print(f"[DEBUG getFullPath] Have dbFileId: {db_file_id}")
                 db_handler = self._get_db_handler()
-                print(f"[DEBUG getFullPath] db_handler: {db_handler}")
                 if db_handler:
                     try:
                         import uuid
                         file_uuid = uuid.UUID(str(db_file_id))
-                        print(f"[DEBUG getFullPath] Calling get_file_path_sync for UUID: {file_uuid}")
                         path = db_handler.get_file_path_sync(file_uuid)
-                        print(f"[DEBUG getFullPath] Database returned path: {path}")
                         if path:
-                            print(f"[DEBUG getFullPath] Retrieved path from database via dbFileId: {path}")
+                            logger.debug(f"Retrieved path from database via dbFileId: {path}")
                             return path
                     except Exception as e:
-                        print(f"[DEBUG getFullPath] Exception during database lookup: {e}")
                         logger.debug(f"Failed to retrieve path from database: {e}")
 
         # Standard path construction: workDirectory + relPath + baseName
@@ -672,9 +657,13 @@ class CDataFile(CData):
         # FINAL FALLBACK: Try to construct path without plugin
         # This handles cases where files were imported but plugin hierarchy isn't available
         # (e.g., after loading from XML during job execution)
+        # NOTE: Only search for EXISTING files - this is for INPUT files only!
+        # Output files should not use this fallback as they don't exist yet.
         if relpath_value and basename_value:
             relpath_str = str(relpath_value).strip()
-            if relpath_str:
+            # Skip this fallback for output files (CCP4_JOBS paths)
+            # Output files are in job directories and don't exist until the job runs
+            if relpath_str and not relpath_str.startswith('CCP4_JOBS'):
                 # Try to find project directory from CCP4I2_PROJECTS_DIR + project UUID
                 import os
                 if 'CCP4I2_PROJECTS_DIR' in os.environ:

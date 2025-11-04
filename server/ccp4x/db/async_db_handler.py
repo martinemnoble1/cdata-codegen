@@ -810,11 +810,23 @@ class AsyncDatabaseHandler:
             file_uuid: UUID of the file record
 
         Returns:
-            Full path to the file, or None if not found
+            Full path to the file, or None if not found or if path doesn't exist
         """
+        from pathlib import Path
+
         try:
             file_record = models.File.objects.get(uuid=file_uuid)
-            return str(file_record.path) if file_record.path else None
+            if not file_record.path:
+                return None
+
+            # Check if the file actually exists at the recorded path
+            # This prevents returning stale paths from previous test runs or moved files
+            file_path = Path(file_record.path)
+            if not file_path.exists():
+                logger.debug(f"File path in database doesn't exist: {file_record.path}, returning None")
+                return None
+
+            return str(file_record.path)
         except models.File.DoesNotExist:
             return None
         except Exception as e:
