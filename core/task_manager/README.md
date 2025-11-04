@@ -4,28 +4,30 @@ This directory contains the plugin registry system for cdata-codegen.
 
 ## Directory Structure
 
-- **plugin_registry.py** - Auto-generated lazy-loading plugin registry (LOCKED)
-- **plugin_lookup.json** - Plugin metadata index (LOCKED)
-- **plugin_lookup.py** - Script to regenerate plugin registry (DO NOT RUN)
+- **plugin_registry.py** - Auto-generated lazy-loading plugin registry
+- **plugin_lookup.json** - Plugin metadata index
+- **plugin_lookup.py** - Script to regenerate plugin registry
 - **defxml_lookup.json** - Index of .def.xml files for plugin definitions
 - **defxml_lookup.py** - Script to regenerate defxml index
 - **def_xml_handler.py** - Parser for .def.xml plugin definition files
 - **params_xml_handler.py** - Parser for .params.xml parameter files
 - **task_lookup.json** - Legacy task lookup file
 
-## IMPORTANT: Locked Files
+## Regenerating Plugin Registry
 
-The following files are **LOCKED** and should **NOT** be regenerated:
+The plugin registry can be regenerated from the local plugins in `wrappers/`, `wrappers2/`, and `pipelines/`:
 
-- `plugin_registry.py` (344KB, 148 plugins)
-- `plugin_lookup.json` (449KB, 148 plugins)
+```bash
+export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
+.venv/bin/python core/task_manager/plugin_lookup.py
+```
 
-These files were pre-generated from the legacy ccp4i2 codebase and contain metadata for all plugins in the `wrappers/`, `wrappers2/`, and `pipelines/` directories.
-
-**Why they are locked:**
-1. The legacy plugin code requires dependencies (qtgui, report, etc.) not available in this environment
-2. The plugin code itself is stable legacy code that should not be modified
-3. Regeneration would require a full ccp4i2 environment with all dependencies
+**Important Notes:**
+1. Use the virtual environment's Python (`.venv/bin/python`) to ensure all dependencies are available
+2. The script will scan all three plugin directories and extract metadata from CPluginScript subclasses
+3. Plugins that fail to import (due to missing dependencies like qtgui, mmut, etc.) will be skipped with warnings
+4. The generated files contain metadata for plugins that can be successfully imported (~144 plugins)
+5. Module paths are automatically corrected to be relative to CCP4I2_ROOT (e.g., `pipelines.servalcat_pipe.script.servalcat_pipe`)
 
 ## Plugin Registry Usage
 
@@ -44,12 +46,12 @@ plugin_class = task_mgr.get_plugin_class('ctruncate')
 metadata = task_mgr.get_plugin_metadata('ctruncate')
 
 # List all available plugins
-plugins = task_mgr.list_plugins()  # Returns 148 plugin names
+plugins = task_mgr.list_plugins()  # Returns 144 plugin names
 ```
 
 ## Available Plugins
 
-The registry contains 148 plugins including:
+The registry contains 144 plugins including:
 
 - **Data Processing**: ctruncate, aimless, pointless, dials_*, xia2_*
 - **Phasing**: phaser_*, shelx_*, crank2_*

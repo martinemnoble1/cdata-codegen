@@ -154,6 +154,21 @@ def build_lookup_from_dir(root_dir: str) -> Dict[str, Any]:
     return lookup
 
 
+def sanitize_for_repr(obj):
+    """Convert objects to JSON-compatible representations."""
+    if isinstance(obj, dict):
+        return {k: sanitize_for_repr(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_repr(v) for v in obj]
+    elif hasattr(obj, 'value'):  # Enum objects
+        return obj.value
+    elif hasattr(obj, '__dict__') and not isinstance(obj, (str, int, float, bool, type(None))):
+        # Custom objects - convert to string
+        return str(obj)
+    else:
+        return obj
+
+
 def generate_plugin_registry(lookup: Dict[str, Any], output_path: str):
     """
     Generate a Python module with lazy-loading plugin registry.
@@ -186,6 +201,9 @@ def generate_plugin_registry(lookup: Dict[str, Any], output_path: str):
                    if k not in ('module', 'class', 'module_file')}
         metadata['_import_module'] = plugin_data['module']
         metadata['_import_class'] = plugin_data['class']
+
+        # Sanitize metadata to remove non-JSON-compatible objects
+        metadata = sanitize_for_repr(metadata)
 
         lines.append(f'    {repr(task_name)}: {repr(metadata)},')
 
@@ -283,7 +301,24 @@ if __name__ == "__main__":
         print(f"Building plugin lookup from: {root_directory}")
         logger.info(f"Building plugin lookup from: {root_directory}")
 
-        result = build_lookup_from_dir(root_directory)
+        # Only scan plugin directories, not the entire project
+        plugin_dirs = ['wrappers', 'wrappers2', 'pipelines']
+        result = {}
+
+        for plugin_dir in plugin_dirs:
+            dir_path = os.path.join(root_directory, plugin_dir)
+            if os.path.exists(dir_path):
+                print(f"Scanning {plugin_dir}...")
+                plugins = build_lookup_from_dir(dir_path)
+
+                # Fix module paths to be relative to CCP4I2_ROOT, not the plugin dir
+                for task_name, plugin_data in plugins.items():
+                    if 'module' in plugin_data:
+                        # Prepend the plugin directory name
+                        plugin_data['module'] = f"{plugin_dir}.{plugin_data['module']}"
+
+                result.update(plugins)
+                print(f"  Found {len(plugins)} plugins in {plugin_dir}")
 
         print(f"Finished scanning, found {len(result)} plugins")
 

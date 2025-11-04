@@ -2111,10 +2111,17 @@ class CPluginScript(CData):
 
             # Build column_mapping (input_label -> output_label)
             # By default, prepend display_name to column (e.g., HKLIN1_F)
-            # unless explicit rename is provided
+            # unless explicit rename is provided or identity mapping is requested
             column_mapping = {}
+
+            # Check if identity mapping is requested (for legacy makeHklin compatibility)
+            use_identity = (rename_map == 'identity')
+
             for col in columns:
-                if col in rename_map:
+                if use_identity:
+                    # Identity mapping: F -> F, SIGF -> SIGF (no prefixing)
+                    output_col = col
+                elif isinstance(rename_map, dict) and col in rename_map:
                     # Explicit rename provided
                     output_col = rename_map[col]
                 else:
@@ -2198,39 +2205,27 @@ class CPluginScript(CData):
 
         try:
             # Translate old API to new API
-            # Legacy makeHklin() should produce prefixed column names (F_SIGF_F, F_SIGF_SIGF, etc.)
-            # by using the parameter name as the display_name
+            # Legacy makeHklin() should NOT prefix column names - it uses identity mapping
+            # (unlike makeHklin0 which DOES prefix with mtzName_columnName)
             file_objects = []
 
             for item in miniMtzsIn:
                 if isinstance(item, str):
-                    # Simple name - use object's own contentFlag
-                    # Don't provide rename map - let makeHklinGemmi use default prefixing
-                    file_obj = None
-                    if hasattr(self.container.inputData, item):
-                        file_obj = getattr(self.container.inputData, item)
-                    elif hasattr(self.container.outputData, item):
-                        file_obj = getattr(self.container.outputData, item)
-
-                    if file_obj and hasattr(file_obj, 'contentFlag'):
-                        # Auto-detect contentFlag if not set
-                        if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
-                            file_obj.setContentFlag()
-
-                    # Just pass the name - makeHklinGemmi will handle prefixing
-                    file_objects.append(item)
+                    # Simple name - use identity mapping (no prefixing)
+                    file_objects.append({
+                        'name': item,
+                        'display_name': item,
+                        'rename': 'identity'  # Special value: use identity mapping
+                    })
 
                 elif isinstance(item, (list, tuple)) and len(item) == 2:
-                    # [name, target_contentFlag] - let makeHklinGemmi handle prefixing
-                    # Don't provide rename map - let makeHklinGemmi use default prefixing
+                    # [name, target_contentFlag] - use identity mapping
                     name, target_flag = item
-
-                    # Just pass the name and target_contentFlag
-                    # makeHklinGemmi will handle column prefixing automatically
                     file_objects.append({
                         'name': name,
                         'display_name': name,
-                        'target_contentFlag': target_flag
+                        'target_contentFlag': target_flag,
+                        'rename': 'identity'  # Special value: use identity mapping
                     })
 
                 else:
@@ -2311,8 +2306,14 @@ class CPluginScript(CData):
         Returns:
             Tuple of (outfile_path, column_names, error_report)
         """
-        # Call the modern API
-        outfile, error = self.makeHklin(miniMtzsIn, hklin)
+        # Choose which makeHklin variant to call based on extendOutputColnames
+        if extendOutputColnames:
+            # Use makeHklin0 which prefixes column names (F_SIGF_F, ABCD_HLA, etc.)
+            outfile, colnames, error = self.makeHklin0(miniMtzsIn, hklin, ignoreErrorCodes)
+            return outfile, colnames, error
+        else:
+            # Use makeHklin which uses identity mapping (F, SIGF, HLA, etc.)
+            outfile, error = self.makeHklin(miniMtzsIn, hklin)
 
         # outfile might be None if there was an error
         if outfile is None:
@@ -2323,6 +2324,111 @@ class CPluginScript(CData):
         colnames = ""
 
         return outfile, colnames, error
+
+    def makeHklin0(
+        self,
+        miniMtzsIn: list = [],
+        hklin: str = 'hklin',
+        ignoreErrorCodes: list = []
+    ) -> tuple:
+        """
+        Legacy API for makeHklin that returns prefixed column names.
+
+        This is similar to makeHklInput but follows the original makeHklin0 behavior
+        from legacy ccp4i2, which prefixes output column names with the parameter name
+        (e.g., "F_SIGF_F,F_SIGF_SIGF,ABCD_HLA,ABCD_HLB,...").
+
+        Args:
+            miniMtzsIn: List of file names or [name, contentFlag] pairs
+            hklin: Output filename (without extension)
+            ignoreErrorCodes: Error codes to ignore (for compatibility)
+
+        Returns:
+            Tuple of (outfile_path, column_names_string, error_report)
+            where column_names_string is comma-separated prefixed column names
+
+        Example:
+            >>> # Returns: ('hklin.mtz', 'F_SIGF_F,F_SIGF_SIGF,ABCD_HLA,ABCD_HLB,ABCD_HLC,ABCD_HLD', error)
+            >>> self.makeHklin0(['F_SIGF', 'ABCD'])
+        """
+        from pathlib import Path
+        import gemmi
+
+        # Initialize error report
+        error = self.errorReport.__class__()
+
+        # Build file_objects list with prefixing (no identity mapping)
+        # Unlike makeHklin(), we want column names prefixed with parameter name
+        file_objects = []
+
+        for item in miniMtzsIn:
+            if isinstance(item, str):
+                # Simple name - prefix columns with parameter name
+                file_objects.append({
+                    'name': item,
+                    'display_name': item,
+                    # Do NOT use 'identity' - let makeHklinGemmi do default prefixing
+                })
+
+            elif isinstance(item, (list, tuple)) and len(item) == 2:
+                # [name, target_contentFlag] - prefix columns with parameter name
+                name, target_flag = item
+                file_objects.append({
+                    'name': name,
+                    'display_name': name,
+                    'target_contentFlag': target_flag,
+                    # Do NOT use 'identity' - let makeHklinGemmi do default prefixing
+                })
+
+            else:
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=207,
+                    details=f"Invalid miniMtzsIn item: {item}. Expected str or [str, int]",
+                    name=str(item)
+                )
+                self.errorReport.extend(error)
+                return (None, "", error)
+
+        # Call new API with prefixing enabled
+        try:
+            output_path = self.makeHklinGemmi(
+                file_objects=file_objects,
+                output_name=hklin,
+                merge_strategy='first'
+            )
+            outfile = str(output_path)
+
+        except (AttributeError, ValueError, NotImplementedError, FileNotFoundError) as e:
+            outfile = str(self.workDirectory / f"{hklin}.mtz")
+            error.append(
+                klass=self.__class__.__name__,
+                code=200,
+                details=f"Error in makeHklin0: {e}",
+                name=hklin
+            )
+            self.errorReport.extend(error)
+            return outfile, "", error
+
+        # Read the merged MTZ to get actual column names
+        try:
+            mtz = gemmi.read_mtz_file(str(outfile))
+            # Get all data columns (exclude H, K, L, M_ISYM which are special)
+            column_names = []
+            for col in mtz.columns:
+                if col.label not in ['H', 'K', 'L', 'M/ISYM']:
+                    column_names.append(col.label)
+
+            # Join with commas
+            allColout = ','.join(column_names)
+
+            print(f"[DEBUG makeHklin0] Created {outfile} with columns: {allColout}")
+
+        except Exception as e:
+            print(f"[WARNING makeHklin0] Could not read column names from {outfile}: {e}")
+            allColout = ""
+
+        return outfile, allColout, error
 
     def splitMtz(self, infile: str, outfiles: list, logFile: str = None) -> int:
         """

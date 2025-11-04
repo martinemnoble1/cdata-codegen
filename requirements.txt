@@ -51,6 +51,12 @@ asgiref>=3.7.0
 scipy>=1.10.0
 numpy>=1.24.0
 
+# Data analysis (required by some plugins like servalcat_pipe)
+pandas>=2.0.0
+
+# Chemistry toolkit (required for ligand/molecule handling)
+rdkit>=2023.3.1
+
 # CCTBX/iotbx - Computational Crystallography Toolbox (optional)
 # Note: These are larger packages with compiled components
 # Installation: pip install cctbx-base
