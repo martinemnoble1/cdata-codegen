@@ -143,6 +143,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         Create plugin instance and populate with command-line arguments.
 
         Uses PluginPopulator component for clean separation of concerns.
+        Attaches Django database handler for database-aware file operations.
 
         Override base class to use Django models instead of CCP4Modules.PROJECTSMANAGER.
         """
@@ -160,12 +161,23 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
 
         self.work_directory = workDirectory
 
+        # Attach Django database handler for database-aware operations
+        if jobId is not None:
+            job = models.Job.objects.get(uuid=jobId)
+            from ..db.async_db_handler import AsyncDatabaseHandler
+            thePlugin._dbHandler = AsyncDatabaseHandler(project_uuid=str(job.project.uuid))
+            thePlugin._dbProjectId = str(job.project.uuid).replace("-", "")
+            logger.debug(f"Attached dbHandler to plugin with project {job.project.uuid}")
+
         # Populate plugin using PluginPopulator component
         allKeywords = self.keywordsOfTaskName(parsed_args.task_name)
         PluginPopulator.populate(thePlugin, parsed_args, allKeywords)
 
-        # Save params to database
-        save_params_for_job(thePlugin, the_job=models.Job.objects.get(uuid=jobId))
+        # Save params to database (creates input_params.xml for the job)
+        # This is separate from thePlugin.saveParams() which is called in execute()
+        if jobId is not None:
+            save_params_for_job(thePlugin, the_job=models.Job.objects.get(uuid=jobId))
+
         return thePlugin
 
     def execute(self):

@@ -151,13 +151,19 @@ class CCP4i2RunnerBase(object):
         """
         Get plugin instance populated with command-line arguments.
 
+        Caches the plugin instance to prevent multiple instantiations.
+
         Args:
             jobId: Optional job ID
             arguments_parsed: If True, skip parsing arguments
 
         Returns:
-            Configured plugin instance
+            Configured plugin instance (cached)
         """
+        # Return cached plugin if already created
+        if self._plugin is not None:
+            return self._plugin
+
         parsed_args = self.parseArgs(arguments_parsed=arguments_parsed)
 
         # Extract project info if provided
@@ -170,6 +176,7 @@ class CCP4i2RunnerBase(object):
             )
             jobId = self.jobId
 
+        # Create and cache plugin instance
         self._plugin = self.pluginWithArgs(parsed_args=parsed_args, jobId=jobId)
         return self._plugin
 
