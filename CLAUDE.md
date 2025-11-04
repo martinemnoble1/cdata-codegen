@@ -212,6 +212,21 @@ data_obj.config = {"key": "value"}  # Creates CData from dict
 data1.my_field = data2
 ```
 
+#### 3a. Legacy API Compatibility
+CData provides legacy camelCase method aliases for backward compatibility with ccp4i2 plugin code:
+
+```python
+# Modern API (preferred)
+obj.set_qualifier('allowUndefined', True)
+obj.get_qualifier('allowUndefined')
+
+# Legacy API (for compatibility)
+obj.setQualifier('allowUndefined', True)  # Alias for set_qualifier()
+obj.qualifiers('allowUndefined')           # Shorthand for get_qualifier()
+```
+
+**Note**: New code should use the modern underscore API (`set_qualifier`, `get_qualifier`). The camelCase methods (`setQualifier`) are provided only for backward compatibility with locked legacy plugin code.
+
 #### 4. Hierarchical Object Paths
 Objects maintain their position in the hierarchy:
 
@@ -308,6 +323,47 @@ await obj.my_signal.emit_async({"status": "complete"})
 5. **Value state semantics** - Check `isSet()` before assuming a field has a value
 6. **Qualifier inheritance** - Subclasses inherit and can override parent qualifiers
 7. **Import paths** - Generated stubs use absolute imports from `core.base_object`
+
+## Legacy Code Type Coercion
+
+**IMPORTANT - Post-Migration TODO**: The CData system currently performs **automatic type conversion** when assigning string values to typed fields (CInt, CFloat, CBoolean). This was implemented to support legacy plugin code patterns like:
+
+```python
+# Legacy code pattern (BAD PRACTICE - found in molrep_pipe.py:280)
+self.refmac.container.controlParameters.NCYCLES = str(self.container.inputData.REFMAC_NCYC)
+```
+
+Where `NCYCLES` is defined as a `CInt`, but the code explicitly converts to string before assignment.
+
+**Current Behavior** (implemented in `core/base_object/cdata.py:905-953`):
+- Assigning `"10"` (string) to a CInt field → automatically converts to `10` (int)
+- Assigning `"3.14"` (string) to a CFloat field → automatically converts to `3.14` (float)
+- Assigning `"true"` (string) to a CBoolean field → automatically converts to `True` (bool)
+
+**Why This Is Questionable**:
+1. **Hides bugs** - Code should fail loudly when types don't match
+2. **Unclear intent** - Why is the legacy code doing `str(int_value)` in the first place?
+3. **Python philosophy violation** - "Explicit is better than implicit"
+4. **Type safety erosion** - The whole point of CInt/CFloat is type enforcement
+
+**Post-Migration Action Items**:
+1. **Audit locked legacy code** - Find all instances of explicit string conversion (`str(...)`) before assignment
+2. **Understand intent** - Was this for XML serialization? String formatting? Or just confused?
+3. **Decision point**:
+   - Option A: Keep automatic conversion with deprecation warnings
+   - Option B: Make it strict and fix all legacy code violations
+   - Option C: Add a migration flag to control behavior (strict vs. permissive)
+
+**Current Status**: Being **permissive** to enable test passage during migration. After migration is complete, revisit this design decision.
+
+**Example of proper code**:
+```python
+# Good - direct integer assignment
+self.refmac.container.controlParameters.NCYCLES = self.container.inputData.REFMAC_NCYC.value
+
+# Also good - explicit int
+self.refmac.container.controlParameters.NCYCLES = 10
+```
 
 ## Known Limitations and Missing Dependencies
 

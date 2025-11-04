@@ -710,7 +710,7 @@ class CString(CData):
         self.value = value
 
     def __hash__(self):
-        """Make CString hashable for use in sets and as dict keys."""
+        """Make CString hashable by object identity for use in sets and as dict keys."""
         return hash(id(self))
 
     def __str__(self):

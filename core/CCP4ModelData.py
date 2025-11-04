@@ -26,25 +26,52 @@ class CAsuContent(CAsuContentStub):
 class CAsuContentSeq(CAsuContentSeqStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     Extends CAsuContentSeqStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    @property
+    def polymerType(self):
+        """
+        Return polymerType as a plain string for legacy plugin compatibility.
+
+        Legacy plugins like modelcraft use polymerType directly as a dictionary key:
+            key = {"PROTEIN": "proteins", "RNA": "rnas", "DNA": "dnas"}[seqObj.polymerType]
+
+        This requires polymerType to hash and compare like a plain string, not a CString object.
+        """
+        # Access the underlying CString via __dict__ to avoid recursion
+        polymer_type_cstring = self.__dict__.get('_polymerType') or self.__dict__.get('polymerType')
+        if polymer_type_cstring is not None:
+            # Convert CString to plain string
+            return str(polymer_type_cstring.value) if hasattr(polymer_type_cstring, 'value') else str(polymer_type_cstring)
+        return "PROTEIN"  # Default fallback
+
+    @polymerType.setter
+    def polymerType(self, value):
+        """Set polymerType, accepting both string and CString values."""
+        # Store in the underlying attribute (handled by parent class)
+        if hasattr(super(), '__setattr__'):
+            super().__setattr__('polymerType', value)
+        else:
+            self.__dict__['polymerType'] = value
 
 
 class CAsuContentSeqList(CAsuContentSeqListStub):
     """
     A list with all items of one CData sub-class
-    
+
     Extends CAsuContentSeqListStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize CAsuContentSeqList with subItem qualifier."""
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Set the subItem qualifier to specify what type of items this list contains
+        # subItem must be a dict with 'class' key pointing to the class
+        self.set_qualifier('subItem', {'class': CAsuContentSeq, 'qualifiers': {}})
 
 
 class CAsuDataFile(CAsuDataFileStub):

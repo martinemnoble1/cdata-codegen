@@ -142,6 +142,15 @@ class CData(HierarchicalObject):
             self.qualifiers = {}
         self.qualifiers[key] = value
 
+    def setQualifier(self, key, value):
+        """
+        Legacy compatibility alias for set_qualifier().
+
+        Provided for backward compatibility with legacy ccp4i2 plugin code.
+        New code should use set_qualifier() instead.
+        """
+        return self.set_qualifier(key, value)
+
     def set(self, values):
         """
         Set attributes from dict or CData object, unset others.

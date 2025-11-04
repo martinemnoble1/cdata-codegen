@@ -372,7 +372,12 @@ class PluginPopulator:
         # For CList, add each item
         if isinstance(target, CCP4Data.CList):
             for val in values:
-                PluginPopulator._handle_single_value(target, val, is_list=True)
+                # Create a new item for the list
+                new_item = target.makeItem()
+                # Set the value on the new item (not on the CList itself)
+                PluginPopulator._handle_single_value(new_item, val, is_list=False)
+                # Add the item to the list
+                target.append(new_item)
         # For single-value file objects, process all subvalues
         elif isinstance(target, CDataFile):
             PluginPopulator._handle_file_with_subvalues(target, values)
@@ -382,7 +387,7 @@ class PluginPopulator:
                 PluginPopulator._handle_single_value(target, values[0])
 
     @staticmethod
-    def _handle_single_value(target, value: str, is_list: bool = False) -> None:
+    def _handle_single_value(target, value, is_list: bool = False) -> None:
         """
         Handle setting a single value.
 
@@ -390,14 +395,32 @@ class PluginPopulator:
 
         Args:
             target: Target parameter object
-            value: String value to parse and set
+            value: Value to parse and set (string, list, or dict)
             is_list: Whether this is being added to a CList
         """
         from core.CCP4File import CDataFile
 
+        # Handle list values - join them or convert to appropriate format
+        if isinstance(value, list):
+            # For CData objects with .set(), convert list to string (comma-separated)
+            # or try to set as individual attributes
+            if hasattr(target, "set"):
+                # If it's a single-item list, unwrap it
+                if len(value) == 1:
+                    value = value[0]
+                else:
+                    # Multiple items - join as comma-separated string
+                    value = ",".join(str(v) for v in value)
+            elif hasattr(target, "value"):
+                # For simple value objects, use first item or join
+                value = value[0] if len(value) == 1 else ",".join(str(v) for v in value)
+            else:
+                logger.warning(f"Don't know how to set list value {value} on {type(target).__name__}")
+                return
+
         # Parse key=value syntax
-        if "=" in value:
-            parts = value.split("=", 1)
+        if "=" in str(value):
+            parts = str(value).split("=", 1)
             key = parts[0]
             val = parts[1] if len(parts) > 1 else ""
 
@@ -424,7 +447,7 @@ class PluginPopulator:
                 target.setFullPath(value)
             elif hasattr(target, "value"):
                 target.value = value
-            elif hasattr(target, "set"):
+            elif hasattr(target, "set") and isinstance(value, (dict, type(target))):
                 target.set(value)
             else:
                 logger.warning(f"Don't know how to set value on {type(target).__name__}")
@@ -436,9 +459,11 @@ class PluginPopulator:
 
         Example: --XYZIN fullPath=/path selection/text=(A)
 
-        Special handling: If an MTZ file is provided with columnLabels,
-        automatically splits the MTZ using gemmi_split_mtz and imports
-        the split version with standardized column names.
+        Special handling:
+        1. If an MTZ file is provided with columnLabels, automatically splits
+           the MTZ using gemmi_split_mtz and imports with standardized column names.
+        2. If seqFile= is provided for CAsuDataFile, converts the sequence file
+           to ASU XML format on the fly.
 
         Args:
             target: CDataFile instance
@@ -446,7 +471,7 @@ class PluginPopulator:
         """
         from core.CCP4File import CDataFile
 
-        # Parse all key=value pairs first to check for MTZ splitting opportunity
+        # Parse all key=value pairs first to check for special handling opportunities
         parsed_values = {}
         has_key_value_syntax = False
         for value in values:
@@ -454,6 +479,62 @@ class PluginPopulator:
                 key, val = value.split("=", 1)
                 parsed_values[key] = val
                 has_key_value_syntax = True
+
+        # Special handling for sequence files with seqFile= (CAsuDataFile)
+        if has_key_value_syntax and "seqFile" in parsed_values:
+            from ccp4x.lib.utils.formats.seq_to_asu import convert_sequence_file_to_asu
+            import tempfile
+            import os
+
+            seq_file_path = Path(parsed_values["seqFile"])
+            logger.info(f"seqFile parameter detected: {seq_file_path.name}, converting to ASU XML")
+
+            try:
+                # Determine destination directory using parent hierarchy
+                dest_dir = None
+                plugin_parent = target._find_plugin_parent() if hasattr(target, '_find_plugin_parent') else None
+
+                if plugin_parent and hasattr(plugin_parent, 'workDirectory'):
+                    # Use the plugin's work directory
+                    work_dir = plugin_parent.workDirectory
+                    dest_dir = Path(str(work_dir))
+                    logger.debug(f"Using plugin workDirectory for ASU XML: {dest_dir}")
+                else:
+                    # Fallback: use temp directory
+                    dest_dir = Path(tempfile.gettempdir())
+                    logger.debug(f"No plugin workDirectory found, using temp dir: {dest_dir}")
+
+                # Generate unique filename for ASU XML
+                fd, temp_path = tempfile.mkstemp(
+                    suffix=".asu.xml",
+                    prefix=f"{seq_file_path.stem}_",
+                    dir=dest_dir
+                )
+                os.close(fd)
+                asu_xml_path = Path(temp_path)
+
+                # Convert sequence file to ASU XML
+                logger.info(f"Converting {seq_file_path} to ASU XML: {asu_xml_path}")
+                convert_sequence_file_to_asu(
+                    input_file=seq_file_path,
+                    output_file=asu_xml_path,
+                    project_name=getattr(plugin_parent, 'projectName', 'i2run_project') if plugin_parent else 'i2run_project',
+                    project_id=getattr(plugin_parent, 'projectId', '00000000000000000000000000000000') if plugin_parent else '00000000000000000000000000000000'
+                )
+
+                # Replace seqFile with fullPath to the generated ASU XML
+                parsed_values["fullPath"] = str(asu_xml_path)
+                del parsed_values["seqFile"]
+                logger.info(f"Converted sequence file to ASU XML: {asu_xml_path.name}")
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to convert sequence file {seq_file_path} to ASU XML: {e}. "
+                    f"The seqFile parameter will be ignored."
+                )
+                # Remove seqFile from parsed_values to avoid setting it as an attribute
+                if "seqFile" in parsed_values:
+                    del parsed_values["seqFile"]
 
         # Special handling for MTZ files with columnLabels
         if has_key_value_syntax and "fullPath" in parsed_values and "columnLabels" in parsed_values:
