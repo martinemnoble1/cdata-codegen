@@ -461,24 +461,46 @@ class PluginPopulator:
             if file_path.suffix.lower() == ".mtz" and file_path.exists():
                 try:
                     from ccp4x.lib.utils.formats.gemmi_split_mtz import gemmi_split_mtz
+                    import tempfile
+                    import os
 
                     logger.info(
                         f"MTZ file with columnLabels detected: {file_path.name}, "
                         f"columns={parsed_values['columnLabels']}"
                     )
 
-                    # Determine destination directory
-                    # Prefer target's dbHandler project import dir, fallback to file's parent
-                    if hasattr(target, "_dbHandler") and target._dbHandler:
-                        dest_dir = Path(target._dbHandler.project_import_dir)
+                    # Determine destination directory using parent hierarchy
+                    # This works in both database and non-database contexts
+                    dest_dir = None
+                    plugin_parent = target._find_plugin_parent() if hasattr(target, '_find_plugin_parent') else None
+
+                    if plugin_parent and hasattr(plugin_parent, 'workDirectory'):
+                        # Use the plugin's work directory
+                        work_dir = plugin_parent.workDirectory
+                        # workDirectory might be a Path or a CString - use str() to handle both
+                        dest_dir = Path(str(work_dir))
+                        logger.debug(f"Using plugin workDirectory for MTZ split: {dest_dir}")
                     else:
-                        dest_dir = file_path.parent
+                        # Fallback: use temp directory
+                        dest_dir = Path(tempfile.gettempdir())
+                        logger.debug(f"No plugin workDirectory found, using temp dir: {dest_dir}")
+
+                    # Generate unique filename to avoid collisions
+                    fd, temp_path = tempfile.mkstemp(
+                        suffix=".mtz",
+                        prefix=f"{file_path.stem}_split_",
+                        dir=dest_dir
+                    )
+                    os.close(fd)  # Close the file descriptor, we just need the unique name
+                    split_dest = Path(temp_path)
+
+                    logger.info(f"Splitting MTZ to: {split_dest}")
 
                     # Split the MTZ with specified columns
                     split_file = gemmi_split_mtz(
                         input_file_path=file_path,
                         input_column_path=parsed_values["columnLabels"],
-                        preferred_dest=dest_dir / f"{file_path.stem}_split.mtz"
+                        preferred_dest=split_dest
                     )
 
                     # Use the split file instead of original

@@ -162,17 +162,41 @@ async def import_external_file_async(job, file_obj, db_handler):
         # No duplicate found - proceed with normal import
         # Determine destination path in CCP4_IMPORTED_FILES
         import_dir = Path(job.project.directory) / "CCP4_IMPORTED_FILES"
-        dest_path = import_dir / source_path.name
 
-        # Ensure unique filename
-        dest_path = await ensure_unique_path(dest_path)
+        # Check if source file is already in CCP4_IMPORTED_FILES
+        # This happens when files are pre-processed (e.g., MTZ splitting)
+        # In this case, we can skip the copy step
+        try:
+            source_resolved = source_path.resolve()
+            import_dir_resolved = import_dir.resolve()
+            if source_resolved.parent == import_dir_resolved:
+                # Source is already in CCP4_IMPORTED_FILES - no copy needed
+                dest_path = source_resolved
+                logger.info(
+                    f"Source file {source_path.name} already in CCP4_IMPORTED_FILES, "
+                    f"skipping copy"
+                )
+            else:
+                # Source is external - need to copy
+                dest_path = import_dir / source_path.name
 
-        # Ensure import directory exists
-        await sync_to_async(import_dir.mkdir)(parents=True, exist_ok=True)
+                # Ensure unique filename
+                dest_path = await ensure_unique_path(dest_path)
 
-        # Copy file asynchronously
-        await async_copy_file(source_path, dest_path)
-        logger.info(f"Copied {source_path} to {dest_path}")
+                # Ensure import directory exists
+                await sync_to_async(import_dir.mkdir)(parents=True, exist_ok=True)
+
+                # Copy file asynchronously
+                await async_copy_file(source_path, dest_path)
+                logger.info(f"Copied {source_path} to {dest_path}")
+        except (OSError, ValueError) as e:
+            # If path resolution fails, fall back to copying
+            logger.debug(f"Path resolution failed, proceeding with copy: {e}")
+            dest_path = import_dir / source_path.name
+            dest_path = await ensure_unique_path(dest_path)
+            await sync_to_async(import_dir.mkdir)(parents=True, exist_ok=True)
+            await async_copy_file(source_path, dest_path)
+            logger.info(f"Copied {source_path} to {dest_path}")
 
         # Register in database
         file_record = await db_handler.register_imported_file(
