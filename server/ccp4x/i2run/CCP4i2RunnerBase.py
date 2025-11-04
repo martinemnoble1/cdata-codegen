@@ -63,9 +63,38 @@ def compute_minimum_paths(keywords):
     """
     For each keyword dict with a 'path' key, add a 'minimumPath' key containing the shortest
     suffix of the path that uniquely identifies the element among all keywords.
+
+    Also computes 'simpleName' (just the last path element) and tracks which simple names
+    are ambiguous (used by multiple paths). For backward compatibility, ambiguous simple
+    names can be used to refer to the object with the shortest matching path.
     """
     paths = [kw["path"].split(".") for kw in keywords]
     n = len(paths)
+
+    # Build a mapping of simple names to all keywords that use them
+    simple_name_map = {}
+    for i, kw in enumerate(keywords):
+        this_path = paths[i]
+        simple_name = this_path[-1]  # Last element only
+        kw["simpleName"] = simple_name
+        if simple_name not in simple_name_map:
+            simple_name_map[simple_name] = []
+        simple_name_map[simple_name].append(i)
+
+    # Mark ambiguous simple names and identify shortest path for each
+    for simple_name, indices in simple_name_map.items():
+        if len(indices) > 1:
+            # This simple name is ambiguous - find the keyword with shortest path
+            shortest_idx = min(indices, key=lambda idx: len(paths[idx]))
+            for idx in indices:
+                keywords[idx]["isAmbiguousSimpleName"] = True
+                keywords[idx]["isShortestForSimpleName"] = (idx == shortest_idx)
+        else:
+            # Unique simple name
+            keywords[indices[0]]["isAmbiguousSimpleName"] = False
+            keywords[indices[0]]["isShortestForSimpleName"] = True
+
+    # Compute minimum unique paths
     for i, kw in enumerate(keywords):
         this_path = paths[i]
         # Try increasing suffix lengths until unique
@@ -84,6 +113,7 @@ def compute_minimum_paths(keywords):
         else:
             # Fallback: use full path
             kw["minimumPath"] = ".".join(this_path)
+
     return keywords
 
 
@@ -217,6 +247,10 @@ class CCP4i2RunnerBase(object):
         """
         Add command-line arguments to parser based on task parameters.
 
+        For backward compatibility with legacy usage, this also adds simple name aliases
+        (e.g., --XYZIN) for ambiguous names. When a simple name is used, it maps to the
+        parameter with the shortest matching path.
+
         Args:
             theParser: argparse.ArgumentParser instance
             task_name: Name of the task/plugin
@@ -225,11 +259,12 @@ class CCP4i2RunnerBase(object):
         keywords = CCP4i2RunnerBase.keywordsOfTaskName(task_name, parent=None)
         logger.debug(str(keywords))
 
+        # First pass: add all arguments with their minimum unique paths
         for keyword in keywords:
             logger.debug(keyword["path"])
             # sys.stdout.flush()
             args = ["--{}".format(keyword["minimumPath"])]
-            kwargs = {"required": False}
+            kwargs = {"required": False, "dest": keyword["minimumPath"]}
             for key, value in keyword["qualifiers"].items():
                 if key == "toolTip" and value != NotImplemented:
                     kwargs["help"] = value
@@ -248,6 +283,28 @@ class CCP4i2RunnerBase(object):
                 print("TypeError Exception ", err, " for ", args, kwargs)
             except argparse.ArgumentError as err:
                 print("argparse.ArgumentError Exception ", err, " for ", args, kwargs)
+
+        # Second pass: add simple name aliases for backward compatibility
+        # Only add the alias for the keyword with the shortest path when name is ambiguous
+        for keyword in keywords:
+            if keyword.get("isAmbiguousSimpleName", False) and keyword.get("isShortestForSimpleName", False):
+                # This simple name is ambiguous, and this is the shortest path
+                # Add an alias so --XYZIN maps to the same destination as --inputData.XYZIN
+                simple_arg = "--{}".format(keyword["simpleName"])
+                try:
+                    theParser.add_argument(
+                        simple_arg,
+                        dest=keyword["minimumPath"],  # Store under the minimumPath attribute
+                        required=False,
+                        nargs="+",
+                        metavar=keyword["object"].__class__.__name__,
+                        help=f"(Alias for --{keyword['minimumPath']}, shortest match for {keyword['simpleName']})"
+                    )
+                    logger.debug(f"Added simple name alias: {simple_arg} -> {keyword['minimumPath']}")
+                except argparse.ArgumentError as err:
+                    # Alias already exists or conflicts - skip
+                    logger.debug(f"Could not add alias {simple_arg}: {err}")
+
         return theParser
 
     @staticmethod
