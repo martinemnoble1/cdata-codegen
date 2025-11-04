@@ -891,8 +891,9 @@ class CData(HierarchicalObject):
             # Primitive value assignment to existing CData value type
             # e.g., ctrl.NCYCLES = 25 where ctrl.NCYCLES is a CInt
             if isinstance(value, (int, float, str, bool)):
-                # Check type compatibility
+                # Check type compatibility and perform conversions if needed
                 type_compatible = False
+                converted_value = value
                 if hasattr(existing_attr, "value"):
                     # Import types locally to avoid circular import
                     from .fundamental_types import CInt, CFloat, CBoolean
@@ -900,19 +901,52 @@ class CData(HierarchicalObject):
                         from .fundamental_types import CString
                     except ImportError:
                         CString = None
-                    if isinstance(existing_attr, CInt) and isinstance(value, int):
-                        type_compatible = True
-                    elif isinstance(existing_attr, CFloat) and isinstance(value, (int, float)):
-                        type_compatible = True
-                    elif isinstance(existing_attr, CBoolean) and isinstance(value, bool):
-                        type_compatible = True
+
+                    # Handle CInt: accept int or string convertible to int
+                    if isinstance(existing_attr, CInt):
+                        if isinstance(value, int):
+                            type_compatible = True
+                        elif isinstance(value, str):
+                            # Legacy code often uses str(int_value) - convert back
+                            try:
+                                converted_value = int(value)
+                                type_compatible = True
+                            except (ValueError, TypeError):
+                                pass
+
+                    # Handle CFloat: accept float, int, or string convertible to float
+                    elif isinstance(existing_attr, CFloat):
+                        if isinstance(value, (int, float)):
+                            type_compatible = True
+                        elif isinstance(value, str):
+                            try:
+                                converted_value = float(value)
+                                type_compatible = True
+                            except (ValueError, TypeError):
+                                pass
+
+                    # Handle CBoolean: accept bool or string convertible to bool
+                    elif isinstance(existing_attr, CBoolean):
+                        if isinstance(value, bool):
+                            type_compatible = True
+                        elif isinstance(value, str):
+                            # Handle common boolean string representations
+                            if value.lower() in ('true', 'yes', '1'):
+                                converted_value = True
+                                type_compatible = True
+                            elif value.lower() in ('false', 'no', '0'):
+                                converted_value = False
+                                type_compatible = True
+
+                    # Handle CString: always accept strings
                     elif CString is not None and isinstance(existing_attr, CString) and isinstance(value, str):
                         type_compatible = True
+
                 if type_compatible:
                     # Update the value attribute of the existing CData object
                     if name in ['contentFlag', 'subType']:  # DEBUG
-                        logger.debug("[SMART ASSIGN] Updating %s.value = %s, keeping %s", name, value, type(existing_attr).__name__)  # DEBUG
-                    existing_attr.value = value
+                        logger.debug("[SMART ASSIGN] Updating %s.value = %s, keeping %s", name, converted_value, type(existing_attr).__name__)  # DEBUG
+                    existing_attr.value = converted_value
                     # Mark as explicitly set
                     if hasattr(self, "_value_states"):
                         self._value_states[name] = ValueState.EXPLICITLY_SET

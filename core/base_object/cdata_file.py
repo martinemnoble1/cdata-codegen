@@ -710,6 +710,24 @@ class CDataFile(CData):
             return Path(path).exists()
         return False
 
+    def getExt(self) -> str:
+        """Get the file extension including the leading dot.
+
+        Returns:
+            File extension (e.g., '.pdb', '.mtz', '.cif') or empty string if no extension
+
+        Example:
+            >>> file = CPdbDataFile()
+            >>> file.setFullPath('/path/to/model.pdb')
+            >>> file.getExt()
+            '.pdb'
+        """
+        from pathlib import Path
+        path = self.getFullPath()
+        if path:
+            return Path(path).suffix
+        return ''
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the file has been set.

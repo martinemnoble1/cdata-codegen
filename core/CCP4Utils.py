@@ -530,6 +530,90 @@ def openFileToEtree(fileName: Union[str, Path], printout: bool = False, useLXML:
     return tree
 
 
+def readFile(fileName: Union[str, Path]) -> str:
+    """
+    Read a text file and return its contents as a string.
+
+    Legacy compatibility function used by plugins to read text files.
+
+    Args:
+        fileName: Path to the file to read
+
+    Returns:
+        File contents as string
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        IOError: If file cannot be read
+
+    Example:
+        >>> content = readFile('/path/to/file.txt')
+        >>> lines = content.split('\n')
+    """
+    file_path = Path(fileName)
+
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+def saveEtreeToFile(etree_element, fileName: Union[str, Path], pretty_print: bool = True):
+    """
+    Save an lxml ElementTree element to an XML file.
+
+    Legacy compatibility function used by plugins to write XML output.
+    Supports both lxml and xml.etree.ElementTree formats.
+
+    Args:
+        etree_element: lxml or ElementTree element to save
+        fileName: Path to output file
+        pretty_print: If True, format with indentation (default: True)
+
+    Raises:
+        IOError: If file cannot be written
+
+    Example:
+        >>> from lxml import etree
+        >>> root = etree.Element('root')
+        >>> saveEtreeToFile(root, '/path/to/output.xml')
+    """
+    file_path = Path(fileName)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Try lxml first (preferred for legacy compatibility)
+    try:
+        from lxml import etree as lxml_etree
+        # Check if this is an lxml element
+        if isinstance(etree_element, lxml_etree._Element):
+            xml_bytes = lxml_etree.tostring(
+                etree_element,
+                pretty_print=pretty_print,
+                xml_declaration=True,
+                encoding='utf-8'
+            )
+            with open(file_path, 'wb') as f:
+                f.write(xml_bytes)
+            return
+    except ImportError:
+        pass
+
+    # Fall back to standard library ElementTree
+    import xml.etree.ElementTree as ET
+
+    # If pretty_print is requested, indent the tree
+    if pretty_print:
+        try:
+            ET.indent(etree_element)  # Python 3.9+
+        except AttributeError:
+            # For Python < 3.9, write without indenting
+            pass
+
+    tree = ET.ElementTree(etree_element)
+    tree.write(str(file_path), encoding='utf-8', xml_declaration=True)
+
+
 def backupFile(file_path: Union[str, Path], delete: bool = True) -> Optional[Path]:
     """
     Backup a file by renaming it with a numeric suffix.

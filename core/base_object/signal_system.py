@@ -429,7 +429,9 @@ class Signal(Generic[T]):
                         results.append(result)
 
                 except Exception as e:
+                    import traceback
                     logger.error(f"Slot execution error in {self._name}: {e}")
+                    logger.error(f"Traceback:\n{traceback.format_exc()}")
                     # Continue with other slots even if one fails
 
             logger.debug(f"Emitted {self._name} to {len(valid_connections)} slots")
