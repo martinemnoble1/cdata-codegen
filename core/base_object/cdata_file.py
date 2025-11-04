@@ -451,18 +451,22 @@ class CDataFile(CData):
 
                 # Add extension if missing
                 if not any(filename.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml', '.txt']):
-                    # Use fileExtensions() method to get appropriate extension for this file type
-                    if hasattr(self, 'fileExtensions') and callable(self.fileExtensions):
-                        try:
-                            extensions = self.fileExtensions()
-                            if extensions and len(extensions) > 0:
-                                filename += f'.{extensions[0]}'
-                            else:
-                                filename += '.mtz'  # Fallback default
-                        except Exception:
-                            filename += '.mtz'  # Fallback on error
-                    else:
-                        filename += '.mtz'  # Default extension for files without fileExtensions() method
+                    # Get appropriate extension from class metadata fileExtensions
+                    default_ext = '.mtz'  # Fallback default
+
+                    # Try getting from class metadata
+                    from core.base_object.class_metadata import get_class_metadata_by_type
+                    try:
+                        meta = get_class_metadata_by_type(type(self))
+                        if meta and meta.qualifiers and 'fileExtensions' in meta.qualifiers:
+                            file_exts = meta.qualifiers['fileExtensions']
+                            if file_exts and isinstance(file_exts, list) and len(file_exts) > 0:
+                                default_ext = '.' + file_exts[0].lstrip('.')
+                                logger.debug(f"  Using extension {default_ext} from class metadata fileExtensions={file_exts}")
+                    except Exception as e:
+                        logger.debug(f"  Failed to get class metadata: {e}")
+
+                    filename += default_ext
 
                 logger.debug(f"  Generated filename: {filename}")
                 if hasattr(self.baseName, 'set'):

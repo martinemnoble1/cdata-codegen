@@ -198,7 +198,7 @@ class refmac_i2(CPluginScript):
         from core import CCP4XtalData
         from core import CCP4File
         import os
-        
+
         # Need to set the expected content flag  for phases data
 
         outputCifPath = os.path.normpath(os.path.join(self.getWorkDirectory(),'XYZOUT.mmcif'))

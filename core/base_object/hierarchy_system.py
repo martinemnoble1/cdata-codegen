@@ -134,6 +134,19 @@ class HierarchicalObject(ABC):
             self._parent_ref = None
         return parent
 
+    def get_parent(self) -> Optional["HierarchicalObject"]:
+        """
+        Get the parent object (backward compatibility wrapper).
+
+        Returns:
+            Parent object or None if no parent or parent was destroyed
+
+        Note:
+            This is a wrapper around the `parent` property for backward compatibility.
+            Prefer using the `parent` property directly in new code.
+        """
+        return self.parent
+
     def set_parent(self, parent: Optional["HierarchicalObject"]) -> bool:
         """
         Set the parent object.
