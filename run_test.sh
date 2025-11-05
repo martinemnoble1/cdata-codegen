@@ -1,8 +1,10 @@
 #!/bin/bash
 # Test dispatcher for i2run tests
-# Usage: ./run_test.sh <test_file> [<test_name>]
+# Usage: ./run_test.sh <test_file_or_dir> [pytest_args...]
 # Example: ./run_test.sh server/ccp4x/tests/i2run/test_i2run.py
 # Example: ./run_test.sh server/ccp4x/tests/i2run/test_i2run.py::test_prosmart_refmac
+# Example: ./run_test.sh i2run/ --ignore=test_mrbump.py -n auto
+# Example: ./run_test.sh i2run/ -n 4 -v
 
 source /Applications/ccp4-9/bin/ccp4.setup-sh
 
@@ -18,16 +20,10 @@ if [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 
-# Get test path from argument
+# Get test path from first argument
 TEST_PATH="${1:-server/ccp4x/tests/i2run/test_i2run.py}"
+shift  # Remove first argument, leaving remaining args for pytest
 
-# Run pytest with verbose output
-if [ -z "$2" ]; then
-    # Run all tests in file
-    echo "Running all tests in $TEST_PATH"
-    python -m pytest "$TEST_PATH"
-else
-    # Run specific test
-    echo "Running test $TEST_PATH::$2"
-    python -m pytest "$TEST_PATH::$2"
-fi
+# Run pytest with all remaining arguments passed through
+echo "Running pytest $TEST_PATH $@"
+python -m pytest "$TEST_PATH" "$@"
