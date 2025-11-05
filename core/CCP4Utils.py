@@ -471,6 +471,39 @@ def getCCP4Dir():
     return target
 
 
+def getTMP(**kw):
+    """
+    Get the temporary directory for CCP4 jobs.
+
+    Returns:
+        str: Path to temporary directory
+
+    Notes:
+        - Legacy compatibility function for plugins that call getTMP()
+        - Returns value from $TMP, $TEMP, or $TMPDIR environment variables
+        - Falls back to '/tmp' on Unix or 'C:\\Temp' on Windows
+        - Creates the directory if it doesn't exist
+    """
+    import os
+    import tempfile
+
+    # Try standard environment variables in order of preference
+    tmp_dir = os.environ.get('TMP') or os.environ.get('TEMP') or os.environ.get('TMPDIR')
+
+    if not tmp_dir:
+        # Fall back to system default
+        tmp_dir = tempfile.gettempdir()
+
+    # Ensure directory exists
+    if tmp_dir and not os.path.exists(tmp_dir):
+        try:
+            os.makedirs(tmp_dir, exist_ok=True)
+        except Exception:
+            pass
+
+    return os.path.normpath(tmp_dir) if tmp_dir else tempfile.gettempdir()
+
+
 def getCCP4I2Dir(**kw):
     """
     Get the CCP4i2 installation directory.

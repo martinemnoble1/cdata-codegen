@@ -14,3 +14,4 @@ __pycache__/
 *.DS_Store  
 **/job_utils_legacy
 i2run/test_projects
+rstdocs

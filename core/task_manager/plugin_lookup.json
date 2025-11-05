@@ -119,6 +119,25 @@
       ]
     ]
   },
+  "arcimboldo": {
+    "module": "wrappers.arcimboldo.script.arcimboldo",
+    "class": "arcimboldo",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": "Arcimboldo",
+    "TASKNAME": "arcimboldo",
+    "TASKVERSION": 0.1,
+    "WHATNEXT": [
+      "prosmart_refmac"
+    ],
+    "ASYNCHRONOUS": true,
+    "PURGESEARCHLIST": [
+      [
+        "hklin*.mtz",
+        0
+      ]
+    ]
+  },
   "xia2_dials": {
     "module": "wrappers.xia2_dials.script.xia2_dials",
     "class": "Cxia2_dials",
@@ -385,6 +404,23 @@
     "TASKNAME": "buccaneer_mr",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
+  },
+  "acorn": {
+    "module": "wrappers.acorn.script.acorn",
+    "class": "acorn",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "density_modification",
+    "TASKTITLE": "Acorn",
+    "TASKNAME": "acorn",
+    "TASKVERSION": 1.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Unexpected reflections in input file, list in stdout.txt"
+      }
+    }
   },
   "freerflag": {
     "module": "wrappers.freerflag.script.freerflag",
@@ -1484,6 +1520,16 @@
         "description": "Failed in processOutputFiles"
       }
     }
+  },
+  "fft": {
+    "module": "wrappers.fft.script.fft",
+    "class": "fft",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Export map",
+    "TASKNAME": "fft",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false
   },
   "convert2mtz": {
     "module": "wrappers.convert2mtz.script.convert2mtz",
@@ -2670,6 +2716,44 @@
     "TASKNAME": "pisapipe",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
+  },
+  "aimless_pipe": {
+    "module": "pipelines.aimless_pipe.script.aimless_pipe",
+    "class": "aimless_pipe",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "data_reduction",
+    "TASKTITLE": "Scale and merge data",
+    "TASKNAME": "aimless_pipe",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CDataReductionPerformance",
+    "PURGESEARCHLIST": [
+      [
+        "ctruncate%*/hklout.mtz",
+        0
+      ],
+      [
+        "aimless%*/*.xmgr",
+        1
+      ]
+    ],
+    "ERROR_CODES": {
+      "201": {
+        "description": "Pointless failed"
+      },
+      "202": {
+        "description": "Aimless failed"
+      },
+      "203": {
+        "description": "Ctruncate failed"
+      },
+      "204": {
+        "description": "FreeR  failed"
+      },
+      "205": {
+        "description": "Data useless"
+      }
+    }
   },
   "LidiaAcedrgNew": {
     "module": "pipelines.LidiaAcedrgNew.script.lidiaAcedrgNew",
