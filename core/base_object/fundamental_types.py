@@ -920,16 +920,16 @@ class CBoolean(CData):
         return str(self.value)
 
     def __bool__(self):
-        """Return True if this value has been explicitly set, False otherwise.
+        """Return the boolean value itself.
 
-        This allows wrapper code to use patterns like:
-            if self.container.controlParameters.SOME_BOOL:
-                # Only do something if SOME_BOOL was actually set by user
+        For CBoolean, __bool__() must return the actual boolean value, not whether
+        it's set, because legacy wrapper code uses patterns like:
+            p.some_option = self.container.controlParameters.SOME_BOOL
+        and expects the CBoolean object to evaluate to its value when assigned.
 
-        Note: This returns whether the parameter is SET, not the boolean value itself.
-              To get the actual boolean value, use .value property.
+        To check if a boolean parameter is set, use .isSet(allowDefault=False).
         """
-        return self.isSet(allowDefault=False)
+        return bool(self.value)
 
     def set(self, value: bool):
         """Set the value directly using .set() method."""
