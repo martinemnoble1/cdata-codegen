@@ -186,6 +186,20 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
   },
+  "editbfac": {
+    "module": "wrappers.editbfac.script.editbfac",
+    "class": "editbfac",
+    "COMTEMPLATE": null,
+    "TASKMODULE": [
+      "alpha_fold",
+      "model_data_utility"
+    ],
+    "TASKTITLE": "Process Predicted Models",
+    "TASKNAME": "editbfac",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false
+  },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
     "class": "x2mtz",
@@ -487,6 +501,19 @@
         "description": "Failed applying selection ot PDB file"
       }
     }
+  },
+  "validate_protein": {
+    "module": "wrappers.validate_protein.script.validate_protein",
+    "class": "validate_protein",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "validate_protein",
+    "TASKVERSION": null,
+    "WHATNEXT": [
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false
   },
   "csymmatch": {
     "module": "wrappers.csymmatch.script.csymmatch",
@@ -2405,6 +2432,18 @@
       }
     }
   },
+  "tableone": {
+    "module": "pipelines.tableone.script.tableone",
+    "class": "tableone",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Generate Table One",
+    "TASKNAME": "tableone",
+    "TASKVERSION": 1.0,
+    "ASYNCHRONOUS": true,
+    "PERFORMANCECLASS": "CExpPhasPerformance"
+  },
   "phaser_MR_FRF": {
     "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",
     "class": "phaser_MR_FRF",
@@ -2596,6 +2635,37 @@
       }
     }
   },
+  "phaser_pipeline": {
+    "module": "pipelines.phaser_pipeline.script.phaser_pipeline",
+    "class": "phaser_pipeline",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "phaser_pipeline",
+    "TASKVERSION": 0.0,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "modelcraft",
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Phaser exited with error status"
+      },
+      "202": {
+        "description": "Failed in harvest operation"
+      },
+      "203": {
+        "description": "Columns not present"
+      },
+      "204": {
+        "description": "Failed in plugin:"
+      }
+    }
+  },
   "phaser_EP": {
     "module": "pipelines.phaser_ep.script.phaser_EP",
     "class": "phaser_EP",
@@ -2672,6 +2742,40 @@
     "TASKNAME": "crank2_createfree",
     "TASKVERSION": 0.01,
     "ASYNCHRONOUS": false
+  },
+  "phaser_rnp_pipeline": {
+    "module": "pipelines.phaser_rnp_pipeline.script.phaser_rnp_pipeline",
+    "class": "phaser_rnp_pipeline",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "phaser_rnp_pipeline",
+    "TASKVERSION": 0.0,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "modelcraft",
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Phaser exited with error statut"
+      },
+      "202": {
+        "description": "Failed in harvest operation"
+      },
+      "203": {
+        "description": "Columns not present"
+      },
+      "204": {
+        "description": "Failed in plugin:",
+        "205": {
+          "description": "Failed in pointless reindex operation"
+        }
+      }
+    }
   },
   "pisa_analyse": {
     "module": "pipelines.pisapipe.wrappers.pisa_analyse.script.pisa_analyse",
@@ -2956,6 +3060,43 @@
     "ASYNCHRONOUS": false,
     "PERFORMANCECLASS": "CExpPhasPerformance"
   },
+  "dr_mr_modelbuild_pipeline": {
+    "module": "pipelines.dr_mr_modelbuild_pipeline.script.dr_mr_modelbuild_pipeline",
+    "class": "dr_mr_modelbuild_pipeline",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "dr_mr_modelbuild_pipeline",
+    "TASKVERSION": null,
+    "WHATNEXT": [],
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "PURGESEARCHLIST": [
+      [
+        "molrep_mr%*/align.pdb",
+        1
+      ],
+      [
+        "molrep_mr%*/molrep_mtz.cif",
+        1
+      ],
+      [
+        "molrep_mr%*/molrep.doc.txt",
+        5
+      ]
+    ],
+    "ERROR_CODES": {
+      "301": {
+        "description": "Error reading program xml output from first molrep run"
+      },
+      "302": {
+        "description": "No Laue results in program xml output from first molrep run"
+      },
+      "202": {
+        "description": "Failed in harvesting file from lidia/acedrg"
+      }
+    }
+  },
   "uniqueify": {
     "module": "pipelines.uniqueify.script.uniqueify",
     "class": "uniqueify",
@@ -3068,6 +3209,37 @@
       },
       "203": {
         "description": "Required input data not set"
+      }
+    }
+  },
+  "phaser_simple": {
+    "module": "pipelines.phaser_simple.script.phaser_simple",
+    "class": "phaser_simple",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "phaser_simple",
+    "TASKVERSION": 0.0,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "modelcraft",
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Phaser exited with error status"
+      },
+      "202": {
+        "description": "Failed in harvest operation"
+      },
+      "203": {
+        "description": "Columns not present"
+      },
+      "204": {
+        "description": "Failed in plugin:"
       }
     }
   }
