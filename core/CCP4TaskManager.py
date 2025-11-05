@@ -111,13 +111,17 @@ class CTaskManager:
                 rel_path = entry.get("file_path", "")
                 if rel_path:
                     # Legacy paths may point to ccp4i2 structure: ../../../ccp4i2/wrappers/...
+                    # Current paths are relative: ../../wrappers/...
                     # Convert to our structure: wrappers/...
-                    # Replace ../../../ccp4i2/ with nothing, or ../../../ with nothing
                     if "../../../ccp4i2/" in rel_path:
                         rel_path = rel_path.replace("../../../ccp4i2/", "")
                     elif "../../../" in rel_path:
                         # Assume it's a legacy path pointing to ccp4i2 root
                         rel_path = rel_path.replace("../../../", "")
+                    elif "../../" in rel_path:
+                        # Current path format from defxml_lookup.py: ../../wrappers/...
+                        # Strip ../../ to get wrappers/...
+                        rel_path = rel_path.replace("../../", "")
 
                     # Resolve relative to CCP4I2_ROOT
                     abs_path = Path(ccp4i2_root) / rel_path
