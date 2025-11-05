@@ -965,7 +965,16 @@ class CData(HierarchicalObject):
         self._setup_hierarchy_for_value(name, value)
         super().__setattr__(name, value)
         # Track that this value has been explicitly set (unless it's internal)
+        # IMPORTANT: Don't mark 'value' attribute here for types with @property setters
+        # (CInt, CFloat, CBoolean) because those setters handle state tracking themselves.
+        # This prevents parameters without defaults from being incorrectly marked as EXPLICITLY_SET
+        # during .def.xml loading and container merging operations.
+        # However, DO track for CString which doesn't use a @property setter.
+        from .fundamental_types import CInt, CFloat, CBoolean
+        has_value_property = isinstance(self, (CInt, CFloat, CBoolean))
+        skip_value_tracking = (name == "value" and has_value_property)
         if (hasattr(self, "_value_states") and not name.startswith("_")
-            and name not in ["parent", "name", "children", "signals"]):
+            and name not in ["parent", "name", "children", "signals"]
+            and not skip_value_tracking):
             self._value_states[name] = ValueState.EXPLICITLY_SET
 

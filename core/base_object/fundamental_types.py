@@ -411,15 +411,33 @@ class CFloat(CData):
     def value(self, val):
         """Set the float value with validation."""
         validated = self._validate_value(float(val))
+        old_value = getattr(self, "_value", None)
         super().__setattr__("_value", validated)
         if hasattr(self, "_value_states"):
-            self._value_states["value"] = ValueState.EXPLICITLY_SET
+            # Only mark as EXPLICITLY_SET if this is a real value change.
+            # If setting to the same value while currently NOT_SET, keep it NOT_SET.
+            # This prevents spurious state changes during .def.xml loading and merging.
+            current_state = self._value_states.get("value", ValueState.NOT_SET)
+            if current_state == ValueState.NOT_SET and old_value == validated:
+                # Keep as NOT_SET - this is internal copying, not user assignment
+                pass
+            else:
+                self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def __str__(self):
         return str(self.value)
 
     def __float__(self):
         return float(self.value)
+
+    def __bool__(self):
+        """Return True if this value has been explicitly set, False otherwise.
+
+        This allows wrapper code to use patterns like:
+            if self.container.controlParameters.RESMAX:
+                # Only write RESOL command if RESMAX was actually set by user
+        """
+        return self.isSet(allowDefault=False)
 
     def set(self, value: float):
         """Set the value directly using .set() method."""
