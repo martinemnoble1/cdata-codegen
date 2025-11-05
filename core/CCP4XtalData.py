@@ -495,13 +495,16 @@ class CImportUnmerged(CImportUnmergedStub):
 class CImportUnmergedList(CImportUnmergedListStub):
     """
     A list with all items of one CData sub-class
-    
+
     Extends CImportUnmergedListStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Set the subItem qualifier that makeItem() expects
+        # This allows i2run to create CImportUnmerged items when parsing arguments
+        self.set_qualifier('subItem', {'class': CImportUnmerged, 'qualifiers': {}})
 
 
 class CMapCoeffsDataFile(CMapCoeffsDataFileStub):

@@ -1121,10 +1121,9 @@ class CList(CData):
         sub_item_def = self.get_qualifier('subItem')
 
         if not sub_item_def:
-            raise ValueError(
-                f"CList '{self.objectName()}' has no 'subItem' qualifier defined. "
-                "Cannot create new item without knowing the type."
-            )
+            # Default to CString for simple lists (common in legacy plugins)
+            # This matches the behavior when lists hold string values like "CA"
+            sub_item_def = {'class': CString, 'qualifiers': {}}
 
         if not isinstance(sub_item_def, dict):
             raise ValueError(

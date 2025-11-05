@@ -9,11 +9,17 @@ The CProjectsManager class provides methods for:
 - Generating file paths for job outputs
 - Accessing job directories
 - Database operations through Django ORM
+
+Backward Compatibility:
+- CPurgeProject is imported from core.CPurgeProject for legacy plugin code
 """
 
 import os
 import logging
 from typing import Optional, Dict, Any
+
+# Import CPurgeProject for backward compatibility with legacy plugins
+from core.CPurgeProject import CPurgeProject
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
