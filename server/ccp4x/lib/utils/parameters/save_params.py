@@ -84,54 +84,9 @@ def save_params_for_job(
     except Exception as e:
         logger.warning(f"[DEBUG save_params] Error checking container structure: {e}")
 
-    # DEBUG: Log container and XYZIN object IDs with timestamp
-    import sys
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-    print(f"DEBUG save_params [{timestamp}]: === SAVE STARTING ===", file=sys.stderr)
-    print(f"DEBUG save_params [{timestamp}]: target file = {relocated_file_path.absolute()}", file=sys.stderr)
-    print(f"DEBUG save_params [{timestamp}]: container id={id(old_job_container)}", file=sys.stderr)
-    if hasattr(old_job_container, 'inputData') and hasattr(old_job_container.inputData, 'XYZIN'):
-        xyzin_obj = old_job_container.inputData.XYZIN
-        print(f"DEBUG save_params [{timestamp}]: XYZIN id={id(xyzin_obj)}", file=sys.stderr)
-        if hasattr(xyzin_obj, 'selection') and hasattr(xyzin_obj.selection, 'text'):
-            print(f"DEBUG save_params [{timestamp}]: selection.text id={id(xyzin_obj.selection.text)}, value='{xyzin_obj.selection.text.value}'", file=sys.stderr)
-
     # Use the exclude_unset parameter passed to this function
     logger.info(f"[DEBUG save_params] Calling getEtree with excludeUnset={exclude_unset}")
     body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
 
-    # Log the XML structure
-    import xml.etree.ElementTree as ET
-    xml_str = ET.tostring(body_etree, encoding='unicode')
-    logger.info(f"[DEBUG save_params] Generated XML length: {len(xml_str)} chars")
-    logger.info(f"[DEBUG save_params] XML preview (first 500 chars):\n{xml_str[:500]}")
-
-    # Check specifically for selection element
-    import sys
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-    if '<selection>' in xml_str:
-        print(f"DEBUG save_params [{timestamp}]: ✓ <selection> element IS in generated XML", file=sys.stderr)
-        # Find and print the selection part
-        sel_start = xml_str.find('<selection>')
-        sel_end = xml_str.find('</selection>') + len('</selection>')
-        print(f"DEBUG save_params [{timestamp}]: selection XML: {xml_str[sel_start:sel_end]}", file=sys.stderr)
-    else:
-        print(f"DEBUG save_params [{timestamp}]: ✗ <selection> element NOT in generated XML", file=sys.stderr)
-
     f.saveFile(bodyEtree=body_etree)
-    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
     logger.info(f"[DEBUG save_params] Saved params to {relocated_file_path}")
-    print(f"DEBUG save_params [{timestamp}]: saveFile() completed", file=sys.stderr)
-
-    # Verify what was actually written to disk
-    if relocated_file_path.exists():
-        with open(relocated_file_path, 'r') as check_file:
-            saved_xml = check_file.read()
-            timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-            if '<selection>' in saved_xml:
-                print(f"DEBUG save_params [{timestamp}]: ✓ <selection> IS in saved file {relocated_file_path.absolute()}", file=sys.stderr)
-            else:
-                print(f"DEBUG save_params [{timestamp}]: ✗ <selection> NOT in saved file {relocated_file_path.absolute()}", file=sys.stderr)
-    print(f"DEBUG save_params [{timestamp}]: === SAVE COMPLETE ===", file=sys.stderr)
