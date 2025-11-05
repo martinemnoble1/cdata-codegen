@@ -365,13 +365,48 @@ class CXmgrDataFile(CXmgrDataFileStub):
 class CXmlDataFile(CXmlDataFileStub):
     """
     A reference to an XML file
-    
+
     Extends CXmlDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def saveFile(self, bodyEtree=None):
+        """
+        Save XML content to the file path specified by this object.
+
+        Args:
+            bodyEtree: Optional ElementTree.Element to use as the body content.
+                      If None, creates an empty file.
+
+        Returns:
+            bool: True if save was successful
+        """
+        import xml.etree.ElementTree as ET
+        from pathlib import Path
+
+        # If bodyEtree is provided, write it directly
+        if bodyEtree is not None:
+            tree = ET.ElementTree(bodyEtree)
+            file_path = Path(self.getFullPath())
+
+            # Ensure directory exists
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write with pretty formatting
+            ET.indent(tree, space='  ')
+            tree.write(file_path, encoding='utf-8', xml_declaration=True)
+
+            return True
+        else:
+            # Create empty root if no body provided
+            root = ET.Element('data')
+            tree = ET.ElementTree(root)
+            file_path = Path(self.getFullPath())
+
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            tree.write(file_path, encoding='utf-8', xml_declaration=True)
+
+            return True
 
 
 class CYmlFile(CYmlFileStub):
