@@ -138,21 +138,6 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         import sys
         from datetime import datetime
 
-        # DEBUG: Log what we're about to save
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        print(f"DEBUG saveFile [{timestamp}]: === SAVEFILE CALLED ===", file=sys.stderr)
-        if bodyEtree is not None:
-            print(f"DEBUG saveFile [{timestamp}]: bodyEtree.tag = '{bodyEtree.tag}'", file=sys.stderr)
-            # Check for selection in bodyEtree
-            body_xml = ET.tostring(bodyEtree, encoding='unicode')
-            if '<selection>' in body_xml:
-                print(f"DEBUG saveFile [{timestamp}]: ✓ bodyEtree CONTAINS <selection>", file=sys.stderr)
-                sel_start = body_xml.find('<selection>')
-                sel_end = body_xml.find('</selection>') + len('</selection>')
-                print(f"DEBUG saveFile [{timestamp}]: {body_xml[sel_start:sel_end]}", file=sys.stderr)
-            else:
-                print(f"DEBUG saveFile [{timestamp}]: ✗ bodyEtree MISSING <selection>", file=sys.stderr)
-
         # Create root element
         root = ET.Element('ccp4i2')
 
@@ -181,42 +166,12 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         tree = ET.ElementTree(root)
         file_path = Path(self.getFullPath())
 
-        # DEBUG: Check what's in the final tree before writing
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        final_xml = ET.tostring(root, encoding='unicode')
-        if '<selection>' in final_xml:
-            print(f"DEBUG saveFile [{timestamp}]: ✓ Final root CONTAINS <selection> before write", file=sys.stderr)
-            sel_start = final_xml.find('<selection>')
-            sel_end = final_xml.find('</selection>') + len('</selection>')
-            print(f"DEBUG saveFile [{timestamp}]: {final_xml[sel_start:sel_end]}", file=sys.stderr)
-        else:
-            print(f"DEBUG saveFile [{timestamp}]: ✗ Final root MISSING <selection> before write", file=sys.stderr)
-
         # Ensure directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write with pretty formatting
         ET.indent(tree, space='  ')
-
-        # DEBUG: Check again after indent
-        final_xml_after_indent = ET.tostring(root, encoding='unicode')
-        if '<selection>' in final_xml_after_indent:
-            print(f"DEBUG saveFile [{timestamp}]: ✓ Final root CONTAINS <selection> AFTER indent", file=sys.stderr)
-        else:
-            print(f"DEBUG saveFile [{timestamp}]: ✗ Final root MISSING <selection> AFTER indent", file=sys.stderr)
-
         tree.write(file_path, encoding='utf-8', xml_declaration=True)
-
-        # DEBUG: Read back what was actually written
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        with open(file_path, 'r') as verify_file:
-            written_content = verify_file.read()
-            if '<selection>' in written_content:
-                print(f"DEBUG saveFile [{timestamp}]: ✓ Verified: File CONTAINS <selection> after write", file=sys.stderr)
-            else:
-                print(f"DEBUG saveFile [{timestamp}]: ✗ Verified: File MISSING <selection> after write", file=sys.stderr)
-                # Show first 500 chars of what WAS written
-                print(f"DEBUG saveFile [{timestamp}]: Written content preview: {written_content[:500]}", file=sys.stderr)
 
         return True
 

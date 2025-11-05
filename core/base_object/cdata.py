@@ -527,24 +527,12 @@ class CData(HierarchicalObject):
         """
         import xml.etree.ElementTree as ET
 
-        import sys  # For debug logging
         element_name = name if name is not None else getattr(self, 'name', 'data')
-
-        # DEBUG: Log which object is being serialized
-        if hasattr(self, 'name') and self.name in ['XYZIN', 'selection', 'text']:
-            obj_name = self.name
-            print(f"DEBUG getEtree: Serializing {obj_name} (id={id(self)})", file=sys.stderr)
-
         elem = ET.Element(element_name)
 
         # For simple value types, store the value as text
         if hasattr(self, 'value'):
             value = getattr(self, 'value')
-
-            # DEBUG: Log text element serialization
-            if hasattr(self, 'name') and self.name == 'text':
-                parent_name = getattr(getattr(self, '_parent_ref', lambda: None)(), 'name', '?') if hasattr(self, '_parent_ref') else '?'
-                print(f"DEBUG getEtree: Serializing 'text' element (parent={parent_name}), value='{value}', value is None={value is None}", file=sys.stderr)
 
             if value is not None:
                 # Check if we should exclude this based on set state
@@ -553,36 +541,12 @@ class CData(HierarchicalObject):
                     if not self.isSet('value', allowDefault=False):
                         return elem  # Return empty element for unset values
                 elem.text = str(value)
-                if hasattr(self, 'name') and self.name == 'text':
-                    print(f"DEBUG getEtree: Set elem.text = '{elem.text}'", file=sys.stderr)
-            else:
-                if hasattr(self, 'name') and self.name == 'text':
-                    print(f"DEBUG getEtree: Skipping elem.text because value is None", file=sys.stderr)
 
         # For containers and complex types, serialize children
-        if hasattr(self, 'name') and self.name == 'XYZIN':
-            print(f"DEBUG getEtree: XYZIN.__dict__.keys() = {list(self.__dict__.keys())}", file=sys.stderr)
-
         for attr_name, attr_value in self.__dict__.items():
             if attr_name.startswith('_') or attr_name in ['parent', 'name', 'children', 'signals']:
                 continue
             if isinstance(attr_value, CData):
-                # DEBUG: Log selection serialization
-                if attr_name == 'selection':
-                    print(f"DEBUG getEtree: Found 'selection' in __dict__ for '{getattr(self, 'name', '?')}', excludeUnset={excludeUnset}", file=sys.stderr)
-                    print(f"DEBUG getEtree:   selection from __dict__: id={id(attr_value)}", file=sys.stderr)
-                    print(f"DEBUG getEtree:   self.selection: id={id(self.selection)}", file=sys.stderr)
-                    if id(attr_value) != id(self.selection):
-                        print(f"DEBUG getEtree:   ⚠️  WARNING: __dict__['selection'] != self.selection!", file=sys.stderr)
-                    try:
-                        is_set_result = attr_value.isSet(allowDefault=False)
-                        print(f"DEBUG getEtree:   isSet(allowDefault=False)={is_set_result}", file=sys.stderr)
-                    except Exception as e:
-                        print(f"DEBUG getEtree:   ERROR calling isSet(): {e}", file=sys.stderr)
-                    if hasattr(attr_value, 'text'):
-                        text_val = getattr(attr_value.text, 'value', None)
-                        print(f"DEBUG getEtree:   selection.text.value='{text_val}'", file=sys.stderr)
-
                 # Check if child should be excluded
                 if excludeUnset and hasattr(attr_value, 'isSet'):
                     # For CData objects, check if they have any set values
@@ -591,21 +555,13 @@ class CData(HierarchicalObject):
 
                 child_elem = attr_value.getEtree(attr_name, excludeUnset=excludeUnset)
 
-                # DEBUG: Log selection element creation
-                if attr_name == 'selection':
-                    print(f"DEBUG getEtree: Created child_elem for selection: tag={child_elem.tag}, text={child_elem.text}, len={len(child_elem)}", file=sys.stderr)
-
                 # Only append if the child element has content
                 if excludeUnset:
                     # Check if element has text or children
                     if child_elem.text or len(child_elem) > 0:
                         elem.append(child_elem)
-                        if attr_name == 'selection':
-                            print(f"DEBUG getEtree: APPENDED selection (excludeUnset=True branch)", file=sys.stderr)
                 else:
                     elem.append(child_elem)
-                    if attr_name == 'selection':
-                        print(f"DEBUG getEtree: APPENDED selection (excludeUnset=False branch)", file=sys.stderr)
 
         # Special handling for CContainer - also serialize _container_items
         if hasattr(self, '_container_items'):
