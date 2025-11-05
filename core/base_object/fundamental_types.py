@@ -880,12 +880,37 @@ class CBoolean(CData):
         # Handle value setting with proper state tracking
         if value is None:
             # Default initialization - set value but mark as NOT_SET
-            super().__setattr__("value", False)
+            super().__setattr__("_value", False)
             if hasattr(self, "_value_states"):
                 self._value_states["value"] = ValueState.NOT_SET
         else:
             # Explicit value provided - mark as EXPLICITLY_SET
             self.value = value
+
+    @property
+    def value(self):
+        """Get the boolean value."""
+        return getattr(self, "_value", False)
+
+    @value.setter
+    def value(self, val):
+        """Set the boolean value with state tracking."""
+        # Convert string representations to bool
+        if isinstance(val, str):
+            val = val.lower() in ('true', '1', 'yes')
+        validated = bool(val)
+        old_value = getattr(self, "_value", None)
+        super().__setattr__("_value", validated)
+        if hasattr(self, "_value_states"):
+            # Only mark as EXPLICITLY_SET if this is a real value change.
+            # If setting to the same value while currently NOT_SET, keep it NOT_SET.
+            # This prevents spurious state changes during .def.xml loading and merging.
+            current_state = self._value_states.get("value", ValueState.NOT_SET)
+            if current_state == ValueState.NOT_SET and old_value == validated:
+                # Keep as NOT_SET - this is internal copying, not user assignment
+                pass
+            else:
+                self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def __hash__(self):
         """Make CBoolean hashable for use in sets and as dict keys."""
@@ -895,7 +920,16 @@ class CBoolean(CData):
         return str(self.value)
 
     def __bool__(self):
-        return bool(self.value)
+        """Return True if this value has been explicitly set, False otherwise.
+
+        This allows wrapper code to use patterns like:
+            if self.container.controlParameters.SOME_BOOL:
+                # Only do something if SOME_BOOL was actually set by user
+
+        Note: This returns whether the parameter is SET, not the boolean value itself.
+              To get the actual boolean value, use .value property.
+        """
+        return self.isSet(allowDefault=False)
 
     def set(self, value: bool):
         """Set the value directly using .set() method."""
