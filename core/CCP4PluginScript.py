@@ -612,6 +612,10 @@ class CPluginScript(CData):
             # Legacy signature: startProcess(self, comList, **kw)
             # Pass empty list for comList
             result = self.startProcess([])
+        elif 'command' in params or (len(params) > 0 and params[0] == 'command'):
+            # Legacy signature: startProcess(self, command, **kw)
+            # Pass None for command (used by phaser plugins with Python-based logic)
+            result = self.startProcess(None)
         else:
             # Unknown signature - try with empty args and let **kwargs catch extras
             try:

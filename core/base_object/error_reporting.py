@@ -162,6 +162,58 @@ class CErrorReport:
         """Clear all errors from the report."""
         self._errors.clear()
 
+    # ========================================================================
+    # Legacy CCP4i2 Compatibility
+    # ========================================================================
+
+    def get_broken_files(self) -> List[str]:
+        """Get list of file names that have errors (legacy CCP4i2 API).
+
+        This method provides backward compatibility with legacy plugins that
+        expect checkInputData() to return a list of broken file names.
+
+        Returns:
+            List of file names that have validation errors
+        """
+        broken_files = []
+        for error in self._errors:
+            if error.get('name') and error.get('name') not in broken_files:
+                broken_files.append(error['name'])
+        return broken_files
+
+    def __contains__(self, item: str) -> bool:
+        """Check if a file name has errors (legacy compatibility).
+
+        Allows legacy code to use: if 'XYZIN' in error_report
+
+        Args:
+            item: File name to check
+
+        Returns:
+            True if the file name has validation errors
+        """
+        return item in self.get_broken_files()
+
+    def __iter__(self):
+        """Iterate over broken file names (legacy compatibility).
+
+        Allows legacy code to use: for filename in error_report
+
+        Returns:
+            Iterator over broken file names
+        """
+        return iter(self.get_broken_files())
+
+    def remove(self, item: str):
+        """Remove all errors for a specific file name (legacy compatibility).
+
+        Allows legacy code to use: error_report.remove('XYZIN')
+
+        Args:
+            item: File name to remove errors for
+        """
+        self._errors = [e for e in self._errors if e.get('name') != item]
+
 
 class CException(CErrorReport, Exception):
     """Exception class that combines CErrorReport functionality with Python exceptions.

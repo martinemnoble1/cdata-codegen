@@ -268,6 +268,12 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
             # Copy all children of the ccp4i2_body node using our recursive function
             # This will also remove any nested file nodes while processing their content
             for child in body_node:
+                # For file nodes, process them directly to merge content into dest_ccp4i2_body
+                if child.tag == "file":
+                    _handle_file_node(child, dest_ccp4i2_body)
+                    continue  # File nodes are not added to destination, only their content
+
+                # For non-file nodes, use load_nested_xml to recursively process
                 child_copy = load_nested_xml(child)
 
                 # Check if this is a container with an id attribute
@@ -282,8 +288,11 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
 
                     if existing is not None:
                         # Merge children from child_copy into existing container
-                        logger.debug(f"Merging container[@id='{child_id}'] children into existing container")
+                        child_count = len(list(child_copy))
+                        logger.info(f"Merging container[@id='{child_id}'] children ({child_count} children) into existing container")
                         for subchild in child_copy:
+                            subchild_id = subchild.get('id', 'NO_ID')
+                            logger.debug(f"  Merging child: <{subchild.tag}> id='{subchild_id}' into container[@id='{child_id}']")
                             existing.append(subchild)
                             total_merged += 1
                     else:

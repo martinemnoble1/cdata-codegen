@@ -349,6 +349,10 @@ class CContainer(CData):
         This enables accessing child objects like container.inputData
         instead of having to search through children manually.
 
+        Supports CCP4i2 truncation convention where long attribute names
+        (e.g., RESOLUTION_HIGH) fall back to truncated versions (e.g., RESO_HIGH)
+        if the full name is not found.
+
         Args:
             name: Name of the child to access
 
@@ -362,32 +366,72 @@ class CContainer(CData):
         if name.startswith('_'):
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-        # Check children from HierarchicalObject hierarchy
-        # Use object.__getattribute__ to avoid recursion
-        try:
-            # Get the 'children' method from HierarchicalObject
-            children_method = object.__getattribute__(self, 'children')
-            children_list = children_method()  # Call the method
-            for child in children_list:
-                # Skip destroyed children
-                if hasattr(child, 'state'):
-                    from .hierarchy_system import ObjectState
-                    if child.state == ObjectState.DESTROYED:
-                        continue
-                # Check if name matches
-                if hasattr(child, 'name') and child.name == name:
-                    return child
-        except (AttributeError, TypeError):
-            pass
+        # Helper function to search for a child by name
+        def find_child(search_name):
+            # Check children from HierarchicalObject hierarchy
+            try:
+                children_method = object.__getattribute__(self, 'children')
+                children_list = children_method()
+                for child in children_list:
+                    # Skip destroyed children
+                    if hasattr(child, 'state'):
+                        from .hierarchy_system import ObjectState
+                        if child.state == ObjectState.DESTROYED:
+                            continue
+                    # Check if name matches
+                    if hasattr(child, 'name') and child.name == search_name:
+                        return child
+            except (AttributeError, TypeError):
+                pass
 
-        # Also check _container_items (in case items were added via add_item)
-        try:
-            container_items = object.__getattribute__(self, '_container_items')
-            for item in container_items:
-                if hasattr(item, 'name') and item.name == name:
-                    return item
-        except (AttributeError, TypeError):
-            pass
+            # Also check _container_items
+            try:
+                container_items = object.__getattribute__(self, '_container_items')
+                for item in container_items:
+                    if hasattr(item, 'name') and item.name == search_name:
+                        return item
+            except (AttributeError, TypeError):
+                pass
+
+            return None
+
+        # First try the exact name
+        result = find_child(name)
+        if result is not None:
+            return result
+
+        # CCP4i2 truncation fallback: try truncating long keywords to 4 characters
+        # Examples: RESOLUTION_HIGH -> RESO_HIGH, RESOLUTION_LOW -> RESO_LOW
+        # Only apply to uppercase names with underscores (typical CCP4 parameters)
+        if '_' in name and name.isupper() and len(name) > 10:
+            # Split on underscores and truncate first part to 4 characters
+            parts = name.split('_')
+            if len(parts) >= 2 and len(parts[0]) > 4:
+                truncated_name = parts[0][:4] + '_' + '_'.join(parts[1:])
+                result = find_child(truncated_name)
+                if result is not None:
+                    return result
+
+        # CCP4i2 truncation fallback (REVERSE): try expanding short keywords
+        # Examples: RESO_HIGH -> RESOLUTION_HIGH, RESO_LOW -> RESOLUTION_LOW
+        # If name has underscore and first part is exactly 4 characters, try common expansions
+        if '_' in name and name.isupper():
+            parts = name.split('_')
+            if len(parts) >= 2 and len(parts[0]) == 4:
+                # Common CCP4i2 keyword expansions
+                # These are from analyzing legacy .def.xml files
+                expansions = {
+                    'RESO': 'RESOLUTION',
+                    'SEQU': 'SEQUENCE',
+                    'COMP': 'COMPOSITION',
+                    'SPAC': 'SPACEGROUP',
+                    # Add more as needed
+                }
+                if parts[0] in expansions:
+                    expanded_name = expansions[parts[0]] + '_' + '_'.join(parts[1:])
+                    result = find_child(expanded_name)
+                    if result is not None:
+                        return result
 
         # Not found - raise AttributeError
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")

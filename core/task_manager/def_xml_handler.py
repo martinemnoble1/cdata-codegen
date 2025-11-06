@@ -390,6 +390,11 @@ class DefXmlParser:
         # Apply constraints and defaults
         for key, value in qualifiers.items():
             if key == "default":
+                # Skip if value is the string "None" (from XML parsing)
+                # This happens when .def.xml has <default>None</default>
+                if value == "None":
+                    continue
+
                 if isinstance(value, dict):
                     # Complex default - store in metadata
                     metadata.default = value
@@ -406,9 +411,11 @@ class DefXmlParser:
                                 if hasattr(obj, "_value_states"):
                                     obj._value_states["value"] = ValueState.DEFAULT
                     except Exception as e:
-                        print(
-                            f"Error setting default value {value} for {class_name}: {e}"
-                        )
+                        # Silently skip errors for None-like values
+                        if value not in [None, "", "None"]:
+                            print(
+                                f"Error setting default value {value} for {class_name}: {e}"
+                            )
 
             elif key == "min":
                 metadata.minimum = value

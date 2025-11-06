@@ -151,6 +151,25 @@ class CData(HierarchicalObject):
         """
         return self.set_qualifier(key, value)
 
+    def setQualifiers(self, qualifiers_dict):
+        """
+        Set multiple qualifiers from a dictionary.
+
+        Provided for backward compatibility with legacy ccp4i2 plugin code
+        that calls setQualifiers() with a dictionary of qualifier key-value pairs.
+
+        Args:
+            qualifiers_dict: Dictionary of qualifier key-value pairs to set
+
+        Example:
+            obj.setQualifiers({'listMinLength': 0, 'listMaxLength': 10})
+        """
+        if not isinstance(qualifiers_dict, dict):
+            raise TypeError(f"setQualifiers() expects a dict, got {type(qualifiers_dict).__name__}")
+
+        for key, value in qualifiers_dict.items():
+            self.set_qualifier(key, value)
+
     def set(self, values):
         """
         Set attributes from dict or CData object, unset others.
@@ -161,8 +180,21 @@ class CData(HierarchicalObject):
         """
         # If values is a CData object, extract its attributes as a dict
         if isinstance(values, CData):
+            source_obj = values  # Keep reference to original CData object
             if hasattr(values, 'get') and callable(values.get):
-                values = values.get()
+                values_dict = values.get()
+                # Filter to only include fields that are explicitly set in the source object
+                # This prevents validation errors when copying unset fields with constraints
+                values = {}
+                for k, v in values_dict.items():
+                    source_field = getattr(source_obj, k, None)
+                    # Only include if the field is set in the source
+                    if hasattr(source_field, 'isSet') and callable(source_field.isSet):
+                        if source_field.isSet():
+                            values[k] = v
+                    else:
+                        # For non-CData fields, include them
+                        values[k] = v
             else:
                 # Fallback: create dict from CData attributes
                 values = {
@@ -205,9 +237,14 @@ class CData(HierarchicalObject):
                     setattr(self, k, new_value)
                 self._value_states[k] = ValueState.EXPLICITLY_SET
             else:
-                # Unset fields not in values
-                if hasattr(self, k):
-                    self.unSet(k)
+                # For CContainer types, DON'T unset fields that aren't in the source
+                # This allows merging data from a source that has fewer fields
+                # (e.g., phaser_pipeline.inputData → phaser_MR_AUTO.inputData)
+                # For non-container types, unset fields not in values (original behavior)
+                from .ccontainer import CContainer
+                if not isinstance(self, CContainer):
+                    if hasattr(self, k):
+                        self.unSet(k)
 
         # Mark the object itself as set when values are provided
         # This is important for legacy code that checks `object.isSet()`

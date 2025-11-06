@@ -403,25 +403,47 @@ class CEnsemble(CEnsembleStub):
 PDB files, but models could also be xtal or EM maps. This should
 be indicated by the types entry.
 A single ensemble is a CList of structures.
-    
+
     Extends CEnsembleStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, *args, **kwargs):
+        """Initialize CEnsemble with a default pdbItemList containing one item."""
+        super().__init__(*args, **kwargs)
+
+        # Set the subItem qualifier for pdbItemList to specify that it contains CPdbEnsembleItem objects
+        if self.pdbItemList is not None:
+            self.pdbItemList.set_qualifier('subItem', {
+                'class': CPdbEnsembleItemStub,
+                'qualifiers': {}
+            })
+
+            # Legacy code expects pdbItemList to have at least one item by default
+            # phaser_simple.py line 33-35 assumes: elements = ensemble.pdbItemList; pdbItem = elements[-1]
+            if len(self.pdbItemList) == 0:
+                # Add one default item to the pdbItemList
+                self.pdbItemList.append(self.pdbItemList.makeItem())
 
 
 class CEnsembleList(CEnsembleListStub):
     """
     A list with all items of one CData sub-class
-    
+
     Extends CEnsembleListStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, *args, **kwargs):
+        """Initialize CEnsembleList with CEnsemble as the subItem type."""
+        super().__init__(*args, **kwargs)
+
+        # Set the subItem qualifier to specify that this list contains CEnsemble objects
+        # This is required for makeItem() to create the correct type
+        self.set_qualifier('subItem', {
+            'class': CEnsemble,
+            'qualifiers': {}
+        })
 
 
 class CEnsemblePdbDataFile(CEnsemblePdbDataFileStub):
