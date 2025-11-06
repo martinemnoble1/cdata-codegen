@@ -31,6 +31,41 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
   },
+  "adding_stats_to_mmcif_i2": {
+    "module": "wrappers.adding_stats_to_mmcif_i2.script.adding_stats_to_mmcif_i2",
+    "class": "adding_stats_to_mmcif_i2",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "adding_stats_to_mmcif_i2",
+    "TASKVERSION": 0.1,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false,
+    "PURGESEARCHLIST": [
+      [
+        "hklin.mtz",
+        0
+      ],
+      [
+        "log_mtzjoin.txt",
+        0
+      ]
+    ],
+    "ERROR_CODES": {
+      "201": {
+        "description": "Failed to analyse output files"
+      },
+      "202": {
+        "description": "Failed applying selection ot PDB file"
+      },
+      "203": {
+        "description": "Input XML file contains neither AIMLESS nor AIMLESS_PIPE nodes"
+      },
+      "204": {
+        "description": "Failed with adding_stats_to_mmcif"
+      }
+    }
+  },
   "cif2mtz": {
     "module": "wrappers.cif2mtz.script.cif2mtz",
     "class": "cif2mtz",
@@ -185,20 +220,6 @@
     "TASKNAME": "pointless",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
-  },
-  "editbfac": {
-    "module": "wrappers.editbfac.script.editbfac",
-    "class": "editbfac",
-    "COMTEMPLATE": null,
-    "TASKMODULE": [
-      "alpha_fold",
-      "model_data_utility"
-    ],
-    "TASKTITLE": "Process Predicted Models",
-    "TASKNAME": "editbfac",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
   },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
@@ -501,19 +522,6 @@
         "description": "Failed applying selection ot PDB file"
       }
     }
-  },
-  "validate_protein": {
-    "module": "wrappers.validate_protein.script.validate_protein",
-    "class": "validate_protein",
-    "COMTEMPLATE": null,
-    "TASKMODULE": null,
-    "TASKTITLE": null,
-    "TASKNAME": "validate_protein",
-    "TASKVERSION": null,
-    "WHATNEXT": [
-      "coot_rebuild"
-    ],
-    "ASYNCHRONOUS": false
   },
   "csymmatch": {
     "module": "wrappers.csymmatch.script.csymmatch",
@@ -887,6 +895,17 @@
     "TASKTITLE": null,
     "TASKNAME": "ProvideAsuContents",
     "TASKVERSION": null,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false
+  },
+  "phaser_analysis": {
+    "module": "wrappers.phaser_analysis.script.phaser_analysis",
+    "class": "phaser_analysis",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "phaser_analysis",
+    "TASKNAME": "phaser_analysis",
+    "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
     "RUNEXTERNALPROCESS": false
   },
@@ -2431,18 +2450,6 @@
         "description": "Failed to determine projectId or Directory of presumed existing project"
       }
     }
-  },
-  "tableone": {
-    "module": "pipelines.tableone.script.tableone",
-    "class": "tableone",
-    "COMTEMPLATE": null,
-    "COMTEMPLATEFILE": null,
-    "TASKMODULE": "test",
-    "TASKTITLE": "Generate Table One",
-    "TASKNAME": "tableone",
-    "TASKVERSION": 1.0,
-    "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
   },
   "phaser_MR_FRF": {
     "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",
