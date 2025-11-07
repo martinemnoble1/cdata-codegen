@@ -6,6 +6,8 @@ import shutil
 import uuid
 import re
 
+from django.utils import timezone
+
 from core import CCP4Container
 from core.base_object.cdata_file import CDataFile
 from core import CCP4File
@@ -107,8 +109,8 @@ def _process_input(
                 createDict = {
                     "file": theFile,
                     "name": str(sourceFilePath),
-                    "time": datetime.datetime.now(),
-                    "last_modified": datetime.datetime.now(),
+                    "time": timezone.now(),
+                    "last_modified": timezone.now(),
                     "checksum": input.checksum(),
                 }
                 # print(createDict)

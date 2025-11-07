@@ -58,6 +58,13 @@ pandas>=2.0.0
 # Chemistry toolkit (required for ligand/molecule handling)
 rdkit>=2023.3.1
 
+# SVG generation (required by iris_validation and other reporting plugins)
+svgwrite>=1.4.0
+
+# File format support
+chardet>=5.0.0  # Character encoding detection
+mrcfile>=1.4.0  # MRC/CCP4 electron density map files
+
 # CCTBX/iotbx - Computational Crystallography Toolbox (optional)
 # Note: These are larger packages with compiled components
 # Installation: pip install cctbx-base

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from asgiref.sync import sync_to_async
+from django.utils import timezone
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -218,7 +219,7 @@ async def job_execution_context(job):
     from ..db import models
 
     # Record start time
-    start_time = datetime.datetime.now()
+    start_time = timezone.now()
 
     # Ensure job directory exists
     job_dir = Path(job.directory)
@@ -254,7 +255,7 @@ async def job_execution_context(job):
         await finalize_status()
 
         # Log execution time
-        elapsed = datetime.datetime.now() - start_time
+        elapsed = timezone.now() - start_time
         logger.info(f"Job {job.number} execution time: {elapsed}")
 
 
@@ -389,7 +390,7 @@ async def run_nested_jobs_async(
     # Mark parent as finished
     await db_handler.update_job_status(
         parent_job.uuid,
-        finish_time=datetime.datetime.now(),
+        finish_time=timezone.now(),
     )
 
     return parent_job.uuid

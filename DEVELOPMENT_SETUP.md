@@ -150,6 +150,10 @@ ln -sf "$CCP4_SITE_PACKAGES/_clipper.so" .
 
 # CCP4MG (includes mmdb2 for macromolecular database)
 ln -sf "$CCP4_SITE_PACKAGES/ccp4mg" .
+
+# PyRVAPI (Report Viewing API for interactive HTML reports)
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi.so" .
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi_ext" .
 ```
 
 ### 5.2 Full CCTBX Stack (for Phaser and advanced features)
@@ -198,7 +202,39 @@ for module in "${CCTBX_MODULES[@]}"; do
 done
 ```
 
-### 5.3 CCTBX Build Configuration
+### 5.3 Additional CCP4 Modules (Optional - enables 158 plugins)
+
+For maximum plugin discovery, symlink additional specialized modules:
+
+```bash
+cd .venv/lib/python3.9/site-packages
+
+# Additional CCP4 modules for specialized plugins
+ADDITIONAL_MODULES=(
+    dials          # Diffraction Integration for Advanced Light Sources
+    dials_data     # DIALS test data
+    ample          # Ab-initio Molecular replacement Pipeline for Ensembles
+    simbad         # Sequence Independent Molecular replacement Based on Available Database
+    iris_validation # Structure validation tools
+    onedep         # One-stop Data Entry and Processing
+    pyjob          # Python job management (dependency for simbad/ample)
+    docx           # Microsoft Word document generation (dependency for reporting)
+)
+
+# Create symlinks for additional modules
+for module in "${ADDITIONAL_MODULES[@]}"; do
+    if [ -e "$CCP4_SITE_PACKAGES/$module" ]; then
+        ln -sf "$CCP4_SITE_PACKAGES/$module" .
+        echo "✓ Symlinked $module"
+    else
+        echo "⚠ Module $module not found (skipping)"
+    fi
+done
+```
+
+**Note**: These additional modules enable 3 more plugins (155 → 158 total) but some (AMPLE, SIMBAD) require full CCP4 environment variables to be sourced at runtime.
+
+### 5.4 CCTBX Build Configuration
 ```bash
 cd /path/to/cdata-codegen
 
@@ -256,14 +292,19 @@ export CCP4I2_ROOT=$(pwd)
 python core/task_manager/plugin_lookup.py
 ```
 
-Expected output:
+Expected output (with full CCTBX stack + additional modules):
 ```
 Building plugin lookup from: /path/to/cdata-codegen
   Found 102+ plugins in wrappers
   Found 2 plugins in wrappers2
-  Found 50 plugins in pipelines
-Finished scanning, found 154+ plugins
+  Found 50+ plugins in pipelines
+Finished scanning, found 158 plugins
 ```
+
+**Plugin Count Summary:**
+- **Minimum setup** (core modules only): ~144 plugins
+- **Full CCTBX stack**: 155 plugins
+- **Full setup** (CCTBX + additional modules): 158 plugins
 
 ---
 
@@ -404,6 +445,8 @@ cd .venv/lib/python3.9/site-packages
 ln -sf "$CCP4_SITE_PACKAGES/clipper.py" .
 ln -sf "$CCP4_SITE_PACKAGES/_clipper.so" .
 ln -sf "$CCP4_SITE_PACKAGES/ccp4mg" .
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi.so" .
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi_ext" .
 
 # Symlink CCTBX stack
 echo "Symlinking CCTBX stack..."
@@ -414,6 +457,18 @@ CCTBX_MODULES=(
 )
 
 for module in "${CCTBX_MODULES[@]}"; do
+    if [ -e "$CCP4_SITE_PACKAGES/$module" ]; then
+        ln -sf "$CCP4_SITE_PACKAGES/$module" .
+    fi
+done
+
+# Symlink additional CCP4 modules (optional - enables 158 plugins)
+echo "Symlinking additional CCP4 modules..."
+ADDITIONAL_MODULES=(
+    dials dials_data ample simbad iris_validation onedep pyjob docx
+)
+
+for module in "${ADDITIONAL_MODULES[@]}"; do
     if [ -e "$CCP4_SITE_PACKAGES/$module" ]; then
         ln -sf "$CCP4_SITE_PACKAGES/$module" .
     fi
@@ -454,13 +509,15 @@ For continuous integration:
 - Python 3.9 venv
 - requirements.txt installed
 - NumPy < 2
-- Symlink: clipper.py, _clipper.so, ccp4mg
+- Symlink: clipper.py, _clipper.so, ccp4mg, pyrvapi.so, pyrvapi_ext
 
 **Full Setup (phaser/molecular replacement):**
 - All of the above, plus:
 - Symlink: 24 CCTBX modules
+- Symlink: 8 additional CCP4 modules (dials, ample, simbad, etc.)
 - Symlink: .venv/share/cctbx
-- Result: 155 plugins, phaser tests functional
+- Install: svgwrite, chardet, mrcfile via pip
+- Result: 158 plugins, phaser tests functional
 
 **Verification Commands:**
 ```bash

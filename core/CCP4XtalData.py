@@ -399,13 +399,51 @@ class CFreeRDataFile(CFreeRDataFileStub):
 class CGenericReflDataFile(CGenericReflDataFileStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     Extends CGenericReflDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def getFormat(self):
+        """
+        Detect file format from file extension.
+
+        Legacy API compatibility method for import_merged and aimless plugins.
+
+        Returns:
+            str: File format ('mtz', 'mmcif', 'cif', or 'unknown')
+        """
+        # Get the file path
+        file_path = self.getFullPath()
+        if not file_path:
+            # Try baseName if getFullPath() returns None
+            if hasattr(self, 'baseName') and self.baseName is not None:
+                file_path = str(self.baseName.value if hasattr(self.baseName, 'value') else self.baseName)
+            else:
+                return 'unknown'
+
+        # Detect format from extension
+        file_path_lower = str(file_path).lower()
+        if file_path_lower.endswith('.mtz'):
+            return 'mtz'
+        elif file_path_lower.endswith('.cif') or file_path_lower.endswith('.mmcif'):
+            return 'mmcif'
+        else:
+            return 'unknown'
+
+    def getMerged(self):
+        """
+        Check if reflection data is merged.
+
+        Legacy API compatibility method for import_merged plugin.
+
+        Returns:
+            bool: True if data is merged, False if unmerged
+        """
+        # Default to True (merged) unless we can determine otherwise
+        # In a full implementation, this would inspect the MTZ/mmCIF file
+        # to check for unmerged data indicators (e.g., I+/I- columns)
+        return True
 
 
 class CHLColumnGroup(CHLColumnGroupStub):
@@ -1232,6 +1270,85 @@ class CMtzData(CMtzDataStub):
             )
 
         return error
+
+    def getListOfWavelengths(self):
+        """
+        Get list of wavelengths from MTZ datasets.
+
+        Legacy API compatibility method for refmac and other plugins.
+        Returns wavelengths extracted from the MTZ file.
+
+        Returns:
+            list: List of wavelengths from datasets (floats)
+
+        Example:
+            >>> wavelength = mtz_data.getListOfWavelengths()[-1]  # Get last wavelength
+        """
+        # First try to use stored gemmi Mtz object (most reliable)
+        if hasattr(self, '_gemmi_mtz') and self._gemmi_mtz is not None:
+            try:
+                wavelengths = [ds.wavelength for ds in self._gemmi_mtz.datasets]
+                # Filter out zero/invalid wavelengths
+                valid_wavelengths = [w for w in wavelengths if w > 0.0]
+                return valid_wavelengths if valid_wavelengths else wavelengths
+            except Exception:
+                pass
+
+        # Fallback: use wavelengths attribute if set
+        if hasattr(self, 'wavelengths') and self.wavelengths is not None:
+            if hasattr(self.wavelengths, 'value'):
+                wl_list = self.wavelengths.value
+            else:
+                wl_list = self.wavelengths
+
+            # Handle both list and single value
+            if isinstance(wl_list, (list, tuple)):
+                return list(wl_list)
+            else:
+                return [wl_list] if wl_list else []
+
+        # Final fallback: return empty list
+        return []
+
+    def getListOfColumns(self):
+        """
+        Get list of column labels from MTZ file.
+
+        Legacy API compatibility method for TestObsConversions and other plugins.
+        Returns list of column label strings.
+
+        Returns:
+            list: List of column labels (strings)
+
+        Example:
+            >>> columns = mtz_data.getListOfColumns()
+            >>> print(columns)  # ['H', 'K', 'L', 'F', 'SIGF', ...]
+        """
+        # First try to use stored gemmi Mtz object (most reliable)
+        if hasattr(self, '_gemmi_mtz') and self._gemmi_mtz is not None:
+            try:
+                return [col.label for col in self._gemmi_mtz.columns]
+            except Exception:
+                pass
+
+        # Fallback: use listOfColumns attribute if set
+        if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
+            # Handle CList or list of CMtzColumn objects
+            columns = []
+            col_list = self.listOfColumns.value if hasattr(self.listOfColumns, 'value') else self.listOfColumns
+
+            if isinstance(col_list, (list, tuple)):
+                for col in col_list:
+                    if hasattr(col, 'columnLabel'):
+                        # CMtzColumn object
+                        label = col.columnLabel.value if hasattr(col.columnLabel, 'value') else col.columnLabel
+                        columns.append(str(label))
+                    elif isinstance(col, str):
+                        columns.append(col)
+                return columns
+
+        # Final fallback: return empty list
+        return []
 
 
 class CMtzDataFile(CMtzDataFileStub):

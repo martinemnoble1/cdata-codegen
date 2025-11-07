@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from asgiref.sync import sync_to_async
 from django.db import transaction
+from django.utils import timezone
 
 from core.CCP4PluginScript import CPluginScript
 # DISABLED: Old ccp4i2 import
@@ -163,7 +164,7 @@ class AsyncDatabaseHandler:
                 job.status = status
 
                 if status == models.Job.Status.FINISHED:
-                    job.finish_time = finish_time or datetime.datetime.now()
+                    job.finish_time = finish_time or timezone.now()
 
                 job.save()
 
@@ -370,7 +371,7 @@ class AsyncDatabaseHandler:
                     file=file_obj,
                     name=str(source_path),
                     checksum=checksum or "",
-                    last_modified=datetime.datetime.now(),
+                    last_modified=timezone.now(),
                 )
 
                 # Create FileUse record

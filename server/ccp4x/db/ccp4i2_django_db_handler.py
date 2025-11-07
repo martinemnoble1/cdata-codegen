@@ -3,6 +3,8 @@ import logging
 import sys
 import uuid
 
+from django.utils import timezone
+
 from core.CCP4PluginScript import CPluginScript
 
 from . import models
@@ -155,7 +157,7 @@ class CCP4i2DjangoDbHandler:
                 the_job.status = status
                 the_job.save()
                 if models.Job.Status(status).label == "Finished":
-                    the_job.finish_time = datetime.datetime.now()
+                    the_job.finish_time = timezone.now()
                     the_job.save()
                     self.db.gleanJobFiles(container=container, jobId=jobId)
                 if the_job.parent is None and models.Job.Status(

@@ -252,6 +252,20 @@ class CAsuDataFile(CAsuDataFileStub):
         with open(fileName, 'w') as f:
             f.write(text)
 
+    def writeArpPir(self, fileName: str, writeMulti: bool = False, polymerTypes: list = None):
+        """
+        Write sequences to ARP/wARP PIR format file.
+
+        Legacy API compatibility method for arp_warp_classic plugin.
+        This is a wrapper around writeFasta() with format='pir'.
+
+        Args:
+            fileName: Output file path
+            writeMulti: Write multiple copies based on nCopies
+            polymerTypes: List of polymer types to include (default: PROTEIN, RNA, DNA)
+        """
+        return self.writeFasta(fileName, indx=-1, format='pir', writeMulti=writeMulti, polymerTypes=polymerTypes)
+
 
 class CAtomRefmacSelection(CAtomRefmacSelectionStub):
     """

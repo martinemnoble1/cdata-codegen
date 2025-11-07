@@ -24,6 +24,46 @@ from core.CPurgeProject import CPurgeProject
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
+# Ensure Django is configured early to prevent app registry errors in async/subprocess contexts
+def _ensure_django_configured():
+    """
+    Ensure Django is configured before any model imports.
+
+    This is critical for async workers and subprocesses that may not inherit
+    the Django configuration from the main process.
+
+    Safe to call multiple times (idempotent).
+    """
+    import os
+    import sys
+
+    # Check if Django is available
+    try:
+        import django
+    except ImportError:
+        # Django not available - this is OK for some contexts
+        return
+
+    # Check if already configured
+    if django.apps.apps.ready:
+        return
+
+    # Ensure DJANGO_SETTINGS_MODULE is set
+    if 'DJANGO_SETTINGS_MODULE' not in os.environ:
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ccp4x.settings')
+
+    # Configure Django
+    try:
+        django.setup()
+        logger.debug("Django configured successfully in CCP4ProjectsManager")
+    except Exception as e:
+        logger.warning(f"Failed to configure Django in CCP4ProjectsManager: {e}")
+
+
+# Configure Django on module import
+_ensure_django_configured()
+
+
 class CProjectsManager:
     """
     Modern projects manager that uses Django database access.

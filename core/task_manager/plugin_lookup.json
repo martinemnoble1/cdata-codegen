@@ -221,6 +221,20 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
   },
+  "editbfac": {
+    "module": "wrappers.editbfac.script.editbfac",
+    "class": "editbfac",
+    "COMTEMPLATE": null,
+    "TASKMODULE": [
+      "alpha_fold",
+      "model_data_utility"
+    ],
+    "TASKTITLE": "Process Predicted Models",
+    "TASKNAME": "editbfac",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false
+  },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
     "class": "x2mtz",
@@ -522,6 +536,19 @@
         "description": "Failed applying selection ot PDB file"
       }
     }
+  },
+  "validate_protein": {
+    "module": "wrappers.validate_protein.script.validate_protein",
+    "class": "validate_protein",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "validate_protein",
+    "TASKVERSION": null,
+    "WHATNEXT": [
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false
   },
   "csymmatch": {
     "module": "wrappers.csymmatch.script.csymmatch",
@@ -2450,6 +2477,18 @@
         "description": "Failed to determine projectId or Directory of presumed existing project"
       }
     }
+  },
+  "tableone": {
+    "module": "pipelines.tableone.script.tableone",
+    "class": "tableone",
+    "COMTEMPLATE": null,
+    "COMTEMPLATEFILE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Generate Table One",
+    "TASKNAME": "tableone",
+    "TASKVERSION": 1.0,
+    "ASYNCHRONOUS": true,
+    "PERFORMANCECLASS": "CExpPhasPerformance"
   },
   "phaser_MR_FRF": {
     "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",

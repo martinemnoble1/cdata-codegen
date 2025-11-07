@@ -231,20 +231,43 @@ class CPluginScript(CData):
         as children of self.container only if they don't already exist.
         This ensures backward compatibility for plugins without .def.xml files.
         """
+        from core.base_object.fundamental_types import CString
+
         standard_containers = ['inputData', 'outputData', 'controlParameters', 'guiAdmin']
 
         for container_name in standard_containers:
             # Check if container exists as a child
             try:
                 # Try to access via __getattr__ (which searches children)
-                getattr(self.container, container_name)
+                container = getattr(self.container, container_name)
             except AttributeError:
                 # Container doesn't exist - create it
                 # Store in __dict__ to avoid __setattr__ while keeping references
-                self.container.__dict__[container_name] = CContainer(
+                container = CContainer(
                     parent=self.container,
                     name=container_name
                 )
+                self.container.__dict__[container_name] = container
+
+            # Add standard fields to guiAdmin
+            if container_name == 'guiAdmin':
+                # Ensure jobTitle exists (used by arcimboldo, baverage, etc.)
+                if not hasattr(container, 'jobTitle'):
+                    job_title = CString(
+                        parent=container,
+                        name='jobTitle'
+                    )
+                    # Set default value from job database if available
+                    if hasattr(self, '_dbJobId') and self._dbJobId:
+                        try:
+                            from server.ccp4x.models import Job
+                            job = Job.objects.get(uuid=self._dbJobId)
+                            if job.name:
+                                job_title.value = job.name
+                        except Exception:
+                            # If we can't get job name from DB, leave it unset
+                            pass
+                    container.__dict__['jobTitle'] = job_title
 
     def _loadDefFile(self):
         """
@@ -1888,6 +1911,24 @@ class CPluginScript(CData):
             Job ID in database, or None if not running in database-backed mode
         """
         return self._dbJobId
+
+    @property
+    def jobId(self):
+        """Legacy property for backward compatibility.
+
+        Returns:
+            Job ID in database (same as getJobId())
+        """
+        return self._dbJobId
+
+    @jobId.setter
+    def jobId(self, value):
+        """Legacy setter for backward compatibility.
+
+        Args:
+            value: Job ID to set
+        """
+        self._dbJobId = value
 
     def getJobNumber(self):
         """Get the database job number.
