@@ -9,6 +9,7 @@
 #   ccp4i2 projects list
 #   ccp4i2 jobs create <project> <task>
 #   ccp4i2 jobs run <project> <job> --detach
+#   ccp4i2 shell                      # Launch Django shell
 #
 # For legacy management commands:
 #   Use: python server/manage.py <command>
@@ -37,10 +38,17 @@ else
 fi
 
 # Source CCP4 environment setup
-if [ -f "/Applications/ccp4-9/bin/ccp4.setup-sh" ]; then
-    source /Applications/ccp4-9/bin/ccp4.setup-sh
+if [ -f "/Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh" ]; then
+    source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 else
-    echo "Warning: CCP4 setup script not found at /Applications/ccp4-9/bin/ccp4.setup-sh" >&2
+    echo "Warning: CCP4 setup script not found at /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh" >&2
+fi
+
+# Check for special 'shell' command
+if [ "$1" = "shell" ]; then
+    export DJANGO_SETTINGS_MODULE=ccp4x.config.settings
+    cd "$SCRIPT_DIR/server"
+    exec python manage.py shell
 fi
 
 # Execute the modern CLI with all forwarded arguments

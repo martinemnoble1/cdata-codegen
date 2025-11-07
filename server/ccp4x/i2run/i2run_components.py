@@ -230,12 +230,21 @@ class ArgumentBuilder:
             keyword: Keyword dictionary with metadata
         """
         arg_name = f"--{keyword['minimumPath']}"
+
+        # Check if this is a CList type
+        # For CList types, we use action="append" WITHOUT nargs="+"
+        # to avoid double-nesting when users specify --LISTARG value1 --LISTARG value2
+        is_clist = isinstance(keyword["object"], CCP4Data.CList)
+
         kwargs = {
             "required": False,
             "dest": keyword["minimumPath"],
-            "nargs": "+",
             "metavar": keyword["object"].__class__.__name__
         }
+
+        # Only add nargs="+" for non-CList types
+        if not is_clist:
+            kwargs["nargs"] = "+"
 
         # Extract help text and defaults from qualifiers
         qualifiers = keyword.get("qualifiers", {})
@@ -247,7 +256,7 @@ class ArgumentBuilder:
             kwargs["default"] = qualifiers["default"]
 
         # CList types use append action
-        if isinstance(keyword["object"], CCP4Data.CList):
+        if is_clist:
             kwargs["action"] = "append"
 
         try:
@@ -332,6 +341,11 @@ class PluginPopulator:
             object_path: Dot-separated path to parameter (e.g., "inputData.XYZIN")
             value: Value(s) to set (may be list)
         """
+        # Debug logging for UNMERGEDFILES
+        if "UNMERGEDFILES" in object_path:
+            print(f"\n[DEBUG] _handle_item for {object_path}")
+            print(f"[DEBUG] value type: {type(value)}, value: {value}")
+
         # Navigate to the target object
         path_parts = object_path.split(".")
         current = plugin
@@ -349,6 +363,11 @@ class PluginPopulator:
         if target is None:
             logger.warning(f"Could not find {target_name} in {object_path}")
             return
+
+        # Debug logging
+        if "UNMERGEDFILES" in object_path:
+            print(f"[DEBUG] target type: {type(target).__name__}")
+            print(f"[DEBUG] isinstance(value, list): {isinstance(value, list)}")
 
         # Handle list of values
         if isinstance(value, list):
@@ -372,15 +391,44 @@ class PluginPopulator:
         # For CList, add each item
         if isinstance(target, CCP4Data.CList):
             logger.debug(f"Handling CList {type(target).__name__} with {len(values)} values")
+            # Debug for UNMERGEDFILES
+            if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
+                print(f"\n[DEBUG] _handle_item_or_list for UNMERGEDFILES")
+                print(f"[DEBUG] values: {values}")
+                print(f"[DEBUG] list length before: {len(target)}")
+
             for val in values:
                 # Create a new item for the list
                 new_item = target.makeItem()
                 logger.debug(f"Created list item: {type(new_item).__name__}, setting value: {val}")
+
+                # Debug for UNMERGEDFILES
+                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
+                    print(f"[DEBUG] Created item: {type(new_item).__name__}")
+                    print(f"[DEBUG] Setting value: {val}")
+
                 # Set the value on the new item (not on the CList itself)
                 PluginPopulator._handle_single_value(new_item, val, is_list=False)
+
+                # Debug for UNMERGEDFILES
+                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
+                    if hasattr(new_item, 'file'):
+                        print(f"[DEBUG] new_item.file type: {type(new_item.file).__name__}")
+                        print(f"[DEBUG] new_item.file.isSet('baseName'): {new_item.file.isSet('baseName')}")
+                        if hasattr(new_item.file, 'baseName') and new_item.file.baseName is not None:
+                            if hasattr(new_item.file.baseName, 'value'):
+                                print(f"[DEBUG] new_item.file.baseName.value: {new_item.file.baseName.value}")
+                            else:
+                                print(f"[DEBUG] new_item.file.baseName: {new_item.file.baseName}")
+                        print(f"[DEBUG] new_item.file.fullPath: {new_item.file.fullPath}")
+
                 # Add the item to the list
                 target.append(new_item)
                 logger.debug(f"Appended item to list, list now has {len(target)} items")
+
+                # Debug for UNMERGEDFILES
+                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
+                    print(f"[DEBUG] list length after append: {len(target)}")
         # For single-value file objects, process all subvalues
         elif isinstance(target, CDataFile):
             PluginPopulator._handle_file_with_subvalues(target, values)
@@ -427,6 +475,9 @@ class PluginPopulator:
             key = parts[0]
             val = parts[1] if len(parts) > 1 else ""
 
+            # Debug logging
+            print(f"[DEBUG _handle_single_value] Parsing key=value: key={key}, val={val}, target type={type(target).__name__}")
+
             # Handle nested paths like "selection/text"
             if "/" in key:
                 nested_parts = key.split("/")
@@ -442,10 +493,13 @@ class PluginPopulator:
                     setattr(current, final_key, val)
             else:
                 # Direct attribute
+                print(f"[DEBUG _handle_single_value] Checking if target has attribute '{key}': {hasattr(target, key)}")
                 if hasattr(target, key):
                     attr = getattr(target, key, None)
+                    print(f"[DEBUG _handle_single_value] Got attribute '{key}': type={type(attr).__name__}, isinstance(CDataFile)={isinstance(attr, CDataFile)}")
                     # Handle CDataFile attributes specially
                     if isinstance(attr, CDataFile):
+                        print(f"[DEBUG _handle_single_value] Calling setFullPath('{val}') on {type(attr).__name__}")
                         attr.setFullPath(val)
                     else:
                         setattr(target, key, val)

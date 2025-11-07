@@ -13,7 +13,7 @@ export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
 export CCP4_LOG_LEVEL=INFO
 
 # Activate environments
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 source .venv/bin/activate
 cd /Users/nmemn/Developer/cdata-codegen/server
 

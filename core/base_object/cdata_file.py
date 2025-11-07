@@ -167,6 +167,13 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
+        print(f"[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}, input path: {path}")
+        print(f"[DEBUG setFullPath] hasattr baseName: {hasattr(self, 'baseName')}")
+        if hasattr(self, 'baseName'):
+            print(f"[DEBUG setFullPath] baseName type: {type(self.baseName)}, baseName is None: {self.baseName is None}")
+            if self.baseName is not None:
+                print(f"[DEBUG setFullPath] baseName has .value: {hasattr(self.baseName, 'value')}")
+
         logger.debug(
             "[setFullPath] Called for %s, input path: %s, hasattr baseName: %s",
             self.name if hasattr(self, 'name') else 'unnamed',

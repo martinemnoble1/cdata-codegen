@@ -489,6 +489,17 @@ class CData(HierarchicalObject):
         """
         return self._value_states.get(field_name, ValueState.NOT_SET)
 
+    def isDefault(self, field_name: str = 'value') -> bool:
+        """Check if a field is at its default value.
+
+        Args:
+            field_name: Name of the field to check (default: 'value')
+
+        Returns:
+            True if the field is at its default value, False otherwise
+        """
+        return self.getValueState(field_name) == ValueState.DEFAULT
+
     def setToDefault(self, field_name: str):
         """Set a field to its default value.
 
@@ -629,19 +640,28 @@ class CData(HierarchicalObject):
         """
         # For simple value types, read from text
         if hasattr(self, 'value') and element.text:
-            # Determine the type and convert
-            if hasattr(self, '__class__'):
-                class_name = self.__class__.__name__
-                if class_name == 'CInt':
-                    self.value = int(element.text)
-                elif class_name == 'CFloat':
-                    self.value = float(element.text)
-                elif class_name == 'CBoolean':
-                    self.value = element.text.lower() in ('true', '1', 'yes')
-                elif class_name == 'CString':
-                    self.value = element.text
-                else:
-                    self.value = element.text
+            # Temporarily disable validation during deserialization
+            # This prevents validation errors when loading values from XML that may
+            # not meet current min/max constraints but were valid when saved
+            old_skip_validation = getattr(self, '_skip_validation', False)
+            self._skip_validation = True
+            try:
+                # Determine the type and convert
+                if hasattr(self, '__class__'):
+                    class_name = self.__class__.__name__
+                    if class_name == 'CInt':
+                        self.value = int(element.text)
+                    elif class_name == 'CFloat':
+                        self.value = float(element.text)
+                    elif class_name == 'CBoolean':
+                        self.value = element.text.lower() in ('true', '1', 'yes')
+                    elif class_name == 'CString':
+                        self.value = element.text
+                    else:
+                        self.value = element.text
+            finally:
+                # Restore previous validation state
+                self._skip_validation = old_skip_validation
 
         # For containers, deserialize children
         for child in element:

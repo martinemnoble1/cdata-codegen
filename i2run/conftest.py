@@ -23,7 +23,7 @@ TEST_PROJECTS_DIR = Path(__file__).parent / "test_projects"
 os.environ["CCP4I2_PROJECTS_DIR"] = str(TEST_PROJECTS_DIR)
 
 # Source CCP4 environment if available
-CCP4_SETUP_SCRIPT = "/Applications/ccp4-9/bin/ccp4.setup-sh"
+CCP4_SETUP_SCRIPT = "/Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh"
 if Path(CCP4_SETUP_SCRIPT).exists():
     import subprocess
     # Source the setup script and export environment variables

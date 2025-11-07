@@ -101,6 +101,7 @@ class ParamsXmlHandler:
             bool: True if successful, False otherwise
         """
         try:
+            print(f"[DEBUG import_params_xml] UPDATED CODE - importing from: {params_xml_path}")
             if not Path(params_xml_path).exists():
                 print(f"❌ Params file not found: {params_xml_path}")
                 return False
@@ -163,23 +164,73 @@ class ParamsXmlHandler:
 
     def _export_container(self, container: CData, parent_elem: ET.Element):
         """Recursively export container contents, only including explicitly set values."""
+        from core.base_object.fundamental_types import CList
+
+        # Debug: show what type of container we're exporting
+        container_name = getattr(container, 'name', 'unnamed')
+        container_type = type(container).__name__
+        is_clist = isinstance(container, CList)
+        if 'UNMERGED' in container_name.upper() or 'UNMERGED' in container_type.upper() or 'inputData' in container_name:
+            print(f"[DEBUG _export_container] Container: {container_name}, type: {container_type}, is_clist: {is_clist}")
+
+        # Special handling for CList: export list items stored in _items
+        # For CList items, we don't check if they're "explicitly set" - the fact that
+        # they exist in the list means they should be exported (even if their attributes are unset)
+        if isinstance(container, CList):
+            # Access the internal items list directly
+            has_items = hasattr(container, '_items')
+            print(f"[DEBUG _export_container] CList has _items: {has_items}")
+            if has_items:
+                items = container._items
+                container_name = getattr(container, 'name', 'unnamed')
+                print(f"[DEBUG _export_container] Exporting CList '{container_name}' with {len(items)} items")
+                for i, item in enumerate(items):
+                    # Use the item's class name as the XML tag (CCP4i2 convention)
+                    # e.g., <CImportUnmerged> instead of <0>
+                    item_class_name = type(item).__name__
+                    item_elem = ET.SubElement(parent_elem, item_class_name)
+                    print(f"[DEBUG _export_container] Creating element for item {i}: {item_class_name}")
+
+                    # Always call _export_container for list items to properly traverse their CData attributes
+                    # This ensures we export nested structures like file, crystalName, etc.
+                    self._export_container(item, item_elem)
+            else:
+                print(f"[DEBUG _export_container] CList does NOT have _items!")
+            return  # CList items are handled, no need to process other attributes
+
         # Get all attributes that are CData objects
+        skip_attrs = [
+            "CONTENTS",  # Class-level metadata, not an instance attribute
+            "child_added",
+            "child_removed",
+            "content",  # For CDataFile - skip file content, only export metadata
+            "fileContent",  # Alternative name for file content
+            "destroyed",
+            "finished",  # Skip signal objects
+            "object_info",
+            "parent_changed",
+            "parent",  # Skip parent to avoid circular references
+            "state",
+        ]
+
+        # Debug for inputData - show what attributes it has
+        if 'inputData' in container_name:
+            all_attrs = [a for a in dir(container) if not a.startswith('_') and a not in skip_attrs]
+            print(f"[DEBUG] inputData has {len(all_attrs)} non-private attributes")
+            # Show first 20
+            print(f"[DEBUG] First 20 attrs: {all_attrs[:20]}")
+            # Check specifically for UNMERGEDFILES
+            has_unmerged = hasattr(container, 'UNMERGEDFILES')
+            print(f"[DEBUG] hasattr(inputData, 'UNMERGEDFILES'): {has_unmerged}")
+            if has_unmerged:
+                unmerged = getattr(container, 'UNMERGEDFILES')
+                print(f"[DEBUG] UNMERGEDFILES type: {type(unmerged).__name__}, isinstance CList: {isinstance(unmerged, CList)}")
+                print(f"[DEBUG] UNMERGEDFILES length: {len(unmerged) if hasattr(unmerged, '__len__') else 'N/A'}")
+                print(f"[DEBUG] UNMERGEDFILES isSet: {unmerged.isSet() if hasattr(unmerged, 'isSet') else 'N/A'}")
+
         for attr_name in sorted(dir(container)):
             # Skip private, signal, and special attributes
-            if (
-                attr_name.startswith("_")
-                or attr_name in [
-                    "CONTENTS",  # Class-level metadata, not an instance attribute
-                    "child_added",
-                    "child_removed",
-                    "destroyed",
-                    "finished",  # Skip signal objects
-                    "object_info",
-                    "parent_changed",
-                    "parent",  # Skip parent to avoid circular references
-                    "state",
-                ]
-            ):
+            if attr_name.startswith("_") or attr_name in skip_attrs:
                 continue
 
             # Try to get the attribute - may not exist or may be callable
@@ -190,10 +241,28 @@ class ParamsXmlHandler:
                 if callable(attr):
                     continue
 
+                # Only export CData objects (not Signal, ObjectInfo, or other internal objects)
+                if not isinstance(attr, CData):
+                    if attr_name in ['CONTENTS', 'child_added', 'object_info', 'state']:
+                        print(f"[DEBUG] Skipping non-CData attr '{attr_name}': type={type(attr).__name__}, is_CData={isinstance(attr, CData)}")
+                    continue
+
                 if hasattr(attr, "name"):  # It's a CData object
 
-                    if isinstance(attr, CContainer):
+                    if isinstance(attr, CList):
+                        # Special handling for CList: use its getEtree() method
+                        # CList.getEtree() handles serialization with proper class name tags
+                        print(f"[DEBUG] Found CList attribute: '{attr_name}', calling getEtree()")
+                        if hasattr(attr, 'getEtree'):
+                            list_etree = attr.getEtree(excludeUnset=False)
+                            # Append the list's etree as a child
+                            parent_elem.append(list_etree)
+                        else:
+                            print(f"[DEBUG] Warning: CList '{attr_name}' has no getEtree() method")
+
+                    elif isinstance(attr, CContainer):
                         # Create container element and recurse
+                        print(f"[DEBUG] Found CContainer attribute: '{attr_name}', creating element and recursing")
                         container_elem = ET.SubElement(parent_elem, attr_name)
                         self._export_container(attr, container_elem)
 
@@ -201,7 +270,10 @@ class ParamsXmlHandler:
                         # Legacy code expects inputData, outputData, and controlParameters
                         # to always be present, even if empty
                         standard_containers = {'inputData', 'outputData', 'controlParameters'}
+                        elem_count = len(container_elem)
+                        print(f"[DEBUG] Container '{attr_name}' has {elem_count} child elements, is_standard={attr_name in standard_containers}")
                         if len(container_elem) == 0 and attr_name not in standard_containers:
+                            print(f"[DEBUG] Removing empty non-standard container '{attr_name}'")
                             parent_elem.remove(container_elem)
 
                     else:
@@ -330,11 +402,23 @@ class ParamsXmlHandler:
     def _export_complex_object(self, obj: CData, elem: ET.Element):
         """Export complex objects with multiple attributes."""
         # For objects like PERFORMANCEINDICATOR
+        skip_attrs = [
+            "CONTENTS",  # Class-level metadata
+            "child_added",
+            "child_removed",
+            "destroyed",
+            "finished",  # Skip signal objects
+            "object_info",
+            "parent_changed",
+            "parent",  # Skip parent to avoid circular references
+            "state",
+            "name",
+        ]
         for attr_name in dir(obj):
             if (
                 not attr_name.startswith("_")
                 and not callable(getattr(obj, attr_name))
-                and attr_name not in ["name", "parent"]
+                and attr_name not in skip_attrs
             ):
 
                 try:
@@ -349,8 +433,39 @@ class ParamsXmlHandler:
         self, xml_container: ET.Element, cdata_container: CData
     ) -> int:
         """Recursively import values from XML into CData container."""
+        from core.base_object.fundamental_types import CList
         imported_count = 0
 
+        # Special handling for CList: elements with class names indicate list items
+        if isinstance(cdata_container, CList):
+            print(f"[DEBUG _import_container_values] Processing CList, found {len(list(xml_container))} items")
+            # For CList, child elements are tagged with the item's class name (CCP4i2 convention)
+            # e.g., <CImportUnmerged> for items in CImportUnmergedList
+            # We create new items and populate them from the XML
+            for child_elem in xml_container:
+                elem_name = child_elem.tag
+                print(f"[DEBUG _import_container_values] Processing CList item with tag: {elem_name}")
+
+                # Create a new list item using makeItem()
+                # This creates an item of the correct type based on the CList's subItem qualifier
+                new_item = cdata_container.makeItem()
+                print(f"[DEBUG _import_container_values] Created item of type: {type(new_item).__name__}")
+
+                # Verify the element name matches the expected item class
+                expected_class_name = type(new_item).__name__
+                if elem_name != expected_class_name:
+                    print(f"Warning: Expected <{expected_class_name}> but found <{elem_name}> in CList")
+
+                # Recursively import the item's contents
+                item_count = self._import_container_values(child_elem, new_item)
+                print(f"[DEBUG _import_container_values] Imported {item_count} values into item")
+
+                # Append the item to the list
+                cdata_container.append(new_item)
+            print(f"[DEBUG _import_container_values] CList now has {len(cdata_container)} items")
+            return imported_count
+
+        # Regular container handling
         for child_elem in xml_container:
             elem_name = child_elem.tag
 
@@ -358,7 +473,12 @@ class ParamsXmlHandler:
             if hasattr(cdata_container, elem_name):
                 attr = getattr(cdata_container, elem_name)
 
-                if isinstance(attr, CContainer):
+                if isinstance(attr, CList):
+                    # CList: Recurse to handle list items
+                    print(f"[DEBUG _import_container_values] Found CList attribute: {elem_name}, recursing")
+                    imported_count += self._import_container_values(child_elem, attr)
+
+                elif isinstance(attr, CContainer):
                     # Recurse into nested containers
                     imported_count += self._import_container_values(child_elem, attr)
 
@@ -407,11 +527,46 @@ class ParamsXmlHandler:
 
     def _import_structured_data(self, xml_elem: ET.Element, param: CData) -> bool:
         """Import structured data from XML into a parameter."""
+        from core.CCP4File import CDataFile
         try:
             imported_any = False
 
+            # Special handling for CDataFile: use setFullPath() if baseName is present
+            if isinstance(param, CDataFile):
+                print(f"[DEBUG _import_structured_data] Found CDataFile: {type(param).__name__}")
+                basename_elem = xml_elem.find('baseName')
+                if basename_elem is not None and basename_elem.text:
+                    basename_value = basename_elem.text.strip()
+                    print(f"[DEBUG _import_structured_data] Calling setFullPath({basename_value})")
+                    # Use setFullPath to properly initialize the file
+                    param.setFullPath(basename_value)
+                    print(f"[DEBUG _import_structured_data] After setFullPath, isSet('baseName'): {param.isSet('baseName')}")
+                    imported_any = True
+                # Continue to import other attributes (relPath, project, etc.)
+
             for child in xml_elem:
                 attr_name = child.tag
+
+                # Skip baseName if we already handled it above for CDataFile
+                if isinstance(param, CDataFile) and attr_name == 'baseName':
+                    continue
+
+                # Check if this attribute exists on the param
+                if not hasattr(param, attr_name):
+                    continue
+
+                # Get the attribute
+                attr = getattr(param, attr_name)
+
+                # If the child has nested elements, it's a CData object - recurse
+                if len(list(child)) > 0:
+                    if isinstance(attr, CData):
+                        # Recursively import nested structure
+                        print(f"[DEBUG _import_structured_data] Recursing into nested CData: {attr_name} (type: {type(attr).__name__})")
+                        imported_any |= self._import_structured_data(child, attr)
+                    continue
+
+                # Otherwise, it's a simple text value
                 if child.text is not None:
                     value = child.text.strip()
                     # Set attribute if it exists

@@ -21,12 +21,12 @@ echo -e "${YELLOW}Step 1: Setting up environment...${NC}"
 export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
 
 # Source CCP4
-if [ -f /Applications/ccp4-9/bin/ccp4.setup-sh ]; then
+if [ -f /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh ]; then
     echo "  Sourcing CCP4 environment..."
-    source /Applications/ccp4-9/bin/ccp4.setup-sh
+    source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
     echo -e "  ${GREEN}✓${NC} CCP4 environment loaded"
 else
-    echo -e "  ${RED}✗${NC} CCP4 not found at /Applications/ccp4-9/"
+    echo -e "  ${RED}✗${NC} CCP4 not found at /Users/nmemn/Developer/ccp4-20251105/"
     echo "  Please install CCP4 or update the path"
     exit 1
 fi

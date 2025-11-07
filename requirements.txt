@@ -1,7 +1,8 @@
 # Core requirements for cdata-codegen project
+# Python 3.11+ / CCP4-10 Compatible
 
 # Django for database and web framework
-Django>=4.2.0,<5.0
+Django>=5.2
 
 # BioPython for sequence file parsing and biological data
 biopython>=1.80
@@ -49,8 +50,9 @@ PyYAML>=6.0
 asgiref>=3.7.0
 
 # Scientific computing (required by some crystallography plugins)
-scipy>=1.10.0
-numpy>=1.24.0
+# IMPORTANT: NumPy must be < 2.0 for CCP4 compatibility
+numpy<2,>=1.24.0
+scipy>=1.16.0
 
 # Data analysis (required by some plugins like servalcat_pipe)
 pandas>=2.0.0
@@ -65,8 +67,22 @@ svgwrite>=1.4.0
 chardet>=5.0.0  # Character encoding detection
 mrcfile>=1.4.0  # MRC/CCP4 electron density map files
 
-# CCTBX/iotbx - Computational Crystallography Toolbox (optional)
-# Note: These are larger packages with compiled components
-# Installation: pip install cctbx-base
-# Alternative: conda install -c conda-forge cctbx-base
-# cctbx-base>=2024.0; platform_system != "Windows"
+# CCTBX/iotbx - Computational Crystallography Toolbox
+# Now pip-installable as of CCP4-10 / cctbx 2025.10+
+cctbx-base>=2025.10
+
+# Visualization (required by cctbx and reporting)
+matplotlib>=3.10
+
+# CCP4-Specific Packages (symlinked from CCP4-10, not pip-installed):
+# - clipper: Crystallographic library (symlinked from CCP4-10)
+# - iris_validation: Protein validation metrics (symlinked from CCP4-10)
+# - pyrvapi: Report Viewing API (symlinked from CCP4-10)
+# - ccp4mg: CCP4 molecular graphics library (includes mmut module)
+# - phaser: Phasing software package
+# - mrbump: Molecular replacement pipeline
+#
+# To symlink these modules:
+#   ln -sf /path/to/ccp4-10/.../site-packages/{clipper.py,_clipper.so,iris_validation,pyrvapi.so,pyrvapi_ext,ccp4mg,phaser,mrbump} .venv/lib/python3.11/site-packages/
+#
+# See DEVELOPMENT_SETUP.md for detailed symlinking instructions

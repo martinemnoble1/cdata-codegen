@@ -6,7 +6,7 @@
 # Example: ./run_test.sh i2run/ --ignore=test_mrbump.py -n auto
 # Example: ./run_test.sh i2run/ -n 4 -v
 
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 
 set -e  # Exit on error
 

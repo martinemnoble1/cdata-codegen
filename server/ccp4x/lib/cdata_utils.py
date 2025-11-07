@@ -22,8 +22,9 @@ def get_file_type_from_class(file_obj: CDataFile) -> str:
     The mapping works as follows:
     1. Get the class name (e.g., "CMtzDataFile")
     2. Strip the leading "C" → "MtzDataFile"
-    3. Find the index in FILETYPES_CLASS
-    4. Return FILETYPES_TEXT[index]
+    3. Apply special case mappings (e.g., UnmergedMtzDataFile → UnmergedDataFile)
+    4. Find the index in FILETYPES_CLASS
+    5. Return FILETYPES_TEXT[index]
 
     Args:
         file_obj: CDataFile object
@@ -41,6 +42,17 @@ def get_file_type_from_class(file_obj: CDataFile) -> str:
     class_name = file_obj.__class__.__name__
     if class_name.startswith('C'):
         class_name = class_name[1:]  # Remove leading 'C'
+
+    # Special case mappings for legacy compatibility
+    # CUnmergedMtzDataFile → UnmergedDataFile (legacy ccp4i2 had no separate UnmergedMtzDataFile)
+    special_mappings = {
+        'UnmergedMtzDataFile': 'UnmergedDataFile',
+    }
+
+    if class_name in special_mappings:
+        original_name = class_name
+        class_name = special_mappings[class_name]
+        logger.debug(f"Applied special mapping: {original_name} → {class_name}")
 
     # Find the index in FILETYPES_CLASS
     try:

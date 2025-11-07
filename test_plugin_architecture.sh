@@ -14,7 +14,7 @@ export CCP4_LOG_LEVEL=INFO  # Show info messages to see what's happening
 
 # Activate CCP4 environment
 echo "[1] Setting up CCP4 environment..."
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 
 # Activate venv
 echo "[2] Activating virtual environment..."

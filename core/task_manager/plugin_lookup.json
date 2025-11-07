@@ -221,6 +221,20 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
   },
+  "editbfac": {
+    "module": "wrappers.editbfac.script.editbfac",
+    "class": "editbfac",
+    "COMTEMPLATE": null,
+    "TASKMODULE": [
+      "alpha_fold",
+      "model_data_utility"
+    ],
+    "TASKTITLE": "Process Predicted Models",
+    "TASKNAME": "editbfac",
+    "TASKVERSION": 0.0,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false
+  },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
     "class": "x2mtz",
@@ -333,6 +347,23 @@
     ],
     "ASYNCHRONOUS": true,
     "TIMEOUT_PERIOD": 9999999.9
+  },
+  "coot1": {
+    "module": "wrappers.coot1.script.coot1",
+    "class": "coot1",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "model_building",
+    "TASKTITLE": "Coot 1",
+    "TASKNAME": "coot1",
+    "TASKVERSION": 0.1,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "coot_rebuild",
+      "modelcraft"
+    ],
+    "ASYNCHRONOUS": true,
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {}
   },
   "import_mosflm": {
     "module": "wrappers.import_mosflm.script.import_mosflm",

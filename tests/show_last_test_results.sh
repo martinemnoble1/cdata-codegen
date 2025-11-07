@@ -4,7 +4,7 @@
 set -e
 
 # Setup environment
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
 export PYTHONPATH=/Users/nmemn/Developer/cdata-codegen/server:/Users/nmemn/Developer/cdata-codegen:$PYTHONPATH
 export DJANGO_SETTINGS_MODULE=ccp4x.config.test_settings

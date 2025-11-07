@@ -5,7 +5,7 @@
 set -e
 
 export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 source $CCP4I2_ROOT/.venv/bin/activate
 cd $CCP4I2_ROOT/server
 

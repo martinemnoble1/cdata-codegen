@@ -421,25 +421,26 @@ class CProcessManager:
                 )
                 print(f"Error in handler callback: {e}")
 
-    def getJobData(self, pid: int, key: str) -> Any:
+    def getJobData(self, pid: int, attribute: str) -> Any:
         """
-        Get process information by key.
+        Get process information by attribute name.
 
         Args:
             pid: Process ID returned by startProcess()
-            key: Data key (exitCode, exitStatus, status, startTime, etc.)
+            attribute: Data attribute name (exitCode, exitStatus, status, startTime, qprocess, etc.)
 
         Returns:
             Requested value or None if not found
 
         Example:
-            exitCode = pm.getJobData(pid, 'exitCode')
-            status = pm.getJobData(pid, 'status')
+            exitCode = pm.getJobData(pid, attribute='exitCode')
+            status = pm.getJobData(pid, attribute='status')
+            qprocess = pm.getJobData(pid, attribute='qprocess')
         """
         if pid not in self.processInfo:
             return None
 
-        return self.processInfo[pid].get(key)
+        return self.processInfo[pid].get(attribute)
 
     def waitForFinished(self, pid: int, timeout: int = -1) -> bool:
         """

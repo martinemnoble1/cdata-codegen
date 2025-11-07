@@ -15,14 +15,14 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 
 # Source CCP4 environment to get executables on PATH
-if [ -f /Applications/ccp4-9/bin/ccp4.setup-sh ]; then
+if [ -f /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh ]; then
     echo -e "${YELLOW}Sourcing CCP4 environment...${NC}"
-    source /Applications/ccp4-9/bin/ccp4.setup-sh
+    source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
     echo -e "${GREEN}✓ CCP4 environment loaded${NC}"
     echo "  CCP4: $CCP4"
     echo "  CBIN: $CBIN"
 else
-    echo -e "${YELLOW}Warning: CCP4 environment not found at /Applications/ccp4-9${NC}"
+    echo -e "${YELLOW}Warning: CCP4 environment not found at /Users/nmemn/Developer/ccp4-20251105${NC}"
     echo "  Some tests requiring CCP4 executables may fail"
 fi
 echo ""

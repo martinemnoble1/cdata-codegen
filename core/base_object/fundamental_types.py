@@ -1,9 +1,12 @@
 
 """Fundamental CCP4i2 data types that form the base of the type system."""
 
-from typing import List, Any, Optional
+from typing import List, Any, Optional, TYPE_CHECKING
 from ..base_object.base_classes import CData, ValueState
 from .class_metadata import cdata_class, attribute, AttributeType
+
+if TYPE_CHECKING:
+    import xml.etree.ElementTree as ET
 
 
 @cdata_class(
@@ -64,6 +67,19 @@ class CInt(CData):
 
         min_val = self.get_qualifier("min")
         max_val = self.get_qualifier("max")
+
+        # Convert min/max to appropriate numeric type if they're strings (from XML deserialization)
+        if min_val is not None:
+            try:
+                min_val = float(min_val) if isinstance(self, CFloat) else int(min_val)
+            except (ValueError, TypeError):
+                min_val = None  # Invalid min value, skip validation
+
+        if max_val is not None:
+            try:
+                max_val = float(max_val) if isinstance(self, CFloat) else int(max_val)
+            except (ValueError, TypeError):
+                max_val = None  # Invalid max value, skip validation
 
         if min_val is not None and val < min_val:
             raise ValueError(f"Value {val} is below minimum {min_val}")
@@ -335,6 +351,17 @@ class CInt(CData):
 
         return report
 
+    def dataOrder(self) -> list:
+        """Return empty list as fundamental types have no child data items.
+
+        This method provides compatibility with the legacy CCP4i2 API where
+        dataOrder() was expected to exist on all CData objects.
+
+        Returns:
+            Empty list since fundamental types don't contain child data
+        """
+        return []
+
 
 @cdata_class(
     error_codes={
@@ -394,6 +421,19 @@ class CFloat(CData):
 
         min_val = self.get_qualifier("min")
         max_val = self.get_qualifier("max")
+
+        # Convert min/max to appropriate numeric type if they're strings (from XML deserialization)
+        if min_val is not None:
+            try:
+                min_val = float(min_val) if isinstance(self, CFloat) else int(min_val)
+            except (ValueError, TypeError):
+                min_val = None  # Invalid min value, skip validation
+
+        if max_val is not None:
+            try:
+                max_val = float(max_val) if isinstance(self, CFloat) else int(max_val)
+            except (ValueError, TypeError):
+                max_val = None  # Invalid max value, skip validation
 
         if min_val is not None and val < min_val:
             raise ValueError(f"Value {val} is below minimum {min_val}")
@@ -684,6 +724,17 @@ class CFloat(CData):
 
         return report
 
+    def dataOrder(self) -> list:
+        """Return empty list as fundamental types have no child data items.
+
+        This method provides compatibility with the legacy CCP4i2 API where
+        dataOrder() was expected to exist on all CData objects.
+
+        Returns:
+            Empty list since fundamental types don't contain child data
+        """
+        return []
+
 
 @cdata_class(
     error_codes={
@@ -855,6 +906,17 @@ class CString(CData):
 
         return report
 
+    def dataOrder(self) -> list:
+        """Return empty list as fundamental types have no child data items.
+
+        This method provides compatibility with the legacy CCP4i2 API where
+        dataOrder() was expected to exist on all CData objects.
+
+        Returns:
+            Empty list since fundamental types don't contain child data
+        """
+        return []
+
 @cdata_class(
     error_codes={
         "101": {"description": "not allowed value"}
@@ -991,6 +1053,17 @@ class CBoolean(CData):
         report = CErrorReport()
         return report
 
+    def dataOrder(self) -> list:
+        """Return empty list as fundamental types have no child data items.
+
+        This method provides compatibility with the legacy CCP4i2 API where
+        dataOrder() was expected to exist on all CData objects.
+
+        Returns:
+            Empty list since fundamental types don't contain child data
+        """
+        return []
+
 
 @cdata_class(
     error_codes={
@@ -1068,7 +1141,7 @@ class CList(CData):
                 self._items[i].name = f"{self.name}[{i}]"
 
         # Mark as explicitly set
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
 
     def remove(self, item: Any) -> None:
         """Remove an item from the list."""
@@ -1081,7 +1154,7 @@ class CList(CData):
                 self._items[i].name = f"{self.name}[{i}]"
 
         # Mark as explicitly set
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
 
     def pop(self, index: int = -1) -> Any:
         """Remove and return item at index."""
@@ -1094,13 +1167,13 @@ class CList(CData):
                     self._items[i].name = f"{self.name}[{i}]"
 
         # Mark as explicitly set
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
         return item
 
     def clear(self) -> None:
         """Remove all items from the list."""
         self._items.clear()
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
 
     def __len__(self) -> int:
         return len(self._items)
@@ -1114,7 +1187,7 @@ class CList(CData):
             value.name = f"{self.name}[{index}]"
 
         self._items[index] = value
-        self._value_states["_items"] = self.ValueState.EXPLICITLY_SET
+        self._value_states["_items"] = ValueState.EXPLICITLY_SET
 
     def __iter__(self):
         return iter(self._items)
@@ -1183,6 +1256,111 @@ class CList(CData):
             item.qualifiers.update(item_qualifiers)
 
         return item
+
+    def dataOrder(self) -> list:
+        """Return list of item names/indices for compatibility with legacy API.
+
+        For CList objects, returns indices of items in the list.
+
+        Returns:
+            List of string indices representing items in the list
+        """
+        return [str(i) for i in range(len(self._items))]
+
+    def getEtree(self, name: str = None, excludeUnset: bool = False) -> 'ET.Element':
+        """Override getEtree to serialize CList with proper item structure.
+
+        For CList, we create a container element with child elements for each item.
+        The child element tags are the class names of the items (CCP4i2 convention).
+
+        Args:
+            name: Optional element name (not used for CList, uses objectName instead)
+            excludeUnset: If True, pass this flag to item's getEtree() calls
+
+        Returns:
+            ET.Element with list items as children
+
+        Example XML structure:
+            <UNMERGEDFILES>
+                <CImportUnmerged>
+                    <file>...</file>
+                    <crystalName>...</crystalName>
+                </CImportUnmerged>
+                <CImportUnmerged>
+                    ...
+                </CImportUnmerged>
+            </UNMERGEDFILES>
+        """
+        import xml.etree.ElementTree as ET
+
+        # Create container element with the list's name
+        # Use provided name if given, otherwise use objectName
+        list_name = name or self.objectName() or "list"
+        container_elem = ET.Element(list_name)
+
+        # Add each item as a child element
+        for item in self._items:
+            # Use the item's class name as the XML tag (CCP4i2 convention)
+            item_class_name = type(item).__name__
+
+            if isinstance(item, CData):
+                # If item is CData, recursively get its etree
+                # But we need to change the root tag to the class name
+                if hasattr(item, 'getEtree'):
+                    item_etree = item.getEtree(excludeUnset=excludeUnset)
+                    # Change the tag to the class name
+                    item_etree.tag = item_class_name
+                    container_elem.append(item_etree)
+                else:
+                    # Fallback: create element with item's string representation
+                    item_elem = ET.Element(item_class_name)
+                    item_elem.text = str(item)
+                    container_elem.append(item_elem)
+            else:
+                # For non-CData items (primitives), create simple element
+                item_elem = ET.Element(item_class_name)
+                item_elem.text = str(item)
+                container_elem.append(item_elem)
+
+        return container_elem
+
+    def setEtree(self, element, ignore_missing: bool = False):
+        """Override setEtree to deserialize CList with proper item structure.
+
+        For CList, child elements use class names as tags (CCP4i2 convention).
+        We create new items using makeItem() and populate them from the XML.
+
+        Args:
+            element: xml.etree.ElementTree.Element containing list items
+            ignore_missing: If True, ignore missing attributes (passed to item's setEtree)
+
+        Example XML structure:
+            <UNMERGEDFILES>
+                <CImportUnmerged>
+                    <file>...</file>
+                    <crystalName>...</crystalName>
+                </CImportUnmerged>
+                <CImportUnmerged>
+                    ...
+                </CImportUnmerged>
+            </UNMERGEDFILES>
+        """
+        # Clear existing items
+        self.clear()
+
+        # Each child element represents a list item
+        # The tag is the item's class name (e.g., <CImportUnmerged>)
+        for child_elem in element:
+            # Create a new item using makeItem()
+            # makeItem() uses the subItem qualifier to determine the correct type
+            new_item = self.makeItem()
+
+            # Recursively deserialize the item's content
+            if hasattr(new_item, 'setEtree'):
+                new_item.setEtree(child_elem, ignore_missing=ignore_missing)
+
+            # Add the item to the list
+            self.append(new_item)
 
 
 # NOTE: Type aliases removed - all custom types now have proper stub classes

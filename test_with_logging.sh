@@ -15,7 +15,7 @@ export CCP4_LOG_LEVEL=ERROR  # Suppress all DEBUG output!
 
 # Activate CCP4 environment first
 echo "[1] Setting up CCP4 environment..."
-source /Applications/ccp4-9/bin/ccp4.setup-sh
+source /Users/nmemn/Developer/ccp4-20251105/bin/ccp4.setup-sh
 
 # Then activate venv (takes precedence)
 echo "[2] Activating virtual environment..."
