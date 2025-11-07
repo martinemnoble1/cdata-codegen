@@ -7,12 +7,14 @@ from core import CCP4TaskManager
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
-def job_directory(jobId=None, projectName=None, jobNumber=None, create=False):
+def job_directory(jobId=None, projectName=None, jobNumber=None, create=False, projectId=None, projectDirectory=None ):
     the_job = None
     if jobId is not None:
         the_job = models.Job.objects.get(uuid=uuid.UUID(jobId))
     elif projectName is not None and jobNumber is not None:
         the_job = models.Job.objects.get(project__name=projectName, number=jobNumber)
+    elif projectId is not None and jobNumber is not None:
+        the_job = models.Job.objects.get(project__uuid=projectId, number=jobNumber)
     if the_job is None:
         logger.error(
             "No job found with jobId %s, projectName %s, jobNumber %s",

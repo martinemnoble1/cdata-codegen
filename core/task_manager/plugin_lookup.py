@@ -21,9 +21,22 @@ project_root = os.path.dirname(os.path.dirname(script_dir))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+# Add server directory to sys.path for Django imports
+server_path = os.path.join(project_root, "server")
+if server_path not in sys.path:
+    sys.path.insert(0, server_path)
+
 # Add CCP4I2_ROOT to sys.path so plugin imports can work
 if CCP4I2_ROOT not in sys.path:
     sys.path.insert(0, CCP4I2_ROOT)
+
+# Configure Django before importing any plugins that might use Django models
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ccp4x.config.settings")
+try:
+    import django
+    django.setup()
+except Exception as e:
+    logging.warning(f"Failed to configure Django: {e}")
 
 TASKATTRIBUTES = [
     "COMTEMPLATE",

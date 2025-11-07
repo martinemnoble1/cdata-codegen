@@ -371,13 +371,16 @@ class PluginPopulator:
 
         # For CList, add each item
         if isinstance(target, CCP4Data.CList):
+            logger.debug(f"Handling CList {type(target).__name__} with {len(values)} values")
             for val in values:
                 # Create a new item for the list
                 new_item = target.makeItem()
+                logger.debug(f"Created list item: {type(new_item).__name__}, setting value: {val}")
                 # Set the value on the new item (not on the CList itself)
                 PluginPopulator._handle_single_value(new_item, val, is_list=False)
                 # Add the item to the list
                 target.append(new_item)
+                logger.debug(f"Appended item to list, list now has {len(target)} items")
         # For single-value file objects, process all subvalues
         elif isinstance(target, CDataFile):
             PluginPopulator._handle_file_with_subvalues(target, values)
@@ -440,7 +443,12 @@ class PluginPopulator:
             else:
                 # Direct attribute
                 if hasattr(target, key):
-                    setattr(target, key, val)
+                    attr = getattr(target, key, None)
+                    # Handle CDataFile attributes specially
+                    if isinstance(attr, CDataFile):
+                        attr.setFullPath(val)
+                    else:
+                        setattr(target, key, val)
         else:
             # No key=value syntax - set the value directly
             if isinstance(target, CDataFile):

@@ -127,9 +127,11 @@ class CPurgeProject:
         """
         if self._db is None:
             try:
-                import django
-                from server.ccp4x.db.ccp4i2_django_dbapi import CCP4i2DjangoDbApi
-                django.setup()
+                # Import Django database API
+                # NOTE: Django MUST be configured before this is called (via django.setup() or pytest-django)
+                # DO NOT call django.setup() here - it must be done in the main thread before any async workers
+                # Import without 'server.' prefix since server/ is in sys.path (added by conftest or main)
+                from ccp4x.db.ccp4i2_django_dbapi import CCP4i2DjangoDbApi
                 self._db = CCP4i2DjangoDbApi()
             except Exception as e:
                 logger.error(f"Failed to initialize Django database: {e}")

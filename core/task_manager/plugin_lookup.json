@@ -221,20 +221,6 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false
   },
-  "editbfac": {
-    "module": "wrappers.editbfac.script.editbfac",
-    "class": "editbfac",
-    "COMTEMPLATE": null,
-    "TASKMODULE": [
-      "alpha_fold",
-      "model_data_utility"
-    ],
-    "TASKTITLE": "Process Predicted Models",
-    "TASKNAME": "editbfac",
-    "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
-  },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
     "class": "x2mtz",

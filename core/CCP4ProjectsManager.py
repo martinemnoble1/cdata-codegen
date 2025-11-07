@@ -45,8 +45,14 @@ def _ensure_django_configured():
         return
 
     # Check if already configured
-    if django.apps.apps.ready:
-        return
+    # NOTE: We must check if apps attribute exists before accessing it
+    # because it's not available until django.setup() is called
+    try:
+        if hasattr(django, 'apps') and django.apps.apps.ready:
+            return
+    except Exception:
+        # If checking ready state fails, assume not configured
+        pass
 
     # Ensure DJANGO_SETTINGS_MODULE is set
     if 'DJANGO_SETTINGS_MODULE' not in os.environ:
@@ -108,9 +114,11 @@ class CProjectsManager:
         if self._db is None:
             # Lazy load the Django database API
             try:
-                import django
-                from server.ccp4x.db.ccp4i2_django_dbapi import CCP4i2DjangoDbApi
-                django.setup()
+                # Import Django database API
+                # NOTE: Django MUST be configured before this is called (via django.setup() or pytest-django)
+                # DO NOT call django.setup() here - it must be done in the main thread before any async workers
+                # Import without 'server.' prefix since server/ is in sys.path (added by conftest or main)
+                from ccp4x.db.ccp4i2_django_dbapi import CCP4i2DjangoDbApi
                 self._db = CCP4i2DjangoDbApi()
             except Exception as e:
                 logger.error(f"Failed to initialize Django database: {e}")
@@ -201,11 +209,14 @@ class CProjectsManager:
         """
         try:
             # Get directory from database
+            # We pass jobId and jobNumber; the implementation will look up project info
             directory = self.db().jobDirectory(
+                projectId=projectId,
+                projectDirectory=projectDirectory,
                 jobId=jobId,
                 jobNumber=jobNumber,
-                projectId=projectId,
-                projectDirectory=projectDirectory
+                projectName=None,  # Will be looked up from jobId if needed
+                create=create
             )
         except Exception as e:
             logger.error(

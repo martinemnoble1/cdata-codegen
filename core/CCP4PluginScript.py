@@ -1879,6 +1879,9 @@ class CPluginScript(CData):
             if hasattr(self, '_dbProjectId') and self._dbProjectId is not None:
                 plugin_instance._dbProjectId = self._dbProjectId
                 logger.debug(f"[DEBUG makePluginObject] Propagated dbProjectId to nested plugin")
+            if hasattr(self, '_dbJobId') and self._dbJobId is not None:
+                plugin_instance._dbJobId = self._dbJobId
+                logger.debug(f"[DEBUG makePluginObject] Propagated dbJobId to nested plugin")
             logger.debug(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance
         except Exception as e:

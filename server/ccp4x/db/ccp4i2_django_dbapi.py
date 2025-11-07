@@ -334,10 +334,11 @@ class CCP4i2DjangoDbApi(object):
             unSetMissingFiles=unSetMissingFiles,
         )
 
-    def jobDirectory(self, jobId=None, projectName=None, jobNumber=None, create=False):
+    def jobDirectory(self, jobId=None, projectName=None, jobNumber=None, create=False, projectId=None, projectDirectory=None):
         logger.debug("in CCP4i2DjangoDbApi %s, %s, %s", jobId, projectName, jobNumber)
-        assert jobId is not None or (projectName is not None and jobNumber is not None)
-        return job_directory(jobId, projectName, jobNumber, create)
+        # Accept projectId and projectDirectory for compatibility but pass to job_directory utility
+        return job_directory(jobId=jobId, projectName=projectName, jobNumber=jobNumber, create=create,
+                           projectId=projectId, projectDirectory=projectDirectory)
 
     def getJobFiles(
         self, jobId=None, role=0, mode="fileId", searchFileUses=True, fileTypes=[]
