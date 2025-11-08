@@ -514,20 +514,23 @@ class CDataFile(CData):
             else:
                 basename_value = self.baseName
 
-        # If baseName is an absolute path, check if it exists
-        # If it doesn't exist, it might be a stale temp file path from gemmi_split_mtz
-        # In that case, fall through to check relPath + basename construction
+        # If baseName is an absolute path, use it directly
+        # Exception: stale temp file paths from gemmi_split_mtz should be stripped to just filename
         if basename_value:
             basename_str = str(basename_value)
             if basename_str and Path(basename_str).is_absolute():
                 abs_path = Path(basename_str)
-                if abs_path.exists():
-                    logger.debug("Returning absolute path from baseName: %s", basename_str)
+                # If path exists OR doesn't look like a temp file, use the absolute path as-is
+                # This allows us to save new files with absolute paths, while still handling
+                # stale temp file paths from gemmi_split_mtz (which start with /tmp or /var/tmp)
+                is_temp_file = str(abs_path).startswith(('/tmp/', '/var/tmp/', 'C:\\Temp\\', 'C:\\Windows\\Temp\\'))
+                print(f"[DEBUG getFullPath] baseName is absolute: {basename_str}, exists={abs_path.exists()}, is_temp_file={is_temp_file}")
+                if abs_path.exists() or not is_temp_file:
+                    print(f"[DEBUG getFullPath] Returning absolute path: {basename_str}")
                     return basename_str
                 else:
-                    # Absolute path doesn't exist - might be stale temp file
-                    # Check if file exists in job directory using just the filename
-                    logger.debug(f"Absolute path {basename_str} doesn't exist, will check relPath")
+                    # Absolute path looks like stale temp file - strip to just filename
+                    print(f"[DEBUG getFullPath] Looks like stale temp file, stripping to filename")
                     # Extract just the filename and continue to relPath logic below
                     basename_value = abs_path.name
                     basename_str = basename_value

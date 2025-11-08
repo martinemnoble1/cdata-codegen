@@ -164,7 +164,15 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
 
         # Create tree and write to file
         tree = ET.ElementTree(root)
-        file_path = Path(self.getFullPath())
+        full_path_str = self.getFullPath()
+        print(f"[DEBUG CI2XmlDataFile.saveFile] getFullPath() returned: '{full_path_str}'")
+
+        if not full_path_str or full_path_str.strip() == '':
+            print(f"[DEBUG CI2XmlDataFile.saveFile] ERROR: getFullPath() returned empty string!")
+            print(f"[DEBUG CI2XmlDataFile.saveFile] baseName.value: {self.baseName.value if hasattr(self, 'baseName') else 'N/A'}")
+            return False
+
+        file_path = Path(full_path_str)
 
         # Ensure directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -172,6 +180,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         # Write with pretty formatting
         ET.indent(tree, space='  ')
         tree.write(file_path, encoding='utf-8', xml_declaration=True)
+        print(f"[DEBUG CI2XmlDataFile.saveFile] Successfully wrote file to: {file_path}")
 
         return True
 

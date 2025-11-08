@@ -74,7 +74,8 @@ class ParamsXmlHandler:
             body = ET.SubElement(root, "ccp4i2_body")
 
             # Export all containers and their explicitly set parameters
-            self._export_container(task, body)
+            # No parent_context at top level (task is the root container)
+            self._export_container(task, body, parent_context=None)
 
             # Write to file with proper formatting
             self._write_formatted_xml(root, output_path)
@@ -162,8 +163,14 @@ class ParamsXmlHandler:
             traceback.print_exc()
             return False
 
-    def _export_container(self, container: CData, parent_elem: ET.Element):
-        """Recursively export container contents, only including explicitly set values."""
+    def _export_container(self, container: CData, parent_elem: ET.Element, parent_context: str = None):
+        """Recursively export container contents, only including explicitly set values.
+
+        Args:
+            container: CData container to export
+            parent_elem: XML element to append to
+            parent_context: Name of parent container (e.g., 'inputData', 'outputData') for context-aware export
+        """
         from core.base_object.fundamental_types import CList
 
         # Debug: show what type of container we're exporting
@@ -171,7 +178,7 @@ class ParamsXmlHandler:
         container_type = type(container).__name__
         is_clist = isinstance(container, CList)
         if 'UNMERGED' in container_name.upper() or 'UNMERGED' in container_type.upper() or 'inputData' in container_name:
-            print(f"[DEBUG _export_container] Container: {container_name}, type: {container_type}, is_clist: {is_clist}")
+            print(f"[DEBUG _export_container] Container: {container_name}, type: {container_type}, is_clist: {is_clist}, parent_context: {parent_context}")
 
         # Special handling for CList: export list items stored in _items
         # For CList items, we don't check if they're "explicitly set" - the fact that
@@ -193,7 +200,7 @@ class ParamsXmlHandler:
 
                     # Always call _export_container for list items to properly traverse their CData attributes
                     # This ensures we export nested structures like file, crystalName, etc.
-                    self._export_container(item, item_elem)
+                    self._export_container(item, item_elem, parent_context=parent_context or container_name)
             else:
                 print(f"[DEBUG _export_container] CList does NOT have _items!")
             return  # CList items are handled, no need to process other attributes
@@ -264,7 +271,8 @@ class ParamsXmlHandler:
                         # Create container element and recurse
                         print(f"[DEBUG] Found CContainer attribute: '{attr_name}', creating element and recursing")
                         container_elem = ET.SubElement(parent_elem, attr_name)
-                        self._export_container(attr, container_elem)
+                        # Pass container name as parent_context for nested export
+                        self._export_container(attr, container_elem, parent_context=attr_name)
 
                         # Remove empty containers EXCEPT for standard sub-containers
                         # Legacy code expects inputData, outputData, and controlParameters
@@ -277,8 +285,41 @@ class ParamsXmlHandler:
                             parent_elem.remove(container_elem)
 
                     else:
-                        # Check if this parameter has been explicitly set
-                        if self._is_explicitly_set(attr):
+                        # For parameters in inputData, export if file has baseName set
+                        # regardless of ValueState (fixes issue with params loaded from input_params.xml)
+                        should_export = False
+                        attr_type = type(attr).__name__
+                        if parent_context == 'inputData':
+                            # In inputData, export CDataFile objects if they have a baseName
+                            try:
+                                from core.base_object.base_classes import CDataFile
+                                if isinstance(attr, CDataFile):
+                                    has_basename = hasattr(attr, 'baseName')
+                                    basename_isset = attr.baseName.isSet() if has_basename else False
+                                    basename_val = attr.baseName.value if (has_basename and basename_isset) else None
+                                    print(f"[DEBUG] Checking inputData '{attr_name}' (type: {attr_type}): has_basename={has_basename}, isset={basename_isset}, value='{basename_val}'")
+
+                                    if has_basename and basename_isset:
+                                        if basename_val and str(basename_val).strip():
+                                            print(f"[DEBUG] Exporting inputData file '{attr_name}' with baseName='{basename_val}'")
+                                            should_export = True
+                                        else:
+                                            print(f"[DEBUG] Skipping inputData file '{attr_name}' - baseName is empty")
+                                    else:
+                                        print(f"[DEBUG] Skipping inputData file '{attr_name}' - baseName not set")
+                            except ImportError:
+                                pass
+
+                        # Default: check if explicitly set
+                        if not should_export:
+                            is_explicitly_set = self._is_explicitly_set(attr)
+                            if is_explicitly_set:
+                                print(f"[DEBUG] Exporting '{attr_name}' (type: {attr_type}) - explicitly set")
+                                should_export = True
+                            else:
+                                print(f"[DEBUG] Skipping '{attr_name}' (type: {attr_type}) - not explicitly set, parent_context={parent_context}")
+
+                        if should_export:
                             param_elem = ET.SubElement(parent_elem, attr_name)
                             self._export_parameter_value(attr, param_elem)
 
@@ -336,6 +377,8 @@ class ParamsXmlHandler:
     def _export_parameter_value(self, param: CData, elem: ET.Element):
         """Export the value of a parameter to an XML element."""
         try:
+            param_name = getattr(param, 'name', 'unnamed')
+
             if hasattr(param, "value"):
                 value = param.value
 
@@ -351,6 +394,7 @@ class ParamsXmlHandler:
 
             # Handle file objects (they have structured data)
             elif self._is_file_object(param):
+                print(f"[DEBUG _export_parameter_value] Exporting file object '{param_name}', type: {type(param).__name__}")
                 self._export_file_data(param, elem)
 
             # Handle performance indicators and other complex objects
@@ -368,6 +412,9 @@ class ParamsXmlHandler:
 
     def _export_file_data(self, file_obj: CData, elem: ET.Element):
         """Export file object data in the structured format."""
+        file_name = getattr(file_obj, 'name', 'unnamed')
+        print(f"[DEBUG _export_file_data] Exporting file '{file_name}'")
+
         # For file objects, we need to export structured data
         # Only export attributes that have been explicitly set (non-empty values)
         file_attrs = [
@@ -380,12 +427,14 @@ class ParamsXmlHandler:
             "contentFlag",
         ]
 
+        exported_count = 0
         for attr in file_attrs:
             if hasattr(file_obj, attr):
                 attr_obj = getattr(file_obj, attr)
                 if attr_obj is not None:
                     # Get the string value
                     value_str = str(attr_obj)
+                    print(f"[DEBUG _export_file_data]   {attr}: '{value_str}' (len={len(value_str.strip())})")
 
                     # Only export if:
                     # 1. It's a non-empty string, OR
@@ -394,10 +443,14 @@ class ParamsXmlHandler:
                     if value_str and len(value_str.strip()) > 0:
                         sub_elem = ET.SubElement(elem, attr)
                         sub_elem.text = value_str
+                        exported_count += 1
                     elif attr in ["subType", "contentFlag"]:
                         # Always export numeric flags even if 0
                         sub_elem = ET.SubElement(elem, attr)
                         sub_elem.text = value_str
+                        exported_count += 1
+
+        print(f"[DEBUG _export_file_data] Exported {exported_count} attributes for file '{file_name}'")
 
     def _export_complex_object(self, obj: CData, elem: ET.Element):
         """Export complex objects with multiple attributes."""

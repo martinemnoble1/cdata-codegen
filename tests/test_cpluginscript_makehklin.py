@@ -304,7 +304,7 @@ class TestMakeHklin:
 
     def test_simple_merge_with_string_names(self, plugin_script, temp_dir):
         """Test basic merge using simple string names (legacy API)."""
-        error = plugin_script.makeHklin(['HKLIN1', 'FREERFLAG'])
+        hklin_filename, error = plugin_script.makeHklin(['HKLIN1', 'FREERFLAG'])
 
         # Should succeed with no errors
         assert error.maxSeverity() == SEVERITY_OK
@@ -317,14 +317,14 @@ class TestMakeHklin:
         merged_mtz = gemmi.read_mtz_file(str(output_path))
         column_labels = [col.label for col in merged_mtz.columns]
 
-        # Legacy API now uses new API internally, which prefixes columns
-        assert 'HKLIN1_F' in column_labels
-        assert 'HKLIN1_SIGF' in column_labels
-        assert 'FREERFLAG_FREER' in column_labels
+        # Legacy API uses identity mapping (no prefixing) for backward compatibility
+        assert 'F' in column_labels
+        assert 'SIGF' in column_labels
+        assert 'FREER' in column_labels
 
     def test_custom_output_name(self, plugin_script, temp_dir):
         """Test custom output name (legacy API)."""
-        error = plugin_script.makeHklin(['HKLIN1'], hklin='custom')
+        hklin_filename, error = plugin_script.makeHklin(['HKLIN1'], hklin='custom')
 
         assert error.maxSeverity() == SEVERITY_OK
         output_path = temp_dir / "custom.mtz"
@@ -360,7 +360,7 @@ class TestMakeHklin:
         plugin_script.container.inputData.HKLIN2 = hklin2
 
         # Merge with explicit contentFlag override that differs from file's flag
-        error = plugin_script.makeHklin([
+        hklin_filename, error = plugin_script.makeHklin([
             'HKLIN1',
             ['HKLIN2', MockCObsDataFile.CONTENT_FLAG_FPAIR]  # Request FPAIR (flag=2), but file has flag=4
         ])
@@ -375,14 +375,14 @@ class TestMakeHklin:
 
     def test_file_not_found_error(self, plugin_script):
         """Test error handling when file not found."""
-        error = plugin_script.makeHklin(['NONEXISTENT'])
+        hklin_filename, error = plugin_script.makeHklin(['NONEXISTENT'])
 
         assert error.maxSeverity() > SEVERITY_OK
         assert error.count() > 0
 
     def test_invalid_content_flag_error(self, plugin_script):
         """Test error with invalid contentFlag in [name, flag] syntax."""
-        error = plugin_script.makeHklin([
+        hklin_filename, error = plugin_script.makeHklin([
             ['HKLIN1', 999]  # Invalid flag
         ])
 
@@ -390,7 +390,7 @@ class TestMakeHklin:
 
     def test_invalid_item_format_error(self, plugin_script):
         """Test error with invalid item format."""
-        error = plugin_script.makeHklin([
+        hklin_filename, error = plugin_script.makeHklin([
             {'invalid': 'dict'}  # Invalid format
         ])
 
@@ -402,7 +402,7 @@ class TestMakeHklin:
         original_flag = plugin_script.container.inputData.HKLIN1.contentFlag
 
         # Request same contentFlag as file has - no conversion needed
-        error = plugin_script.makeHklin([
+        hklin_filename, error = plugin_script.makeHklin([
             ['HKLIN1', MockCObsDataFile.CONTENT_FLAG_FMEAN]  # Same as file's flag
         ])
 

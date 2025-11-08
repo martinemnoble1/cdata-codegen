@@ -583,22 +583,33 @@ class CPluginScript(CData):
         # Save params.xml after setting output file attributes
         # This ensures output files have project/relPath/baseName set before execution
         # NOTE: We save to params.xml (not input_params.xml) to preserve the original inputs
+        # NOTE: We do NOT reload from input_params.xml here because:
+        # 1. The async runner already loaded params from input_params.xml (async_run_job.py line 172)
+        # 2. The async runner imported files and updated the container (async_run_job.py line 73)
+        # 3. The async runner saved params.xml (async_run_job.py line 108)
+        # 4. Reloading here would corrupt the file paths that were set during import
+        #
+        # The file metadata should already be correct from the import step.
         has_method = hasattr(self, 'get_db_job_id')
         job_id = self.get_db_job_id() if has_method else None
-        logger.debug(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
+        print(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
+        print(f"[DEBUG process] self.workDirectory = {self.workDirectory}")
         if has_method and job_id:
             try:
+                # Just save params.xml with current state (which already has correct file paths from import)
                 params_path = os.path.join(self.workDirectory, "params.xml")
-                logger.debug(f"[DEBUG process] About to call saveDataToXml({params_path})")
+                print(f"[DEBUG process] About to call saveDataToXml({params_path})")
                 save_error = self.saveDataToXml(params_path)
                 if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
-                    logger.debug(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
+                    print(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
                 else:
-                    logger.debug(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
+                    print(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
             except Exception as e:
-                logger.debug(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
+                print(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
+                import traceback
+                traceback.print_exc()
         else:
-            logger.debug(f"[DEBUG process] Skipping params save (no database context)")
+            print(f"[DEBUG process] Skipping params save (no database context)")
 
         # Pre-process input files if needed
         result = self.processInputFiles()
@@ -2240,7 +2251,7 @@ class CPluginScript(CData):
 
         raise ValueError(f"No content flag name found for value {content_flag}")
 
-    def makeHklin(self, miniMtzsIn: list, hklin: str = 'hklin') -> CErrorReport:
+    def makeHklin(self, miniMtzsIn: list, hklin: str = 'hklin') -> tuple:
         """
         Merge mini-MTZ files into HKLIN (backward-compatible legacy API).
 
@@ -2259,7 +2270,9 @@ class CPluginScript(CData):
             hklin: Base name for output file (default: 'hklin')
 
         Returns:
-            CErrorReport: Error report (empty if successful)
+            tuple: (hklin_filename, CErrorReport) where:
+                - hklin_filename: Path to created HKLIN file (None if error)
+                - CErrorReport: Error report (empty if successful)
 
         Example (old API):
             >>> # Simple merge (uses objects' contentFlags)
