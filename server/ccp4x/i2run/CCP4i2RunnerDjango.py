@@ -291,6 +291,14 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             print(validation_error.report(severity_threshold=Severity.WARNING))
             print()
 
+        # Save input parameters to input_params.xml so async_run_job can load them
+        # This is essential because async_run_job creates a fresh plugin instance
+        # and needs to populate it with the command-line arguments we just processed
+        from ..db import models
+        job = models.Job.objects.get(uuid=self.jobId)
+        save_params_for_job(thePlugin, the_job=job, mode="JOB_INPUT", exclude_unset=False)
+        logger.info(f"Saved input parameters to input_params.xml for async runner to load")
+
         # Execute job using async runner
         from asgiref.sync import async_to_sync
         from ccp4x.lib.async_run_job import run_job_async

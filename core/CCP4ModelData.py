@@ -51,11 +51,10 @@ class CAsuContentSeq(CAsuContentSeqStub):
     @polymerType.setter
     def polymerType(self, value):
         """Set polymerType, accepting both string and CString values."""
-        # Store in the underlying attribute (handled by parent class)
-        if hasattr(super(), '__setattr__'):
-            super().__setattr__('polymerType', value)
-        else:
-            self.__dict__['polymerType'] = value
+        # Store directly in __dict__ to avoid recursion through CData.__setattr__
+        # Use the attribute name that the parent class expects (polymerType)
+        # The parent CData class will handle the CString wrapping
+        self.__dict__['polymerType'] = value
 
 
 class CAsuContentSeqList(CAsuContentSeqListStub):
@@ -160,6 +159,8 @@ class CAsuDataFile(CAsuDataFileStub):
             print(f"Error parsing XML file {file_path}: {e}")
         except Exception as e:
             print(f"Error loading file {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
 
     def writeFasta(
         self,

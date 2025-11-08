@@ -2114,13 +2114,21 @@ class CPluginScript(CData):
                 print(f"  - project.value: '{val}'")
             print(f"  - getFullPath(): '{file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}'")
 
+            print(f"[DEBUG makeHklinGemmi] About to check if setContentFlag needed for '{name}'")
+            print(f"[DEBUG makeHklinGemmi]   hasattr(file_obj, 'setContentFlag'): {hasattr(file_obj, 'setContentFlag')}")
+            print(f"[DEBUG makeHklinGemmi]   contentFlag: {file_obj.contentFlag if hasattr(file_obj, 'contentFlag') else 'N/A'}")
+            print(f"[DEBUG makeHklinGemmi]   int(contentFlag): {int(file_obj.contentFlag) if hasattr(file_obj, 'contentFlag') else 'N/A'}")
+
             # Auto-detect contentFlag from file content to ensure accuracy
             if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
+                print(f"[DEBUG makeHklinGemmi] Calling setContentFlag() for '{name}'...")
                 logger.debug(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
                 file_obj.setContentFlag()
+                print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag now: {int(file_obj.contentFlag)}")
 
             # Check if conversion is needed
             current_content_flag = int(file_obj.contentFlag)
+            print(f"[DEBUG makeHklinGemmi] current_content_flag={current_content_flag}, target_content_flag={target_content_flag}")
 
             if target_content_flag is not None and current_content_flag != target_content_flag:
                 # CONVERSION NEEDED!
@@ -2169,19 +2177,26 @@ class CPluginScript(CData):
                 logger.debug(f"[DEBUG makeHklinGemmi] Using temp file object '{temp_name}' with contentFlag={target_content_flag}")
 
             # Get filesystem path
+            print(f"[DEBUG makeHklinGemmi] Getting path for '{name}'...")
             path = file_obj.getFullPath()
+            print(f"[DEBUG makeHklinGemmi] Got path: {path}")
             logger.debug(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
 
+            print(f"[DEBUG makeHklinGemmi] Getting columns for '{name}'...")
             # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
             # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
+            print(f"[DEBUG makeHklinGemmi] Converting contentFlag to int...")
             content_flag = int(file_obj.contentFlag)
+            print(f"[DEBUG makeHklinGemmi] content_flag={content_flag}")
+            print(f"[DEBUG makeHklinGemmi] Checking for CONTENT_SIGNATURE_LIST...")
             if not hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
                 raise ValueError(
                     f"File object '{name}' (class {file_obj.__class__.__name__}) "
                     f"has no CONTENT_SIGNATURE_LIST. Is it a CMiniMtzDataFile?"
                 )
+            print(f"[DEBUG makeHklinGemmi] CONTENT_SIGNATURE_LIST exists, length={len(file_obj.CONTENT_SIGNATURE_LIST)}")
 
             if content_flag < 1 or content_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
                 raise ValueError(
@@ -2189,7 +2204,9 @@ class CPluginScript(CData):
                     f"Valid range: 1-{len(file_obj.CONTENT_SIGNATURE_LIST)}"
                 )
 
+            print(f"[DEBUG makeHklinGemmi] Getting columns from CONTENT_SIGNATURE_LIST[{content_flag - 1}]...")
             columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
+            print(f"[DEBUG makeHklinGemmi] Got columns: {columns}")
 
             # Build column_mapping (input_label -> output_label)
             # By default, prepend display_name to column (e.g., HKLIN1_F)
