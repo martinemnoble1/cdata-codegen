@@ -351,17 +351,6 @@ class CInt(CData):
 
         return report
 
-    def dataOrder(self) -> list:
-        """Return empty list as fundamental types have no child data items.
-
-        This method provides compatibility with the legacy CCP4i2 API where
-        dataOrder() was expected to exist on all CData objects.
-
-        Returns:
-            Empty list since fundamental types don't contain child data
-        """
-        return []
-
 
 @cdata_class(
     error_codes={
@@ -724,17 +713,6 @@ class CFloat(CData):
 
         return report
 
-    def dataOrder(self) -> list:
-        """Return empty list as fundamental types have no child data items.
-
-        This method provides compatibility with the legacy CCP4i2 API where
-        dataOrder() was expected to exist on all CData objects.
-
-        Returns:
-            Empty list since fundamental types don't contain child data
-        """
-        return []
-
 
 @cdata_class(
     error_codes={
@@ -906,16 +884,74 @@ class CString(CData):
 
         return report
 
-    def dataOrder(self) -> list:
-        """Return empty list as fundamental types have no child data items.
+    # Class variable for whitespace pattern (cached)
+    RE_PATTERN_WHITESPACE = None
 
-        This method provides compatibility with the legacy CCP4i2 API where
-        dataOrder() was expected to exist on all CData objects.
+    def reWhiteSpacePattern(self):
+        """
+        Get compiled regex pattern for whitespace characters.
+
+        Legacy API compatibility method for CRangeSelection and other string validators.
+        Uses cached class variable to avoid recompiling the pattern.
 
         Returns:
-            Empty list since fundamental types don't contain child data
+            re.Pattern: Compiled regex pattern matching all whitespace characters
         """
-        return []
+        if CString.RE_PATTERN_WHITESPACE is None:
+            import string
+            import re
+            pat = ''
+            for item in string.whitespace:
+                pat = pat + repr(item)[1:-1] + '|'
+            CString.RE_PATTERN_WHITESPACE = re.compile(pat[0:-1])
+        return CString.RE_PATTERN_WHITESPACE
+
+    def removeWhiteSpace(self, arg):
+        """
+        Remove all whitespace characters from a string.
+
+        Legacy API compatibility method for CRangeSelection and other validators.
+
+        Args:
+            arg: String to remove whitespace from
+
+        Returns:
+            str: String with all whitespace removed
+        """
+        p = self.reWhiteSpacePattern()
+        arg = p.sub('', arg)
+        return arg
+
+    def split(self, sep=' ', maxsplit=-1):
+        """
+        Split string into list of substrings.
+
+        Legacy API compatibility method that wraps Python's str.split().
+        Used by CRangeSelection and other string-based classes.
+
+        Args:
+            sep: Separator to split on (default: space)
+            maxsplit: Maximum number of splits (default: -1 = no limit)
+
+        Returns:
+            list: List of substrings
+        """
+        return self.value.split(sep, maxsplit)
+
+    def splitlines(self, keepends=False):
+        """
+        Split string into list of lines.
+
+        Legacy API compatibility method that wraps Python's str.splitlines().
+
+        Args:
+            keepends: If True, line breaks are included in results (default: False)
+
+        Returns:
+            list: List of lines
+        """
+        return self.value.splitlines(keepends)
+
 
 @cdata_class(
     error_codes={
@@ -1053,17 +1089,6 @@ class CBoolean(CData):
         report = CErrorReport()
         return report
 
-    def dataOrder(self) -> list:
-        """Return empty list as fundamental types have no child data items.
-
-        This method provides compatibility with the legacy CCP4i2 API where
-        dataOrder() was expected to exist on all CData objects.
-
-        Returns:
-            Empty list since fundamental types don't contain child data
-        """
-        return []
-
 
 @cdata_class(
     error_codes={
@@ -1174,6 +1199,44 @@ class CList(CData):
         """Remove all items from the list."""
         self._items.clear()
         self._value_states["_items"] = ValueState.EXPLICITLY_SET
+
+    def set(self, value=None, validate=False):
+        """
+        Replace list contents with items from value.
+
+        Legacy API compatibility method for CList. Accepts a list or CList
+        and replaces all current items with the new items.
+
+        Args:
+            value: List, CList, or single item to set. If None or empty list, clears the list.
+            validate: If True, validate items before setting (default: False)
+
+        Returns:
+            self (for method chaining)
+        """
+        # Handle None or empty default
+        if value is None:
+            value = []
+
+        # Convert single item to list
+        if not isinstance(value, (list, CList)):
+            value = [value]
+
+        # Validate if requested
+        if validate:
+            from .error_reporting import SEVERITY_WARNING
+            v = self.validity(value)
+            if v.maxSeverity() > SEVERITY_WARNING:
+                raise v
+
+        # Clear current items
+        self._items.clear()
+
+        # Add new items using append to ensure proper parent/name setup
+        for item in value:
+            self.append(item)
+
+        return self
 
     def __len__(self) -> int:
         return len(self._items)

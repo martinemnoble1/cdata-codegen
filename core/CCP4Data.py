@@ -178,14 +178,99 @@ class CRange(CRangeStub):
 
 class CRangeSelection(CRangeSelectionStub):
     """
-    A string
-    
-    Extends CRangeSelectionStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
+    Range selection string (e.g., "1-10,15,20-25").
+
+    Extends CRangeSelectionStub with validation for range selection syntax.
+    Validates format like "1-10,15,20-25" where ranges are specified as
+    comma-separated numbers or hyphen-separated ranges.
     """
 
-    # Add your methods here
-    pass
+    ERROR_CODES = {
+        201: {'description': 'Range selection contains invalid character'},
+        202: {'description': 'Range selection contains bad syntax'}
+    }
+
+    def validity(self, arg):
+        """
+        Validate range selection string syntax.
+
+        Legacy API compatibility method for validating range selection format.
+        Checks for:
+        - Only digits, commas, and hyphens
+        - Valid range syntax (start-end where start < end)
+        - No empty ranges
+
+        Args:
+            arg: String to validate (e.g., "1-10,15,20-25")
+
+        Returns:
+            CErrorReport: Error report with validation issues
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from core.base_object.base_classes import CData
+
+        err = CErrorReport()
+
+        # Check for undefined value
+        if arg is None:
+            if not self.get_qualifier('allowUndefined'):
+                err.append(
+                    "CData", 2,
+                    details="Value is not set",
+                    name=self.object_path()
+                )
+            return err
+
+        # Remove whitespace
+        arg = self.removeWhiteSpace(arg)
+
+        # Check for invalid characters (only allow digits, comma, hyphen)
+        import re
+        s = re.search(r'[^0-9,\-]', arg)
+        if s is not None:
+            err.append(
+                "CRangeSelection", 201,
+                details=self.ERROR_CODES[201]['description'],
+                name=self.object_path()
+            )
+        else:
+            # Check each range component
+            rList = arg.split(',')
+            for r in rList:
+                if len(r) < 1:
+                    # Empty range (e.g., "1,,2")
+                    err.append(
+                        "CRangeSelection", 202,
+                        details=self.ERROR_CODES[202]['description'],
+                        name=self.object_path()
+                    )
+                elif r.count('-') > 1:
+                    # Too many hyphens (e.g., "1-2-3")
+                    err.append(
+                        "CRangeSelection", 202,
+                        details=self.ERROR_CODES[202]['description'],
+                        name=self.object_path()
+                    )
+                elif r.count('-') == 1:
+                    # Range format "start-end"
+                    rr = r.split('-')
+                    try:
+                        if int(rr[0]) > int(rr[1]):
+                            # Start is greater than end (e.g., "10-5")
+                            err.append(
+                                "CRangeSelection", 202,
+                                details=self.ERROR_CODES[202]['description'],
+                                name=self.object_path()
+                            )
+                    except:
+                        # Invalid integers
+                        err.append(
+                            "CRangeSelection", 202,
+                            details=self.ERROR_CODES[202]['description'],
+                            name=self.object_path()
+                        )
+
+        return err
 
 
 class CUUID(CUUIDStub):

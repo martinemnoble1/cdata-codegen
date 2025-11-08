@@ -22,8 +22,7 @@ def displayFile(fileroot, parent, filenames, text, projectid=None, jobNumber=Non
 
   print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
   print(fileroot, parent, filenames, text, projectid, jobNumber)
-  print("%%%%%%%")
-  
+
   if fileroot == None:
       fileroot = ""
   

@@ -25,9 +25,6 @@ from core.CCP4PluginScript import CPluginScript
 from core import CCP4ErrorHandling
 from core import CCP4Utils
 import os,sys,shutil,re
-import traceback
-from wrappers.modelASUCheck.script.modelASUCheck import sequenceAlignment
-
 
 class prosmart_refmac(CPluginScript):
 
@@ -70,11 +67,7 @@ class prosmart_refmac(CPluginScript):
            self.executeProsmartNucleicAcid()
            self.executePlatonyzer()
            self.executeFirstRefmac()
-        except Exception as e:
-           # Log the exception for debugging
-           import logging
-           logger = logging.getLogger(__name__)
-           logger.error(f"prosmart_refmac.startProcess() failed: {type(e).__name__}: {e}", exc_info=True)
+        except:
            self.reportStatus(CPluginScript.FAILED)
            return CPluginScript.FAILED
         return CPluginScript.SUCCEEDED
@@ -218,13 +211,6 @@ class prosmart_refmac(CPluginScript):
         result = self.makePluginObject('refmac')
         #input data for this refmac instance is the same as the input data for the program
         result.container.inputData.copyData(self.container.inputData)
-
-        # WORKAROUND: Set _temp_plugin_ref on all copied files so they can find the database handler
-        # This is needed because the parent hierarchy walk doesn't work correctly after copyData
-        from core.base_object.cdata_file import CDataFile
-        for child in result.container.inputData.children():
-            if isinstance(child, CDataFile):
-                child._temp_plugin_ref = result
         #result.container.inputData = self.container.inputData
 
         #Copy over most of the control parameters
@@ -311,17 +297,10 @@ class prosmart_refmac(CPluginScript):
             return
         print("AAA11")
 
-        try:
-            self.handleXmlChanged(self.firstRefmac.makeFileName(format='PROGRAMXML'))
-            print("AAA10")
-        except Exception as e:
-            print(f"ERROR in handleXmlChanged: {e}")
-            import traceback
-            traceback.print_exc()
-            # Don't fail the job just because of XML handling
-            print("AAA10 - continuing after XML error")
+        self.handleXmlChanged(self.firstRefmac.makeFileName(format='PROGRAMXML'))
+
+        print("AAA10")
         import os
-        print(f"AAA10.5 finishStatus={statusDict['finishStatus']}, FAILED={CPluginScript.FAILED}, SUCCEEDED={CPluginScript.SUCCEEDED}")
         if statusDict['finishStatus'] == CPluginScript.FAILED:
             #This gets done in the firstRefmac.reportStatus() - Liz
             self.fileSystemWatcher = None
@@ -329,19 +308,12 @@ class prosmart_refmac(CPluginScript):
             return
         else:
             print("AAA12")
-            try:
-                self.addCycleXML(self.firstRefmac)
-                aFile=open( self.pipelinexmlfile,'w')
-                CCP4Utils.writeXML(aFile, etree.tostring(self.xmlroot,pretty_print=True) )
-                aFile.close()
-            except Exception as e:
-                print(f"ERROR in addCycleXML/writeXML: {e}")
-                import traceback
-                traceback.print_exc()
+            self.addCycleXML(self.firstRefmac)
+            aFile=open( self.pipelinexmlfile,'w')
+            CCP4Utils.writeXML(aFile, etree.tostring(self.xmlroot,pretty_print=True) )
+            aFile.close()
             print("AAA13")
-            # Use getattr with default to handle missing attributes
-            optimise_weight = getattr(self.container.controlParameters, 'OPTIMISE_WEIGHT', None)
-            if optimise_weight and optimise_weight.value if hasattr(optimise_weight, 'value') else optimise_weight:
+            if self.container.controlParameters.OPTIMISE_WEIGHT:
                 print("AAA14")
                 self.fileSystemWatcher = None
                 weightUsed = float(self.xmlroot.xpath('//weight')[-1].text)
@@ -350,9 +322,7 @@ class prosmart_refmac(CPluginScript):
                print("AAA15")
                best_r_free = self.firstRefmac.container.outputData.PERFORMANCEINDICATOR.RFactor
                print("AAA15.1")
-               add_waters = getattr(self.container.controlParameters, 'ADD_WATERS', None)
-               refpro_limit = getattr(self.container.controlParameters, 'REFPRO_RSR_RWORK_LIMIT', None)
-               if add_waters and refpro_limit and add_waters.value and best_r_free < refpro_limit.value:
+               if self.container.controlParameters.ADD_WATERS and best_r_free < self.container.controlParameters.REFPRO_RSR_RWORK_LIMIT :
                    print("AAA16")
                    self.currentCoordinates = self.firstRefmac.container.outputData.CIFFILE
                    self.cootPlugin = self.makeCootPlugin()
@@ -503,49 +473,18 @@ class prosmart_refmac(CPluginScript):
         from core import CCP4ProjectsManager
         import shutil
         print('into prosmart_refmac.finishUp')
-
-        # WORKAROUND: Set _temp_plugin_ref on all output files so they can find the database handler and workDirectory
-        from core.base_object.cdata_file import CDataFile
-        for child in self.container.outputData.children():
-            if isinstance(child, CDataFile):
-                child._temp_plugin_ref = self
-
-        # Use children() fallback if dataOrder() is empty
-        attrs = self.container.outputData.dataOrder()
-        if not attrs:
-            from core.base_object.base_classes import CData
-            attrs = [child.name for child in self.container.outputData.children()
-                     if isinstance(child, CData)]
-            print(f'prosmart_refmac.finishUp using children() fallback, found {len(attrs)} attrs')
-
-        for attr in attrs:
+        for attr in self.container.outputData.dataOrder():
             print('prosmart_refmac.finishUp attr',attr)
-            wrappersAttr = getattr(refmacJob.container.outputData, attr, None)
-            pipelinesAttr = getattr(self.container.outputData, attr, None)
-
-            if not wrappersAttr or not pipelinesAttr:
-                print(f'  Skipping {attr}: wrappersAttr={wrappersAttr}, pipelinesAttr={pipelinesAttr}')
-                continue
-
+            wrappersAttr = getattr(refmacJob.container.outputData, attr)
+            pipelinesAttr = getattr(self.container.outputData, attr)
             if attr in [ "PERFORMANCEINDICATOR"]:
                 setattr(self.container.outputData, attr, wrappersAttr)
             else:
-                source_path = str(wrappersAttr.fullPath) if hasattr(wrappersAttr, 'fullPath') else None
-                dest_path = str(pipelinesAttr.fullPath) if hasattr(pipelinesAttr, 'fullPath') else None
-
-                print(f'  Source: {source_path}')
-                print(f'  Dest: {dest_path}')
-                print(f'  Source exists: {os.path.exists(source_path) if source_path else False}')
-
-                if source_path and dest_path and os.path.exists(source_path):
+                if os.path.exists(str(wrappersAttr.fullPath)):
                   try:
-                    shutil.copyfile(source_path, dest_path)
-                    print(f'  ✓ Copied {attr}')
-                  except Exception as e:
-                    print(f'  ✗ Error copying {attr}: {e}')
-                    self.appendErrorReport(101,source_path+' to '+dest_path)
-                else:
-                    print(f'  Skipping {attr}: source does not exist or paths invalid')
+                    shutil.copyfile( str(wrappersAttr.fullPath), str(pipelinesAttr.fullPath) )
+                  except:
+                    self.appendErrorReport(101,str(wrappersAttr.fullPath)+' to '+str(pipelinesAttr.fullPath))
                   #self.container.outputData.copyData(refmacJob.container.outputData,[attr])
                 if attr == "XMLOUT":
                     pass
@@ -740,10 +679,10 @@ class prosmart_refmac(CPluginScript):
                 validateXMLPath = self.validate.makeFileName('PROGRAMXML')
                 validateXML = CCP4Utils.openFileToEtree(validateXMLPath)
                 if len(validateXML.xpath("//Validate_geometry_CCP4i2/Model_info"))>0:
-                   xml_validation.append(validateXML.xpath("//Validate_geometry_CCP4i2/Model_info")[0])
+                   xml_validation.append(validateXML.xpath("//Validate_geometry_CCP4i2/Model_info")[0]) 
                 if self.validate.container.controlParameters.DO_IRIS:
                    if len(validateXML.xpath("//Validate_geometry_CCP4i2/Iris"))>0:
-                      xml_validation.append(validateXML.xpath("//Validate_geometry_CCP4i2/Iris")[0])
+                      xml_validation.append(validateXML.xpath("//Validate_geometry_CCP4i2/Iris")[0]) 
                 if self.validate.container.controlParameters.DO_BFACT:
                    if len(validateXML.xpath("//Validate_geometry_CCP4i2/B_factors"))>0:
                       xml_validation.append(validateXML.xpath("//Validate_geometry_CCP4i2/B_factors")[0])
@@ -796,6 +735,7 @@ class prosmart_refmac(CPluginScript):
 
                        self.saveXml()
                    except:
+                       import traceback
                        print("Some problem with verdict...."); sys.stdout.flush()
                        exc_type, exc_value, exc_tb = sys.exc_info()[:3]
                        sys.stderr.write(str(exc_type) + '\n')
@@ -806,6 +746,7 @@ class prosmart_refmac(CPluginScript):
              except Exception as err:
                 xml_validation_status.text = "FAILURE"
                 self.saveXml()
+                import traceback
                 traceback.print_exc()
                 print("...Failed validation run after refinement", err)
 
@@ -814,16 +755,6 @@ class prosmart_refmac(CPluginScript):
             logfiles.append(self.firstRefmac.makeFileName('LOG'))
         if hasattr(self,"refmacPostCootPlugin"):
             logfiles.append(self.refmacPostCootPlugin.makeFileName('LOG'))
-
-        asuin = getattr(self.container.inputData, 'ASUIN', None)
-        if asuin and asuin.isSet():
-            self.saveXml()
-            try:
-                xyzinPath = str(self.container.outputData.XYZOUT)
-                self.xmlroot.append(sequenceAlignment(xyzinPath, asuin))
-            except Exception as err:
-                traceback.print_exc()
-                print("...importing sequences for alignment test failed", err)
 
         self.createWarningsXML(logfiles)
         self.saveXml()

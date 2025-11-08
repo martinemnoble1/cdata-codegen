@@ -514,13 +514,23 @@ class CDataFile(CData):
             else:
                 basename_value = self.baseName
 
-        # If baseName is an absolute path, return it directly
-        # This takes precedence over everything (user-specified absolute paths)
+        # If baseName is an absolute path, check if it exists
+        # If it doesn't exist, it might be a stale temp file path from gemmi_split_mtz
+        # In that case, fall through to check relPath + basename construction
         if basename_value:
             basename_str = str(basename_value)
             if basename_str and Path(basename_str).is_absolute():
-                logger.debug("Returning absolute path from baseName: %s", basename_str)
-                return basename_str
+                abs_path = Path(basename_str)
+                if abs_path.exists():
+                    logger.debug("Returning absolute path from baseName: %s", basename_str)
+                    return basename_str
+                else:
+                    # Absolute path doesn't exist - might be stale temp file
+                    # Check if file exists in job directory using just the filename
+                    logger.debug(f"Absolute path {basename_str} doesn't exist, will check relPath")
+                    # Extract just the filename and continue to relPath logic below
+                    basename_value = abs_path.name
+                    basename_str = basename_value
 
         # Database-aware mode: Check if dbFileId is set
         if hasattr(self, 'dbFileId') and self.dbFileId is not None:

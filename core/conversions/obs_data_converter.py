@@ -157,13 +157,14 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output paths
+        # NOTE: Output files are written to ctruncate_work directory, not parent work_directory
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
+            hklout_path = str(Path(ctruncate_work) / hklout_name)
             obsout_name = f"{input_path.stem}_as_FPAIR{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
+            obsout_path = str(Path(ctruncate_work) / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
@@ -300,13 +301,14 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output file paths
+        # NOTE: Output files are written to ctruncate_work directory, not parent work_directory
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
+            hklout_path = str(Path(ctruncate_work) / hklout_name)
             obsout_name = f"{input_path.stem}_as_IMEAN{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
+            obsout_path = str(Path(ctruncate_work) / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
@@ -455,13 +457,14 @@ class ObsDataConverter:
                         group._column_mapping = {}
 
         # Set output file paths
+        # NOTE: Output files are written to ctruncate_work directory, not parent work_directory
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
+            hklout_path = str(Path(ctruncate_work) / hklout_name)
             obsout_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
+            obsout_path = str(Path(ctruncate_work) / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)

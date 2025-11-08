@@ -52,7 +52,7 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
                 
         self.createLine( ['widget', '-title','Select unmerged data files',
                           'UNMERGEDFILES'])
-        self.container.inputData.UNMERGEDFILES.dataChanged.connect(self.getUnknownCell)
+        self.container.inputData.UNMERGEDFILES.dataChanged.connect( self.getUnknownCell)
         self.openSubFrame(toggle=[ 'SHOW_MMCIF_BLOCKS', 'open', [ True ] ] )
         self.setMMCIFframe()
         self.setCIFblocklist()
@@ -234,9 +234,7 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
                           'P22<sub>1</sub>2<sub>1</sub>, and also not to use I2 instead of C2'])
         self.createLine( ['widget', 'SET_SETTING'] )
 
-        #self.createLine(['label',' '])
-
-        self.latticeCentreOptions()  # in Pointless
+        self.createLine(['label',' '])
 
         # Aimless things
         self.createLine(['subtitle',
@@ -249,7 +247,7 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
         self.container.controlParameters.REFINE_REFERENCE.dataChanged.connect\
            (self.handleSelectAimlessRefineReference)
         self.rejectOutliers()
-        #self.createLine(['label',' '])
+        self.createLine(['label',' '])
 
         self.createLine(['subtitle',
                           'Options for both Pointless and Aimless:   -------',
@@ -269,7 +267,7 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
         self.createLine(['label',' '])
         self.createLine(['label',' '])
 
-        ####
+####
         self.createLine( ['subtitle',
                           'Expert options, not for normal use:   -------',
                           '... use only if you know what you are doing',
@@ -278,6 +276,7 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
 
         # . . . . . {
         self.openSubFrame(frame=True, toggle=['EXPERT_OPTIONS','open',[True]])
+        self.latticeCentreOptions()
 
         self.createLine(['subtitle',
                          'Option to allow non-chiral space groups, not for biological macromolecules'])
@@ -302,61 +301,20 @@ class CTaskaimless_pipe(CCP4TaskWidget.CTaskWidget):
     def latticeCentreOptions(self):
         #  LATTICE option
         self.createLine(['subtitle',
-                         'Option to remove centred lattice absences in Pointless'])
-        self.createLine(['advice',
-                         'If the input data belong to a primitive lattice (P), '+\
-                         'the data are checked for additional centred lattice symmetry<br>'+\
-                         'By default, extra centred lattice reflections will be removed '+\
-                         'if the estimated "probability" of a centred lattice<br> is greater '+\
-                         'than the THRESHOLD set here or by default. KEEP and REMOVE options are unconditional'\
-                         ])
-        self.createLine(['widget','LATTICE_CENTERING_THRESHOLD',
-                         'label','Probability threshold for removing centred lattice reflections'],
-                        toggleFunction=[self.displayThreshold,
-                                        ['KEEP_LATTICE_CENTERING', 'REMOVE_LATTICE_CENTERING']])
-
-        self.createLine(['widget','KEEP_LATTICE_CENTERING',
-                         'label','Always keep centred lattice reflections (KEEP)'])
+                         'Option to remove centred lattice absences'])
         self.createLine(['widget','REMOVE_LATTICE_CENTERING',
-                         'label','Unconditionally remove centred lattice absences (REMOVE)'])
+                         'label','Remove centred lattice absences'])
         self.createLine(['label','Desired lattice centering type',
-                         'widget','LATTICE_CENTERING',
-                        'advice', 'lattice type P does nothing and is ignored'],
+                         'widget','LATTICE_CENTERING'],
                         toggle=['REMOVE_LATTICE_CENTERING','open'])
         self.createLine(['advice',
           'This option should ONLY be used if you are sure that '+\
                          'the wrong cell was used in integration:'+\
                          ' probably better to redo the integration<br/>'+\
          'Note that not all centred lattices are consisent with all Bravais lattices,'+\
-                         ' check the result carefully<br/>'],
+                         ' check the result carefully<br/>'+\
+                         'Lattice type "P" is ignored'],
                         toggle=['REMOVE_LATTICE_CENTERING','open'])
-
-        self.container.controlParameters.REMOVE_LATTICE_CENTERING.dataChanged.connect(self.handleLatticeRemove)
-        self.container.controlParameters.KEEP_LATTICE_CENTERING.dataChanged.connect(self.handleLatticeKeep)        
-
-    # -------------------------------------------------------------
-    @QtCore.Slot(bool)
-    def handleLatticeKeep(self):
-        # Toggle lattice centring options, KEEP option changed
-        if self.container.controlParameters.KEEP_LATTICE_CENTERING:
-            # KEEP on, make sure REMOVE is off
-            self.container.controlParameters.REMOVE_LATTICE_CENTERING.set(False)
-
-    # -------------------------------------------------------------
-    @QtCore.Slot(bool)
-    def handleLatticeRemove(self):
-        # Toggle lattice centring options, REMOVE option changed
-        if self.container.controlParameters.REMOVE_LATTICE_CENTERING:
-            # REMOVE on, make sure Keep is off
-            self.container.controlParameters.KEEP_LATTICE_CENTERING.set(False)
-
-    # -------------------------------------------------------------
-    def displayThreshold(self):
-        # Return True if both LATTICE KEEP and REMOVE options are both False
-        if self.container.controlParameters.REMOVE_LATTICE_CENTERING or \
-            self.container.controlParameters.KEEP_LATTICE_CENTERING:
-            return False
-        return True
 
     # -------------------------------------------------------------
     def getMaximumResolution( self ) :

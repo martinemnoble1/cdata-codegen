@@ -18,7 +18,6 @@ from __future__ import print_function
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
     """
-import sys
 from PySide2 import QtCore
 from core.CCP4PluginScript import CPluginScript
 from core import CCP4ErrorHandling
@@ -54,24 +53,20 @@ class refmac_i2(CPluginScript):
 
     @QtCore.Slot()
     def handleReadyReadStandardOutput(self):
-        if not hasattr(self,'logFileHandle'):
-            logFilePath = pathlib.Path(self.makeFileName('LOG'))
-            self.logFileHandle = logFilePath.open('w')
-        if not hasattr(self,'errFileHandle'):
-            logFilePath = pathlib.Path(self.makeFileName('LOG'))
-            errFilePath = logFilePath.with_stem(logFilePath.stem + "_err")
-            self.errFileHandle = errFilePath.open('w')
-
+        if not hasattr(self,'logFileHandle'): self.logFileHandle = open(self.makeFileName('LOG'),'w')
         if not hasattr(self,'logFileBuffer'): self.logFileBuffer = ''
         pid = self.getProcessId()
         qprocess = CCP4Modules.PROCESSMANAGER().getJobData(pid,attribute='qprocess')
         availableStdout = qprocess.readAllStandardOutput()
-        self.logFileHandle.write(availableStdout.data().decode("utf-8"))
+        if sys.version_info > (3,0):
+            self.logFileHandle.write(availableStdout.data().decode("utf-8"))
+        else:
+            self.logFileHandle.write(availableStdout)
         self.logFileHandle.flush()
-        availableStderr = qprocess.readAllStandardError()
-        self.errFileHandle.write(availableStderr.data().decode("utf-8"))
-        self.errFileHandle.flush()
-        self.logScraper.processLogChunk(availableStdout.data().decode("utf-8"))
+        if sys.version_info > (3,0):
+            self.logScraper.processLogChunk(availableStdout.data().decode("utf-8"))
+        else:
+            self.logScraper.processLogChunk(str(availableStdout))
     
     def flushXML(self):
         newXml = etree.tostring(self.xmlroot,pretty_print=True)
@@ -157,22 +152,19 @@ class refmac_i2(CPluginScript):
         try:
             exitStatus = PROCESSMANAGER().getJobData(pid=self.getProcessId(), attribute='exitStatus')
         except Exception as e:
-            print(f"Warning: Unable to recover exitStatus: {e}")
-            # Don't fail - the process completed successfully, we just can't query the status
-            # self.appendErrorReport(201,'Exit status: Unable to recover exitStatus')
-            # return CPluginScript.FAILED
+            print(e)
+            self.appendErrorReport(201,'Exit status: Unable to recover exitStatus')
+            return CPluginScript.FAILED
         if exitStatus != 0:
             self.appendErrorReport(201,'Exit status: '+str(exitStatus))
             return CPluginScript.FAILED
-
+        
         #Now the exit codes...I think that non zero means Refmac identified an issue
         try:
             exitCode = PROCESSMANAGER().getJobData(pid=self.getProcessId(), attribute='exitCode')
-        except Exception as e:
-            print(f"Warning: Unable to recover exitCode: {e}")
-            # Don't fail - the process completed successfully, we just can't query the exit code
-            # self.appendErrorReport(201,'Exit code: Unable to recover exitCode')
-            # return CPluginScript.FAILED
+        except:
+            self.appendErrorReport(201,'Exit code: Unable to recover exitCode')
+            return CPluginScript.FAILED
         if exitCode != 0:
             import os
             try:
@@ -198,7 +190,7 @@ class refmac_i2(CPluginScript):
         from core import CCP4XtalData
         from core import CCP4File
         import os
-
+        
         # Need to set the expected content flag  for phases data
 
         outputCifPath = os.path.normpath(os.path.join(self.getWorkDirectory(),'XYZOUT.mmcif'))
@@ -245,9 +237,7 @@ class refmac_i2(CPluginScript):
             outputFiles += ['DIFANOMFPHIOUT']
             outputColumns += ['DELFAN,PHDELAN']
 
-        print(f"[DEBUG] About to call splitHklout with outputFiles={outputFiles}, outputColumns={outputColumns}")
         error = self.splitHklout(outputFiles,outputColumns)
-        print(f"[DEBUG] splitHklout returned error with maxSeverity={error.maxSeverity() if error else 'None'}")
         if error.maxSeverity()>CCP4ErrorHandling.SEVERITY_WARNING:
             return CPluginScript.FAILED
 

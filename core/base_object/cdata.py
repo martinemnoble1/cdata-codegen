@@ -563,6 +563,23 @@ class CData(HierarchicalObject):
 
         return report
 
+    def dataOrder(self) -> list:
+        """Return the order of child data items.
+
+        This method provides compatibility with the legacy CCP4i2 API where
+        dataOrder() was expected to exist on all CData objects.
+
+        For fundamental types (CInt, CFloat, CString, CBoolean), this returns
+        an empty list since they have no child data items.
+
+        Container types (CContainer, CList) override this method to return
+        their child item names or indices.
+
+        Returns:
+            Empty list for base CData and fundamental types
+        """
+        return []
+
     def getEtree(self, name: str = None, excludeUnset: bool = False):
         """Serialize this object to an XML ElementTree element.
 
