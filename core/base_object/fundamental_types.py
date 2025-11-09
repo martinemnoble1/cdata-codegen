@@ -46,6 +46,13 @@ class CInt(CData):
         """Make CInt hashable by object identity for use in sets and as dict keys."""
         return hash(id(self))
 
+    def __delattr__(self, name):
+        """Prevent deletion of _value attribute during garbage collection."""
+        if name == '_value':
+            # Don't allow deletion of _value to prevent AttributeError in __str__
+            return
+        super().__delattr__(name)
+
     def __init__(self, value: int = None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)
 
@@ -388,6 +395,13 @@ class CFloat(CData):
     def __hash__(self):
         """Make CFloat hashable by object identity for use in sets and as dict keys."""
         return hash(id(self))
+
+    def __delattr__(self, name):
+        """Prevent deletion of _value attribute during garbage collection."""
+        if name == '_value':
+            # Don't allow deletion of _value to prevent AttributeError in __str__
+            return
+        super().__delattr__(name)
 
     def __init__(self, value: float = None, parent=None, name=None, **kwargs):
         super().__init__(parent=parent, name=name, **kwargs)
@@ -760,6 +774,13 @@ class CString(CData):
         """Make CString hashable by object identity for use in sets and as dict keys."""
         return hash(id(self))
 
+    def __delattr__(self, name):
+        """Prevent deletion of _value attribute during garbage collection."""
+        if name == '_value':
+            # Don't allow deletion of _value to prevent AttributeError in __str__
+            return
+        super().__delattr__(name)
+
     def __str__(self):
         return str(self.value)
 
@@ -1014,6 +1035,13 @@ class CBoolean(CData):
         """Make CBoolean hashable for use in sets and as dict keys."""
         return hash(id(self))
 
+    def __delattr__(self, name):
+        """Prevent deletion of _value attribute during garbage collection."""
+        if name == '_value':
+            # Don't allow deletion of _value to prevent AttributeError in __str__
+            return
+        super().__delattr__(name)
+
     def __str__(self):
         return str(self.value)
 
@@ -1257,6 +1285,13 @@ class CList(CData):
 
     def __contains__(self, item: Any) -> bool:
         return item in self._items
+
+    def __delattr__(self, name):
+        """Prevent deletion of _items attribute during garbage collection."""
+        if name == '_items':
+            # Don't allow deletion of _items to prevent AttributeError in __str__
+            return
+        super().__delattr__(name)
 
     def __str__(self) -> str:
         return f"CList({len(self._items)} items)"

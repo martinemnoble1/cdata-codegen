@@ -587,13 +587,15 @@ class HierarchicalObject(ABC):
             parent._remove_child(self)
             self._parent_ref = None
 
-        # Emit destroyed signal if it exists
-        destroyed_signal = getattr(self, 'destroyed', None)
-        if destroyed_signal is not None:
-            try:
-                destroyed_signal.emit()
-            except Exception:
-                pass
+        # NOTE: destroyed signal is not emitted because nothing in the codebase
+        # connects to it, and emitting signals during garbage collection can
+        # cause timing issues with attribute deletion
+        # destroyed_signal = getattr(self, 'destroyed', None)
+        # if destroyed_signal is not None:
+        #     try:
+        #         destroyed_signal.emit()
+        #     except Exception:
+        #         pass
 
         # Cleanup
         self._signal_manager.cleanup()

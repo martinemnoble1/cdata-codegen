@@ -284,7 +284,7 @@ class Signal(Generic[T]):
     def connect(
         self,
         slot: SlotCallable,
-        weak: bool = True,
+        weak: bool = False,
         once: bool = False,
         thread_safe: bool = False,
         priority: int = 0,
@@ -295,7 +295,8 @@ class Signal(Generic[T]):
 
         Args:
             slot: The callable to connect
-            weak: Use weak reference (default True)
+            weak: Use weak reference (default False - strong references prevent
+                  garbage collection of signal handlers in async pipelines)
             once: Disconnect after first emission
             thread_safe: Execute slot in thread pool
             priority: Higher priority slots are called first
