@@ -68,7 +68,8 @@ def i2run(args: list[str], project_name: str = None):
     if project_name is None:
         chars = ascii_letters + digits
         project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
-
+        project_name = project_name.lower()
+        
     # Check if we're running in test environment with CCP4I2_PROJECTS_DIR set
     projects_dir = environ.get("CCP4I2_PROJECTS_DIR")
     if projects_dir:
