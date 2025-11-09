@@ -166,6 +166,14 @@ class CErrorReport:
     # Legacy CCP4i2 Compatibility
     # ========================================================================
 
+    @property
+    def _reports(self):
+        """Legacy compatibility: Alias for _errors.
+
+        Old CCP4i2 code expects _reports instead of _errors.
+        """
+        return self._errors
+
     def get_broken_files(self) -> List[str]:
         """Get list of file names that have errors (legacy CCP4i2 API).
 
