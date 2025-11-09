@@ -19,3 +19,6 @@ rstdocs
 /input_params.xml
 /program.xml
 /*.params.xml
+
+# Environment configuration (use .env.example as template)
+.env

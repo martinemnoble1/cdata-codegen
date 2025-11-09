@@ -106,12 +106,24 @@ class Parser:
         """Parse primary expression (CID selector or grouped expression)."""
         token = self.current_token()
 
-        # Grouped expression with parentheses
+        # Grouped expression with parentheses OR residue name selector
         if token.type == TokenType.LPAREN:
-            self.advance()  # consume '('
-            expr = self.parse_or_expr()
-            self.expect(TokenType.RPAREN)
-            return expr
+            # Look ahead to distinguish (resName) from (expr)
+            # If it's (identifier) or (identifier,identifier,...) with no operators/slashes,
+            # treat it as a residue name selector
+            if self._is_residue_name_selector():
+                # It's a (resName) selector - parse as CID with just res_name
+                selector = CIDSelector()
+                self.advance()  # consume '('
+                selector.res_name = self._parse_value()
+                self.expect(TokenType.RPAREN)
+                return selector
+            else:
+                # It's a grouped expression like (A or B)
+                self.advance()  # consume '('
+                expr = self.parse_or_expr()
+                self.expect(TokenType.RPAREN)
+                return expr
 
         # Grouped expression with braces (CCP4i2 extension)
         if token.type == TokenType.LBRACE:
@@ -122,6 +134,47 @@ class Parser:
 
         # Otherwise, it must be a CID selector
         return self.parse_cid_selector()
+
+    def _is_residue_name_selector(self) -> bool:
+        """
+        Check if current position is (resName) selector vs (expression).
+
+        Returns True if pattern matches: ( identifier[,identifier]* )
+        with no operators (and/or/not) or slashes.
+        """
+        if self.current_token().type != TokenType.LPAREN:
+            return False
+
+        # Look ahead past the (
+        pos = self.position + 1
+        if pos >= len(self.tokens):
+            return False
+
+        # Must start with identifier or number
+        if self.tokens[pos].type not in (TokenType.IDENTIFIER, TokenType.NUMBER):
+            return False
+
+        # Scan until we find ) or something that indicates it's an expression
+        pos += 1
+        while pos < len(self.tokens):
+            token = self.tokens[pos]
+
+            if token.type == TokenType.RPAREN:
+                # Found closing paren - it's a residue name
+                return True
+            elif token.type in (TokenType.SLASH, TokenType.AND, TokenType.OR,
+                              TokenType.NOT, TokenType.LPAREN, TokenType.LBRACE):
+                # These indicate it's an expression, not a simple residue name
+                return False
+            elif token.type in (TokenType.IDENTIFIER, TokenType.NUMBER,
+                              TokenType.COMMA, TokenType.DASH, TokenType.WILDCARD):
+                # These are OK in a residue name list
+                pos += 1
+            else:
+                # Anything else ends the check
+                return False
+
+        return False
 
     def parse_cid_selector(self) -> CIDSelector:
         """

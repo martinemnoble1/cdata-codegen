@@ -348,23 +348,6 @@
     "ASYNCHRONOUS": true,
     "TIMEOUT_PERIOD": 9999999.9
   },
-  "coot1": {
-    "module": "wrappers.coot1.script.coot1",
-    "class": "coot1",
-    "COMTEMPLATE": null,
-    "TASKMODULE": "model_building",
-    "TASKTITLE": "Coot 1",
-    "TASKNAME": "coot1",
-    "TASKVERSION": 0.1,
-    "WHATNEXT": [
-      "prosmart_refmac",
-      "coot_rebuild",
-      "modelcraft"
-    ],
-    "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9,
-    "ERROR_CODES": {}
-  },
   "import_mosflm": {
     "module": "wrappers.import_mosflm.script.import_mosflm",
     "class": "import_mosflm",
@@ -2745,12 +2728,28 @@
       }
     }
   },
+  "shelx": {
+    "module": "pipelines.shelx.script.shelx_script",
+    "class": "shelx",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": "SHELX",
+    "TASKNAME": "shelx",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
   "servalcat_pipe": {
     "module": "pipelines.servalcat_pipe.script.servalcat_pipe",
     "class": "servalcat_pipe",
     "COMTEMPLATE": null,
     "TASKMODULE": "refinement",
-    "TASKTITLE": "Refinement against diffraction data with optional restraints (ProSMART, MetalCoord)",
+    "TASKTITLE": "Refinement against diffraction data or SPA map & optional restraints from ProSMART & MetalCoord",
     "TASKNAME": "servalcat_pipe",
     "TASKVERSION": 0.1,
     "WHATNEXT": [
@@ -2796,6 +2795,86 @@
       }
     }
   },
+  "crank2_refatompick": {
+    "module": "pipelines.crank2.wrappers.crank2_refatompick.script.crank2_refatompick",
+    "class": "crank2_refatompick",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_refatompick",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_handdet": {
+    "module": "pipelines.crank2.wrappers.crank2_handdet.script.crank2_handdet",
+    "class": "crank2_handdet",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_handdet",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_mbref": {
+    "module": "pipelines.crank2.wrappers.crank2_mbref.script.crank2_mbref",
+    "class": "crank2_mbref",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_mbref",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_phdmmb": {
+    "module": "pipelines.crank2.wrappers.crank2_phdmmb.script.crank2_phdmmb",
+    "class": "crank2_phdmmb",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_phdmmb",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_dmfull": {
+    "module": "pipelines.crank2.wrappers.crank2_dmfull.script.crank2_dmfull",
+    "class": "crank2_dmfull",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_dmfull",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
   "crank2_createfree": {
     "module": "pipelines.crank2.wrappers.crank2_createfree.script.crank2_createfree",
     "class": "crank2_createfree",
@@ -2805,6 +2884,102 @@
     "TASKNAME": "crank2_createfree",
     "TASKVERSION": 0.01,
     "ASYNCHRONOUS": false
+  },
+  "crank2_comb_phdmmb": {
+    "module": "pipelines.crank2.wrappers.crank2_comb_phdmmb.script.crank2_comb_phdmmb",
+    "class": "crank2_comb_phdmmb",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_comb_phdmmb",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_ref": {
+    "module": "pipelines.crank2.wrappers.crank2_ref.script.crank2_ref",
+    "class": "crank2_ref",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_ref",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_phas": {
+    "module": "pipelines.crank2.wrappers.crank2_phas.script.crank2_phas",
+    "class": "crank2_phas",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_phas",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_faest": {
+    "module": "pipelines.crank2.wrappers.crank2_faest.script.crank2_faest",
+    "class": "crank2_faest",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_faest",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2_substrdet": {
+    "module": "pipelines.crank2.wrappers.crank2_substrdet.script.crank2_substrdet",
+    "class": "crank2_substrdet",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "test",
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2_substrdet",
+    "TASKVERSION": 0.01,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
+  },
+  "crank2": {
+    "module": "pipelines.crank2.script.crank2_script",
+    "class": "crank2",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": "Crank2",
+    "TASKNAME": "crank2",
+    "TASKVERSION": 0.02,
+    "ASYNCHRONOUS": false,
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "0": {
+        "description": " "
+      }
+    }
   },
   "phaser_rnp_pipeline": {
     "module": "pipelines.phaser_rnp_pipeline.script.phaser_rnp_pipeline",

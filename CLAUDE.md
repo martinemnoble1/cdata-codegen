@@ -69,13 +69,55 @@ This allows the system to find plugins in `wrappers/`, `wrappers2/`, and `pipeli
 ## Development Commands
 
 ### Environment Setup
+
+**Flexible CCP4 Environment Configuration:**
+
+The project supports testing with multiple Python/CCP4 versions via a `.env` configuration file:
+
 ```bash
-# Activate virtual environment (Python 3.11+)
-source .venv/bin/activate
+# Check current environment
+./switch_env.sh status
+
+# Switch to Python 3.9 (CCP4-9, older stable)
+./switch_env.sh py39
+
+# Switch to Python 3.11 (CCP4-20251105, newer)
+./switch_env.sh py311
+```
+
+**Environment Files:**
+- `.env` - Active configuration (used by `run_test.sh`)
+- `.env.py39` - Python 3.9 configuration (CCP4-9 at `/Applications/ccp4-9` + `.venv.old-py39`)
+- `.env.py311` - Python 3.11 configuration (CCP4-20251105 at `../ccp4-20251105` + `.venv`)
+- `.env.example` - Template with both options documented
+
+**Initial Setup for Python 3.11:**
+```bash
+# Install dependencies
+pip install autopep8 pytest
+
+# Symlink mrbump module from CCP4 distribution
+# Required for MrBUMP pipeline tests
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/mrbump .venv/lib/python3.11/site-packages/mrbump
+```
+
+**Initial Setup for Python 3.9:**
+```bash
+# Create separate virtual environment
+/Applications/ccp4-9/bin/ccp4-python -m venv .venv.old-py39
+source .venv.old-py39/bin/activate
 
 # Install dependencies
 pip install autopep8 pytest
+
+# Symlink mrbump module from CCP4-9
+ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/mrbump .venv.old-py39/lib/python3.9/site-packages/mrbump
 ```
+
+**Why Multiple Environments?**
+- Compare test results between Python 3.9 and 3.11
+- Identify version-specific bugs vs. code regressions
+- Test against both older stable (CCP4-9) and newer (CCP4-20251105) CCP4 distributions
 
 ### Code Generation
 ```bash
