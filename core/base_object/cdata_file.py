@@ -514,24 +514,35 @@ class CDataFile(CData):
             else:
                 basename_value = self.baseName
 
-        # If baseName is an absolute path, use it directly
-        # Exception: stale temp file paths from gemmi_split_mtz should be stripped to just filename
+        # If baseName is an absolute path, check if it's stale or valid
         if basename_value:
             basename_str = str(basename_value)
             if basename_str and Path(basename_str).is_absolute():
                 abs_path = Path(basename_str)
-                # If path exists OR doesn't look like a temp file, use the absolute path as-is
-                # This allows us to save new files with absolute paths, while still handling
-                # stale temp file paths from gemmi_split_mtz (which start with /tmp or /var/tmp)
                 is_temp_file = str(abs_path).startswith(('/tmp/', '/var/tmp/', 'C:\\Temp\\', 'C:\\Windows\\Temp\\'))
-                print(f"[DEBUG getFullPath] baseName is absolute: {basename_str}, exists={abs_path.exists()}, is_temp_file={is_temp_file}")
-                if abs_path.exists() or not is_temp_file:
-                    print(f"[DEBUG getFullPath] Returning absolute path: {basename_str}")
+                has_relpath = hasattr(self, 'relPath') and self.relPath is not None and \
+                             (hasattr(self.relPath, 'value') and self.relPath.value) or self.relPath
+
+                print(f"[DEBUG getFullPath] baseName is absolute: {basename_str}, exists={abs_path.exists()}, is_temp_file={is_temp_file}, has_relpath={has_relpath}")
+
+                # If file exists at the absolute path, use it
+                if abs_path.exists():
+                    print(f"[DEBUG getFullPath] File exists at absolute path, returning: {basename_str}")
+                    return basename_str
+
+                # If we have relPath set, the absolute path in baseName is likely stale
+                # (from CWD-relative path expansion). Strip to just filename and use relPath logic.
+                if has_relpath:
+                    print(f"[DEBUG getFullPath] Have relPath, treating absolute baseName as stale, stripping to filename")
+                    basename_value = abs_path.name
+                    basename_str = basename_value
+                elif not is_temp_file:
+                    # No relPath, not a temp file, use the absolute path as-is
+                    print(f"[DEBUG getFullPath] No relPath, using absolute baseName as-is: {basename_str}")
                     return basename_str
                 else:
-                    # Absolute path looks like stale temp file - strip to just filename
-                    print(f"[DEBUG getFullPath] Looks like stale temp file, stripping to filename")
-                    # Extract just the filename and continue to relPath logic below
+                    # Temp file that doesn't exist - strip to filename
+                    print(f"[DEBUG getFullPath] Stale temp file, stripping to filename")
                     basename_value = abs_path.name
                     basename_str = basename_value
 

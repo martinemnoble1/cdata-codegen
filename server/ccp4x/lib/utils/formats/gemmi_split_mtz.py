@@ -55,14 +55,14 @@ def gemmi_split_mtz(
     if len(input_column_path.split("/")) not in [1, 3]:
         raise Exception("smartSplitMTZ Exception:", "Invalid input columnPath")
 
-    selected_columns = re.sub("[\[\] ]", "", input_column_path.split("/")[-1]).split(
+    selected_columns = re.sub(r"[\[\] ]", "", input_column_path.split("/")[-1]).split(
         ","
     )
     output_columns, type_signature = get_output_columns(
         selected_columns, provided_column_names, mtzin, input_column_path
     )
 
-    logger.error("Output columns are %s", output_columns)
+    logger.info("Output columns are %s", output_columns)
     final_dest = available_file_name_based_on(preferred_dest)
 
     mtzout = gemmi.Mtz()

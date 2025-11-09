@@ -127,7 +127,19 @@ class ObsDataConverter:
         # Configure container
         inp = wrapper.container.inputData
         obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-        inp.HKLIN.setFullPath(obs_file.getFullPath())
+
+        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
+        # This preserves database context for sub-jobs
+        if hasattr(obs_file, 'project') and obs_file.project.isSet():
+            inp.HKLIN.project.set(obs_file.project.value)
+        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
+            inp.HKLIN.relPath.set(obs_file.relPath.value)
+        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
+            inp.HKLIN.baseName.set(obs_file.baseName.value)
+        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
+            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
+        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
+            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
 
         # Configure output format
         par = wrapper.container.controlParameters
@@ -267,7 +279,19 @@ class ObsDataConverter:
         # Populate container manually
         inp = wrapper.container.inputData
         obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-        inp.HKLIN.setFullPath(obs_file.getFullPath())
+
+        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
+        # This preserves database context for sub-jobs
+        if hasattr(obs_file, 'project') and obs_file.project.isSet():
+            inp.HKLIN.project.set(obs_file.project.value)
+        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
+            inp.HKLIN.relPath.set(obs_file.relPath.value)
+        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
+            inp.HKLIN.baseName.set(obs_file.baseName.value)
+        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
+            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
+        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
+            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
 
         # Configure to output mini-MTZ with IMEAN format
         par = wrapper.container.controlParameters
@@ -408,7 +432,19 @@ class ObsDataConverter:
         # Populate container
         inp = wrapper.container.inputData
         obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-        inp.HKLIN.setFullPath(obs_file.getFullPath())
+
+        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
+        # This preserves database context for sub-jobs
+        if hasattr(obs_file, 'project') and obs_file.project.isSet():
+            inp.HKLIN.project.set(obs_file.project.value)
+        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
+            inp.HKLIN.relPath.set(obs_file.relPath.value)
+        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
+            inp.HKLIN.baseName.set(obs_file.baseName.value)
+        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
+            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
+        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
+            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
 
         # Configure to output mini-MTZ with FMEAN format
         par = wrapper.container.controlParameters
@@ -470,11 +506,14 @@ class ObsDataConverter:
                 imported_files_dir = input_path.parent
             else:
                 # work_directory is typically {project}/CCP4_JOBS/job_N
+                # Or for nested jobs: {project}/CCP4_JOBS/job_N/job_N/ctruncate
                 # We want {project}/CCP4_IMPORTED_FILES
                 work_path = Path(work_directory)
-                if work_path.name.startswith('job_'):
-                    # Remove job_N directory
+
+                # Walk up the directory tree to find CCP4_JOBS
+                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
                     work_path = work_path.parent
+
                 if work_path.name == 'CCP4_JOBS':
                     # Go up to project root
                     project_root = work_path.parent
