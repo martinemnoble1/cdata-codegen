@@ -137,6 +137,19 @@ def cdata_class(
         # Store as class attribute for easy access
         cls._metadata = metadata
 
+        # ALSO set direct class attributes for backward compatibility with CData.__init__
+        # which expects cls.qualifiers, cls.qualifiers_order, etc.
+        if qualifiers:
+            cls.qualifiers = qualifiers
+        if qualifiers_order:
+            cls.qualifiers_order = qualifiers_order
+        if qualifiers_definition:
+            cls.qualifiers_definition = qualifiers_definition
+        if contents_order:
+            cls.CONTENT_ORDER = contents_order
+        if error_codes:
+            cls.ERROR_CODES = error_codes
+
         return cls
 
     return decorator

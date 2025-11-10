@@ -1802,6 +1802,19 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
     Add file I/O, validation, and business logic here.
     """
 
+    def __init__(self, parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Initialize attributes not in stub but needed by legacy code
+        from core.base_object.fundamental_types import CList
+        if not hasattr(self, 'listOfColumns') or self.listOfColumns is None:
+            self.listOfColumns = CList(name='listOfColumns', parent=self)
+        if not hasattr(self, 'datasets') or self.datasets is None:
+            self.datasets = CList(name='datasets', parent=self)
+        if not hasattr(self, 'crystalNames') or self.crystalNames is None:
+            self.crystalNames = CList(name='crystalNames', parent=self)
+        if not hasattr(self, 'wavelengths') or self.wavelengths is None:
+            self.wavelengths = CList(name='wavelengths', parent=self)
+
     def loadFile(self, file_path: str = None):
         """
         Load unmerged reflection file using gemmi library.
@@ -1973,6 +1986,31 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
         if has_batch:
             if hasattr(self, 'numberLattices') and self.numberLattices is not None:
                 self.numberLattices = len(mtz.batches)
+
+        # Extract column information as CMtzColumn objects
+        if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
+            # Create CMtzColumn objects with columnLabel and columnType
+            mtz_columns = []
+            for col in mtz.columns:
+                mtz_col = CMtzColumn(name=col.label)
+                mtz_col.columnLabel = col.label
+                mtz_col.columnType = col.type
+                # Get dataset name if available
+                if col.dataset:
+                    mtz_col.dataset = col.dataset.dataset_name
+                mtz_columns.append(mtz_col)
+            self.listOfColumns = mtz_columns
+
+        # Extract datasets, crystal names, and wavelengths lists
+        if hasattr(self, 'datasets') and self.datasets is not None:
+            dataset_names = [ds.dataset_name for ds in mtz.datasets]
+            self.datasets = dataset_names
+        if hasattr(self, 'crystalNames') and self.crystalNames is not None:
+            crystal_names = [ds.crystal_name for ds in mtz.datasets]
+            self.crystalNames = crystal_names
+        if hasattr(self, 'wavelengths') and self.wavelengths is not None:
+            wavelength_list = [ds.wavelength for ds in mtz.datasets]
+            self.wavelengths = wavelength_list
 
         # Cell and wavelength are known for MTZ
         self.knowncell = True
