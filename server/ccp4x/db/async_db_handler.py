@@ -63,6 +63,44 @@ class AsyncDatabaseHandler:
         self.project_uuid = project_uuid
         self._project: Optional[models.Project] = None
 
+    @property
+    def projectId(self) -> uuid.UUID:
+        """Legacy compatibility: Get project UUID as projectId."""
+        return self.project_uuid
+
+    @property
+    def projectName(self) -> str:
+        """Legacy compatibility: Get project name (requires sync access)."""
+        if self._project is None:
+            # Synchronously fetch project if not cached
+            # This is for legacy compatibility only - async code should use get_project()
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # In async context, can't block - return a default
+                    return "unknown"
+                else:
+                    # Safe to run sync
+                    return loop.run_until_complete(self.get_project()).name
+            except RuntimeError:
+                # No event loop - use sync
+                from asgiref.sync import async_to_sync
+                return async_to_sync(self.get_project)().name
+        return self._project.name
+
+    @property
+    def jobId(self) -> Optional[uuid.UUID]:
+        """Legacy compatibility: Get current job ID."""
+        # This would need to be tracked separately if needed
+        return None
+
+    @property
+    def jobNumber(self) -> Optional[str]:
+        """Legacy compatibility: Get current job number."""
+        # This would need to be tracked separately if needed
+        return None
+
     async def get_project(self) -> models.Project:
         """Get the project instance, cached after first retrieval."""
         if self._project is None:
