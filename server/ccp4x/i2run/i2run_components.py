@@ -350,7 +350,7 @@ class PluginPopulator:
         # Debug logging for UNMERGEDFILES
         if "UNMERGEDFILES" in object_path:
             print(f"\n[DEBUG] _handle_item for {object_path}")
-            print(f"[DEBUG] value type: {type(value)}, value: {value}")
+            pass  # DEBUG: print(f"[DEBUG] value type: {type(value)}, value: {value}")
 
         # Navigate to the target object
         path_parts = object_path.split(".")
@@ -372,8 +372,8 @@ class PluginPopulator:
 
         # Debug logging
         if "UNMERGEDFILES" in object_path:
-            print(f"[DEBUG] target type: {type(target).__name__}")
-            print(f"[DEBUG] isinstance(value, list): {isinstance(value, list)}")
+            pass  # DEBUG: print(f"[DEBUG] target type: {type(target).__name__}")
+            pass  # DEBUG: print(f"[DEBUG] isinstance(value, list): {isinstance(value, list)}")
 
         # Handle list of values
         if isinstance(value, list):
@@ -400,8 +400,8 @@ class PluginPopulator:
             # Debug for UNMERGEDFILES
             if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
                 print(f"\n[DEBUG] _handle_item_or_list for UNMERGEDFILES")
-                print(f"[DEBUG] values: {values}")
-                print(f"[DEBUG] list length before: {len(target)}")
+                pass  # DEBUG: print(f"[DEBUG] values: {values}")
+                pass  # DEBUG: print(f"[DEBUG] list length before: {len(target)}")
 
             for val in values:
                 # Create a new item for the list
@@ -410,8 +410,8 @@ class PluginPopulator:
 
                 # Debug for UNMERGEDFILES
                 if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                    print(f"[DEBUG] Created item: {type(new_item).__name__}")
-                    print(f"[DEBUG] Setting value: {val}")
+                    pass  # DEBUG: print(f"[DEBUG] Created item: {type(new_item).__name__}")
+                    pass  # DEBUG: print(f"[DEBUG] Setting value: {val}")
 
                 # Set the value on the new item (not on the CList itself)
                 PluginPopulator._handle_single_value(new_item, val, is_list=False)
@@ -419,14 +419,14 @@ class PluginPopulator:
                 # Debug for UNMERGEDFILES
                 if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
                     if hasattr(new_item, 'file'):
-                        print(f"[DEBUG] new_item.file type: {type(new_item.file).__name__}")
-                        print(f"[DEBUG] new_item.file.isSet('baseName'): {new_item.file.isSet('baseName')}")
+                        pass  # DEBUG: print(f"[DEBUG] new_item.file type: {type(new_item.file).__name__}")
+                        pass  # DEBUG: print(f"[DEBUG] new_item.file.isSet('baseName'): {new_item.file.isSet('baseName')}")
                         if hasattr(new_item.file, 'baseName') and new_item.file.baseName is not None:
                             if hasattr(new_item.file.baseName, 'value'):
-                                print(f"[DEBUG] new_item.file.baseName.value: {new_item.file.baseName.value}")
+                                pass  # DEBUG: print(f"[DEBUG] new_item.file.baseName.value: {new_item.file.baseName.value}")
                             else:
-                                print(f"[DEBUG] new_item.file.baseName: {new_item.file.baseName}")
-                        print(f"[DEBUG] new_item.file.fullPath: {new_item.file.fullPath}")
+                                pass  # DEBUG: print(f"[DEBUG] new_item.file.baseName: {new_item.file.baseName}")
+                        pass  # DEBUG: print(f"[DEBUG] new_item.file.fullPath: {new_item.file.fullPath}")
 
                 # Add the item to the list
                 target.append(new_item)
@@ -434,7 +434,7 @@ class PluginPopulator:
 
                 # Debug for UNMERGEDFILES
                 if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                    print(f"[DEBUG] list length after append: {len(target)}")
+                    pass  # DEBUG: print(f"[DEBUG] list length after append: {len(target)}")
         # For single-value file objects, process all subvalues
         elif isinstance(target, CDataFile):
             PluginPopulator._handle_file_with_subvalues(target, values)
@@ -482,7 +482,7 @@ class PluginPopulator:
             val = parts[1] if len(parts) > 1 else ""
 
             # Debug logging
-            print(f"[DEBUG _handle_single_value] Parsing key=value: key={key}, val={val}, target type={type(target).__name__}")
+            pass  # DEBUG: print(f"[DEBUG _handle_single_value] Parsing key=value: key={key}, val={val}, target type={type(target).__name__}")
 
             # Handle nested paths like "selection/text"
             if "/" in key:
@@ -499,13 +499,13 @@ class PluginPopulator:
                     setattr(current, final_key, val)
             else:
                 # Direct attribute
-                print(f"[DEBUG _handle_single_value] Checking if target has attribute '{key}': {hasattr(target, key)}")
+                pass  # DEBUG: print(f"[DEBUG _handle_single_value] Checking if target has attribute '{key}': {hasattr(target, key)}")
                 if hasattr(target, key):
                     attr = getattr(target, key, None)
-                    print(f"[DEBUG _handle_single_value] Got attribute '{key}': type={type(attr).__name__}, isinstance(CDataFile)={isinstance(attr, CDataFile)}")
+                    pass  # DEBUG: print(f"[DEBUG _handle_single_value] Got attribute '{key}': type={type(attr).__name__}, isinstance(CDataFile)={isinstance(attr, CDataFile)}")
                     # Handle CDataFile attributes specially
                     if isinstance(attr, CDataFile):
-                        print(f"[DEBUG _handle_single_value] Calling setFullPath('{val}') on {type(attr).__name__}")
+                        pass  # DEBUG: print(f"[DEBUG _handle_single_value] Calling setFullPath('{val}') on {type(attr).__name__}")
                         attr.setFullPath(val)
                     else:
                         setattr(target, key, val)

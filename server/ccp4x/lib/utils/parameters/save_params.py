@@ -38,7 +38,7 @@ def save_params_for_job(
     # Rework to the directory of "the_job"
     relocated_file_path = the_job.directory / pathlib.Path(fileName).name
 
-    print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path}")
+    pass  # DEBUG: print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path}")
 
     if relocated_file_path.exists():
         CCP4Utils.backupFile(str(relocated_file_path), delete=False)
@@ -48,8 +48,8 @@ def save_params_for_job(
     f = CCP4File.CI2XmlDataFile(fullPath=str(relocated_file_path.absolute()))
 
     # Debug: check what setFullPath did
-    print(f"[DEBUG save_params_for_job] After init: baseName.value={f.baseName.value}, relPath.value={getattr(f.relPath, 'value', 'N/A')}")
-    print(f"[DEBUG save_params_for_job] After init: getFullPath()={f.getFullPath()}")
+    pass  # DEBUG: print(f"[DEBUG save_params_for_job] After init: baseName.value={f.baseName.value}, relPath.value={getattr(f.relPath, 'value', 'N/A')}")
+    pass  # DEBUG: print(f"[DEBUG save_params_for_job] After init: getFullPath()={f.getFullPath()}")
 
     # CI2XmlDataFile already has a header instance created during __init__
     # Just populate it with job information
@@ -102,6 +102,6 @@ def save_params_for_job(
     # Verify file was actually written
     import os
     if os.path.exists(relocated_file_path):
-        print(f"[DEBUG save_params] ✓ Verified file exists: {relocated_file_path}")
+        pass  # DEBUG: print(f"[DEBUG save_params] ✓ Verified file exists: {relocated_file_path}")
     else:
-        print(f"[DEBUG save_params] ✗ WARNING: File does NOT exist after saveFile(): {relocated_file_path}")
+        pass  # DEBUG: print(f"[DEBUG save_params] ✗ WARNING: File does NOT exist after saveFile(): {relocated_file_path}")

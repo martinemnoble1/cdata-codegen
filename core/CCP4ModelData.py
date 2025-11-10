@@ -1404,24 +1404,24 @@ class CPdbDataFile(CPdbDataFileStub):
         import sys
         # Check if selection attribute exists
         if not hasattr(self, 'selection'):
-            print(f"DEBUG isSelectionSet: No selection attribute", file=sys.stderr)
+            pass  # DEBUG: print(f"DEBUG isSelectionSet: No selection attribute", file=sys.stderr)
             return False
 
         # Check if text attribute exists
         if not hasattr(self.selection, 'text'):
-            print(f"DEBUG isSelectionSet: selection has no text attribute", file=sys.stderr)
+            pass  # DEBUG: print(f"DEBUG isSelectionSet: selection has no text attribute", file=sys.stderr)
             return False
 
         # Get the text value
         text_value = self.selection.text.value
         if text_value is None:
-            print(f"DEBUG isSelectionSet: text_value is None", file=sys.stderr)
+            pass  # DEBUG: print(f"DEBUG isSelectionSet: text_value is None", file=sys.stderr)
             return False
 
         # Check if text has non-whitespace content
         stripped = str(text_value).strip()
         result = len(stripped) > 0
-        print(f"DEBUG isSelectionSet: text_value='{text_value}', stripped='{stripped}', result={result}", file=sys.stderr)
+        pass  # DEBUG: print(f"DEBUG isSelectionSet: text_value='{text_value}', stripped='{stripped}', result={result}", file=sys.stderr)
         return result
 
     def _introspect_content_flag(self) -> Optional[int]:

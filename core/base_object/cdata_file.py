@@ -167,12 +167,12 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
-        print(f"[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}, input path: {path}")
-        print(f"[DEBUG setFullPath] hasattr baseName: {hasattr(self, 'baseName')}")
+        pass  # DEBUG: print(f"[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}, input path: {path}")
+        pass  # DEBUG: print(f"[DEBUG setFullPath] hasattr baseName: {hasattr(self, 'baseName')}")
         if hasattr(self, 'baseName'):
-            print(f"[DEBUG setFullPath] baseName type: {type(self.baseName)}, baseName is None: {self.baseName is None}")
+            pass  # DEBUG: print(f"[DEBUG setFullPath] baseName type: {type(self.baseName)}, baseName is None: {self.baseName is None}")
             if self.baseName is not None:
-                print(f"[DEBUG setFullPath] baseName has .value: {hasattr(self.baseName, 'value')}")
+                pass  # DEBUG: print(f"[DEBUG setFullPath] baseName has .value: {hasattr(self.baseName, 'value')}")
 
         logger.debug(
             "[setFullPath] Called for %s, input path: %s, hasattr baseName: %s",
@@ -523,26 +523,26 @@ class CDataFile(CData):
                 has_relpath = hasattr(self, 'relPath') and self.relPath is not None and \
                              (hasattr(self.relPath, 'value') and self.relPath.value) or self.relPath
 
-                print(f"[DEBUG getFullPath] baseName is absolute: {basename_str}, exists={abs_path.exists()}, is_temp_file={is_temp_file}, has_relpath={has_relpath}")
+                pass  # DEBUG: print(f"[DEBUG getFullPath] baseName is absolute: {basename_str}, exists={abs_path.exists()}, is_temp_file={is_temp_file}, has_relpath={has_relpath}")
 
                 # If file exists at the absolute path, use it
                 if abs_path.exists():
-                    print(f"[DEBUG getFullPath] File exists at absolute path, returning: {basename_str}")
+                    pass  # DEBUG: print(f"[DEBUG getFullPath] File exists at absolute path, returning: {basename_str}")
                     return basename_str
 
                 # If we have relPath set, the absolute path in baseName is likely stale
                 # (from CWD-relative path expansion). Strip to just filename and use relPath logic.
                 if has_relpath:
-                    print(f"[DEBUG getFullPath] Have relPath, treating absolute baseName as stale, stripping to filename")
+                    pass  # DEBUG: print(f"[DEBUG getFullPath] Have relPath, treating absolute baseName as stale, stripping to filename")
                     basename_value = abs_path.name
                     basename_str = basename_value
                 elif not is_temp_file:
                     # No relPath, not a temp file, use the absolute path as-is
-                    print(f"[DEBUG getFullPath] No relPath, using absolute baseName as-is: {basename_str}")
+                    pass  # DEBUG: print(f"[DEBUG getFullPath] No relPath, using absolute baseName as-is: {basename_str}")
                     return basename_str
                 else:
                     # Temp file that doesn't exist - strip to filename
-                    print(f"[DEBUG getFullPath] Stale temp file, stripping to filename")
+                    pass  # DEBUG: print(f"[DEBUG getFullPath] Stale temp file, stripping to filename")
                     basename_value = abs_path.name
                     basename_str = basename_value
 

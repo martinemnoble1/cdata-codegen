@@ -599,24 +599,24 @@ class CPluginScript(CData):
         # The file metadata should already be correct from the import step.
         has_method = hasattr(self, 'get_db_job_id')
         job_id = self.get_db_job_id() if has_method else None
-        print(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
-        print(f"[DEBUG process] self.workDirectory = {self.workDirectory}")
+        pass  # DEBUG: print(f"[DEBUG process] Checking if should save params: has_method={has_method}, job_id={job_id}")
+        pass  # DEBUG: print(f"[DEBUG process] self.workDirectory = {self.workDirectory}")
         if has_method and job_id:
             try:
                 # Just save params.xml with current state (which already has correct file paths from import)
                 params_path = os.path.join(self.workDirectory, "params.xml")
-                print(f"[DEBUG process] About to call saveDataToXml({params_path})")
+                pass  # DEBUG: print(f"[DEBUG process] About to call saveDataToXml({params_path})")
                 save_error = self.saveDataToXml(params_path)
                 if save_error and hasattr(save_error, 'hasError') and save_error.hasError():
-                    print(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
+                    pass  # DEBUG: print(f"[DEBUG process] Warning: Failed to save params.xml after checkOutputData: {save_error}")
                 else:
-                    print(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
+                    pass  # DEBUG: print(f"[DEBUG process] Saved params.xml after checkOutputData with output file attributes")
             except Exception as e:
-                print(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
+                pass  # DEBUG: print(f"[DEBUG process] Warning: Exception saving params.xml: {e}")
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"[DEBUG process] Skipping params save (no database context)")
+            pass  # DEBUG: print(f"[DEBUG process] Skipping params save (no database context)")
 
         # Pre-process input files if needed
         result = self.processInputFiles()
@@ -2104,7 +2104,7 @@ class CPluginScript(CData):
                 )
 
             # Debug logging
-            print(f"[DEBUG makeHklinGemmi] Processing file '{name}':")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Processing file '{name}':")
             print(f"  - Type: {type(file_obj).__name__}")
             if hasattr(file_obj, 'baseName'):
                 val = file_obj.baseName.value if hasattr(file_obj.baseName, 'value') else file_obj.baseName
@@ -2121,21 +2121,21 @@ class CPluginScript(CData):
                 print(f"  - project.value: '{val}'")
             print(f"  - getFullPath(): '{file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}'")
 
-            print(f"[DEBUG makeHklinGemmi] About to check if setContentFlag needed for '{name}'")
-            print(f"[DEBUG makeHklinGemmi]   hasattr(file_obj, 'setContentFlag'): {hasattr(file_obj, 'setContentFlag')}")
-            print(f"[DEBUG makeHklinGemmi]   contentFlag: {file_obj.contentFlag if hasattr(file_obj, 'contentFlag') else 'N/A'}")
-            print(f"[DEBUG makeHklinGemmi]   int(contentFlag): {int(file_obj.contentFlag) if hasattr(file_obj, 'contentFlag') else 'N/A'}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] About to check if setContentFlag needed for '{name}'")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi]   hasattr(file_obj, 'setContentFlag'): {hasattr(file_obj, 'setContentFlag')}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi]   contentFlag: {file_obj.contentFlag if hasattr(file_obj, 'contentFlag') else 'N/A'}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi]   int(contentFlag): {int(file_obj.contentFlag) if hasattr(file_obj, 'contentFlag') else 'N/A'}")
 
             # Auto-detect contentFlag from file content to ensure accuracy
             if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
-                print(f"[DEBUG makeHklinGemmi] Calling setContentFlag() for '{name}'...")
+                pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Calling setContentFlag() for '{name}'...")
                 logger.debug(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
                 file_obj.setContentFlag()
-                print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag now: {int(file_obj.contentFlag)}")
+                pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag now: {int(file_obj.contentFlag)}")
 
             # Check if conversion is needed
             current_content_flag = int(file_obj.contentFlag)
-            print(f"[DEBUG makeHklinGemmi] current_content_flag={current_content_flag}, target_content_flag={target_content_flag}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] current_content_flag={current_content_flag}, target_content_flag={target_content_flag}")
 
             if target_content_flag is not None and current_content_flag != target_content_flag:
                 # CONVERSION NEEDED!
@@ -2184,26 +2184,26 @@ class CPluginScript(CData):
                 logger.debug(f"[DEBUG makeHklinGemmi] Using temp file object '{temp_name}' with contentFlag={target_content_flag}")
 
             # Get filesystem path
-            print(f"[DEBUG makeHklinGemmi] Getting path for '{name}'...")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Getting path for '{name}'...")
             path = file_obj.getFullPath()
-            print(f"[DEBUG makeHklinGemmi] Got path: {path}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Got path: {path}")
             logger.debug(f"[DEBUG makeHklinGemmi] Processing '{name}' -> path: {path}")
             if not path:
                 raise ValueError(f"File object '{name}' has no path set")
 
-            print(f"[DEBUG makeHklinGemmi] Getting columns for '{name}'...")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Getting columns for '{name}'...")
             # Get columns from CONTENT_SIGNATURE_LIST using contentFlag
             # contentFlag is 1-indexed, CONTENT_SIGNATURE_LIST is 0-indexed
-            print(f"[DEBUG makeHklinGemmi] Converting contentFlag to int...")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Converting contentFlag to int...")
             content_flag = int(file_obj.contentFlag)
-            print(f"[DEBUG makeHklinGemmi] content_flag={content_flag}")
-            print(f"[DEBUG makeHklinGemmi] Checking for CONTENT_SIGNATURE_LIST...")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] content_flag={content_flag}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Checking for CONTENT_SIGNATURE_LIST...")
             if not hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
                 raise ValueError(
                     f"File object '{name}' (class {file_obj.__class__.__name__}) "
                     f"has no CONTENT_SIGNATURE_LIST. Is it a CMiniMtzDataFile?"
                 )
-            print(f"[DEBUG makeHklinGemmi] CONTENT_SIGNATURE_LIST exists, length={len(file_obj.CONTENT_SIGNATURE_LIST)}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] CONTENT_SIGNATURE_LIST exists, length={len(file_obj.CONTENT_SIGNATURE_LIST)}")
 
             if content_flag < 1 or content_flag > len(file_obj.CONTENT_SIGNATURE_LIST):
                 raise ValueError(
@@ -2211,9 +2211,9 @@ class CPluginScript(CData):
                     f"Valid range: 1-{len(file_obj.CONTENT_SIGNATURE_LIST)}"
                 )
 
-            print(f"[DEBUG makeHklinGemmi] Getting columns from CONTENT_SIGNATURE_LIST[{content_flag - 1}]...")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Getting columns from CONTENT_SIGNATURE_LIST[{content_flag - 1}]...")
             columns = file_obj.CONTENT_SIGNATURE_LIST[content_flag - 1]
-            print(f"[DEBUG makeHklinGemmi] Got columns: {columns}")
+            pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Got columns: {columns}")
 
             # Build column_mapping (input_label -> output_label)
             # By default, prepend display_name to column (e.g., HKLIN1_F)
@@ -2530,7 +2530,7 @@ class CPluginScript(CData):
             # Join with commas
             allColout = ','.join(column_names)
 
-            print(f"[DEBUG makeHklin0] Created {outfile} with columns: {allColout}")
+            pass  # DEBUG: print(f"[DEBUG makeHklin0] Created {outfile} with columns: {allColout}")
 
         except Exception as e:
             print(f"[WARNING makeHklin0] Could not read column names from {outfile}: {e}")
@@ -2700,7 +2700,7 @@ class CPluginScript(CData):
 
             # Get output file path
             output_path = file_obj.getFullPath()
-            print(f"[DEBUG splitHklout] {obj_name}.getFullPath() returned: '{output_path}'")
+            pass  # DEBUG: print(f"[DEBUG splitHklout] {obj_name}.getFullPath() returned: '{output_path}'")
 
             # Convert relative paths to absolute paths in work directory
             # This handles legacy wrappers that set baseName to just a filename
@@ -2710,10 +2710,10 @@ class CPluginScript(CData):
                 if not path_obj.is_absolute():
                     # Relative path - make it absolute relative to workDirectory
                     output_path = str(self.workDirectory / output_path)
-                    print(f"[DEBUG splitHklout]   Converted to absolute: {output_path}")
+                    pass  # DEBUG: print(f"[DEBUG splitHklout]   Converted to absolute: {output_path}")
             else:
                 # Path not set at all - construct default path
-                print(f"[DEBUG splitHklout] Auto-setting path for {obj_name}")
+                pass  # DEBUG: print(f"[DEBUG splitHklout] Auto-setting path for {obj_name}")
 
                 # Get file extension
                 extension = '.mtz'  # Default
@@ -2728,7 +2728,7 @@ class CPluginScript(CData):
                 # Construct path: workDirectory/OBJECTNAME.ext
                 filename = f"{obj_name}{extension}"
                 output_path = str(self.workDirectory / filename)
-                print(f"[DEBUG splitHklout]   Created path: {output_path}")
+                pass  # DEBUG: print(f"[DEBUG splitHklout]   Created path: {output_path}")
 
                 # Set the baseName so getFullPath() will work next time
                 if hasattr(file_obj.baseName, 'set'):

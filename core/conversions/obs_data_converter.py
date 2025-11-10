@@ -530,9 +530,9 @@ class ObsDataConverter:
             obsout_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
             obsout_path = str(imported_files_dir / obsout_name)
 
-            print(f"[DEBUG ObsDataConverter] Conversion outputs will be in CCP4_IMPORTED_FILES:")
-            print(f"[DEBUG ObsDataConverter]   imported_files_dir: {imported_files_dir}")
-            print(f"[DEBUG ObsDataConverter]   obsout_path: {obsout_path}")
+            pass  # DEBUG: print(f"[DEBUG ObsDataConverter] Conversion outputs will be in CCP4_IMPORTED_FILES:")
+            pass  # DEBUG: print(f"[DEBUG ObsDataConverter]   imported_files_dir: {imported_files_dir}")
+            pass  # DEBUG: print(f"[DEBUG ObsDataConverter]   obsout_path: {obsout_path}")
         else:
             hklout_path = obs_file._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)

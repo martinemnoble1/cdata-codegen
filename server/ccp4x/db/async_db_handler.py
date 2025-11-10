@@ -534,37 +534,37 @@ class AsyncDatabaseHandler:
 
             try:
                 logger.debug(f"[DEBUG glean_job_files] Processing {file_obj.name}:")
-                print(f"  isSet(): {file_obj.isSet() if hasattr(file_obj, 'isSet') else 'N/A'}")
-                print(f"  exists(): {file_obj.exists() if hasattr(file_obj, 'exists') else 'N/A'}")
-                print(f"  getFullPath(): {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}")
+                pass  # DEBUG: print(f"  isSet(): {file_obj.isSet() if hasattr(file_obj, 'isSet') else 'N/A'}")
+                pass  # DEBUG: print(f"  exists(): {file_obj.exists() if hasattr(file_obj, 'exists') else 'N/A'}")
+                pass  # DEBUG: print(f"  getFullPath(): {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}")
 
                 # Check if file is set (baseName has been assigned)
                 if not hasattr(file_obj, 'isSet') or not file_obj.isSet():
                     logger.debug(f"Skipping unset file: {file_obj.name}")
-                    print(f"  -> Skipping: not set")
+                    pass  # DEBUG: print(f"  -> Skipping: not set")
                     continue
 
                 # Check if file exists on disk
                 if not hasattr(file_obj, 'exists') or not file_obj.exists():
                     logger.debug(f"Skipping non-existent file: {file_obj.name} (path: {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'})")
-                    print(f"  -> Skipping: doesn't exist")
+                    pass  # DEBUG: print(f"  -> Skipping: doesn't exist")
                     continue
             finally:
                 # Clean up temporary reference
                 if hasattr(file_obj, '_temp_plugin_ref'):
                     delattr(file_obj, '_temp_plugin_ref')
 
-            print(f"  -> Will glean this file")
+            pass  # DEBUG: print(f"  -> Will glean this file")
 
             # Extract metadata using modern CData system
             try:
                 metadata = extract_file_metadata(file_obj)
 
                 logger.debug(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.name}:")
-                print(f"  file_type (mimeTypeName): {metadata['file_type']}")
-                print(f"  content_flag: {metadata.get('content_flag', 'NOT SET')}")
-                print(f"  sub_type: {metadata.get('sub_type', 'NOT SET')}")
-                print(f"  gui_label: {metadata.get('gui_label', 'NOT SET')}")
+                pass  # DEBUG: print(f"  file_type (mimeTypeName): {metadata['file_type']}")
+                pass  # DEBUG: print(f"  content_flag: {metadata.get('content_flag', 'NOT SET')}")
+                pass  # DEBUG: print(f"  sub_type: {metadata.get('sub_type', 'NOT SET')}")
+                pass  # DEBUG: print(f"  gui_label: {metadata.get('gui_label', 'NOT SET')}")
 
                 # Get full file path
                 file_path = Path(str(file_obj))
@@ -580,7 +580,7 @@ class AsyncDatabaseHandler:
                     annotation=metadata.get('annotation', metadata.get('gui_label', '')),
                 )
 
-                print(f"  -> Registered as: {file_record.type.name if file_record.type else 'NO TYPE'}")
+                pass  # DEBUG: print(f"  -> Registered as: {file_record.type.name if file_record.type else 'NO TYPE'}")
 
                 # Link back to container
                 if hasattr(file_obj, 'dbFileId'):

@@ -238,14 +238,14 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         PluginPopulator.populate(thePlugin, parsed_args, allKeywords)
 
         # Save params to database (creates input_params.xml)
-        print(f"[DEBUG pluginWithArgs] job is not None: {job is not None}")
+        pass  # DEBUG: print(f"[DEBUG pluginWithArgs] job is not None: {job is not None}")
         if job is not None:
-            print(f"[DEBUG pluginWithArgs] Calling save_params_for_job for job {job.number}, directory: {job.directory}")
+            pass  # DEBUG: print(f"[DEBUG pluginWithArgs] Calling save_params_for_job for job {job.number}, directory: {job.directory}")
             # Use exclude_unset=False to ensure input files are saved to input_params.xml
             # The files have full absolute paths at this point, but that's OK - the import
             # process will copy them to CCP4_IMPORTED_FILES and update input_params.xml
             save_params_for_job(thePlugin, the_job=job, exclude_unset=False)
-            print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
+            pass  # DEBUG: print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
 
         return thePlugin
 
