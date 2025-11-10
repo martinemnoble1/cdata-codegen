@@ -34,7 +34,7 @@ class servalcat_pipe(CPluginScript):
 
     TASKMODULE = 'refinement'
     SHORTTASKTITLE = 'Servalcat'
-    TASKTITLE = 'Refinement against diffraction data or SPA map & optional restraints from ProSMART & MetalCoord'
+    TASKTITLE = 'Refinement against diffraction data with optional restraints (ProSMART, MetalCoord)'
     TASKNAME = 'servalcat_pipe'  # Task name - same as class name
     MAINTAINER = 'martin.maly@mrc-lmb.cam.ac.uk'
     TASKVERSION= 0.1
@@ -292,6 +292,8 @@ class servalcat_pipe(CPluginScript):
                     # else report error?
             else:
                 result.container.inputData.METALCOORD_RESTRAINTS=self.container.metalCoordPipeline.METALCOORD_RESTRAINTS
+
+        # Set parameters if there is prior ProSMART (for job cloning)
         if self.container.prosmartProtein.TOGGLE:
             result.container.controlParameters.PROSMART_PROTEIN_SGMN=self.container.prosmartProtein.SGMN
             result.container.controlParameters.PROSMART_PROTEIN_SGMX=self.container.prosmartProtein.SGMX

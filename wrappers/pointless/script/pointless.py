@@ -29,14 +29,8 @@ class pointless(CPluginScript):
       ###self.appendCommandScript("XMLOUT %s" % str( self.makeFileName( 'PROGRAMXML' )))
       # XMLOUT on command line so that syntax errors go into it
       self.appendCommandLine(['XMLOUT',str( self.makeFileName( 'PROGRAMXML' ) )])
-
-      # TEMPORARY DEBUG: Check UNMERGEDFILES
-      print(f"[DEBUG pointless.py] UNMERGEDFILES type: {type(self.container.inputData.UNMERGEDFILES)}")
-      print(f"[DEBUG pointless.py] UNMERGEDFILES length: {len(self.container.inputData.UNMERGEDFILES)}")
-      print(f"[DEBUG pointless.py] UNMERGEDFILES: {self.container.inputData.UNMERGEDFILES}")
-      if hasattr(self.container.inputData.UNMERGEDFILES, '_items'):
-          print(f"[DEBUG pointless.py] UNMERGEDFILES._items: {self.container.inputData.UNMERGEDFILES._items}")
-
+      print(">>XMLOUT<<", str( self.makeFileName( 'PROGRAMXML' ) ))
+      
       for i in range(len(self.container.inputData.UNMERGEDFILES)):
         # Note: NAME, CIFBLOCK commands must preceed HKLIN
         # print(">>>HKLIN ", self.container.inputData.UNMERGEDFILES[i], file=logit)
@@ -174,6 +168,13 @@ class pointless(CPluginScript):
               if lattype != 'P':
                   self.appendCommandScript('lattice '+lattype)
 
+      if par.KEEP_LATTICE_CENTERING:
+          self.appendCommandScript('keeplattice')
+      else:
+          if not par.REMOVE_LATTICE_CENTERING:
+              if par.LATTICE_CENTERING_THRESHOLD:
+                  self.appendCommandScript('keeplattice '+ str(par.LATTICE_CENTERING_THRESHOLD))
+              
       if par.ALLOW_NONCHIRAL:
           self.appendCommandScript('CHIRALITY NONCHIRAL')
           

@@ -243,7 +243,8 @@ class CDataFile(CData):
         while current is not None:
             if isinstance(current, CPluginScript):
                 return current
-            current = getattr(current, 'parent', None)
+            # parent is now a method, not a property - must call it
+            current = current.parent() if hasattr(current, 'parent') and callable(current.parent) else None
             depth += 1
             if depth > 10:  # Safety limit
                 logger.debug("_find_plugin_parent: Depth limit reached")

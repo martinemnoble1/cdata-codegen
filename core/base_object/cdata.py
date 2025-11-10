@@ -365,7 +365,8 @@ class CData(HierarchicalObject):
         while current is not None:
             if hasattr(current, 'name') and current.name:
                 path_parts.insert(0, current.name)
-            current = getattr(current, 'parent', None)
+            # parent is now a method, not a property - must call it
+            current = current.parent() if hasattr(current, 'parent') and callable(current.parent) else None
 
         return ".".join(path_parts) if path_parts else ""
 
