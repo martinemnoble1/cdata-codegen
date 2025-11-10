@@ -138,9 +138,9 @@ def cdata_class(
         cls._metadata = metadata
 
         # ALSO set direct class attributes for backward compatibility with CData.__init__
-        # which expects cls.qualifiers, cls.qualifiers_order, etc.
+        # Use _class_* naming to avoid shadowing instance methods like qualifiers()
         if qualifiers:
-            cls.qualifiers = qualifiers
+            cls._class_qualifiers = qualifiers
         if qualifiers_order:
             cls.qualifiers_order = qualifiers_order
         if qualifiers_definition:
@@ -309,14 +309,14 @@ class MetadataAttributeFactory:
 
             # Apply qualifiers
             if qualifiers:
-                # Ensure qualifiers attribute exists
-                if not hasattr(obj, 'qualifiers') or obj.qualifiers is None:
-                    obj.qualifiers = {}
+                # Ensure _qualifiers attribute exists
+                if not hasattr(obj, '_qualifiers') or obj._qualifiers is None:
+                    obj._qualifiers = {}
                 # Update qualifiers
-                if isinstance(obj.qualifiers, dict):
-                    obj.qualifiers.update(qualifiers)
+                if isinstance(obj._qualifiers, dict):
+                    obj._qualifiers.update(qualifiers)
                 else:
-                    obj.qualifiers = qualifiers
+                    obj._qualifiers = qualifiers
 
             # Set default value from qualifiers if provided
             default_value = qualifiers.get('default')

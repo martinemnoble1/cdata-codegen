@@ -58,24 +58,26 @@ class CData(HierarchicalObject):
         # --- Per-instance metadata copying and override ---
         # Copy class-level metadata to instance for override flexibility
         cls = self.__class__
-        # Qualifiers
-        if hasattr(cls, 'qualifiers'):
-            class_qualifiers = getattr(cls, 'qualifiers')
-            logger.debug("%s.qualifiers type: %s, value: %s", cls.__name__, type(class_qualifiers), class_qualifiers)
+        # Qualifiers - store in _qualifiers (private) to leave qualifiers() method free for legacy API
+        if hasattr(cls, '_class_qualifiers'):
+            class_qualifiers = getattr(cls, '_class_qualifiers')
+            logger.debug("%s._class_qualifiers type: %s, value: %s", cls.__name__, type(class_qualifiers), class_qualifiers)
 
             # Handle case where qualifiers is a dict-like object
             if isinstance(class_qualifiers, dict):
-                self.qualifiers = dict(class_qualifiers)
+                self._qualifiers = dict(class_qualifiers)
             elif hasattr(class_qualifiers, 'items') and callable(getattr(class_qualifiers, 'items', None)):
                 try:
-                    self.qualifiers = dict(class_qualifiers.items())
+                    self._qualifiers = dict(class_qualifiers.items())
                 except (AttributeError, TypeError) as e:
-                    logger.error("Error calling .items() on qualifiers for %s: %s (type: %s)", cls.__name__, e, type(class_qualifiers))
-                    self.qualifiers = {}
+                    logger.error("Error calling .items() on _class_qualifiers for %s: %s (type: %s)", cls.__name__, e, type(class_qualifiers))
+                    self._qualifiers = {}
             else:
                 # Not a dict and doesn't have .items() - set to empty dict
-                logger.warning("Class-level qualifiers for %s is not dict-like: %s, setting to empty dict", cls.__name__, type(class_qualifiers))
-                self.qualifiers = {}
+                logger.warning("Class-level _class_qualifiers for %s is not dict-like: %s, setting to empty dict", cls.__name__, type(class_qualifiers))
+                self._qualifiers = {}
+        else:
+            self._qualifiers = {}
         # Qualifiers order
         if hasattr(cls, 'qualifiers_order'):
             self.qualifiers_order = list(getattr(cls, 'qualifiers_order'))
@@ -94,7 +96,7 @@ class CData(HierarchicalObject):
             if meta_key in kwargs:
                 # Set qualifiers directly as a dict to avoid wrapping as CData
                 if meta_key == 'qualifiers' and isinstance(kwargs[meta_key], dict):
-                    self.qualifiers = kwargs.pop(meta_key)
+                    self._qualifiers = kwargs.pop(meta_key)
                 else:
                     setattr(self, meta_key, kwargs.pop(meta_key))
 
@@ -132,15 +134,44 @@ class CData(HierarchicalObject):
 
     def get_qualifier(self, key, default=None):
         """Get a qualifier value for this instance."""
-        if hasattr(self, 'qualifiers') and self.qualifiers is not None:
-            return self.qualifiers.get(key, default)
+        if hasattr(self, '_qualifiers') and self._qualifiers is not None:
+            return self._qualifiers.get(key, default)
         return default
 
     def set_qualifier(self, key, value):
         """Set or override a qualifier value for this instance."""
-        if not hasattr(self, 'qualifiers') or self.qualifiers is None:
-            self.qualifiers = {}
-        self.qualifiers[key] = value
+        if not hasattr(self, '_qualifiers') or self._qualifiers is None:
+            self._qualifiers = {}
+        self._qualifiers[key] = value
+
+    def qualifiers(self, key=None, default=None):
+        """
+        Legacy compatibility method for getting qualifiers.
+
+        Provided for backward compatibility with legacy ccp4i2 plugin code
+        that calls qualifiers('key') instead of get_qualifier('key').
+
+        Args:
+            key: Optional qualifier key to get. If None, returns all qualifiers dict.
+            default: Default value if key not found
+
+        Returns:
+            If key is provided, returns the qualifier value (or default).
+            If key is None, returns the _qualifiers dict.
+
+        Example:
+            # Legacy code pattern:
+            label = obj.qualifiers('guiLabel')
+
+            # All qualifiers:
+            all_quals = obj.qualifiers()
+        """
+        if key is None:
+            # Return all qualifiers
+            return getattr(self, '_qualifiers', {})
+        else:
+            # Return specific qualifier
+            return self.get_qualifier(key, default)
 
     def setQualifier(self, key, value):
         """
@@ -251,16 +282,24 @@ class CData(HierarchicalObject):
         if values and hasattr(self, '_value_states'):
             self._value_states['value'] = ValueState.EXPLICITLY_SET
 
-    def get(self) -> dict:
-        """Get attributes as dict. Compatible with old CCP4i2 API.
+    def get(self, child_name=None):
+        """Get child by name or all attributes as dict. Compatible with old CCP4i2 API.
 
-        Returns a dict of all CData attributes and their values.
-        For CData objects with a 'value' attribute, returns the value.
-        For nested CData objects, recursively calls get().
+        If child_name is provided, returns the child object with that name.
+        Otherwise, returns a dict of all CData attributes and their values.
+
+        Args:
+            child_name: Optional name of child to retrieve
 
         Returns:
-            Dict of attribute names to values
+            If child_name provided: The child object with that name
+            If child_name is None: Dict of attribute names to values
         """
+        # Legacy API: get(childName) retrieves child by name
+        if child_name is not None:
+            return getattr(self, child_name, None)
+
+        # Modern API: get() returns dict representation
         result = {}
 
         # Get all fields (metadata-aware)
@@ -556,7 +595,7 @@ class CData(HierarchicalObject):
 
         # Base CData validation - can be extended by subclasses
         # Check if object has required qualifiers
-        if hasattr(self, 'qualifiers') and self.qualifiers:
+        if hasattr(self, '_qualifiers') and self._qualifiers:
             # Basic validation is done here
             # Subclasses will add their own validation
             pass
@@ -700,8 +739,8 @@ class CData(HierarchicalObject):
 
         qualifiers_elem = ET.Element('qualifiers')
 
-        if hasattr(self, 'qualifiers') and self.qualifiers:
-            for key, value in self.qualifiers.items():
+        if hasattr(self, '_qualifiers') and self._qualifiers:
+            for key, value in self._qualifiers.items():
                 qual_elem = ET.Element(key)
                 if value is not None:
                     if isinstance(value, bool):

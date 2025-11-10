@@ -1157,3 +1157,25 @@ class CDataFile(CData):
                 md5_hash.update(chunk)
 
         return md5_hash.hexdigest()
+
+    def stripedName(self):
+        """
+        Get the base filename without path or extension.
+
+        Legacy compatibility method for getting a simple filename for display.
+
+        Returns:
+            str: Base filename without directory path or extension
+
+        Example:
+            >>> file_obj.setFullPath('/path/to/myfile.mtz')
+            >>> file_obj.stripedName()
+            'myfile'
+        """
+        file_path = self.getFullPath()
+        if not file_path:
+            return ""
+
+        from pathlib import Path
+        # Get filename without directory path and extension
+        return Path(file_path).stem

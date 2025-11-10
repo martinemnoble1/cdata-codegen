@@ -748,6 +748,44 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
 
     # Note: _get_conversion_output_path() is now in CDataFile base class
 
+    def columnNames(self, asString=False):
+        """
+        Get column names from the file content.
+
+        Legacy compatibility method that inspects fileContent to return column names.
+
+        Args:
+            asString: If True, return comma-separated string. If False, return list.
+
+        Returns:
+            list or str: Column names as list or comma-separated string
+
+        Example:
+            >>> mtz_file.columnNames(False)
+            ['H', 'K', 'L', 'F', 'SIGF']
+            >>> mtz_file.columnNames(True)
+            'H,K,L,F,SIGF'
+        """
+        col_names = []
+
+        # Try to get from fileContent.listOfColumns
+        content = self.getFileContent()
+        if content and hasattr(content, 'listOfColumns') and content.listOfColumns:
+            # Extract column labels from CMtzColumn objects
+            for col in content.listOfColumns:
+                if hasattr(col, 'columnLabel'):
+                    label = col.columnLabel
+                    # Handle both CString with .value and plain strings
+                    if hasattr(label, 'value'):
+                        col_names.append(str(label.value))
+                    else:
+                        col_names.append(str(label))
+
+        if asString:
+            return ','.join(col_names)
+        else:
+            return col_names
+
     def _introspect_content_flag(self) -> Optional[int]:
         """
         Auto-detect content flag by reading MTZ columns and matching against
@@ -1378,6 +1416,44 @@ class CMtzDataFile(CMtzDataFileStub):
             list: ['mtz']
         """
         return ['mtz']
+
+    def columnNames(self, asString=False):
+        """
+        Get column names from the file content.
+
+        Legacy compatibility method that inspects fileContent to return column names.
+
+        Args:
+            asString: If True, return comma-separated string. If False, return list.
+
+        Returns:
+            list or str: Column names as list or comma-separated string
+
+        Example:
+            >>> mtz_file.columnNames(False)
+            ['H', 'K', 'L', 'F', 'SIGF']
+            >>> mtz_file.columnNames(True)
+            'H,K,L,F,SIGF'
+        """
+        col_names = []
+
+        # Try to get from fileContent.listOfColumns
+        content = self.getFileContent()
+        if content and hasattr(content, 'listOfColumns') and content.listOfColumns:
+            # Extract column labels from CMtzColumn objects
+            for col in content.listOfColumns:
+                if hasattr(col, 'columnLabel'):
+                    label = col.columnLabel
+                    # Handle both CString with .value and plain strings
+                    if hasattr(label, 'value'):
+                        col_names.append(str(label.value))
+                    else:
+                        col_names.append(str(label))
+
+        if asString:
+            return ','.join(col_names)
+        else:
+            return col_names
 
 
 class CMtzDataset(CMtzDatasetStub):

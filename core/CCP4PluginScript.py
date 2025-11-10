@@ -2620,7 +2620,8 @@ class CPluginScript(CData):
         miniMtzsOut: list,
         programColumnNames: list,
         inFile: str = None,
-        logFile: str = None
+        logFile: str = None,
+        **kwargs
     ) -> 'CErrorReport':
         """
         Split an HKLOUT file into multiple mini-MTZ files (CData-aware API).
@@ -2634,6 +2635,7 @@ class CPluginScript(CData):
                               e.g., ['F,SIGF', 'HLA,HLB,HLC,HLD']
             inFile: Input MTZ file path (default: workDirectory/hklout.mtz)
             logFile: Log file path (default: workDirectory/splitmtz.log)
+            **kwargs: Legacy compatibility - accepts 'infile' (lowercase) as alias for 'inFile'
 
         Returns:
             CErrorReport with any errors
@@ -2646,6 +2648,10 @@ class CPluginScript(CData):
             ... )
         """
         error = CErrorReport()
+
+        # Legacy compatibility: accept 'infile' (lowercase) as alias for 'inFile'
+        if 'infile' in kwargs and inFile is None:
+            inFile = kwargs['infile']
 
         # Default input file
         if inFile is None:
