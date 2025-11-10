@@ -8,7 +8,57 @@
     "TASKTITLE": "Import Serial Core",
     "TASKNAME": "import_serial",
     "TASKVERSION": 1.1,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "chainsaw": {
     "module": "wrappers.chainsaw.script.chainsaw",
@@ -19,7 +69,57 @@
     "TASKNAME": "chainsaw",
     "TASKVERSION": 0.1,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CAtomCountPerformance"
+    "PERFORMANCECLASS": "CAtomCountPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "mtzheader": {
     "module": "wrappers.mtzheader.script.mtzheader",
@@ -29,7 +129,57 @@
     "TASKTITLE": "Read MTZ header",
     "TASKNAME": "mtzheader",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "adding_stats_to_mmcif_i2": {
     "module": "wrappers.adding_stats_to_mmcif_i2.script.adding_stats_to_mmcif_i2",
@@ -94,7 +244,57 @@
     "TASKNAME": "AUSPEX",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "phaser_phil": {
     "module": "wrappers.phaser_phil.script.phaser_phil",
@@ -132,7 +332,57 @@
     "TASKTITLE": "Create dummy dataset",
     "TASKNAME": "unique",
     "TASKVERSION": 0.1,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "comit": {
     "module": "wrappers.comit.script.comit",
@@ -152,7 +402,57 @@
         "log_mtzjoin.txt",
         0
       ]
-    ]
+    ],
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "arcimboldo": {
     "module": "wrappers.arcimboldo.script.arcimboldo",
@@ -171,7 +471,57 @@
         "hklin*.mtz",
         0
       ]
-    ]
+    ],
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "xia2_dials": {
     "module": "wrappers.xia2_dials.script.xia2_dials",
@@ -219,7 +569,57 @@
     "TASKTITLE": "Analyse unmerged dataset (POINTLESS)",
     "TASKNAME": "pointless",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "editbfac": {
     "module": "wrappers.editbfac.script.editbfac",
@@ -233,7 +633,57 @@
     "TASKNAME": "editbfac",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "x2mtz": {
     "module": "wrappers.x2mtz.script.x2mtz",
@@ -302,7 +752,57 @@
     "TASKNAME": "ProvideSequence",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "phaser_mr": {
     "module": "wrappers.phaser_mr.script.phaser_mr",
@@ -346,7 +846,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "import_mosflm": {
     "module": "wrappers.import_mosflm.script.import_mosflm",
@@ -357,7 +907,57 @@
     "TASKTITLE": null,
     "TASKNAME": "import_mosflm",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "Platonyzer": {
     "module": "wrappers.Platonyzer.script.Platonyzer",
@@ -396,7 +996,57 @@
     "TASKTITLE": null,
     "TASKNAME": "AlternativeImportXIA2",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "prosmart": {
     "module": "wrappers.prosmart.script.prosmart",
@@ -431,7 +1081,57 @@
     "TASKTITLE": "Match and analyse phases to reference set",
     "TASKNAME": "cphasematch",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "mergeMtz": {
     "module": "wrappers.mergeMtz.script.mergeMtz",
@@ -442,7 +1142,57 @@
     "TASKNAME": "mergeMtz",
     "TASKVERSION": null,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "buccaneer_mr": {
     "module": "wrappers.buccaneer_mr.script.buccaneer_mr",
@@ -452,7 +1202,57 @@
     "TASKTITLE": "Buccaneer_mr",
     "TASKNAME": "buccaneer_mr",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "acorn": {
     "module": "wrappers.acorn.script.acorn",
@@ -479,7 +1279,57 @@
     "TASKTITLE": "Add a freeR flag",
     "TASKNAME": "freerflag",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "arp_warp_classic": {
     "module": "wrappers.arp_warp_classic.script.arp_warp_classic",
@@ -491,7 +1341,57 @@
     "TASKNAME": "arp_warp_classic",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CModelBuildPerformance"
+    "PERFORMANCECLASS": "CModelBuildPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "acedrgNew": {
     "module": "wrappers.acedrgNew.script.acedrgNew",
@@ -548,7 +1448,57 @@
     "WHATNEXT": [
       "coot_rebuild"
     ],
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "csymmatch": {
     "module": "wrappers.csymmatch.script.csymmatch",
@@ -558,7 +1508,57 @@
     "TASKTITLE": "Csymmatch - move model to a reference by using symmetry",
     "TASKNAME": "csymmatch",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "scalepack2mtz": {
     "module": "wrappers.scalepack2mtz.script.scalepack2mtz",
@@ -586,7 +1586,57 @@
     "TASKTITLE": "MrBUMP Basic",
     "TASKNAME": "mrbump_basic",
     "TASKVERSION": 0.1,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "nautilus": {
     "module": "wrappers.nautilus.script.nautilus",
@@ -664,7 +1714,57 @@
     "TASKNAME": "dials_rlattice",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "xia2_xds": {
     "module": "wrappers.xia2_xds.script.xia2_xds",
@@ -770,7 +1870,57 @@
     "TASKTITLE": "Prepare map coefficients",
     "TASKNAME": "cpatterson",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "i2Dimple": {
     "module": "wrappers.i2Dimple.script.i2Dimple",
@@ -838,7 +1988,57 @@
     "TASKTITLE": "Copy an MTZ column between files",
     "TASKNAME": "cad_copy_column",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "gesamt": {
     "module": "wrappers.gesamt.script.gesamt",
@@ -849,7 +2049,57 @@
     "TASKNAME": "gesamt",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CSuperposePerformance"
+    "PERFORMANCECLASS": "CSuperposePerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "clustalw": {
     "module": "wrappers.clustalw.script.clustalw",
@@ -923,7 +2173,57 @@
     "TASKNAME": "ProvideAsuContents",
     "TASKVERSION": null,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "phaser_analysis": {
     "module": "wrappers.phaser_analysis.script.phaser_analysis",
@@ -934,7 +2234,57 @@
     "TASKNAME": "phaser_analysis",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "Lidia": {
     "module": "wrappers.Lidia.script.Lidia",
@@ -1039,7 +2389,57 @@
     "WHATNEXT": [
       "coot_rebuild"
     ],
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "phaser_singleMR": {
     "module": "wrappers.phaser_singleMR.script.phaser_singleMR",
@@ -1051,7 +2451,57 @@
     "TASKNAME": "phaser_singleMR",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "servalcat": {
     "module": "wrappers.servalcat.script.servalcat",
@@ -1190,7 +2640,57 @@
     "TASKTITLE": "Average B over main and side chain atoms",
     "TASKNAME": "baverage",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "sculptor": {
     "module": "wrappers.sculptor.script.sculptor",
@@ -1240,7 +2740,57 @@
     "TASKTITLE": "Scripted structure edits - Pdbset",
     "TASKNAME": "pdbset_ui",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coot_rebuild": {
     "module": "wrappers.coot_rebuild.script.coot_rebuild",
@@ -1302,7 +2852,57 @@
     "TASKNAME": "parrot",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coot_rsr_morph": {
     "module": "wrappers.coot_rsr_morph.script.coot_rsr_morph",
@@ -1316,7 +2916,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "ctruncate": {
     "module": "wrappers.ctruncate.script.ctruncate",
@@ -1344,7 +2994,57 @@
     "TASKNAME": "shelxeMR",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "pyphaser_mr": {
     "module": "wrappers.pyphaser_mr.script.pyphaser_mr",
@@ -1354,7 +3054,57 @@
     "TASKTITLE": "MR using Phaser (pythonic)",
     "TASKNAME": "pyphaser_mr",
     "TASKVERSION": 0.2,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "refmac": {
     "module": "wrappers.refmac_i2.script.refmac_i2",
@@ -1396,7 +3146,57 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
     "PERFORMANCECLASS": "CRefinementPerformance",
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "dials_image": {
     "module": "wrappers.dials_image.script.dials_image",
@@ -1408,7 +3208,57 @@
     "TASKNAME": "dials_image",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "morda_i2": {
     "module": "wrappers.morda_i2.script.morda_i2",
@@ -1419,7 +3269,57 @@
     "TASKNAME": "morda_i2",
     "TASKVERSION": 0.1,
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CRefinementPerformance"
+    "PERFORMANCECLASS": "CRefinementPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "splitMtz": {
     "module": "wrappers.splitMtz.script.splitMtz",
@@ -1430,7 +3330,57 @@
     "TASKNAME": "splitMtz",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "mrparse": {
     "module": "wrappers.mrparse.script.mrparse_wrapper",
@@ -1447,7 +3397,57 @@
       "molrep_pipe"
     ],
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "ShelxCD": {
     "module": "wrappers.ShelxCDE.script.ShelxCD",
@@ -1570,7 +3570,57 @@
       "coot_rebuild"
     ],
     "ASYNCHRONOUS": false,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "imosflm": {
     "module": "wrappers.imosflm.script.imosflm",
@@ -1602,7 +3652,57 @@
     "TASKTITLE": "Export map",
     "TASKNAME": "fft",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "convert2mtz": {
     "module": "wrappers.convert2mtz.script.convert2mtz",
@@ -1630,7 +3730,57 @@
     "TASKTITLE": "PDBSet",
     "TASKNAME": "pdbset",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "mosflm": {
     "module": "wrappers.mosflm.script.mosflm",
@@ -1641,7 +3791,57 @@
     "TASKTITLE": "Run mosflm and capture output",
     "TASKNAME": "mosflm",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "libcheck": {
     "module": "wrappers.libcheck.script.libcheck",
@@ -1652,7 +3852,57 @@
     "TASKTITLE": "Manage dictionary libraries",
     "TASKNAME": "libcheck",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "SubtractNative": {
     "module": "wrappers.SubtractNative.script.SubtractNative",
@@ -1775,7 +4025,57 @@
         "HKLOUT.mtz",
         0
       ]
-    ]
+    ],
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "MakeMonster": {
     "module": "wrappers.MakeMonster.script.MakeMonster",
@@ -1787,7 +4087,57 @@
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": false,
     "TIMEOUT_PERIOD": 9999999.9,
-    "RUNEXTERNALPROCESS": false
+    "RUNEXTERNALPROCESS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "mtzutils": {
     "module": "wrappers.mtzutils.script.mtzutils",
@@ -1798,7 +4148,57 @@
     "TASKTITLE": "Add or delete MTZ columns",
     "TASKNAME": "mtzutils",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coordinate_selector": {
     "module": "wrappers.coordinate_selector.script.coordinate_selector",
@@ -1886,7 +4286,57 @@
     "TASKNAME": "dui",
     "TASKVERSION": 0.1,
     "ASYNCHRONOUS": false,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "ProvideTLS": {
     "module": "wrappers.ProvideTLS.script.ProvideTLS",
@@ -1897,7 +4347,57 @@
     "TASKTITLE": null,
     "TASKNAME": "ProvideTLS",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "AcedrgLink": {
     "module": "wrappers.AcedrgLink.script.AcedrgLink",
@@ -1972,7 +4472,57 @@
     "TASKTITLE": "Demo copy cell",
     "TASKNAME": "demo_copycell",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": true
+    "ASYNCHRONOUS": true,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "demo_multi_mtzdump": {
     "module": "wrappers2.demo_multi_mtzdump.script.demo_multi_mtzdump",
@@ -1983,7 +4533,57 @@
     "TASKNAME": "demo_multi_mtzdump",
     "TASKVERSION": 0.0,
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 0.1
+    "TIMEOUT_PERIOD": 0.1,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "molrep_pipe": {
     "module": "pipelines.molrep_pipe.script.molrep_pipe",
@@ -2037,7 +4637,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coot_script_lines": {
     "module": "pipelines.prosmart_refmac.wrappers.coot_script_lines.script.coot_script_lines",
@@ -2051,7 +4701,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "reindex_minimtz": {
     "module": "pipelines.prosmart_refmac.wrappers.reindex_minimtz.script.reindex_minimtz",
@@ -2062,7 +4762,57 @@
     "TASKNAME": "reindex_minimtz",
     "TASKVERSION": 0.0,
     "WHATNEXT": [],
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coot_fit_residues": {
     "module": "pipelines.prosmart_refmac.wrappers.coot_fit_residues.script.coot_fit_residues",
@@ -2076,7 +4826,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": true,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "coot_stepped_refine": {
     "module": "pipelines.prosmart_refmac.wrappers.coot_stepped_refine.script.coot_stepped_refine",
@@ -2090,7 +4890,57 @@
       "prosmart_refmac"
     ],
     "ASYNCHRONOUS": false,
-    "TIMEOUT_PERIOD": 9999999.9
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "reindex_processed_data": {
     "module": "pipelines.prosmart_refmac.wrappers.reindex_processed_data.script.reindex_processed_data",
@@ -2488,7 +5338,57 @@
     "TASKNAME": "tableone",
     "TASKVERSION": 1.0,
     "ASYNCHRONOUS": true,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "phaser_MR_FRF": {
     "module": "pipelines.phaser_pipeline.wrappers.phaser_MR_FRF.script.phaser_MR_FRF",
@@ -2883,7 +5783,57 @@
     "TASKTITLE": null,
     "TASKNAME": "crank2_createfree",
     "TASKVERSION": 0.01,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "crank2_comb_phdmmb": {
     "module": "pipelines.crank2.wrappers.crank2_comb_phdmmb.script.crank2_comb_phdmmb",
@@ -3024,7 +5974,57 @@
     "TASKTITLE": "Structure analysis with Pisa",
     "TASKNAME": "pisa_analyse",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "pisa_list": {
     "module": "pipelines.pisapipe.wrappers.pisa_list.script.pisa_list",
@@ -3035,7 +6035,57 @@
     "TASKTITLE": "Structure analysis with Pisa",
     "TASKNAME": "pisa_list",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "pisa_xml": {
     "module": "pipelines.pisapipe.wrappers.pisa_xml.script.pisa_xml",
@@ -3046,7 +6096,57 @@
     "TASKTITLE": "Structure analysis with Pisa",
     "TASKNAME": "pisa_xml",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": true
+    "ASYNCHRONOUS": true,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "pisapipe": {
     "module": "pipelines.pisapipe.script.pisapipe",
@@ -3057,7 +6157,57 @@
     "TASKTITLE": " Structure analysis with Pisa",
     "TASKNAME": "pisapipe",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "aimless_pipe": {
     "module": "pipelines.aimless_pipe.script.aimless_pipe",
@@ -3296,7 +6446,57 @@
       "molrep_pipe"
     ],
     "ASYNCHRONOUS": false,
-    "PERFORMANCECLASS": "CExpPhasPerformance"
+    "PERFORMANCECLASS": "CExpPhasPerformance",
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "dr_mr_modelbuild_pipeline": {
     "module": "pipelines.dr_mr_modelbuild_pipeline.script.dr_mr_modelbuild_pipeline",
@@ -3343,7 +6543,57 @@
     "TASKTITLE": "Standardise reflection data file",
     "TASKNAME": "uniqueify",
     "TASKVERSION": 0.0,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "pdb_extract_wrapper": {
     "module": "pipelines.PrepareDeposit.wrappers.pdb_extract_wrapper.script.pdb_extract_wrapper",
@@ -3416,7 +6666,57 @@
     "TASKTITLE": "Import Serial Pipeline",
     "TASKNAME": "import_serial_pipe",
     "TASKVERSION": 1.1,
-    "ASYNCHRONOUS": false
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "200": {
+        "description": "Error merging MTZ files"
+      },
+      "201": {
+        "description": "Invalid miniMtzsIn specification"
+      },
+      "202": {
+        "description": "File object has no CONTENT_SIGNATURE_LIST"
+      },
+      "203": {
+        "description": "File object has no path set"
+      },
+      "204": {
+        "description": "MTZ file not found"
+      },
+      "205": {
+        "description": "File object not found in inputData or outputData"
+      },
+      "206": {
+        "description": "Invalid contentFlag for file type"
+      },
+      "207": {
+        "description": "Invalid item format in miniMtzsIn"
+      },
+      "208": {
+        "description": "Conversion method not found on file object"
+      },
+      "209": {
+        "description": "Conversion to requested format not yet implemented"
+      },
+      "210": {
+        "description": "Error during MTZ file conversion"
+      },
+      "300": {
+        "description": "Input MTZ file not found for split operation"
+      },
+      "301": {
+        "description": "miniMtzsOut and programColumnNames length mismatch"
+      },
+      "302": {
+        "description": "Output object not found in container.outputData"
+      },
+      "303": {
+        "description": "Output object has no path set"
+      },
+      "304": {
+        "description": "Error splitting MTZ file"
+      }
+    }
   },
   "MakeLink": {
     "module": "pipelines.MakeLink.script.MakeLink",

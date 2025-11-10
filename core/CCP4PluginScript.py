@@ -326,11 +326,14 @@ class CPluginScript(CData):
 
         task_manager = TASKMANAGER()
 
-        # Treat '0.0', '0.1', '1.0' (string or float) and empty string as "no version"
-        # for compatibility with defxml_lookup.json which uses empty strings
-        # Many plugins have version 0.0, 0.1, or 1.0 which means "unversioned"
+        # Treat low version numbers (< 1.0) and empty string as "no version"
+        # for compatibility with defxml_lookup.json which uses empty strings for plugins
+        # that don't have a <pluginVersion> element in their .def.xml
+        # Many plugins have version 0.0, 0.01, 0.1, or 1.0 which means "unversioned"
         version = self.TASKVERSION
-        if version in ('0.0', '0.1', '1.0', '0', '', None, 0.0, 0.1, 1.0, 0):
+        if version in ('0.0', '0.01', '0.1', '1.0', '0', '', None):
+            version = None
+        elif isinstance(version, (int, float)) and version < 1.0:
             version = None
 
         # Use CTaskManager's locate_def_xml method

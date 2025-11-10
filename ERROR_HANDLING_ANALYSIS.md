@@ -14,34 +14,15 @@ The user correctly identified a critical error handling gap: when the SMILES str
 
 **Location**: `server/ccp4x/i2run/i2run_components.py:447-538` (`_handle_single_value()`)
 
-**Problem**: When argument parsing fails, the code calls `logger.warning()` but does NOT raise exceptions:
+**Problem**: When argument parsing fails, the code calls `logger.warning()` but does NOT raise exceptions.
 
-```python
-# Line 510-511: Nested path navigation failure
-if current is None:
-    logger.warning(f"Could not navigate to {nested_key}")
-    return  # ❌ Silently returns - no exception
-
-# Line 537: Unknown attribute
-else:
-    logger.warning(f"Don't know how to set value on {type(target).__name__}")
-    # ❌ No exception raised
-```
-
-**Impact**: When SMILES string `"CN1CCC(=O)CC4"` was misparsed as key=value, it tried to set:
-- Key: `CN1CCC(`
-- Value: `O)CC4`
-
-The attribute `CN1CCC(` doesn't exist on the plugin, so `logger.warning()` fired, but execution continued with empty SMILESIN.
+**Impact**: When SMILES string was misparsed due to treating `=` as key=value syntax, the attribute assignment failed silently and SMILESIN remained empty.
 
 ### 2. Missing Validation Metadata
 
 **Location**: Plugin metadata for `acedrgNew.SMILESIN`
 
-**Problem**: SMILESIN has NO validation qualifiers:
-- `allowUndefined`: None (defaults to allowing undefined)
-- `minlength`: None (no minimum length check)
-- `maxlength`: None (no maximum length check)
+**Problem**: SMILESIN has NO validation qualifiers (allowUndefined, minlength, maxlength).
 
 **Impact**: The validation system (`checkInputData()`) cannot detect that SMILESIN is empty or invalid.
 
@@ -49,180 +30,77 @@ The attribute `CN1CCC(` doesn't exist on the plugin, so `logger.warning()` fired
 
 **Location**: `core/CCP4PluginScript.py` (checkInputData)
 
-**Problem**: The base class validation only checks:
-- File existence (for file objects)
-- Qualifier constraints (min, max, minlength, etc.)
-- Cross-field dependencies (if explicitly coded)
+**Problem**: The base class validation only checks qualifier constraints, not domain-specific requirements or whether argument parsing succeeded.
 
-It does NOT:
-- Detect "empty string that was supposed to be populated"
-- Understand domain-specific requirements (e.g., "SMILESIN must be valid SMILES syntax")
-- Track whether command-line arguments were successfully parsed
+## Fixes Implemented
 
-## Error Propagation Chain
+### 1. ✅ DONE: Type-Based Parsing
 
-```
-❌ BEFORE OUR FIX:
+**Fix**: Implemented type-based parsing decision in `i2run_components.py:478-504`
 
-User runs: ./run_test.sh i2run/test_acedrg.py::test_from_smiles
+**Key Insight**: Only CDataFile and CData composite types support key=value syntax for setting sub-attributes. Fundamental types (CInt, CFloat, CString, CBoolean) only have a `.value` attribute and should ALWAYS be treated as literal values.
 
-1. PluginPopulator._handle_single_value() receives:
-   value = '"CN1CCC(=O)CC4"'
+**Implementation**:
+```python
+# Check target type to determine parsing strategy
+from core.base_object.fundamental_types import CInt, CFloat, CString, CBoolean
+from core.base_object.base_classes import CData
 
-2. Old code checks: if "=" in str(value):  # TRUE!
-   Splits: parts = ["CN1CCC(", "O)CC4"]
+is_fundamental_type = isinstance(target, (CInt, CFloat, CString, CBoolean))
+is_composite_type = isinstance(target, (CDataFile, CData)) and not is_fundamental_type
 
-3. Tries: setattr(target, "CN1CCC(", "O)CC4")
-
-4. Attribute doesn't exist
-   → logger.warning("Could not navigate to CN1CCC(")
-   → Returns silently ❌
-
-5. SMILESIN remains empty ("")
-
-6. checkInputData() runs:
-   → No qualifiers to check
-   → Returns maxSeverity=0 (no errors) ✅ FALSE POSITIVE
-
-7. Job executes:
-   → acedrg gets empty SMILES
-   → acedrg fails with "String format error"
-   → No output files created
-
-8. Test fails with:
-   FileNotFoundError: HCA.pdb
-
-❌ User sees: "File not found" (unhelpful)
-✅ Should see: "Failed to parse SMILESIN argument" (helpful)
+# Parse key=value syntax ONLY for composite types
+if is_composite_type and "=" in str(value):
+    # Parse as key=value for sub-attributes
+else:
+    # Set value directly on fundamental types
 ```
 
-## Fixes Needed
+**Examples**:
+- `--SMILESIN CN1CCC(=O)CC4` → CString (fundamental), set `.value` directly, `=` is literal
+- `--FPHIIN fullPath=/path/file.mtz` → CDataFile (composite), parse `fullPath=/path/file.mtz` as key=value
 
-### 1. ✅ DONE: Quote Escaping Mechanism
+**Benefits**:
+- ✅ No quote-escaping needed in test code
+- ✅ Type-safe: prevents misparsing chemical notation, math expressions, etc.
+- ✅ Cleaner API: `--SMILESIN CN1CCC(=O)CC4` instead of `--SMILESIN '"CN1CCC(=O)CC4"'`
+- ✅ Architectural correctness: parsing decision based on type system, not syntactic heuristics
+- ✅ Prevents future bugs: any fundamental type with special characters is safe
 
-**Fix**: Implemented double-quote escape mechanism in `i2run_components.py:478-495`
-
-**Status**: Complete and tested
+**Status**: Complete and tested (both SMILES tests pass)
 
 ### 2. ⚠️ TODO: Strict Argument Parsing Errors
 
 **Location**: `server/ccp4x/i2run/i2run_components.py:447-538`
 
-**Proposal**: Replace `logger.warning()` with exceptions:
+**Proposal**: Replace `logger.warning()` with exceptions for critical failures.
 
-```python
-# STRICT MODE - Fail fast on parsing errors
-if current is None:
-    raise ValueError(
-        f"Failed to parse argument: could not navigate to '{nested_key}' "
-        f"in parameter path '{key}'. Available attributes: {dir(target)}"
-    )
-
-# Unknown target type
-else:
-    raise ValueError(
-        f"Failed to set value '{value}' on {type(target).__name__}. "
-        f"Target does not support .value, .set(), or .setFullPath(). "
-        f"This may indicate a malformed argument or unsupported parameter type."
-    )
-```
-
-**Benefits**:
-- Fail fast with clear error messages
-- Prevent execution with invalid data
-- Easier debugging for users
-
-**Risks**:
-- May break existing tests that rely on permissive parsing
-- Could expose other argument parsing issues we haven't discovered
-
-**Recommendation**: Implement with a **STRICT_PARSING** flag (default: True for new code, False for legacy)
+**Status**: NOT YET IMPLEMENTED (type-based parsing already prevents the SMILES issue)
 
 ### 3. ⚠️ TODO: Validation Metadata Audit
 
-**Location**: Plugin metadata (XML definitions or cdata.json)
+**Proposal**: Add validation qualifiers for critical parameters (e.g., `allowUndefined=False` for SMILESIN).
 
-**Proposal**: Add validation qualifiers for critical parameters:
-
-```json
-{
-  "SMILESIN": {
-    "type": "CString",
-    "qualifiers": {
-      "allowUndefined": false,  // ← Must be provided
-      "minlength": 1,           // ← Cannot be empty
-      "guiLabel": "SMILES String",
-      "toolTip": "Chemical structure in SMILES notation"
-    }
-  }
-}
-```
-
-**Benefits**:
-- Validation catches empty/missing required parameters
-- Self-documenting parameter requirements
-- Consistent error reporting
-
-**Challenge**: This requires auditing ALL 144+ plugins to identify required parameters
+**Status**: NOT YET IMPLEMENTED
 
 ### 4. ⚠️ TODO: Argument Tracking System
 
-**Location**: New feature in `PluginPopulator`
+**Proposal**: Track which command-line arguments were successfully processed and raise errors for unprocessed args.
 
-**Proposal**: Track which command-line arguments were successfully processed:
-
-```python
-class PluginPopulator:
-    @staticmethod
-    def populate(plugin, parsed_args, allKeywords):
-        # Track what we attempted to set
-        attempted_args = set(vars(parsed_args).keys())
-        successfully_set = set()
-
-        # ... populate logic ...
-
-        # At end, check for unprocessed arguments
-        failed_args = attempted_args - successfully_set
-        if failed_args:
-            raise ValueError(
-                f"Failed to process command-line arguments: {failed_args}. "
-                f"These arguments were provided but could not be set on the plugin. "
-                f"This may indicate typos, unsupported parameters, or parsing errors."
-            )
-```
-
-**Benefits**:
-- Catches typos in parameter names
-- Detects parsing failures
-- Provides immediate feedback
+**Status**: NOT YET IMPLEMENTED
 
 ### 5. ⚠️ TODO: Enhanced Logging Configuration
 
-**Location**: All logging calls
+**Proposal**: Add `--strict` and `--debug` flags to control error handling strictness.
 
-**Proposal**:
-- Add `--strict` flag to i2run that converts warnings to errors
-- Add `--debug` flag that shows all logger.debug() and logger.warning() output
-- Default behavior: Hide DEBUG, show WARNING to stderr
-
-**Example**:
-```bash
-# Current behavior (permissive)
-./run_test.sh i2run/test_acedrg.py::test_from_smiles
-# → Silently ignores parsing warnings
-
-# Proposed strict mode
-./run_test.sh i2run/test_acedrg.py::test_from_smiles --strict
-# → Fails immediately with clear error:
-#    ERROR: Failed to set SMILESIN - attribute 'CN1CCC(' does not exist
-```
+**Status**: NOT YET IMPLEMENTED
 
 ## Recommendations
 
 ### Immediate (High Priority):
 
-1. ✅ **Quote escaping** - DONE
-2. ⚠️ **Add exceptions to PluginPopulator** - Replace critical logger.warning() with ValueError
+1. ✅ **Type-based parsing** - DONE and tested
+2. ⚠️ **Add exceptions to PluginPopulator** - Still recommended for catching other parsing errors
 3. ⚠️ **Add argument tracking** - Detect unprocessed command-line arguments
 
 ### Short Term (Medium Priority):
@@ -236,36 +114,19 @@ class PluginPopulator:
 7. ⚠️ **Integration tests** - Test error handling paths explicitly
 8. ⚠️ **Error documentation** - Document common errors and solutions
 
-## Impact on Existing Code
-
-### High Risk Changes:
-- Raising exceptions instead of logger.warning()
-- Adding allowUndefined=False to parameters
-
-These could break existing tests/plugins that rely on permissive behavior.
-
-### Low Risk Changes:
-- Argument tracking (only catches NEW errors)
-- Logging configuration (opt-in strict mode)
-- Documentation
-
-## Testing Strategy
-
-1. **Before changes**: Run full test suite, capture baseline
-2. **After changes**: Compare results, identify newly-failing tests
-3. **Categorize failures**:
-   - Real bugs exposed by strict parsing ✅ Good!
-   - Breaking changes to valid legacy code ❌ Need compatibility layer
-4. **Add regression tests**: Test error handling explicitly
-
 ## Conclusion
 
-The SMILES parsing failure revealed a **systemic error handling gap** in the CCP4i2Runner stack:
+The SMILES parsing failure revealed a **systemic error handling gap**:
 
 - **Silent failures** instead of loud errors
 - **Permissive parsing** instead of strict validation
 - **Cryptic downstream errors** instead of clear immediate feedback
 
-Our quote-escaping fix solves the SMILES problem, but the underlying architecture needs strengthening to catch similar issues in the future.
+**Resolution**: The type-based parsing fix addresses the root cause architecturally, preventing this class of bugs for ALL fundamental types. This is superior to quote-escaping because:
 
-**Recommended next step**: Implement strict parsing exceptions in PluginPopulator with a feature flag for backward compatibility.
+1. It's based on the type system (correct abstraction level)
+2. It requires no special syntax from users
+3. It prevents similar bugs with other special characters (`,`, `;`, `|`, etc.)
+4. It makes the code more maintainable and self-documenting
+
+**Next Steps**: Consider implementing strict exception raising for other parsing failures to catch edge cases not prevented by type-based parsing.

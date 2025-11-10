@@ -90,13 +90,6 @@ class CTaskManager:
         Returns:
             Path to the .def.xml file if found, None otherwise
         """
-        # Get CCP4I2_ROOT for resolving paths
-        ccp4i2_root = os.environ.get("CCP4I2_ROOT")
-        if not ccp4i2_root:
-            # Fallback: try to detect from current file location
-            # core/CCP4TaskManager.py -> core/../ = project root
-            ccp4i2_root = str(Path(__file__).parent.parent)
-
         for entry in self.defxml_lookup:
             plugin_name = entry.get("pluginName", "")
             plugin_version = entry.get("pluginVersion", "")
@@ -109,23 +102,24 @@ class CTaskManager:
 
                 # Get relative path from entry
                 rel_path = entry.get("file_path", "")
-                if rel_path:
-                    # Legacy paths may point to ccp4i2 structure: ../../../ccp4i2/wrappers/...
-                    # Current paths are relative: ../../wrappers/...
-                    # Convert to our structure: wrappers/...
-                    if "../../../ccp4i2/" in rel_path:
-                        rel_path = rel_path.replace("../../../ccp4i2/", "")
-                    elif "../../../" in rel_path:
-                        # Assume it's a legacy path pointing to ccp4i2 root
-                        rel_path = rel_path.replace("../../../", "")
-                    elif "../../" in rel_path:
-                        # Current path format from defxml_lookup.py: ../../wrappers/...
-                        # Strip ../../ to get wrappers/...
-                        rel_path = rel_path.replace("../../", "")
 
-                    # Resolve relative to CCP4I2_ROOT
-                    abs_path = Path(ccp4i2_root) / rel_path
-                    abs_path = abs_path.resolve()  # Resolve any remaining .. in the path
+                if rel_path:
+                    # CRITICAL: Paths in defxml_lookup.json are relative to the task_manager directory
+                    # (where defxml_lookup.py is located), NOT relative to CCP4I2_ROOT or CWD.
+                    #
+                    # The defxml_lookup.py script does:
+                    #   script_dir = os.path.dirname(os.path.abspath(__file__))  # core/task_manager/
+                    #   rel_path = os.path.relpath(file_path, script_dir)
+                    #
+                    # So a path like "../../pipelines/shelx/script/shelx.def.xml" means:
+                    #   - Start from core/task_manager/
+                    #   - Go up two levels to project root
+                    #   - Then pipelines/shelx/script/shelx.def.xml
+                    #
+                    # Therefore, we resolve relative to self.task_manager_dir (which is rooted to
+                    # __file__, making it CWD-independent)
+                    abs_path = Path(self.task_manager_dir) / rel_path
+                    abs_path = abs_path.resolve()  # Resolve any .. in the path
 
                     if abs_path.exists():
                         return abs_path
