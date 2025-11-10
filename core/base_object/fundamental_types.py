@@ -834,6 +834,8 @@ class CString(CData):
         return item in self.value
 
     def __len__(self):
+        if self.value is None:
+            return 0
         return len(self.value)
 
     def set(self, value: str):

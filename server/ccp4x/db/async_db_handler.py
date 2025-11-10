@@ -675,8 +675,8 @@ class AsyncDatabaseHandler:
         # Create job if doesn't exist in database
         if plugin.get_db_job_id() is None:
             parent_uuid = None
-            if plugin.parent and hasattr(plugin.parent, 'get_db_job_id'):
-                parent_uuid = plugin.parent.get_db_job_id()
+            if plugin.parent() and hasattr(plugin.parent(), 'get_db_job_id'):
+                parent_uuid = plugin.parent().get_db_job_id()
 
             job = await self.create_job(
                 task_name=plugin.TASKNAME or "unknown",

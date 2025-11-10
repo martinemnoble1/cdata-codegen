@@ -399,7 +399,7 @@ class CXmlDataFile(CXmlDataFileStub):
             file_path = Path(self.getFullPath())
 
             # Ensure directory exists
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.parent().mkdir(parents=True, exist_ok=True)
 
             # Write with pretty formatting
             ET.indent(tree, space='  ')
@@ -412,7 +412,7 @@ class CXmlDataFile(CXmlDataFileStub):
             tree = ET.ElementTree(root)
             file_path = Path(self.getFullPath())
 
-            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.parent().mkdir(parents=True, exist_ok=True)
             tree.write(file_path, encoding='utf-8', xml_declaration=True)
 
             return True

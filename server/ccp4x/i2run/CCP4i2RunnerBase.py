@@ -91,7 +91,7 @@ class CCP4i2RunnerBase(object):
             parser: argparse.ArgumentParser instance (optional)
             parent: Parent object (legacy, unused)
         """
-        self.parent = parent
+        # parent parameter is legacy/unused - runner classes don't inherit from HierarchicalObject
 
         assert (
             the_args is not None or command_line is not None

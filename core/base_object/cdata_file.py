@@ -238,7 +238,7 @@ class CDataFile(CData):
             return self._temp_plugin_ref
 
         # Walk up parent hierarchy
-        current = self.parent
+        current = self.parent()
         depth = 0
         while current is not None:
             if isinstance(current, CPluginScript):
@@ -808,7 +808,8 @@ class CDataFile(CData):
         from ..base_object.qt_compat import QtStringCompat
         path_string = self.getFullPath()
         # Return a string-like object with .get() method for Qt API compatibility
-        return QtStringCompat(path_string) if path_string else ""
+        # Always return QtStringCompat for consistent API (even for empty strings)
+        return QtStringCompat(path_string) if path_string else QtStringCompat("")
 
     @fullPath.setter
     def fullPath(self, path: str):

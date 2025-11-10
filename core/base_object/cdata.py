@@ -794,7 +794,7 @@ class CData(HierarchicalObject):
         """
         if isinstance(value, CData):
             # Only set parent if not already set (respect explicit parent assignment)
-            if value.parent is None:
+            if value.parent() is None:
                 value.set_parent(self)
             # Only set name if not already set
             if not value.name:
@@ -804,7 +804,7 @@ class CData(HierarchicalObject):
             for i, item in enumerate(value):
                 if isinstance(item, CData):
                     # Only set parent if not already set
-                    if item.parent is None:
+                    if item.parent() is None:
                         item.set_parent(self)
                     if not item.name:
                         item.name = f"{key}[{i}]"

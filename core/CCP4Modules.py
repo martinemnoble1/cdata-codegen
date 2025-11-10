@@ -15,7 +15,39 @@ from .CCP4ProjectsManager import PROJECTSMANAGER
 from .CCP4ProcessManager import PROCESSMANAGER
 
 
-__all__ = ['TASKMANAGER', 'PROJECTSMANAGER', 'PROCESSMANAGER', 'QTAPPLICATION']
+__all__ = ['TASKMANAGER', 'PROJECTSMANAGER', 'PROCESSMANAGER', 'QTAPPLICATION', 'PREFERENCES']
+
+
+class _PreferencesStub:
+    """Stub for legacy PREFERENCES object.
+
+    Legacy code checks for attributes like SHELXDIR on the preferences object.
+    This stub allows attribute access without raising errors.
+    """
+    def __init__(self):
+        pass
+
+    def __getattr__(self, name):
+        # Return None for any requested attribute (preferences not set)
+        return None
+
+
+def PREFERENCES():
+    """
+    Get the user preferences object (stub for legacy compatibility).
+
+    This replaces the legacy CCP4Modules.PREFERENCES() function from classic ccp4i2.
+    Returns a stub object that returns None for any attribute access.
+
+    Returns:
+        _PreferencesStub: A stub preferences object
+
+    Example:
+        >>> from core import CCP4Modules
+        >>> prefs = CCP4Modules.PREFERENCES()
+        >>> shelx_dir = prefs.SHELXDIR  # Returns None
+    """
+    return _PreferencesStub()
 
 
 def QTAPPLICATION():

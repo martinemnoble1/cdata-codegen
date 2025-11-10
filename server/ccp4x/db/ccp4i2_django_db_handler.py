@@ -160,7 +160,7 @@ class CCP4i2DjangoDbHandler:
                     the_job.finish_time = timezone.now()
                     the_job.save()
                     self.db.gleanJobFiles(container=container, jobId=jobId)
-                if the_job.parent is None and models.Job.Status(
+                if the_job.parent() is None and models.Job.Status(
                     the_job.status
                 ).label in [
                     "Finished",

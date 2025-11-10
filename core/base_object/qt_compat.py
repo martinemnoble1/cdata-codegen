@@ -33,6 +33,14 @@ class QtStringCompat(str):
         """
         return str(self)
 
+    def isSet(self):
+        """Check if the string has a value (CData compatibility).
+
+        Returns:
+            bool: True if the string is non-empty, False otherwise
+        """
+        return bool(self)
+
     def __repr__(self):
         """Return repr showing this is a compatibility wrapper."""
         return f"QtStringCompat({str.__repr__(self)})"

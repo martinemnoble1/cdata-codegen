@@ -302,7 +302,7 @@ async def ensure_unique_path(dest_path: Path) -> Path:
     while True:
         stem = dest_path.stem
         suffix = dest_path.suffix
-        parent = dest_path.parent
+        parent = dest_path.parent()
 
         new_path = parent / f"{stem}_{counter}{suffix}"
         if not await sync_to_async(path_exists)(new_path):

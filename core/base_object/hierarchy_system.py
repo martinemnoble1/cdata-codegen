@@ -123,16 +123,23 @@ class HierarchicalObject(ABC):
         """Current object state."""
         return self._state
 
-    @property
     def parent(self) -> Optional["HierarchicalObject"]:
-        """Get the parent object (None if no parent or parent was destroyed)."""
+        """
+        Get the parent object (None if no parent or parent was destroyed).
+
+        This is a METHOD for backward compatibility with legacy ccp4i2 code that calls parent().
+        It can be used both as a method: obj.parent() or as a property-like: obj.parent
+
+        Returns:
+            Parent object or None if no parent or parent was destroyed
+        """
         if self._parent_ref is None:
             return None
-        parent = self._parent_ref()
-        if parent is None:
+        parent_obj = self._parent_ref()
+        if parent_obj is None:
             # Parent was garbage collected
             self._parent_ref = None
-        return parent
+        return parent_obj
 
     def get_parent(self) -> Optional["HierarchicalObject"]:
         """
@@ -142,10 +149,10 @@ class HierarchicalObject(ABC):
             Parent object or None if no parent or parent was destroyed
 
         Note:
-            This is a wrapper around the `parent` property for backward compatibility.
-            Prefer using the `parent` property directly in new code.
+            This is a wrapper around the `parent()` method for backward compatibility.
+            Prefer using the `parent()` method directly in new code.
         """
-        return self.parent
+        return self.parent()
 
     def set_parent(self, parent: Optional["HierarchicalObject"]) -> bool:
         """
@@ -164,7 +171,7 @@ class HierarchicalObject(ABC):
                 )
                 return False
 
-            old_parent = self.parent
+            old_parent = self.parent()
 
             # Remove from old parent
             if old_parent is not None:
@@ -283,7 +290,7 @@ class HierarchicalObject(ABC):
     def ancestors(self) -> List["HierarchicalObject"]:
         """Get list of all ancestor objects (parents, grandparents, etc.)."""
         ancestors = []
-        current = self.parent
+        current = self.parent()
         while current is not None:
             ancestors.append(current)
             current = current.parent
@@ -555,7 +562,7 @@ class HierarchicalObject(ABC):
 
         # Propagate to parent if requested
         if propagate:
-            parent = self.parent
+            parent = self.parent()
             if parent:
                 parent.emit_event(event_type, data, propagate=True)
 
@@ -582,7 +589,7 @@ class HierarchicalObject(ABC):
             child.destroy()
 
         # Remove from parent (only if parent supports hierarchy)
-        parent = self.parent
+        parent = self.parent()
         if parent and hasattr(parent, '_remove_child'):
             parent._remove_child(self)
             self._parent_ref = None
@@ -771,7 +778,7 @@ class HierarchicalObject(ABC):
 
     def __repr__(self) -> str:
         # Defensive: parent might not be a HierarchicalObject (e.g., QEventLoop)
-        parent = self.parent
+        parent = self.parent()
         if parent is None:
             parent_name = "None"
         elif hasattr(parent, '_name'):
