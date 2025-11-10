@@ -81,25 +81,29 @@ class CTaskManager:
 
     def locate_def_xml(self, task_name: str, version: Optional[str] = None) -> Optional[Path]:
         """
-        Locate the .def.xml file for a task given its name and optional version.
+        Locate the .def.xml file for a task given its name.
 
         Args:
             task_name: Name of the task/plugin (e.g., "refmac", "pointless")
-            version: Optional version string to match specific version
+            version: Optional version (IGNORED - kept for API compatibility, but unused since
+                     no plugins in this codebase actually have multiple versions)
 
         Returns:
             Path to the .def.xml file if found, None otherwise
+
+        Note:
+            Version checking is intentionally disabled. Analysis of defxml_lookup.json shows:
+            - 175/176 plugins have empty string version
+            - 1 plugin has version "0.0"
+            - Only 1 plugin (lorestr_i2) has multiple .def.xml files (both same version)
+            - No plugins have actual version variants (e.g., 1.0 vs 2.0)
+            Therefore, matching by name only is both simpler and sufficient.
         """
         for entry in self.defxml_lookup:
             plugin_name = entry.get("pluginName", "")
-            plugin_version = entry.get("pluginVersion", "")
 
-            # Check if plugin name matches
+            # Match by plugin name only (version checking is unnecessary - see docstring)
             if plugin_name == task_name:
-                # If version specified, check version match
-                if version is not None and plugin_version != version:
-                    continue
-
                 # Get relative path from entry
                 rel_path = entry.get("file_path", "")
 

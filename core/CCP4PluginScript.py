@@ -320,26 +320,22 @@ class CPluginScript(CData):
 
         Returns:
             Path to .def.xml file, or None if not found
+
+        Note:
+            Version checking is disabled - CTaskManager.locate_def_xml() ignores version
+            parameter since no plugins in this codebase have multiple versions.
+            See CCP4TaskManager.locate_def_xml() docstring for details.
         """
         if not self.TASKNAME:
             return None
 
         task_manager = TASKMANAGER()
 
-        # Treat low version numbers (< 1.0) and empty string as "no version"
-        # for compatibility with defxml_lookup.json which uses empty strings for plugins
-        # that don't have a <pluginVersion> element in their .def.xml
-        # Many plugins have version 0.0, 0.01, 0.1, or 1.0 which means "unversioned"
-        version = self.TASKVERSION
-        if version in ('0.0', '0.01', '0.1', '1.0', '0', '', None):
-            version = None
-        elif isinstance(version, (int, float)) and version < 1.0:
-            version = None
-
-        # Use CTaskManager's locate_def_xml method
+        # Version parameter is ignored by locate_def_xml (no plugins have multiple versions)
+        # Passing None for clarity, though any value would work
         return task_manager.locate_def_xml(
             task_name=self.TASKNAME,
-            version=version
+            version=None
         )
 
     def loadContentsFromXml(self, fileName: str) -> CErrorReport:
