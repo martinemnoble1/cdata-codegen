@@ -162,6 +162,83 @@ class CAsuDataFile(CAsuDataFileStub):
             import traceback
             traceback.print_exc()
 
+    def saveFile(self, dbInfo=None):
+        """
+        Save fileContent to an XML file.
+
+        Args:
+            dbInfo: Optional database info dict with keys: projectName, projectId, jobId, jobNumber
+        """
+        # Get the file path to write to
+        file_path = self.getFullPath()
+        if not file_path:
+            print(f"Warning: Cannot save CAsuDataFile - no file path set")
+            return
+
+        # Ensure parent directory exists
+        from pathlib import Path
+        output_path = Path(file_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Build XML structure
+        import xml.etree.ElementTree as ET
+        from xml.dom import minidom
+
+        # Create root with CCP4i2 header structure
+        root = ET.Element('ccp4i2_body')
+        root.set('id', 'CAsuDataFile')
+
+        # Add seqList element
+        seq_list_elem = ET.SubElement(root, 'seqList')
+
+        # Export each sequence from fileContent.seqList
+        if hasattr(self, 'fileContent') and self.fileContent is not None:
+            if hasattr(self.fileContent, 'seqList') and self.fileContent.seqList is not None:
+                for seq_obj in self.fileContent.seqList:
+                    seq_elem = ET.SubElement(seq_list_elem, 'CAsuContentSeq')
+
+                    # Export sequence fields
+                    if hasattr(seq_obj, 'sequence') and seq_obj.isSet('sequence'):
+                        seq_text = ET.SubElement(seq_elem, 'sequence')
+                        seq_text.text = str(seq_obj.sequence.value if hasattr(seq_obj.sequence, 'value') else seq_obj.sequence)
+
+                    if hasattr(seq_obj, 'nCopies') and seq_obj.isSet('nCopies'):
+                        copies = ET.SubElement(seq_elem, 'nCopies')
+                        copies.text = str(seq_obj.nCopies.value if hasattr(seq_obj.nCopies, 'value') else seq_obj.nCopies)
+
+                    if hasattr(seq_obj, 'polymerType') and seq_obj.isSet('polymerType'):
+                        polymer = ET.SubElement(seq_elem, 'polymerType')
+                        polymer.text = str(seq_obj.polymerType.value if hasattr(seq_obj.polymerType, 'value') else seq_obj.polymerType)
+
+                    if hasattr(seq_obj, 'name') and seq_obj.isSet('name'):
+                        name_elem = ET.SubElement(seq_elem, 'name')
+                        name_elem.text = str(seq_obj.name.value if hasattr(seq_obj.name, 'value') else seq_obj.name)
+
+                    if hasattr(seq_obj, 'description') and seq_obj.isSet('description'):
+                        desc = ET.SubElement(seq_elem, 'description')
+                        desc.text = str(seq_obj.description.value if hasattr(seq_obj.description, 'value') else seq_obj.description)
+
+                    # Export source element if it exists
+                    if hasattr(seq_obj, 'source') and seq_obj.isSet('source'):
+                        source_elem = ET.SubElement(seq_elem, 'source')
+                        if hasattr(seq_obj.source, 'baseName') and seq_obj.source.isSet('baseName'):
+                            base = ET.SubElement(source_elem, 'baseName')
+                            base.text = str(seq_obj.source.baseName.value if hasattr(seq_obj.source.baseName, 'value') else seq_obj.source.baseName)
+                        if hasattr(seq_obj.source, 'relPath') and seq_obj.source.isSet('relPath'):
+                            rel = ET.SubElement(source_elem, 'relPath')
+                            rel.text = str(seq_obj.source.relPath.value if hasattr(seq_obj.source.relPath, 'value') else seq_obj.source.relPath)
+
+        # Pretty print XML
+        xml_string = ET.tostring(root, encoding='unicode')
+        dom = minidom.parseString(xml_string)
+        pretty_xml = dom.toprettyxml(indent="  ")
+
+        # Write to file
+        with open(file_path, 'w') as f:
+            f.write(pretty_xml)
+
+        print(f"Debug: Saved ASU data to {file_path}")
+
     def writeFasta(
         self,
         fileName: str,
@@ -1313,8 +1390,7 @@ class CPdbDataFile(CPdbDataFileStub):
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier
-        self.set_qualifier('fileContentClassName', 'CPdbData')
+        # Note: fileContentClassName='CPdbData' is already set in CPdbDataFileStub decorator
 
     def isSelectionSet(self) -> bool:
         """Check if an atom selection is defined for this PDB file.

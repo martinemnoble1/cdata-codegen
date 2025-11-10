@@ -327,412 +327,6 @@ class CFreeRColumnGroup(CFreeRColumnGroupStub):
     pass
 
 
-class CFreeRDataFile(CFreeRDataFileStub):
-    """
-    An MTZ experimental data file
-
-    NOTE: Cannot inherit from CMiniMtzDataFile due to definition order.
-    CMiniMtzDataFile is defined later in the file.
-
-    Extends CFreeRDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
-        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier (same as CMiniMtzDataFile)
-        self.set_qualifier('fileContentClassName', 'CMtzData')
-
-    def _introspect_content_flag(self) -> Optional[int]:
-        """
-        Auto-detect content flag by reading MTZ columns and matching against
-        CONTENT_SIGNATURE_LIST.
-
-        This method uses gemmi to read the MTZ file and extract column labels,
-        then compares them against the class's CONTENT_SIGNATURE_LIST to
-        determine the appropriate contentFlag value.
-
-        Returns:
-            Detected content flag (1-indexed), or None if file cannot be read
-            or no signature matches.
-        """
-        from pathlib import Path
-
-        # Check if file exists
-        file_path = self.getFullPath()
-        if not file_path or not Path(file_path).exists():
-            return None
-
-        # Check if class has CONTENT_SIGNATURE_LIST
-        if not hasattr(self.__class__, 'CONTENT_SIGNATURE_LIST'):
-            return None
-
-        signature_list = self.__class__.CONTENT_SIGNATURE_LIST
-
-        try:
-            import gemmi
-
-            # Read MTZ file
-            mtz = gemmi.read_mtz_file(file_path)
-
-            # Extract column labels (just the names, not types)
-            column_labels = [col.label for col in mtz.columns]
-            column_set = set(column_labels)
-
-            # Match against signatures
-            for idx, required_columns in enumerate(signature_list):
-                required_set = set(required_columns)
-
-                # Check if all required columns are present
-                if required_set.issubset(column_set):
-                    # Match found: return contentFlag (1-indexed)
-                    return idx + 1
-
-            # No match found
-            return None
-
-        except Exception:
-            # File reading error or gemmi not available
-            return None
-
-
-class CGenericReflDataFile(CGenericReflDataFileStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    Extends CGenericReflDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    def getFormat(self):
-        """
-        Detect file format from file extension.
-
-        Legacy API compatibility method for import_merged and aimless plugins.
-
-        Returns:
-            str: File format ('mtz', 'mmcif', 'cif', or 'unknown')
-        """
-        # Get the file path
-        file_path = self.getFullPath()
-        if not file_path:
-            # Try baseName if getFullPath() returns None
-            if hasattr(self, 'baseName') and self.baseName is not None:
-                file_path = str(self.baseName.value if hasattr(self.baseName, 'value') else self.baseName)
-            else:
-                return 'unknown'
-
-        # Detect format from extension
-        file_path_lower = str(file_path).lower()
-        if file_path_lower.endswith('.mtz'):
-            return 'mtz'
-        elif file_path_lower.endswith('.cif') or file_path_lower.endswith('.mmcif'):
-            return 'mmcif'
-        else:
-            return 'unknown'
-
-    def getMerged(self):
-        """
-        Check if reflection data is merged.
-
-        Legacy API compatibility method for import_merged plugin.
-
-        Returns:
-            bool: True if data is merged, False if unmerged
-        """
-        # Default to True (merged) unless we can determine otherwise
-        # In a full implementation, this would inspect the MTZ/mmCIF file
-        # to check for unmerged data indicators (e.g., I+/I- columns)
-        return True
-
-
-class CHLColumnGroup(CHLColumnGroupStub):
-    """
-    A group of MTZ columns required for program input
-    
-    Extends CHLColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CIPairColumnGroup(CIPairColumnGroupStub):
-    """
-    A group of MTZ columns required for program input
-    
-    Extends CIPairColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CISigIColumnGroup(CISigIColumnGroupStub):
-    """
-    A group of MTZ columns required for program input
-    
-    Extends CISigIColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CImageFile(CImageFileStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CImageFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CImageFileList(CImageFileListStub):
-    """
-    A list with all items of one CData sub-class
-    
-    Extends CImageFileListStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CImosflmXmlDataFile(CImosflmXmlDataFileStub):
-    """
-    An iMosflm data file
-    
-    Extends CImosflmXmlDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CImportUnmerged(CImportUnmergedStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CImportUnmergedStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CImportUnmergedList(CImportUnmergedListStub):
-    """
-    A list with all items of one CData sub-class
-
-    Extends CImportUnmergedListStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        super().__init__(parent=parent, name=name, **kwargs)
-        # Set the subItem qualifier that makeItem() expects
-        # This allows i2run to create CImportUnmerged items when parsing arguments
-        self.set_qualifier('subItem', {'class': CImportUnmerged, 'qualifiers': {}})
-
-
-class CMapCoeffsDataFile(CMapCoeffsDataFileStub):
-    """
-    An MTZ experimental data file
-
-    NOTE: Cannot inherit from CMiniMtzDataFile due to definition order.
-    CMiniMtzDataFile is defined later in the file.
-
-    Extends CMapCoeffsDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    def as_FPHI(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Return path to this file as FPHI format.
-
-        Since CMapCoeffsDataFile only has one content type (FPHI),
-        this method simply returns the current file path without conversion.
-
-        FPHI format: F, PHI
-
-        This is a thin wrapper around PhaseDataConverter.to_fphi().
-        See core.conversions.phase_data_converter for implementation details.
-
-        Args:
-            work_directory: Ignored for this class
-
-        Returns:
-            Full path to this file (no conversion needed)
-        """
-        from core.conversions import PhaseDataConverter
-        return PhaseDataConverter.to_fphi(self, work_directory=work_directory)
-
-
-class CPhsDataFile(CPhsDataFileStub):
-    """
-    An MTZ phase data file.
-
-    Handles phase data in different formats:
-    - HL (1): Hendrickson-Lattman coefficients (HLA, HLB, HLC, HLD)
-    - PHIFOM (2): Phase + Figure of Merit (PHI, FOM)
-
-    NOTE: Cannot inherit from CMiniMtzDataFile due to definition order.
-    CMiniMtzDataFile is defined later in the file.
-
-    Extends CPhsDataFileStub with conversion methods for transforming
-    between different phase data representations.
-    """
-
-    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
-        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier (same as CMiniMtzDataFile)
-        self.set_qualifier('fileContentClassName', 'CMtzData')
-
-    def setContentFlag(self):
-        """
-        Introspect the MTZ file to determine the phase data content type.
-
-        Sets self.contentFlag to:
-        - 1 (CONTENT_FLAG_HL): Hendrickson-Lattman coefficients (HLA, HLB, HLC, HLD)
-        - 2 (CONTENT_FLAG_PHIFOM): Phase + Figure of Merit (PHI, FOM)
-        - 0: If content type cannot be determined
-
-        Returns:
-            int: The detected content flag value
-        """
-        import gemmi
-        from pathlib import Path
-
-        input_path = self.getFullPath()
-        if not input_path or not Path(input_path).exists():
-            self.contentFlag.set(0)
-            return 0
-
-        try:
-            mtz = gemmi.read_mtz_file(input_path)
-            column_labels = {col.label.upper() for col in mtz.columns}
-
-            # Check for HL coefficients
-            hl_cols = {'HLA', 'HLB', 'HLC', 'HLD'}
-            if hl_cols.issubset(column_labels):
-                self.contentFlag.set(self.CONTENT_FLAG_HL)
-                return self.CONTENT_FLAG_HL
-
-            # Check for PHI/FOM
-            phifom_cols = {'PHI', 'FOM'}
-            if phifom_cols.issubset(column_labels):
-                self.contentFlag.set(self.CONTENT_FLAG_PHIFOM)
-                return self.CONTENT_FLAG_PHIFOM
-
-            # Cannot determine
-            self.contentFlag.set(0)
-            return 0
-
-        except Exception:
-            self.contentFlag.set(0)
-            return 0
-
-    def as_HL(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to HL format (Hendrickson-Lattman coefficients).
-
-        HL format: HLA, HLB, HLC, HLD
-
-        This is a thin wrapper around PhaseDataConverter.to_hl().
-        See core.conversions.phase_data_converter for implementation details.
-
-        Args:
-            work_directory: Directory for output if input dir not writable
-
-        Returns:
-            Full path to converted file
-
-        Raises:
-            ValueError: If conversion not possible from current format
-        """
-        from core.conversions import PhaseDataConverter
-        return PhaseDataConverter.to_hl(self, work_directory=work_directory)
-
-    def as_PHIFOM(self, work_directory: Optional[Any] = None) -> str:
-        """
-        Convert this file to PHIFOM format (Phase + Figure of Merit).
-
-        PHIFOM format: PHI, FOM
-
-        This is a thin wrapper around PhaseDataConverter.to_phifom().
-        See core.conversions.phase_data_converter for implementation details.
-
-        Args:
-            work_directory: Directory for output if input dir not writable
-
-        Returns:
-            Full path to converted file
-
-        Raises:
-            ValueError: If conversion not possible from current format
-        """
-        from core.conversions import PhaseDataConverter
-        return PhaseDataConverter.to_phifom(self, work_directory=work_directory)
-
-
-class CMapColumnGroup(CMapColumnGroupStub):
-    """
-    A group of MTZ columns required for program input
-    
-    Extends CMapColumnGroupStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CMapDataFile(CMapDataFileStub):
-    """
-    A CCP4 Map file
-    
-    Extends CMapDataFileStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CMergeMiniMtz(CMergeMiniMtzStub):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CMergeMiniMtzStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
-class CMergeMiniMtzList(CMergeMiniMtzListStub):
-    """
-    A list with all items of one CData sub-class
-    
-    Extends CMergeMiniMtzListStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
-    """
-
-    # Add your methods here
-    pass
-
-
 class CMiniMtzDataFile(CMiniMtzDataFileStub):
     """
     An MTZ experimental data file
@@ -743,8 +337,7 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier (inherited by all subclasses)
-        self.set_qualifier('fileContentClassName', 'CMtzData')
+        # Note: fileContentClassName='CMtzData' is already set in CMiniMtzDataFileStub decorator
 
     # Note: _get_conversion_output_path() is now in CDataFile base class
 
@@ -897,6 +490,328 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
             list: ['mtz']
         """
         return ['mtz']
+
+class CFreeRDataFile(CFreeRDataFileStub, CMiniMtzDataFile):
+    """
+    An MTZ experimental data file for free-R flags.
+
+    Inherits from CMiniMtzDataFile to gain MTZ-specific methods:
+    - columnNames(): Get column names from file content
+    - _introspect_content_flag(): Auto-detect content flag from MTZ columns
+    - datasetName(): Get dataset name from MTZ
+    - fileExtensions(): Return ['mtz']
+
+    Extends CFreeRDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Note: fileContentClassName='CMtzData' is already set in CFreeRDataFileStub decorator
+
+
+class CGenericReflDataFile(CGenericReflDataFileStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    Extends CGenericReflDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    def getFormat(self):
+        """
+        Detect file format from file extension.
+
+        Legacy API compatibility method for import_merged and aimless plugins.
+
+        Returns:
+            str: File format ('mtz', 'mmcif', 'cif', or 'unknown')
+        """
+        # Get the file path
+        file_path = self.getFullPath()
+        if not file_path:
+            # Try baseName if getFullPath() returns None
+            if hasattr(self, 'baseName') and self.baseName is not None:
+                file_path = str(self.baseName.value if hasattr(self.baseName, 'value') else self.baseName)
+            else:
+                return 'unknown'
+
+        # Detect format from extension
+        file_path_lower = str(file_path).lower()
+        if file_path_lower.endswith('.mtz'):
+            return 'mtz'
+        elif file_path_lower.endswith('.cif') or file_path_lower.endswith('.mmcif'):
+            return 'mmcif'
+        else:
+            return 'unknown'
+
+    def getMerged(self):
+        """
+        Check if reflection data is merged.
+
+        Legacy API compatibility method for import_merged plugin.
+
+        Returns:
+            bool: True if data is merged, False if unmerged
+        """
+        # Default to True (merged) unless we can determine otherwise
+        # In a full implementation, this would inspect the MTZ/mmCIF file
+        # to check for unmerged data indicators (e.g., I+/I- columns)
+        return True
+
+
+class CHLColumnGroup(CHLColumnGroupStub):
+    """
+    A group of MTZ columns required for program input
+    
+    Extends CHLColumnGroupStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CIPairColumnGroup(CIPairColumnGroupStub):
+    """
+    A group of MTZ columns required for program input
+    
+    Extends CIPairColumnGroupStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CISigIColumnGroup(CISigIColumnGroupStub):
+    """
+    A group of MTZ columns required for program input
+    
+    Extends CISigIColumnGroupStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CImageFile(CImageFileStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+    
+    Extends CImageFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CImageFileList(CImageFileListStub):
+    """
+    A list with all items of one CData sub-class
+    
+    Extends CImageFileListStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CImosflmXmlDataFile(CImosflmXmlDataFileStub):
+    """
+    An iMosflm data file
+    
+    Extends CImosflmXmlDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CImportUnmerged(CImportUnmergedStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+    
+    Extends CImportUnmergedStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CImportUnmergedList(CImportUnmergedListStub):
+    """
+    A list with all items of one CData sub-class
+
+    Extends CImportUnmergedListStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Set the subItem qualifier that makeItem() expects
+        # This allows i2run to create CImportUnmerged items when parsing arguments
+        self.set_qualifier('subItem', {'class': CImportUnmerged, 'qualifiers': {}})
+
+
+class CMapCoeffsDataFile(CMapCoeffsDataFileStub, CMiniMtzDataFile):
+    """
+    An MTZ map coefficients data file (FPHI format).
+
+    Inherits from CMiniMtzDataFile to gain MTZ-specific methods:
+    - columnNames(): Get column names from file content
+    - _introspect_content_flag(): Auto-detect content flag from MTZ columns
+    - datasetName(): Get dataset name from MTZ
+    - fileExtensions(): Return ['mtz']
+
+    Extends CMapCoeffsDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    def as_FPHI(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Return path to this file as FPHI format.
+
+        Since CMapCoeffsDataFile only has one content type (FPHI),
+        this method simply returns the current file path without conversion.
+
+        FPHI format: F, PHI
+
+        This is a thin wrapper around PhaseDataConverter.to_fphi().
+        See core.conversions.phase_data_converter for implementation details.
+
+        Args:
+            work_directory: Ignored for this class
+
+        Returns:
+            Full path to this file (no conversion needed)
+        """
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_fphi(self, work_directory=work_directory)
+
+
+class CPhsDataFile(CPhsDataFileStub, CMiniMtzDataFile):
+    """
+    An MTZ phase data file.
+
+    Handles phase data in different formats:
+    - HL (1): Hendrickson-Lattman coefficients (HLA, HLB, HLC, HLD)
+    - PHIFOM (2): Phase + Figure of Merit (PHI, FOM)
+
+    Inherits from CMiniMtzDataFile to gain MTZ-specific methods:
+    - columnNames(): Get column names from file content
+    - _introspect_content_flag(): Auto-detect content flag from MTZ columns
+    - datasetName(): Get dataset name from MTZ
+    - fileExtensions(): Return ['mtz']
+
+    Extends CPhsDataFileStub with conversion methods for transforming
+    between different phase data representations.
+    """
+
+    def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
+        super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
+        # Note: fileContentClassName='CMtzData' is already set in CPhsDataFileStub decorator
+
+    # Note: setContentFlag() inherited from CDataFile base class
+    # It uses _introspect_content_flag() from CMiniMtzDataFile, which reads
+    # CONTENT_SIGNATURE_LIST = [['HLA', 'HLB', 'HLC', 'HLD'], ['PHI', 'FOM']]
+    # defined in CPhsDataFileStub
+
+    def as_HL(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to HL format (Hendrickson-Lattman coefficients).
+
+        HL format: HLA, HLB, HLC, HLD
+
+        This is a thin wrapper around PhaseDataConverter.to_hl().
+        See core.conversions.phase_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If conversion not possible from current format
+        """
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_hl(self, work_directory=work_directory)
+
+    def as_PHIFOM(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to PHIFOM format (Phase + Figure of Merit).
+
+        PHIFOM format: PHI, FOM
+
+        This is a thin wrapper around PhaseDataConverter.to_phifom().
+        See core.conversions.phase_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for output if input dir not writable
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If conversion not possible from current format
+        """
+        from core.conversions import PhaseDataConverter
+        return PhaseDataConverter.to_phifom(self, work_directory=work_directory)
+
+
+class CMapColumnGroup(CMapColumnGroupStub):
+    """
+    A group of MTZ columns required for program input
+    
+    Extends CMapColumnGroupStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CMapDataFile(CMapDataFileStub):
+    """
+    A CCP4 Map file
+    
+    Extends CMapDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CMergeMiniMtz(CMergeMiniMtzStub):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+    
+    Extends CMergeMiniMtzStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CMergeMiniMtzList(CMergeMiniMtzListStub):
+    """
+    A list with all items of one CData sub-class
+    
+    Extends CMergeMiniMtzListStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
 
 
 class CMiniMtzDataFileList(CMiniMtzDataFileListStub):
@@ -1096,8 +1011,7 @@ class CMmcifReflDataFile(CMmcifReflDataFileStub):
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier
-        self.set_qualifier('fileContentClassName', 'CMmcifReflData')
+        # Note: fileContentClassName='CMmcifReflData' is already set in CMmcifReflDataFileStub decorator
 
 
 class CMtzColumn(CMtzColumnStub):
@@ -1399,8 +1313,7 @@ class CMtzDataFile(CMtzDataFileStub):
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier
-        self.set_qualifier('fileContentClassName', 'CMtzData')
+        # Note: fileContentClassName='CMtzData' is already set in CMtzDataFileStub decorator
         # Note: MIME type now comes from ccp4i2_static_data.py via get_file_type_from_class()
         self.set_qualifier('guiLabel', 'Experimental data')
         self.set_qualifier('toolTip', 'MTZ format reflection data file')
@@ -2310,8 +2223,7 @@ class CUnmergedDataFile(CUnmergedDataFileStub):
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)
-        # Set the content class name qualifier
-        self.set_qualifier('fileContentClassName', 'CUnmergedDataContent')
+        # Note: fileContentClassName='CUnmergedDataContent' is already set in CUnmergedDataFileStub decorator
 
 
 class CUnmergedDataFileList(CUnmergedDataFileListStub):

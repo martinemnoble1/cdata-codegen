@@ -257,8 +257,10 @@ class PhaseDataConverter:
                 details=f"Input columns: {', '.join(input_labels)}"
             )
 
-        # Create the plugin wrapper
-        wrapper = chltofom.chltofom(name='phase_conversion')
+        # Create the plugin wrapper with correct workDirectory
+        # Use output_path's directory to avoid polluting project root with log files
+        work_dir = Path(output_path).parent
+        wrapper = chltofom.chltofom(name='phase_conversion', workDirectory=str(work_dir))
 
         # Set up input
         wrapper.container.inputData.HKLIN.setFullPath(input_path)

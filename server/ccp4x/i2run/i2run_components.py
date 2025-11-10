@@ -240,8 +240,6 @@ class ArgumentBuilder:
         arg_name = f"--{keyword['minimumPath']}"
 
         # Check if this is a CList type
-        # For CList types, we use action="append" WITHOUT nargs="+"
-        # to avoid double-nesting when users specify --LISTARG value1 --LISTARG value2
         is_clist = isinstance(keyword["object"], CCP4Data.CList)
 
         kwargs = {
@@ -250,9 +248,9 @@ class ArgumentBuilder:
             "metavar": keyword["object"].__class__.__name__
         }
 
-        # Only add nargs="+" for non-CList types
-        if not is_clist:
-            kwargs["nargs"] = "+"
+        # Always use nargs="+" to capture multiple values (including key=value pairs)
+        # For CList types, also use action="append" to allow multiple --ARG invocations
+        kwargs["nargs"] = "+"
 
         # Extract help text and defaults from qualifiers
         qualifiers = keyword.get("qualifiers", {})
