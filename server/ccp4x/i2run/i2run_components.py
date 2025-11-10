@@ -475,8 +475,33 @@ class PluginPopulator:
                 logger.warning(f"Don't know how to set list value {value} on {type(target).__name__}")
                 return
 
-        # Parse key=value syntax
-        if "=" in str(value):
+        # Strip surrounding quotes if present (shell artifact)
+        if isinstance(value, str):
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+
+        # TYPE-BASED PARSING DECISION
+        # Key insight: Only CDataFile and CData composite types support key=value syntax
+        # for setting sub-attributes (e.g., fullPath=, selection/text=, columnLabels=)
+        #
+        # Fundamental types (CInt, CFloat, CString, CBoolean) only have a .value attribute
+        # and should ALWAYS be treated as literal values, even if they contain "=" characters.
+        #
+        # Examples:
+        #   --SMILESIN "CN1CCC(=O)CC4"  -> Fundamental type (CString), set .value directly
+        #   --FPHIIN fullPath=/path/to/file.mtz -> CDataFile, parse key=value
+        #
+        # This type-based approach is cleaner than quote-based escaping and prevents
+        # accidental misparsing of chemical notation, mathematical expressions, etc.
+        from core.base_object.fundamental_types import CInt, CFloat, CString, CBoolean, CList
+        from core.base_object.base_classes import CData
+
+        is_fundamental_type = isinstance(target, (CInt, CFloat, CString, CBoolean))
+        is_composite_type = isinstance(target, (CDataFile, CData)) and not is_fundamental_type
+
+        # Parse key=value syntax ONLY for composite types (CDataFile, CData)
+        # Fundamental types are always treated as literal values
+        if is_composite_type and "=" in str(value):
             parts = str(value).split("=", 1)
             key = parts[0]
             val = parts[1] if len(parts) > 1 else ""
