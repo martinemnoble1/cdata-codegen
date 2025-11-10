@@ -63,7 +63,9 @@ def test_from_smiles():
     args = ["LidiaAcedrgNew"]
     args += ["--MOLSMILESORSKETCH", "SMILES"]
     args += ["--TLC", "HCA"]
-    args += ["--SMILESIN", '"CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(=O)CC4"']
+    # Note: SMILESIN is a CString (fundamental type), so the "=" in the SMILES
+    # string is NOT parsed as key=value syntax. Type-based parsing handles this correctly.
+    args += ["--SMILESIN", "CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(=O)CC4"]
     with i2run(args) as job:
         check_output(job, "HCA")
 
@@ -83,7 +85,8 @@ def test_from_smiles_atom_name_matching():
     args = ["LidiaAcedrgNew"]
     args += ["--MOLSMILESORSKETCH", "SMILES"]
     args += ["--TLC", "LIG"]
-    args += ["--SMILESIN", '"CO[C@@H]1[C@@H]([C@H](O[C@H]1N2C=NC3=C2N=C(NC3=O)N)COP(=O)(O)O)O"']
+    # SMILES with stereochemistry notation - still a CString, no quote-escaping needed
+    args += ["--SMILESIN", "CO[C@@H]1[C@@H]([C@H](O[C@H]1N2C=NC3=C2N=C(NC3=O)N)COP(=O)(O)O)O"]
     args += ["--ATOMMATCHOPTION", "MONLIBCODE"]
     args += ["--MATCHTLC", "5GP"]
     args += ["--NRANDOM", "5"]
