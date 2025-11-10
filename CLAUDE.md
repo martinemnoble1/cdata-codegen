@@ -481,3 +481,16 @@ This project migrates CCP4i2 from Qt dependencies to pure Python:
 - **C++ types** → Python fundamental types (CInt, CFloat, etc.)
 
 The goal is metadata-driven, type-safe data modeling without Qt overhead.
+
+### Python 3.11 Environment (CCP4-20251105)
+
+**Required CCP4 Module Symlinks:**
+```bash
+# For validate_protein plugin
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/iris_validation .venv.py311/lib/python3.11/site-packages/iris_validation
+
+# For mrbump (if needed - already done during setup)
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/mrbump .venv.py311/lib/python3.11/site-packages/mrbump
+```
+
+**Note**: validate_protein requires `iris_validation` which is only available in the CCP4 Python distribution, not in PyPI.

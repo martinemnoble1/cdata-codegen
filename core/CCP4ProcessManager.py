@@ -425,6 +425,9 @@ class CProcessManager:
         """
         Get process information by attribute name.
 
+        For synchronous processes, checks both the processInfo dict and
+        the plugin object's attributes (_exitCode, _exitStatus, etc.).
+
         Args:
             pid: Process ID returned by startProcess()
             attribute: Data attribute name (exitCode, exitStatus, status, startTime, qprocess, etc.)
@@ -440,7 +443,22 @@ class CProcessManager:
         if pid not in self.processInfo:
             return None
 
-        return self.processInfo[pid].get(attribute)
+        info = self.processInfo[pid]
+
+        # First check if attribute exists in processInfo dict
+        if attribute in info:
+            return info[attribute]
+
+        # For synchronous processes, check plugin object attributes
+        # CPluginScript stores exit codes as _exitCode, _exitStatus
+        plugin = info.get('plugin')
+        if plugin:
+            # Try with underscore prefix (e.g., exitCode -> _exitCode)
+            attr_name = f'_{attribute}'
+            if hasattr(plugin, attr_name):
+                return getattr(plugin, attr_name)
+
+        return None
 
     def waitForFinished(self, pid: int, timeout: int = -1) -> bool:
         """
@@ -490,18 +508,22 @@ class CProcessManager:
         Register a plugin with the process manager.
 
         Legacy API compatibility method for CPluginScript.
-        In Qt-based CProcessManager, this allowed plugins to register
-        themselves so the manager could track their execution.
-
-        In our subprocess-based implementation, this is a no-op since
-        we track processes by PID rather than by plugin reference.
+        Stores a reference to the plugin so that getJobData() can query
+        plugin attributes (_exitCode, _exitStatus) for synchronous processes.
 
         Args:
             plugin: CPluginScript instance to register
         """
-        # No-op in subprocess-based implementation
-        # Process tracking is done via PIDs in processInfo dict
-        pass
+        # Use plugin's object ID as PID (matches getProcessId() implementation)
+        pid = id(plugin)
+
+        # Create or update process info entry
+        if pid not in self.processInfo:
+            self.processInfo[pid] = {}
+
+        # Store plugin reference for attribute queries
+        self.processInfo[pid]['plugin'] = plugin
+        self.processInfo[pid]['startTime'] = time.time()
 
     def formatted_job(self, pid: int) -> str:
         """
