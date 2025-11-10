@@ -76,13 +76,28 @@ class CErrorReport:
         if isinstance(other, CErrorReport):
             self._errors.extend(other._errors)
 
-    def count(self) -> int:
+    def count(self, cls=None, code=None) -> int:
         """Return the number of errors in this report.
 
+        Args:
+            cls: Optional class filter (legacy Qt API compatibility)
+            code: Optional error code filter
+
         Returns:
-            Number of errors
+            Number of errors matching the filters (or all errors if no filters)
         """
-        return len(self._errors)
+        if cls is None and code is None:
+            return len(self._errors)
+
+        # Filter errors by cls and/or code
+        count = 0
+        for error in self._errors:
+            if code is not None and error.get('code') != code:
+                continue
+            # cls parameter is ignored in Qt-free implementation
+            # (it was used to filter by plugin class in Qt version)
+            count += 1
+        return count
 
     def maxSeverity(self) -> int:
         """Return the maximum severity level of all errors.
