@@ -169,6 +169,9 @@ class CPluginScript(CData):
     # Getter/setter methods for database-related attributes
     def get_status(self) -> Optional[int]:
         """Get the current plugin status."""
+        # Handle case where _status might be a dict (from postProcessWrapper)
+        if isinstance(self._status, dict):
+            return self._status.get('finishStatus', self.FAILED)
         return self._status
 
     def get_db_job_id(self) -> Optional[str]:
