@@ -1377,8 +1377,8 @@ class CList(CData):
         item = item_class(parent=None, name=f"temp_item_{len(self._items)}")
 
         # Apply qualifiers if provided
-        if item_qualifiers and hasattr(item, 'qualifiers'):
-            item.qualifiers.update(item_qualifiers)
+        if item_qualifiers and hasattr(item, '_qualifiers'):
+            item._qualifiers.update(item_qualifiers)
 
         return item
 
