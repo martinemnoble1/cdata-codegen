@@ -2203,13 +2203,16 @@ class CUnmergedDataFile(CUnmergedDataFileStub):
 class CUnmergedDataFileList(CUnmergedDataFileListStub):
     """
     A list with all items of one CData sub-class
-    
+
     Extends CUnmergedDataFileListStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        super().__init__(parent=parent, name=name, **kwargs)
+        # Set the subItem qualifier to specify CUnmergedDataFile as item type
+        # This allows aimless_pipe to use list items as CUnmergedDataFile objects
+        self.set_qualifier('subItem', {'class': CUnmergedDataFile, 'qualifiers': {}})
 
 
 class CUnmergedMtzDataFile(CUnmergedMtzDataFileStub, CMtzDataFile):

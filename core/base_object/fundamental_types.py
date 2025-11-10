@@ -1166,9 +1166,25 @@ class CList(CData):
                 item.name = f"{self.name}[{i}]"
 
     def append(self, item: Any) -> None:
-        """Add an item to the list."""
-        from ..base_object.base_classes import ValueState
+        """Add an item to the list.
+
+        Supports smart type conversion:
+        - If appending a string to a list expecting CDataFile objects,
+          creates a new file object and sets its path
+        """
+        from ..base_object.base_classes import ValueState, CDataFile
         index = len(self._items)
+
+        # Smart type conversion for legacy code compatibility
+        # If appending a string but subItem expects a CDataFile, create one
+        sub_item_def = self.get_qualifier('subItem')
+        if sub_item_def and isinstance(item, str):
+            item_class = sub_item_def.get('class')
+            if item_class and issubclass(item_class, CDataFile):
+                # Create file object and set its path
+                file_obj = item_class(parent=None, name=f"temp_item_{index}")
+                file_obj.setFullPath(item)
+                item = file_obj
 
         # If item is CData, register as child
         if isinstance(item, CData):
