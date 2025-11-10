@@ -899,6 +899,14 @@ class CData(HierarchicalObject):
 
         elif isinstance(value, CData) and isinstance(existing_attr, CData):
             # CData to CData assignment: use smart assignment logic
+            # Only perform assignment if the source value is actually set
+            # This prevents copying unset/default values which would mark them as explicitly set
+            if hasattr(value, 'isSet') and not value.isSet():
+                # Source value is not set - skip the assignment
+                # This prevents legacy code like: obj.FRAC = source.FREER_FRACTION
+                # from marking FRAC as set when FREER_FRACTION is just a default
+                return
+
             if name in ['contentFlag', 'subType']:  # DEBUG
                 logger.debug("Branch: CData to CData for %s", name)  # DEBUG
             existing_attr._smart_assign_from_cdata(value)

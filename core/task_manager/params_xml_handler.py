@@ -261,7 +261,8 @@ class ParamsXmlHandler:
                         # CList.getEtree() handles serialization with proper class name tags
                         print(f"[DEBUG] Found CList attribute: '{attr_name}', calling getEtree()")
                         if hasattr(attr, 'getEtree'):
-                            list_etree = attr.getEtree(excludeUnset=False)
+                            # excludeUnset=True to skip parameters that haven't been explicitly set
+                            list_etree = attr.getEtree(excludeUnset=True)
                             # Append the list's etree as a child
                             parent_elem.append(list_etree)
                         else:
