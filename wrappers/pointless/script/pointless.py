@@ -30,6 +30,13 @@ class pointless(CPluginScript):
       # XMLOUT on command line so that syntax errors go into it
       self.appendCommandLine(['XMLOUT',str( self.makeFileName( 'PROGRAMXML' ) )])
 
+      # TEMPORARY DEBUG: Check UNMERGEDFILES
+      print(f"[DEBUG pointless.py] UNMERGEDFILES type: {type(self.container.inputData.UNMERGEDFILES)}")
+      print(f"[DEBUG pointless.py] UNMERGEDFILES length: {len(self.container.inputData.UNMERGEDFILES)}")
+      print(f"[DEBUG pointless.py] UNMERGEDFILES: {self.container.inputData.UNMERGEDFILES}")
+      if hasattr(self.container.inputData.UNMERGEDFILES, '_items'):
+          print(f"[DEBUG pointless.py] UNMERGEDFILES._items: {self.container.inputData.UNMERGEDFILES._items}")
+
       for i in range(len(self.container.inputData.UNMERGEDFILES)):
         # Note: NAME, CIFBLOCK commands must preceed HKLIN
         # print(">>>HKLIN ", self.container.inputData.UNMERGEDFILES[i], file=logit)

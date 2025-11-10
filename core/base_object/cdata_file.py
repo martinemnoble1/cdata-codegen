@@ -797,14 +797,15 @@ class CDataFile(CData):
     def fullPath(self):
         """Property to access the full file path as a string.
 
-        Returns a LegacyPath wrapper that behaves like a string but also
+        Returns a CString that behaves like a string but also
         supports the Qt API `.get()` method for backward compatibility.
 
         Returns:
-            LegacyPath wrapper around the full path string
+            CString wrapper around the full path string
         """
+        from ..base_object.fundamental_types import CString
         path_string = self.getFullPath()
-        return LegacyPath(path_string)
+        return CString(value=path_string)
 
     @fullPath.setter
     def fullPath(self, path: str):

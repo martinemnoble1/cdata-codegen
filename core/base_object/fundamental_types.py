@@ -841,6 +841,17 @@ class CString(CData):
         self.value = value
         return self
 
+    def get(self) -> str:
+        """Get the value as a plain string.
+
+        This method provides Qt API compatibility for legacy code
+        that expects property objects with .get() method.
+
+        Returns:
+            The string value
+        """
+        return self.value
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
