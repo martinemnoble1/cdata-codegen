@@ -849,7 +849,17 @@ class CData(HierarchicalObject):
                 ]:
                     setattr(self, key, value)
         else:
-            # Complex type assignment (like containers)
+            # Complex type assignment (like containers and lists)
+            # For CList types, copy items from source to self
+            from .fundamental_types import CList
+            if isinstance(self, CList) and isinstance(source, CList):
+                # Clear existing items
+                self.clear()
+                # Copy items from source to self
+                for item in source:
+                    self.append(item)
+                return
+
             # For containers, merge attributes from source instead of replacing
             from .ccontainer import CContainer
             if isinstance(self, CContainer) and isinstance(source, CContainer):
