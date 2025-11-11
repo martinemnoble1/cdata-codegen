@@ -38,7 +38,7 @@ def save_params_for_job(
     # Rework to the directory of "the_job"
     relocated_file_path = the_job.directory / pathlib.Path(fileName).name
 
-    pass  # DEBUG: print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path}")
+    pass  # DEBUG: print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path.name}")
 
     if relocated_file_path.exists():
         CCP4Utils.backupFile(str(relocated_file_path), delete=False)
@@ -63,54 +63,7 @@ def save_params_for_job(
     f.header.userId.set(getpass.getuser())
     old_job_container: CCP4Container.CContainer = the_job_plugin.container
 
-    # DEBUG: Check container structure before saving
-    print(f"\n[DEBUG save_params] === Container structure for job {the_job.number} ===")
-    print(f"[DEBUG save_params] exclude_unset parameter: {exclude_unset}")
-    print(f"[DEBUG save_params] Container type: {type(old_job_container).__name__}")
-
-    try:
-        # Show all top-level attributes
-        for attr_name in ['inputData', 'outputData', 'controlParameters']:
-            if hasattr(old_job_container, attr_name):
-                section = getattr(old_job_container, attr_name)
-                print(f"[DEBUG save_params]   {attr_name}: type={type(section).__name__}")
-
-                # Check specific file attributes
-                if attr_name == 'inputData':
-                    for attr in ['HKLIN', 'XYZIN', 'UNMERGEDFILES']:
-                        if hasattr(section, attr):
-                            attr_obj = getattr(section, attr)
-                            print(f"[DEBUG save_params]     {attr}: type={type(attr_obj).__name__}, isSet={attr_obj.isSet() if hasattr(attr_obj, 'isSet') else 'N/A'}")
-                            if hasattr(attr_obj, '__len__'):
-                                print(f"[DEBUG save_params]       length: {len(attr_obj)}")
-    except Exception as e:
-        print(f"[DEBUG save_params] Error checking container structure: {e}")
-
     # Use the exclude_unset parameter passed to this function
-    print(f"[DEBUG save_params] Calling getEtree with excludeUnset={exclude_unset}")
     body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
 
-    # DEBUG: Check what's in body_etree
-    import xml.etree.ElementTree as ET
-    body_xml = ET.tostring(body_etree, encoding='unicode')
-    print(f"[DEBUG save_params] Body etree length: {len(body_xml)}")
-    if 'UNMERGEDFILES' in body_xml:
-        print(f"[DEBUG save_params] ✓ UNMERGEDFILES found in body etree")
-        # Find and print the UNMERGEDFILES section
-        start_idx = body_xml.index('<UNMERGEDFILES>')
-        end_idx = body_xml.index('</UNMERGEDFILES>') + len('</UNMERGEDFILES>')
-        print(f"[DEBUG save_params] UNMERGEDFILES section:")
-        print(body_xml[start_idx:end_idx])
-    else:
-        print(f"[DEBUG save_params] ✗ UNMERGEDFILES NOT found in body etree!")
-        print(f"[DEBUG save_params] Body etree (first 1000 chars): {body_xml[:1000]}")
-
     f.saveFile(bodyEtree=body_etree)
-    logger.info(f"[DEBUG save_params] Saved params to {relocated_file_path}")
-
-    # Verify file was actually written
-    import os
-    if os.path.exists(relocated_file_path):
-        pass  # DEBUG: print(f"[DEBUG save_params] ✓ Verified file exists: {relocated_file_path}")
-    else:
-        pass  # DEBUG: print(f"[DEBUG save_params] ✗ WARNING: File does NOT exist after saveFile(): {relocated_file_path}")
