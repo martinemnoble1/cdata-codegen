@@ -533,20 +533,20 @@ class AsyncDatabaseHandler:
                 file_obj._temp_plugin_ref = plugin
 
             try:
-                logger.debug(f"[DEBUG glean_job_files] Processing {file_obj.name}:")
+                logger.debug(f"[DEBUG glean_job_files] Processing {file_obj.objectName()}:")
                 pass  # DEBUG: print(f"  isSet(): {file_obj.isSet() if hasattr(file_obj, 'isSet') else 'N/A'}")
                 pass  # DEBUG: print(f"  exists(): {file_obj.exists() if hasattr(file_obj, 'exists') else 'N/A'}")
                 pass  # DEBUG: print(f"  getFullPath(): {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'}")
 
                 # Check if file is set (baseName has been assigned)
                 if not hasattr(file_obj, 'isSet') or not file_obj.isSet():
-                    logger.debug(f"Skipping unset file: {file_obj.name}")
+                    logger.debug(f"Skipping unset file: {file_obj.objectName()}")
                     pass  # DEBUG: print(f"  -> Skipping: not set")
                     continue
 
                 # Check if file exists on disk
                 if not hasattr(file_obj, 'exists') or not file_obj.exists():
-                    logger.debug(f"Skipping non-existent file: {file_obj.name} (path: {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'})")
+                    logger.debug(f"Skipping non-existent file: {file_obj.objectName()} (path: {file_obj.getFullPath() if hasattr(file_obj, 'getFullPath') else 'N/A'})")
                     pass  # DEBUG: print(f"  -> Skipping: doesn't exist")
                     continue
             finally:
@@ -560,7 +560,7 @@ class AsyncDatabaseHandler:
             try:
                 metadata = extract_file_metadata(file_obj)
 
-                logger.debug(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.name}:")
+                logger.debug(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.objectName()}:")
                 pass  # DEBUG: print(f"  file_type (mimeTypeName): {metadata['file_type']}")
                 pass  # DEBUG: print(f"  content_flag: {metadata.get('content_flag', 'NOT SET')}")
                 pass  # DEBUG: print(f"  sub_type: {metadata.get('sub_type', 'NOT SET')}")
@@ -589,7 +589,7 @@ class AsyncDatabaseHandler:
                 files_created.append(file_record)
 
             except Exception as e:
-                logger.exception(f"Error gleaning file {file_obj.name}: {e}")
+                logger.exception(f"Error gleaning file {file_obj.objectName()}: {e}")
 
         return files_created
 

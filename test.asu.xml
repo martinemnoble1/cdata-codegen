@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<ccp4i2_body id="CAsuDataFile">
+  <seqList>
+    <CAsuContentSeq>
+      <sequence>HPETLVKVK</sequence>
+      <nCopies>1</nCopies>
+      <polymerType>PROTEIN</polymerType>
+      <name>BETA</name>
+      <description>Beta-lactamase</description>
+    </CAsuContentSeq>
+    <CAsuContentSeq>
+      <sequence>AGVMTGAKFT</sequence>
+      <nCopies>1</nCopies>
+      <polymerType>PROTEIN</polymerType>
+      <name>BLIP</name>
+      <description>BLIP protein</description>
+    </CAsuContentSeq>
+  </seqList>
+</ccp4i2_body>

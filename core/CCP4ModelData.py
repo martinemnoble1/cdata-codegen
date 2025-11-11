@@ -8,6 +8,7 @@ This file is safe to edit - add your implementation code here.
 from __future__ import annotations
 from typing import Optional, Any
 
+from core.base_object.base_classes import CData
 from core.cdata_stubs.CCP4ModelData import CAsuContentStub, CAsuContentSeqStub, CAsuContentSeqListStub, CAsuDataFileStub, CAtomRefmacSelectionStub, CAtomRefmacSelectionGroupsStub, CAtomRefmacSelectionListStub, CAtomRefmacSelectionOccupancyStub, CAtomSelectionStub, CBlastDataStub, CBlastDataFileStub, CBlastItemStub, CChemCompStub, CDictDataStub, CDictDataFileStub, CElementStub, CEnsembleStub, CEnsembleListStub, CEnsemblePdbDataFileStub, CHhpredDataStub, CHhpredDataFileStub, CHhpredItemStub, CMDLMolDataFileStub, CMol2DataFileStub, CMonomerStub, COccRefmacSelectionListStub, COccRelationRefmacListStub, CPdbDataStub, CPdbDataFileStub, CPdbDataFileListStub, CPdbEnsembleItemStub, CResidueRangeStub, CResidueRangeListStub, CSeqAlignDataFileStub, CSeqDataFileStub, CSeqDataFileListStub, CSequenceStub, CSequenceAlignmentStub, CSequenceMetaStub, CSequenceStringStub, CTLSDataFileStub
 
 
@@ -123,30 +124,60 @@ class CAsuContentSeq(CAsuContentSeqStub):
     Add file I/O, validation, and business logic here.
     """
 
-    @property
-    def polymerType(self):
+    def molecularWeight(self, polymerType="PROTEIN"):
         """
-        Return polymerType as a plain string for legacy plugin compatibility.
+        Calculate molecular weight of the sequence.
 
-        Legacy plugins like modelcraft use polymerType directly as a dictionary key:
-            key = {"PROTEIN": "proteins", "RNA": "rnas", "DNA": "dnas"}[seqObj.polymerType]
+        Args:
+            polymerType: Type of polymer ("PROTEIN", "RNA", or "DNA")
 
-        This requires polymerType to hash and compare like a plain string, not a CString object.
+        Returns:
+            float: Molecular weight in Daltons, multiplied by nCopies
+
+        Note:
+            Uses BioPython's SeqUtils.molecular_weight() function.
+            Filters out non-standard residues before calculation.
         """
-        # Access the underlying CString via __dict__ to avoid recursion
-        polymer_type_cstring = self.__dict__.get('_polymerType') or self.__dict__.get('polymerType')
-        if polymer_type_cstring is not None:
-            # Convert CString to plain string
-            return str(polymer_type_cstring.value) if hasattr(polymer_type_cstring, 'value') else str(polymer_type_cstring)
-        return "PROTEIN"  # Default fallback
+        import re
+        import Bio.SeqUtils
 
-    @polymerType.setter
-    def polymerType(self, value):
-        """Set polymerType, accepting both string and CString values."""
-        # Store directly in __dict__ to avoid recursion through CData.__setattr__
-        # Use the attribute name that the parent class expects (polymerType)
-        # The parent CData class will handle the CString wrapping
-        self.__dict__['polymerType'] = value
+        # Get sequence value - handle both CString and plain string
+        sequence = self.sequence
+        if hasattr(sequence, 'value'):
+            seq_str = str(sequence.value)
+        else:
+            seq_str = str(sequence)
+
+        # Get nCopies value - handle both CInt and plain int
+        n_copies = self.nCopies
+        if hasattr(n_copies, 'value'):
+            n_copies_val = float(n_copies.value)
+        else:
+            n_copies_val = float(n_copies)
+
+        # Normalize polymerType - handle CString, plain string, and empty values
+        if hasattr(polymerType, 'value'):
+            polymer_type_str = str(polymerType.value)
+        elif hasattr(polymerType, '__str__'):
+            polymer_type_str = str(polymerType)
+        else:
+            polymer_type_str = polymerType
+
+        # Default to PROTEIN if empty
+        if not polymer_type_str or polymer_type_str.strip() == '':
+            polymer_type_str = "PROTEIN"
+
+        # BioPython is not robust to bad sequences - filter to valid residues only
+        if polymer_type_str == "PROTEIN":
+            # Standard amino acid codes
+            seq = re.sub('[^GALMFWKQESPVICYHRNDT]', '', seq_str)
+            wt = Bio.SeqUtils.molecular_weight(seq, seq_type='protein')
+        else:
+            # Nucleic acid codes
+            seq = re.sub('[^CAUGT]', '', seq_str)
+            wt = Bio.SeqUtils.molecular_weight(seq, seq_type=polymer_type_str)
+
+        return wt * n_copies_val
 
 
 class CAsuContentSeqList(CAsuContentSeqListStub):

@@ -432,6 +432,20 @@ class PluginPopulator:
                 target.append(new_item)
                 logger.debug(f"Appended item to list, list now has {len(target)} items")
 
+                # Debug: verify the item was actually added
+                print(f"[DEBUG] After append: target list has {len(target)} items")
+                print(f"[DEBUG] target type: {type(target).__name__}, target object_path: {target.object_path() if hasattr(target, 'object_path') else 'N/A'}")
+                if len(target) > 0:
+                    last_item = target[-1]
+                    print(f"[DEBUG] Last item type: {type(last_item).__name__}")
+                    # Check actual data attributes - use getattr to avoid confusion with hierarchical 'name'
+                    for attr_name in ['sequence', 'nCopies', 'polymerType', 'description']:
+                        if hasattr(last_item, attr_name):
+                            attr = getattr(last_item, attr_name)
+                            if attr is not None:
+                                val_repr = attr.value if hasattr(attr, 'value') else attr
+                                print(f"[DEBUG]   last_item.{attr_name} = {val_repr!r}"[:100])
+
                 # Debug for UNMERGEDFILES
                 if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
                     pass  # DEBUG: print(f"[DEBUG] list length after append: {len(target)}")
@@ -459,14 +473,102 @@ class PluginPopulator:
 
         # Handle list values - join them or convert to appropriate format
         if isinstance(value, list):
-            # For CData objects with .set(), convert list to string (comma-separated)
-            # or try to set as individual attributes
+            # For CData objects with .set(), check if we're dealing with key=value pairs
             if hasattr(target, "set"):
-                # If it's a single-item list, unwrap it
-                if len(value) == 1:
+                # Check if this looks like multiple key=value pairs (for CList items)
+                # If most items contain "=", parse them as individual key=value pairs
+                has_equals = [("=" in str(v)) for v in value]
+                if len(has_equals) > 0 and sum(has_equals) >= len(has_equals) * 0.5:
+                    print(f"\n[DEBUG] Parsing {len(value)} key=value pairs for {type(target).__name__}")
+                    print(f"[DEBUG] value list: {value}")
+                    logger.info(f"Parsing {len(value)} key=value pairs for {type(target).__name__}: {value}")
+                    # Multiple key=value pairs - parse each one individually
+                    for item_str in value:
+                        if "=" in str(item_str):
+                            parts = str(item_str).split("=", 1)
+                            key = parts[0]
+                            val = parts[1] if len(parts) > 1 else ""
+                            logger.info(f"  Setting {key}={val!r}")
+
+                            # Handle nested paths like "source/baseName"
+                            if "/" in key:
+                                nested_parts = key.split("/")
+                                current = target
+                                for nested_key in nested_parts[:-1]:
+                                    current = getattr(current, nested_key, None)
+                                    if current is None:
+                                        logger.warning(f"Could not navigate to {nested_key}")
+                                        break
+                                if current is not None:
+                                    final_key = nested_parts[-1]
+                                    # For CData objects, attributes are created dynamically
+                                    # For attributes that collide with HierarchicalObject properties,
+                                    # bypass __setattr__ and create CData values directly
+                                    try:
+                                        # Import CString locally
+                                        from core.base_object.fundamental_types import CString, CInt, CFloat, CBoolean
+
+                                        # Check if attribute already exists
+                                        existing = getattr(current, final_key, None)
+
+                                        # Determine appropriate wrapper type
+                                        if existing is not None:
+                                            # Update existing CData value
+                                            if hasattr(existing, 'value'):
+                                                existing.value = val
+                                            else:
+                                                setattr(current, final_key, val)
+                                        else:
+                                            # Simply use setattr - no special handling needed!
+                                            setattr(current, final_key, val)
+
+                                        logger.info(f"    ✓ Set {'.'.join(nested_parts)}={val!r}")
+                                    except Exception as e:
+                                        logger.warning(f"Could not set {nested_key}.{final_key}={val}: {e}")
+                            else:
+                                # Direct attribute - CData objects support dynamic attributes
+                                # For attributes that collide with HierarchicalObject properties (like 'name'),
+                                # we must bypass __setattr__ and create CData values directly
+                                try:
+                                    # Import CString locally
+                                    from core.base_object.fundamental_types import CString, CInt, CFloat, CBoolean
+
+                                    # Check if attribute already exists
+                                    existing = getattr(target, key, None)
+
+                                    # Determine appropriate wrapper type
+                                    if existing is not None:
+                                        # Update existing CData value
+                                        if hasattr(existing, 'value'):
+                                            existing.value = val
+                                        else:
+                                            setattr(target, key, val)
+                                    else:
+                                        # Simply use setattr - no special handling needed!
+                                        # Since HierarchicalObject now uses _name internally, there's no collision
+                                        setattr(target, key, val)
+
+                                    logger.info(f"    ✓ Set {key}={val!r}")
+                                except Exception as e:
+                                    logger.warning(f"Could not set {key}={val}: {e}")
+
+                    # Debug: verify attributes were set
+                    print(f"[DEBUG] After setting attributes on {type(target).__name__}:")
+                    for key_to_check in ['sequence', 'nCopies', 'name', 'polymerType', 'description']:
+                        if hasattr(target, key_to_check):
+                            attr = getattr(target, key_to_check, None)
+                            if attr is not None:
+                                val_repr = attr.value if hasattr(attr, 'value') else attr
+                                print(f"[DEBUG]   {key_to_check} = {val_repr!r}")
+                            else:
+                                print(f"[DEBUG]   {key_to_check} = None")
+
+                    return  # Done processing - exit early
+                elif len(value) == 1:
+                    # Single-item list, unwrap it
                     value = value[0]
                 else:
-                    # Multiple items - join as comma-separated string
+                    # Multiple items without "=" - join as comma-separated string
                     value = ",".join(str(v) for v in value)
             elif hasattr(target, "value"):
                 # For simple value objects, use first item or join

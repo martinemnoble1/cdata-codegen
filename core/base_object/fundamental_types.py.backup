@@ -43,7 +43,7 @@ class CInt(CData):
     """Integer value type."""
 
     def __hash__(self):
-        """Make CInt hashable by object identity for use in sets and as dict keys."""
+        """Make CInt hashable using object identity."""
         return hash(id(self))
 
     def __delattr__(self, name):
@@ -281,11 +281,14 @@ class CInt(CData):
 
     # Comparison operators
     def __eq__(self, other):
+        self_val = getattr(self, '_value', 0)
         if isinstance(other, CInt):
-            return self.value == other.value
+            other_val = getattr(other, '_value', 0)
+            return self_val == other_val
         elif isinstance(other, CFloat):
-            return float(self.value) == other.value
-        return int(self.value) == other
+            other_val = getattr(other, '_value', 0.0)
+            return float(self_val) == other_val
+        return int(self_val) == other
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -393,8 +396,12 @@ class CFloat(CData):
     """Float value type."""
 
     def __hash__(self):
-        """Make CFloat hashable by object identity for use in sets and as dict keys."""
-        return hash(id(self))
+        """Make CFloat hashable by its float value for use in sets and as dict keys.
+
+        This allows CFloat to behave like a plain float when used as dictionary keys,
+        e.g., {1.5: "one-half", 2.0: "two"}[cfloat_obj] will work if cfloat_obj.value == 1.5.
+        """
+        return hash(getattr(self, '_value', 0.0))
 
     def __delattr__(self, name):
         """Prevent deletion of _value attribute during garbage collection."""
@@ -650,11 +657,14 @@ class CFloat(CData):
 
     # Comparison operators
     def __eq__(self, other):
+        self_val = getattr(self, '_value', 0.0)
         if isinstance(other, CFloat):
-            return self.value == other.value
+            other_val = getattr(other, '_value', 0.0)
+            return self_val == other_val
         elif isinstance(other, CInt):
-            return self.value == float(other.value)
-        return float(self.value) == other
+            other_val = getattr(other, '_value', 0)
+            return self_val == float(other_val)
+        return float(self_val) == other
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -771,8 +781,13 @@ class CString(CData):
         self.value = value
 
     def __hash__(self):
-        """Make CString hashable by object identity for use in sets and as dict keys."""
-        return hash(id(self))
+        """Make CString hashable by its string value for use in sets and as dict keys.
+
+        This allows CString to behave like a plain string when used as dictionary keys,
+        e.g., {"PROTEIN": "proteins"}[cstring_obj] will work if cstring_obj.value == "PROTEIN".
+        """
+        # Use getattr to handle case where value property isn't fully initialized yet
+        return hash(getattr(self, '_value', ''))
 
     def __delattr__(self, name):
         """Prevent deletion of _value attribute during garbage collection."""
@@ -789,8 +804,8 @@ class CString(CData):
 
     def __eq__(self, other):
         if isinstance(other, CString):
-            return self.value == other.value
-        return self.value == other
+            return getattr(self, '_value', '') == getattr(other, '_value', '')
+        return getattr(self, '_value', '') == other
 
     def __ne__(self, other):
         if isinstance(other, CString):
@@ -837,21 +852,6 @@ class CString(CData):
         if self.value is None:
             return 0
         return len(self.value)
-
-    @property
-    def value(self):
-        """Get the string value."""
-        return getattr(self, "_value", "")
-
-    @value.setter
-    def value(self, val):
-        """Set the string value with state tracking."""
-        from .base_classes import ValueState
-
-        validated = str(val) if val is not None else ""
-        super().__setattr__("_value", validated)
-        if hasattr(self, "_value_states"):
-            self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def set(self, value: str):
         """Set the value directly using .set() method."""
@@ -1060,8 +1060,12 @@ class CBoolean(CData):
                 self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def __hash__(self):
-        """Make CBoolean hashable for use in sets and as dict keys."""
-        return hash(id(self))
+        """Make CBoolean hashable by its boolean value for use in sets and as dict keys.
+
+        This allows CBoolean to behave like a plain bool when used as dictionary keys,
+        e.g., {True: "yes", False: "no"}[cbool_obj] will work if cbool_obj.value == True.
+        """
+        return hash(getattr(self, '_value', False))
 
     def __delattr__(self, name):
         """Prevent deletion of _value attribute during garbage collection."""
@@ -1113,7 +1117,7 @@ class CBoolean(CData):
 
     # Boolean and comparison operators
     def __eq__(self, other):
-        return bool(self.value) == other
+        return bool(getattr(self, '_value', False)) == other
 
     def __ne__(self, other):
         return bool(self.value) != other
@@ -1191,7 +1195,8 @@ class CList(CData):
         for i, item in enumerate(self._items):
             if isinstance(item, CData):
                 item.set_parent(self)
-                item.name = f"{self.name}[{i}]"
+                # Set hierarchical name directly (not the CData 'name' attribute)
+                item._name = f"{self.name}[{i}]"
 
     def append(self, item: Any) -> None:
         """Add an item to the list.
@@ -1217,8 +1222,8 @@ class CList(CData):
         # If item is CData, register as child
         if isinstance(item, CData):
             item.set_parent(self)
-            # Set hierarchical name directly (don't use property to avoid collision with CData 'name' attributes)
-            item._name = f"{self._name}[{index}]"
+            # Set hierarchical name directly (not the CData 'name' attribute)
+            item._name = f"{self.name}[{index}]"
 
         self._items.append(item)
 
@@ -1229,15 +1234,16 @@ class CList(CData):
         """Insert an item at specified index."""
         if isinstance(item, CData):
             item.set_parent(self)
-            # Set hierarchical name directly
-            item._name = f"{self._name}[{index}]"
+            # Set hierarchical name directly (not the CData 'name' attribute)
+            item._name = f"{self.name}[{index}]"
 
         self._items.insert(index, item)
 
         # Update names of subsequent items
         for i in range(index + 1, len(self._items)):
             if isinstance(self._items[i], CData):
-                self._items[i]._name = f"{self._name}[{i}]"
+                # Set hierarchical name directly (not the CData 'name' attribute)
+                self._items[i]._name = f"{self.name}[{i}]"
 
         # Mark as explicitly set
         self._value_states["_items"] = ValueState.EXPLICITLY_SET
@@ -1250,7 +1256,7 @@ class CList(CData):
         # Update names of subsequent items
         for i in range(index, len(self._items)):
             if isinstance(self._items[i], CData):
-                self._items[i]._name = f"{self._name}[{i}]"
+                self._items[i].name = f"{self.name}[{i}]"
 
         # Mark as explicitly set
         self._value_states["_items"] = ValueState.EXPLICITLY_SET

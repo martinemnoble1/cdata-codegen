@@ -62,9 +62,9 @@ async def import_input_files_async(job, plugin, db_handler):
                         await db_handler.register_input_file(
                             job_uuid=job.uuid,
                             file_uuid=uuid.UUID(file_uuid_str),
-                            param_name=file_obj.name,
+                            param_name=file_obj.objectName(),
                         )
-                        logger.info(f"Registered existing file for {file_obj.name}")
+                        logger.info(f"Registered existing file for {file_obj.objectName()}")
                         files_imported += 1
                         continue
 
@@ -79,7 +79,7 @@ async def import_input_files_async(job, plugin, db_handler):
                         files_imported += 1
 
         except Exception as e:
-            logger.exception(f"Error importing file {file_obj.name}: {e}")
+            logger.exception(f"Error importing file {file_obj.objectName()}: {e}")
 
     # Save updated parameters to input_params.xml
     # This preserves the dbFileId, relPath, baseName changes made during import
@@ -229,7 +229,7 @@ async def import_external_file_async(job, file_obj, db_handler):
     if hasattr(file_obj, 'setContentFlag'):
         await sync_to_async(file_obj.setContentFlag)()
 
-    logger.info(f"Successfully imported {file_obj.name}")
+    logger.info(f"Successfully imported {file_obj.objectName()}")
 
 
 async def get_source_file_path(job, file_obj) -> Optional[Path]:

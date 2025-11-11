@@ -403,7 +403,8 @@ class ParamsXmlHandler:
                 self._export_complex_object(param, elem)
 
         except Exception as e:
-            print(f"Warning: Error exporting value for {param.name}: {e}")
+            param_name = param.objectName() if hasattr(param, 'objectName') else str(type(param).__name__)
+            print(f"Warning: Error exporting value for {param_name}: {e}")
             elem.text = ""
 
     def _is_file_object(self, param: CData) -> bool:
@@ -576,7 +577,8 @@ class ParamsXmlHandler:
             return False
 
         except Exception as e:
-            print(f"Warning: Error importing value for {param.name}: {e}")
+            param_name = param.objectName() if hasattr(param, 'objectName') else str(type(param).__name__)
+            print(f"Warning: Error importing value for {param_name}: {e}")
             return False
 
     def _import_structured_data(self, xml_elem: ET.Element, param: CData) -> bool:

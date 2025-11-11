@@ -18,20 +18,35 @@ from pathlib import Path
 import logging
 
 from .cdata import CData
+from .class_metadata import cdata_class, attribute, AttributeType
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 
+@cdata_class(
+    attributes={
+        "baseName": attribute(AttributeType.STRING),
+        "relPath": attribute(AttributeType.STRING),
+        "annotation": attribute(AttributeType.STRING),
+        "subType": attribute(AttributeType.INT),
+        "contentFlag": attribute(AttributeType.INT),
+    },
+    qualifiers={
+        "baseName": {"toolTip": "Base filename"},
+        "relPath": {"toolTip": "Relative path to file"},
+        "annotation": {"toolTip": "File annotation"},
+        "contentFlag": {"min": 0, "allowUndefined": True, "toolTip": "Content flag"},
+        "subType": {"allowUndefined": True, "toolTip": "File subtype"},
+    }
+)
 class CDataFile(CData):
     """Base class for file-related CData classes.
 
     Attributes are automatically created from embedded metadata:
-    - project: CProjectId - Project identifier
-    - baseName: CFilePath - Base filename
-    - relPath: CFilePath - Relative path to file
+    - baseName: CString - Base filename
+    - relPath: CString - Relative path to file
     - annotation: CString - File annotation
-    - dbFileId: CUUID - Database file identifier
     - subType: CInt - File subtype (optional)
     - contentFlag: CInt - Content flag (min=0, optional)
 

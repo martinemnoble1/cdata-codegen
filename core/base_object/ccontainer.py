@@ -87,7 +87,7 @@ class CContainer(CData):
 
         Args:
             obj: The CData object to add
-            name: Optional name for the object (uses obj.name if not provided)
+            name: Optional name for the object (uses obj.objectName() if not provided)
 
         Returns:
             The added object
@@ -95,13 +95,13 @@ class CContainer(CData):
         if not isinstance(obj, CData):
             raise TypeError("Object must be a CData instance")
 
-        obj_name = name if name is not None else getattr(obj, 'name', None)
+        obj_name = name if name is not None else obj.objectName()
         if not obj_name:
             raise ValueError("Object must have a name")
 
         # Set parent relationship
         obj.set_parent(self)
-        obj.name = obj_name
+        obj._name = obj_name
 
         # Add to container
         setattr(self, obj_name, obj)
@@ -187,7 +187,7 @@ class CContainer(CData):
                 # Fallback: Find all CData attributes by iterating children
                 # This handles cases where items weren't added to _data_order
                 from core.base_object.base_classes import CData
-                items_to_copy = [child.name for child in otherContainer.children()
+                items_to_copy = [child.objectName() for child in otherContainer.children()
                                 if isinstance(child, CData)]
         else:
             items_to_copy = dataList
@@ -379,7 +379,7 @@ class CContainer(CData):
                         if child.state == ObjectState.DESTROYED:
                             continue
                     # Check if name matches
-                    if hasattr(child, 'name') and child.name == search_name:
+                    if hasattr(child, 'objectName') and child.objectName() == search_name:
                         return child
             except (AttributeError, TypeError):
                 pass
@@ -388,7 +388,7 @@ class CContainer(CData):
             try:
                 container_items = object.__getattribute__(self, '_container_items')
                 for item in container_items:
-                    if hasattr(item, 'name') and item.name == search_name:
+                    if hasattr(item, 'objectName') and item.objectName() == search_name:
                         return item
             except (AttributeError, TypeError):
                 pass

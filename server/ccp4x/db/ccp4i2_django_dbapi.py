@@ -440,7 +440,7 @@ class CCP4i2DjangoDbApi(object):
             elif mode == "fullPath":
                 return [str(file_obj.path) for file_obj in unique_files]
             elif mode == "fileName":
-                return [file_obj.name for file_obj in unique_files]
+                return [file_obj.objectName() for file_obj in unique_files]
             elif mode == "jobparamname":
                 return [file_obj.job_param_name for file_obj in unique_files]
             elif mode == "annotation":
@@ -456,7 +456,7 @@ class CCP4i2DjangoDbApi(object):
                 for file_obj in unique_files:
                     file_info = {
                         "fileid": str(file_obj.uuid),
-                        "filename": file_obj.name,
+                        "filename": file_obj.objectName(),
                         "fullpath": str(file_obj.path),
                         "filetype": get_file_type_id_from_mimetype(file_obj.type),
                         "filetypename": get_file_type_name_from_mimetype(file_obj.type),

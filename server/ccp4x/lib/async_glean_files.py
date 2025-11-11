@@ -149,9 +149,9 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
             if not file_exists:
                 if unset_missing and hasattr(file_obj, 'unSet'):
                     file_obj.unSet()
-                    logger.debug(f"Unset missing file: {file_obj.name}")
+                    logger.debug(f"Unset missing file: {file_obj.objectName()}")
                 else:
-                    logger.debug(f"Skipping non-existent file: {file_obj.name}")
+                    logger.debug(f"Skipping non-existent file: {file_obj.objectName()}")
                 continue
 
             # For CPdbDataFile, introspect the file to set contentFlag
@@ -159,7 +159,7 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
             from core.CCP4ModelData import CPdbDataFile
             if isinstance(file_obj, CPdbDataFile):
                 if hasattr(file_obj, 'setContentFlag'):
-                    logger.debug(f"Setting contentFlag for {file_obj.name}")
+                    logger.debug(f"Setting contentFlag for {file_obj.objectName()}")
                     await sync_to_async(file_obj.setContentFlag)()
 
                     # After detecting format, fix file extension if needed
@@ -172,7 +172,7 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
             # Validate file has required metadata
             if metadata['file_type'] == 'unknown':
                 logger.warning(
-                    f"File {file_obj.name} has unknown type - "
+                    f"File {file_obj.objectName()} has unknown type - "
                     f"class {file_obj.__class__.__name__} needs mimeTypeName qualifier"
                 )
                 # Try to continue with 'unknown' type
@@ -200,7 +200,7 @@ async def glean_output_files_async(job, container, db_handler, unset_missing=Tru
             logger.info(f"Gleaned output file: {metadata['name']} -> {file_path.name}")
 
         except Exception as e:
-            logger.exception(f"Error gleaning file {file_obj.name}: {e}")
+            logger.exception(f"Error gleaning file {file_obj.objectName()}: {e}")
 
     logger.info(f"Successfully gleaned {len(files_created)} output files")
     return files_created
@@ -242,25 +242,25 @@ async def glean_input_file_uses_async(job, container, db_handler) -> int:
 
             # Check if file actually exists and is set
             if not hasattr(file_obj, 'isSet') or not file_obj.isSet():
-                logger.debug(f"Skipping unset file: {file_obj.name}")
+                logger.debug(f"Skipping unset file: {file_obj.objectName()}")
                 continue
 
             file_exists = hasattr(file_obj, 'exists') and file_obj.exists()
             if not file_exists:
-                logger.debug(f"Skipping non-existent input file: {file_obj.name}")
+                logger.debug(f"Skipping non-existent input file: {file_obj.objectName()}")
                 continue
 
             # Register FileUse
             await db_handler.register_input_file(
                 job_uuid=job.uuid,
                 file_uuid=uuid.UUID(file_uuid_str),
-                param_name=file_obj.name,
+                param_name=file_obj.objectName(),
             )
             uses_created += 1
-            logger.info(f"Registered input file use: {file_obj.name}")
+            logger.info(f"Registered input file use: {file_obj.objectName()}")
 
         except Exception as e:
-            logger.exception(f"Error registering input file use {file_obj.name}: {e}")
+            logger.exception(f"Error registering input file use {file_obj.objectName()}: {e}")
 
     logger.info(f"Created {uses_created} input file use records")
     return uses_created

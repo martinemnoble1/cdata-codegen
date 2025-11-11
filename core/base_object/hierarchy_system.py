@@ -97,16 +97,8 @@ class HierarchicalObject(ABC):
         self._state = ObjectState.INITIALIZED
         logger.debug(f"Created {self._name}")
 
-    @property
-    def name(self) -> str:
-        """Object name for identification and debugging."""
-        return self._name
-
-    @name.setter
-    def name(self, value: str):
-        old_name = self._name
-        self._name = value
-        logger.debug(f"Renamed object from {old_name} to {value}")
+    # NOTE: No 'name' property to avoid collision with CData 'name' attributes
+    # Use objectName() to get the hierarchical name, or _name directly in internal code
 
     @property
     def object_info(self) -> ObjectInfo:

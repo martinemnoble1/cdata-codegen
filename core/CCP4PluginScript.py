@@ -363,7 +363,7 @@ class CPluginScript(CData):
             # Iterate through all children of the parsed container
             logger.info(f"[DEBUG loadContentsFromXml] Attaching children to self.container:")
             for child in parsed_container.children():
-                child_name = child.name
+                child_name = child.objectName()
                 logger.info(f"[DEBUG loadContentsFromXml]   - {child_name} (type={type(child).__name__})")
                 # Attach the child to our container using __setattr__
                 setattr(self.container, child_name, child)
@@ -374,7 +374,7 @@ class CPluginScript(CData):
                 if child_name == 'inputData' and hasattr(child, 'children'):
                     logger.info(f"[DEBUG loadContentsFromXml]     inputData children:")
                     for grandchild in child.children():
-                        logger.info(f"[DEBUG loadContentsFromXml]       - {grandchild.name} (type={type(grandchild).__name__})")
+                        logger.info(f"[DEBUG loadContentsFromXml]       - {grandchild.objectName()} (type={type(grandchild).__name__})")
 
             self.defFile = fileName
             logger.info(f"[DEBUG loadContentsFromXml] Successfully loaded .def.xml and attached all children")
@@ -409,7 +409,7 @@ class CPluginScript(CData):
             klass=self.__class__.__name__,
             code=101,
             details="loadContentsFromEtree not yet implemented",
-            name=self.name or ""
+            name=self.objectName() or ""
         )
         return error
 
@@ -467,7 +467,7 @@ class CPluginScript(CData):
                 klass=self.__class__.__name__,
                 code=104,
                 details=f"Failed to load data from etree: {e}",
-                name=self.name or ""
+                name=self.objectName() or ""
             )
         return error
 
@@ -488,7 +488,7 @@ class CPluginScript(CData):
             klass=self.__class__.__name__,
             code=105,
             details="saveContentsToXml not yet implemented",
-            name=self.name or ""
+            name=self.objectName() or ""
         )
         return error
 
@@ -719,14 +719,14 @@ class CPluginScript(CData):
         for child in container.children():
             # If it's a CDataFile, add it
             if isinstance(child, CDataFile):
-                results.append((child.name, child))
+                results.append((child.objectName(), child))
             # If it's a CList, check its elements
             elif isinstance(child, CList):
                 for i, item in enumerate(child):
                     # If the list item is a CDataFile, add it
                     if isinstance(item, CDataFile):
                         # Use list element name if available, otherwise use index
-                        item_name = item.name if hasattr(item, 'name') and item.name else f"{child.name}[{i}]"
+                        item_name = item.objectName() if item.objectName() else f"{child.objectName()}[{i}]"
                         results.append((item_name, item))
                     # If the list item is a container, recurse into it
                     elif hasattr(item, 'children'):
@@ -839,11 +839,11 @@ class CPluginScript(CData):
 
         def process_container(container, parent_path: str = ""):
             """Recursively process container to set output file paths."""
-            logger.debug(f'[DEBUG checkOutputData] Processing container: {container.name if hasattr(container, "name") else "unknown"}')
+            logger.debug(f'[DEBUG checkOutputData] Processing container: {container.objectName() or "unknown"}')
             children = list(container.children())
             logger.debug(f'[DEBUG checkOutputData] Found {len(children)} children')
             for child in children:
-                logger.debug(f'[DEBUG checkOutputData] Processing child: {child.name if hasattr(child, "name") else "unknown"} (type: {type(child).__name__})')
+                logger.debug(f'[DEBUG checkOutputData] Processing child: {child.objectName() or "unknown"} (type: {type(child).__name__})')
                 # Handle CDataFile
                 if isinstance(child, CDataFile):
                     # Only set path if baseName has not been set by the user
@@ -882,7 +882,7 @@ class CPluginScript(CData):
                             # Fallback: generate simple local path
                             obj_name = child.objectName()
                             if not obj_name:
-                                obj_name = child.name if hasattr(child, 'name') and child.name else 'output'
+                                obj_name = 'output'
 
                             file_name = slugify(obj_name)
                             if not any(file_name.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml']):
@@ -1837,7 +1837,7 @@ class CPluginScript(CData):
             child_work_dir = Path(self.workDirectory)
 
         # Create name following convention: parent_name_N
-        child_name = f"{self.name}_{self._childJobCounter}" if self.name else f"job_{self._childJobCounter}"
+        child_name = f"{self.objectName()}_{self._childJobCounter}" if self.objectName() else f"job_{self._childJobCounter}"
 
         # Use TASKMANAGER to get the plugin class
         task_manager = TASKMANAGER()

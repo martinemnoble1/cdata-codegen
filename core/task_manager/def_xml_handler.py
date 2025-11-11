@@ -133,7 +133,7 @@ class DefXmlParser:
 
         # Create root container
         root_container = CContainer()
-        root_container.name = task_name
+        root_container._name = task_name
 
         # Parse the main ccp4i2_body structure
         body = root.find(".//ccp4i2_body[@id]")
@@ -209,7 +209,7 @@ class DefXmlParser:
 
         # Create container object
         container_obj = CContainer()
-        container_obj.name = container_id
+        container_obj._name = container_id
 
         # Parse all content elements
         for content in container.findall("./content[@id]"):
@@ -245,7 +245,7 @@ class DefXmlParser:
         obj = self._create_object(class_name_str, qualifiers, content)
 
         if obj is not None:
-            obj.name = content_id
+            obj._name = content_id
 
             # Handle subItem for lists
             sub_item = content.find("./subItem")

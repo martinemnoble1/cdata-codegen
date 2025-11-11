@@ -81,7 +81,7 @@ def find_all_files(container) -> List[CDataFile]:
     Example:
         >>> output_files = find_all_files(plugin.outputData)
         >>> for file_obj in output_files:
-        ...     print(f"Found {file_obj.name}: {file_obj.object_path()}")
+        ...     print(f"Found {file_obj.objectName()}: {file_obj.object_path()}")
     """
     files = []
     logger.debug(f"[DEBUG find_all_files] Starting search from {container}")
@@ -90,7 +90,7 @@ def find_all_files(container) -> List[CDataFile]:
     def traverse(obj, depth=0):
         """Recursively traverse the CData hierarchy"""
         indent = "  " * depth
-        logger.debug(f"{indent}[DEBUG traverse] obj={obj.name if hasattr(obj, 'name') else 'unnamed'}, type={type(obj).__name__}")
+        logger.debug(f"{indent}[DEBUG traverse] obj={obj.objectName() if hasattr(obj, 'objectName') else 'unnamed'}, type={type(obj).__name__}")
 
         # Check if this object itself is a file
         if isinstance(obj, CDataFile):
@@ -124,7 +124,7 @@ def find_all_files(container) -> List[CDataFile]:
                     logger.debug(f"{indent}  CContainer children() returned {len(children)} children")
                     for child in children:
                         if child is not None:
-                            child_name = child.name if hasattr(child, 'name') else 'unnamed'
+                            child_name = child.objectName() if hasattr(child, 'objectName') else 'unnamed'
                             logger.debug(f"{indent}    Child from hierarchy: {child_name}")
                             traverse(child, depth + 1)
 
@@ -144,7 +144,7 @@ def find_all_files(container) -> List[CDataFile]:
                 logger.debug(f"{indent}  CData object has {len(children)} children")
                 for child in children:
                     if child is not None:
-                        child_name = child.name if hasattr(child, 'name') else 'unnamed'
+                        child_name = child.objectName() if hasattr(child, 'objectName') else 'unnamed'
                         logger.debug(f"{indent}    Child: {child_name}")
                         traverse(child, depth + 1)
             except Exception as e:
@@ -254,7 +254,7 @@ def extract_file_metadata(file_obj: CDataFile) -> Dict[str, Any]:
     """
     # Get qualifiers using get_qualifier() method
     metadata = {
-        'name': file_obj.name,
+        'name': file_obj.objectName(),
         'object_path': file_obj.object_path(),
         'file_type': get_file_type_from_class(file_obj),
         'gui_label': file_obj.get_qualifier('guiLabel', ''),
@@ -453,7 +453,7 @@ def get_file_full_path(file_obj: CDataFile, project_directory: Optional[Path] = 
             return Path(file_str)
 
     except Exception as e:
-        logger.debug(f"Error getting full path for {file_obj.name}: {e}")
+        logger.debug(f"Error getting full path for {file_obj.objectName()}: {e}")
 
     return None
 
