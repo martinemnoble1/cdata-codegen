@@ -525,7 +525,12 @@ def debug_print_container_structure(container, max_depth: int = 5, current_depth
         return
 
     indent = "  " * current_depth
-    obj_name = container.name if hasattr(container, 'name') else "unnamed"
+    # Get name - prefer 'name' attribute, fall back to objectName() method
+    obj_name = "unnamed"
+    if hasattr(container, 'name') and container.name:
+        obj_name = container.name
+    elif hasattr(container, 'objectName'):
+        obj_name = container.objectName()
     obj_type = container.__class__.__name__
 
     # Print this object

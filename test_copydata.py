@@ -64,7 +64,12 @@ for item_name in dest2.dataOrder():
     print(f"    - {item_name}: {item.value} ({type(item).__name__})")
 
 # Check if flag exists as a child (should be False since we didn't copy it)
-has_flag = any(child.name == 'flag' for child in dest2.children())
+# Check both 'name' attribute and objectName() method
+has_flag = any(
+    (hasattr(child, 'name') and child.name == 'flag') or
+    (hasattr(child, 'objectName') and child.objectName() == 'flag')
+    for child in dest2.children()
+)
 print(f"  dest2 has flag: {has_flag} (should be False)")
 
 print("\n[TEST] All tests passed!")
