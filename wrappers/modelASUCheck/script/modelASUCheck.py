@@ -84,7 +84,7 @@ def sequenceAlignment(xyzinPath, asuin):
             "PROTEIN": (gemmi.ResidueKind.AA, gemmi.PolymerType.PeptideL),
             "DNA": (gemmi.ResidueKind.DNA, gemmi.PolymerType.Dna),
             "RNA": (gemmi.ResidueKind.RNA, gemmi.PolymerType.Rna),
-        }[seq.polymerType]
+        }[str(seq.polymerType)]
         list_seq.append((gemmi.expand_one_letter_sequence(str(seq.sequence), residueKind),polymerType))
 
     for chain in structure[0]:
@@ -117,7 +117,7 @@ def sequences(asuin):
             "PROTEIN": (gemmi.ResidueKind.AA, gemmi.PolymerType.PeptideL),
             "DNA": (gemmi.ResidueKind.DNA, gemmi.PolymerType.Dna),
             "RNA": (gemmi.ResidueKind.RNA, gemmi.PolymerType.Rna),
-        }[seq.polymerType]
+        }[str(seq.polymerType)]
         expanded = gemmi.expand_one_letter_sequence(str(seq.sequence), residueKind)
         for _ in range(int(seq.nCopies)):
             yield expanded, polymerType

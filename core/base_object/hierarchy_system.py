@@ -241,7 +241,14 @@ class HierarchicalObject(ABC):
         """Get list of all child objects."""
         with self._lock:
             self._cleanup_dead_children()
-            return [ref() for ref in self._children if ref() is not None]
+            result = [ref() for ref in self._children if ref() is not None]
+            # DEBUG: Check if SMILESIN is missing
+            if hasattr(self, '_name') and self._name == 'inputData':
+                logging.debug(f"[children DEBUG] inputData._children has {len(self._children)} refs")
+                logging.debug(f"[children DEBUG] Returning {len(result)} children")
+                result_names = [c._name if hasattr(c, '_name') else str(c) for c in result]
+                logging.debug(f"[children DEBUG] Children names: {result_names}")
+            return result
 
     def find_child(
         self, name: str, recursive: bool = False

@@ -85,6 +85,16 @@ async def import_input_files_async(job, plugin, db_handler):
     # This preserves the dbFileId, relPath, baseName changes made during import
     if files_imported > 0:
         input_params_file = job.directory / "input_params.xml"
+
+        # DEBUG: Check what's in the container before saving
+        logger.info(f"[DEBUG import_input_files_async] About to save input_params.xml for job {job.number}")
+        logger.info(f"[DEBUG import_input_files_async] Plugin container type: {type(plugin.container).__name__}")
+        logger.info(f"[DEBUG import_input_files_async] Has inputData: {hasattr(plugin.container, 'inputData')}")
+        if hasattr(plugin.container, 'inputData'):
+            logger.info(f"[DEBUG import_input_files_async] inputData type: {type(plugin.container.inputData).__name__}")
+            input_data_children = [c.objectName() for c in plugin.container.inputData.children() if hasattr(c, 'objectName')]
+            logger.info(f"[DEBUG import_input_files_async] inputData children: {input_data_children}")
+
         logger.info(f"Saving updated parameters to {input_params_file}")
         error = await sync_to_async(plugin.saveDataToXml)(str(input_params_file))
         if error and hasattr(error, 'hasError') and error.hasError():
@@ -339,6 +349,14 @@ async def save_params_after_import(plugin, job):
     """
     # Import save_params_for_job from modern utilities
     from .utils.parameters.save_params import save_params_for_job
+
+    # DEBUG: Check what's in the container before saving
+    logger.info(f"[DEBUG save_params_after_import] About to save input_params.xml for job {job.number}")
+    logger.info(f"[DEBUG save_params_after_import] Plugin container type: {type(plugin.container).__name__}")
+    logger.info(f"[DEBUG save_params_after_import] Has inputData: {hasattr(plugin.container, 'inputData')}")
+    if hasattr(plugin.container, 'inputData'):
+        logger.info(f"[DEBUG save_params_after_import] inputData type: {type(plugin.container.inputData).__name__}")
+        logger.info(f"[DEBUG save_params_after_import] inputData children: {[c.objectName() for c in plugin.container.inputData.children() if hasattr(c, 'objectName')]}")
 
     # Run synchronously (it's a quick operation)
     await sync_to_async(save_params_for_job)(plugin, job, mode="JOB_INPUT")

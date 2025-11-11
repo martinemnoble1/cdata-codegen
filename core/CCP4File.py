@@ -149,6 +149,11 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
 
         # Add body
         if bodyEtree is not None:
+            # DEBUG: Show what we're saving
+            print(f"[DEBUG saveFile] bodyEtree.tag={bodyEtree.tag}, len(children)={len(bodyEtree)}, text={bodyEtree.text}")
+            if len(bodyEtree) > 0:
+                print(f"[DEBUG saveFile] First few children: {[child.tag for child in list(bodyEtree)[:5]]}")
+
             # If bodyEtree is provided, use it as the body
             if bodyEtree.tag == 'body':
                 root.append(bodyEtree)
@@ -159,6 +164,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
                 root.append(body)
         else:
             # Create empty body
+            print(f"[DEBUG saveFile] WARNING: bodyEtree is None!")
             body = ET.Element('body')
             root.append(body)
 
@@ -179,6 +185,20 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
 
         # Write with pretty formatting
         ET.indent(tree, space='  ')
+
+        # DEBUG: Show what we're about to write
+        xml_content = ET.tostring(root, encoding='unicode')
+        print(f"[DEBUG saveFile] About to write XML (length={len(xml_content)}):")
+        # Show the body section specifically
+        if '<body>' in xml_content:
+            body_start = xml_content.index('<body>')
+            body_end = xml_content.index('</body>') + len('</body>')
+            print(f"[DEBUG saveFile] Body section (first 1000 chars):")
+            print(xml_content[body_start:body_start+1000])
+        else:
+            print(f"[DEBUG saveFile] WARNING: No <body> tag found in XML!")
+            print(f"[DEBUG saveFile] XML (first 1000 chars): {xml_content[:1000]}")
+
         tree.write(file_path, encoding='utf-8', xml_declaration=True)
         pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] Successfully wrote file to: {file_path}")
 

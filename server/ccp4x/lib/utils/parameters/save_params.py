@@ -64,37 +64,46 @@ def save_params_for_job(
     old_job_container: CCP4Container.CContainer = the_job_plugin.container
 
     # DEBUG: Check container structure before saving
-    logger.info(f"[DEBUG save_params] === Container structure for job {the_job.number} ===")
-    logger.info(f"[DEBUG save_params] exclude_unset parameter: {exclude_unset}")
-    logger.info(f"[DEBUG save_params] Container type: {type(old_job_container).__name__}")
+    print(f"\n[DEBUG save_params] === Container structure for job {the_job.number} ===")
+    print(f"[DEBUG save_params] exclude_unset parameter: {exclude_unset}")
+    print(f"[DEBUG save_params] Container type: {type(old_job_container).__name__}")
 
     try:
         # Show all top-level attributes
         for attr_name in ['inputData', 'outputData', 'controlParameters']:
             if hasattr(old_job_container, attr_name):
                 section = getattr(old_job_container, attr_name)
-                logger.info(f"[DEBUG save_params]   {attr_name}: type={type(section).__name__}")
+                print(f"[DEBUG save_params]   {attr_name}: type={type(section).__name__}")
 
-                # Show all attributes in this section
-                if hasattr(section, '__dict__'):
-                    section_attrs = [a for a in dir(section) if not a.startswith('_') and not callable(getattr(section, a, None))]
-                    logger.info(f"[DEBUG save_params]     attributes: {section_attrs}")
-
-                    # Check specific file attributes
-                    for attr in ['HKLIN', 'XYZIN']:
+                # Check specific file attributes
+                if attr_name == 'inputData':
+                    for attr in ['HKLIN', 'XYZIN', 'UNMERGEDFILES']:
                         if hasattr(section, attr):
-                            file_obj = getattr(section, attr)
-                            logger.info(f"[DEBUG save_params]     {attr}: {file_obj}")
-                            if hasattr(file_obj, 'baseName'):
-                                logger.info(f"[DEBUG save_params]       baseName: {file_obj.baseName}")
-                            if hasattr(file_obj, 'fullPath'):
-                                logger.info(f"[DEBUG save_params]       fullPath: {file_obj.fullPath}")
+                            attr_obj = getattr(section, attr)
+                            print(f"[DEBUG save_params]     {attr}: type={type(attr_obj).__name__}, isSet={attr_obj.isSet() if hasattr(attr_obj, 'isSet') else 'N/A'}")
+                            if hasattr(attr_obj, '__len__'):
+                                print(f"[DEBUG save_params]       length: {len(attr_obj)}")
     except Exception as e:
-        logger.warning(f"[DEBUG save_params] Error checking container structure: {e}")
+        print(f"[DEBUG save_params] Error checking container structure: {e}")
 
     # Use the exclude_unset parameter passed to this function
-    logger.info(f"[DEBUG save_params] Calling getEtree with excludeUnset={exclude_unset}")
+    print(f"[DEBUG save_params] Calling getEtree with excludeUnset={exclude_unset}")
     body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
+
+    # DEBUG: Check what's in body_etree
+    import xml.etree.ElementTree as ET
+    body_xml = ET.tostring(body_etree, encoding='unicode')
+    print(f"[DEBUG save_params] Body etree length: {len(body_xml)}")
+    if 'UNMERGEDFILES' in body_xml:
+        print(f"[DEBUG save_params] ✓ UNMERGEDFILES found in body etree")
+        # Find and print the UNMERGEDFILES section
+        start_idx = body_xml.index('<UNMERGEDFILES>')
+        end_idx = body_xml.index('</UNMERGEDFILES>') + len('</UNMERGEDFILES>')
+        print(f"[DEBUG save_params] UNMERGEDFILES section:")
+        print(body_xml[start_idx:end_idx])
+    else:
+        print(f"[DEBUG save_params] ✗ UNMERGEDFILES NOT found in body etree!")
+        print(f"[DEBUG save_params] Body etree (first 1000 chars): {body_xml[:1000]}")
 
     f.saveFile(bodyEtree=body_etree)
     logger.info(f"[DEBUG save_params] Saved params to {relocated_file_path}")

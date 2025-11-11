@@ -237,15 +237,30 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         allKeywords = self.keywordsOfTaskName(parsed_args.task_name)
         PluginPopulator.populate(thePlugin, parsed_args, allKeywords)
 
+        # DEBUG: Check UNMERGEDFILES state after population
+        if hasattr(thePlugin.container, 'inputData') and hasattr(thePlugin.container.inputData, 'UNMERGEDFILES'):
+            uf = thePlugin.container.inputData.UNMERGEDFILES
+            print(f"\n[DEBUG pluginWithArgs] After population:")
+            print(f"[DEBUG pluginWithArgs]   UNMERGEDFILES type: {type(uf).__name__}")
+            print(f"[DEBUG pluginWithArgs]   UNMERGEDFILES length: {len(uf)}")
+            print(f"[DEBUG pluginWithArgs]   UNMERGEDFILES isSet(): {uf.isSet()}")
+            if len(uf) > 0:
+                print(f"[DEBUG pluginWithArgs]   First item type: {type(uf[0]).__name__}")
+                print(f"[DEBUG pluginWithArgs]   First item isSet(): {uf[0].isSet()}")
+                if hasattr(uf[0], 'file'):
+                    print(f"[DEBUG pluginWithArgs]   First item.file: {uf[0].file}")
+                    print(f"[DEBUG pluginWithArgs]   First item.file.isSet(): {uf[0].file.isSet()}")
+                    print(f"[DEBUG pluginWithArgs]   First item.file.baseName: {uf[0].file.baseName}")
+            print()
+
         # Save params to database (creates input_params.xml)
-        pass  # DEBUG: print(f"[DEBUG pluginWithArgs] job is not None: {job is not None}")
         if job is not None:
-            pass  # DEBUG: print(f"[DEBUG pluginWithArgs] Calling save_params_for_job for job {job.number}, directory: {job.directory}")
+            print(f"[DEBUG pluginWithArgs] About to call save_params_for_job, exclude_unset=False")
             # Use exclude_unset=False to ensure input files are saved to input_params.xml
             # The files have full absolute paths at this point, but that's OK - the import
             # process will copy them to CCP4_IMPORTED_FILES and update input_params.xml
             save_params_for_job(thePlugin, the_job=job, exclude_unset=False)
-            pass  # DEBUG: print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
+            print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
 
         return thePlugin
 

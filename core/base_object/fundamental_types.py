@@ -771,12 +771,20 @@ class CString(CData):
         self.value = value
 
     def __hash__(self):
-        """Make CString hashable by value for use in sets and as dict keys.
+        """Make CString hashable by object identity for use in sets and as dict keys.
 
-        This allows CString objects to be used as dict keys and compared with plain strings.
-        For example: {'PROTEIN': value}[CString('PROTEIN')] will work correctly.
+        Identity-based hashing is required because:
+        1. CString objects are mutable (value can change)
+        2. Multiple CString objects can have the same value
+        3. Children tracking uses sets which require stable hashing
+
+        NOTE: CString objects cannot be used directly as dictionary keys to match
+        plain string keys. Plugin code must convert to string using str() or .value:
+
+        WRONG:  dict[cstring_obj]
+        RIGHT:  dict[str(cstring_obj)]
         """
-        return hash(self.value)
+        return hash(id(self))
 
     def __delattr__(self, name):
         """Prevent deletion of _value attribute during garbage collection."""

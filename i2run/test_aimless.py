@@ -13,7 +13,7 @@ def check_result(job: Path, spacegroup, resolution, rmeas):
         "HKLOUT_unmerged",
     ]:
         read_mtz_file(str(job / f"{name}.mtz"))
-    tree = ET.parse(job / "XMLOUT.xml")
+    tree = ET.parse(job / "program.xml")
     assert tree.find(".//Result/Dataset/SpacegroupName").text == spacegroup
     assert float(tree.find(".//ResolutionHigh/Overall").text) == approx(resolution)
     assert float(tree.find(".//Rmeas/Overall").text) == approx(rmeas)

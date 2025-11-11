@@ -288,6 +288,51 @@ Qualifiers provide:
 
 Access via: `get_qualifier(key)`, `set_qualifier(key, value)`, `get_merged_metadata('qualifiers')`
 
+#### 6. CString Hashing and Dictionary Key Usage
+
+**IMPORTANT**: CString uses **identity-based hashing** (`hash(id(self))`), not value-based hashing.
+
+**Why Identity-Based Hashing?**
+- CString objects are mutable (value can change)
+- Multiple CString objects can have the same value (e.g., empty strings)
+- Children tracking in `HierarchicalObject` uses `Set[weakref.ReferenceType]`
+- Value-based hashing causes Set collisions when multiple empty CStrings exist as children
+- Identity-based hashing ensures each CString instance has a unique hash
+
+**Dictionary Key Usage Pattern**:
+CString objects **cannot** be used directly as dictionary keys to match plain string keys because the hashes won't match:
+
+```python
+# WRONG - This will raise KeyError
+polymer_map = {"PROTEIN": ..., "DNA": ..., "RNA": ...}
+value = polymer_map[cstring_obj]  # KeyError! hash(cstring_obj) != hash("PROTEIN")
+
+# RIGHT - Convert to string first
+value = polymer_map[str(cstring_obj)]  # Works correctly
+# OR
+value = polymer_map[cstring_obj.value]  # Also works
+```
+
+**Example from modelASUCheck.py**:
+```python
+# Fixed pattern (lines 87, 120)
+residueKind, polymerType = {
+    "PROTEIN": (gemmi.ResidueKind.AA, gemmi.PolymerType.PeptideL),
+    "DNA": (gemmi.ResidueKind.DNA, gemmi.PolymerType.Dna),
+    "RNA": (gemmi.ResidueKind.RNA, gemmi.PolymerType.Rna),
+}[str(seq.polymerType)]  # Must convert CString to str
+```
+
+**Historical Note**:
+We initially attempted hybrid hashing (value-based when set, identity-based when unset) to accommodate legacy plugin code that incorrectly used CString as dict keys. This approach failed because:
+1. Even empty CStrings get marked as EXPLICITLY_SET during `__init__` via default parameter
+2. Multiple empty CStrings would all hash to `hash("")` = 0, causing Set collisions
+3. Children would mysteriously disappear from parent's children Set
+4. The complexity of heuristics wasn't worth accommodating incorrect usage patterns
+
+**Plugin Development Rule**:
+Always convert CString to `str` when using as dictionary keys or for any operation requiring value-based comparison with plain strings.
+
 ## File Organization
 
 ### Key Directories

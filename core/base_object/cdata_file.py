@@ -26,18 +26,28 @@ logger = logging.getLogger(__name__)
 
 @cdata_class(
     attributes={
-        "baseName": attribute(AttributeType.STRING),
-        "relPath": attribute(AttributeType.STRING),
-        "annotation": attribute(AttributeType.STRING),
-        "subType": attribute(AttributeType.INT),
-        "contentFlag": attribute(AttributeType.INT),
+        "project": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "baseName": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "relPath": attribute(AttributeType.CUSTOM, custom_class="CFilePath"),
+        "dbFileId": attribute(AttributeType.CUSTOM, custom_class="CUUID"),
+        "annotation": attribute(AttributeType.CUSTOM, custom_class="CString"),
+        "subType": attribute(AttributeType.CUSTOM, custom_class="CInt"),
+        "contentFlag": attribute(AttributeType.CUSTOM, custom_class="CInt"),
     },
     qualifiers={
-        "baseName": {"toolTip": "Base filename"},
-        "relPath": {"toolTip": "Relative path to file"},
-        "annotation": {"toolTip": "File annotation"},
-        "contentFlag": {"min": 0, "allowUndefined": True, "toolTip": "Content flag"},
-        "subType": {"allowUndefined": True, "toolTip": "File subtype"},
+        "allowUndefined": True,
+        "mustExist": False,
+        "fromPreviousJob": False,
+        "jobCombo": True,
+        "mimeTypeName": "",
+        "mimeTypeDescription": "",
+        "fileLabel": None,
+        "fileExtensions": [],
+        "fileContentClassName": None,
+        "isDirectory": False,
+        "saveToDb": True,
+        "requiredSubType": None,
+        "requiredContentFlag": None
     }
 )
 class CDataFile(CData):

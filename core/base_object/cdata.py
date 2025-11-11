@@ -459,6 +459,22 @@ class CData(HierarchicalObject):
                         return True
                     if state == ValueState.DEFAULT and allowDefault:
                         return True
+
+                # Also check CData children recursively (e.g., CList, nested CContainer)
+                # This handles cases like container.UNMERGEDFILES.append(item)
+                # where UNMERGEDFILES itself is set but not explicitly assigned
+                for attr_name in dir(self):
+                    if attr_name.startswith('_'):
+                        continue
+                    try:
+                        attr = getattr(self, attr_name)
+                        if isinstance(attr, CData) and hasattr(attr, 'isSet'):
+                            if attr.isSet(field_name=None, allowUndefined=allowUndefined,
+                                        allowDefault=allowDefault, allSet=allSet):
+                                return True
+                    except Exception:
+                        continue
+
                 return False
             field_name = "value"
 
@@ -808,29 +824,6 @@ class CData(HierarchicalObject):
 
             self.set_qualifier(key, value)
 
-    def _setup_hierarchy_for_value(self, key: str, value: Any):
-        """Set up hierarchical relationships for attribute values.
-
-        Only sets parent if not already set, respecting explicit parent assignments.
-        Only sets name if not already set.
-        """
-        if isinstance(value, CData):
-            # Only set parent if not already set (respect explicit parent assignment)
-            if value.parent() is None:
-                value.set_parent(self)
-            # Only set hierarchical name if not already set
-            if not value._name:
-                value._name = key
-        elif isinstance(value, list):
-            # Handle list of CData objects
-            for i, item in enumerate(value):
-                if isinstance(item, CData):
-                    # Only set parent if not already set
-                    if item.parent() is None:
-                        item.set_parent(self)
-                    if not item._name:
-                        item._name = f"{key}[{i}]"
-
     def _is_value_type(self) -> bool:
         """Check if this is a simple value type (like CString, CInt, etc.)."""
         # Simple heuristic: if class has only basic Python types as attributes
@@ -920,6 +913,29 @@ class CData(HierarchicalObject):
                         "signals",
                     ]:
                         setattr(self, key, value)
+
+    def _setup_hierarchy_for_value(self, key: str, value: Any):
+        """Set up hierarchical relationships for attribute values.
+
+        Only sets parent if not already set, respecting explicit parent assignments.
+        Only sets name if not already set.
+        """
+        if isinstance(value, CData):
+            # Only set parent if not already set (respect explicit parent assignment)
+            if value.parent() is None:
+                value.set_parent(self)
+            # Only set hierarchical name if not already set
+            if not value._name:
+                value._name = key
+        elif isinstance(value, list):
+            # Handle list of CData objects
+            for i, item in enumerate(value):
+                if isinstance(item, CData):
+                    # Only set parent if not already set
+                    if item.parent() is None:
+                        item.set_parent(self)
+                    if not item._name:
+                        item._name = f"{key}[{i}]"
 
     def __setattr__(self, name: str, value: Any):
         """Override setattr to handle smart assignment and hierarchical relationships."""
