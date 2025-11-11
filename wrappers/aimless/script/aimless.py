@@ -418,9 +418,9 @@ class aimless(CPluginScript):
     # -----------------------------------------------------------------------
     def outputOptions(self):
 
-        print("outputOptions:", self.container.outputData.HKLOUT_BASENAME)        
+        print("outputOptions:", self.container.outputData.HKLOUT_BASENAME)
 
-        if not self.container.outputData.HKLOUT_BASENAME.isSet():
+        if not self.container.outputData.HKLOUT_BASENAME.isSet() or not str(self.container.outputData.HKLOUT_BASENAME):
             self.container.outputData.HKLOUT_BASENAME = os.path.join(self.getWorkDirectory(),"HKLOUT")
         par = self.container.controlParameters
 

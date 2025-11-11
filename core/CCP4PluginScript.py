@@ -2760,6 +2760,196 @@ class CPluginScript(CData):
 
         return error
 
+    def splitHkloutList(
+        self,
+        miniMtzsOut: list,
+        programColumnNames: list,
+        outputBaseName: list = None,
+        outputContentFlags: list = None,
+        infileList: list = None,
+        logFile: str = None,
+        **kwargs
+    ) -> 'CErrorReport':
+        """
+        Split multiple HKLOUT files into mini-MTZ files (list processing version).
+
+        This method processes a list of input MTZ files, splitting each one into
+        multiple output files. For each input file and each miniMtzsOut entry,
+        it creates a corresponding output file with auto-generated paths.
+
+        Args:
+            miniMtzsOut: List of output object names in container.outputData
+                        (e.g., ['MAPOUT', 'ABCDOUT'])
+            programColumnNames: List of comma-separated column name strings
+                              (e.g., ['FWT,PHWT', 'HLA,HLB,HLC,HLD'])
+            outputBaseName: List of base names for output files (one per miniMtzsOut)
+                          If None, uses miniMtzsOut names as base names
+            outputContentFlags: List of contentFlag values (one per miniMtzsOut)
+                              If provided, sets contentFlag on each output file object
+            infileList: List of input MTZ file paths or file objects
+                       If None, uses [workDirectory/hklout.mtz]
+            logFile: Log file path (default: workDirectory/splitmtz.log)
+            **kwargs: Legacy compatibility
+
+        Returns:
+            CErrorReport with any errors
+
+        Example:
+            >>> # Split 2 input files, each into MAPOUT and ABCDOUT
+            >>> error = self.splitHkloutList(
+            ...     miniMtzsOut=['MAPOUT', 'ABCDOUT'],
+            ...     programColumnNames=['FWT,PHWT', 'HLA,HLB,HLC,HLD'],
+            ...     outputBaseName=['MAPOUT', 'ABCDOUT'],
+            ...     infileList=self.container.outputData.HKLOUT
+            ... )
+            >>> # Creates: MAPOUT_1.mtz, ABCDOUT_1.mtz, MAPOUT_2.mtz, ABCDOUT_2.mtz
+        """
+        from core.CCP4ErrorReport import CErrorReport
+        from pathlib import Path
+        error = CErrorReport()
+
+        # Default parameters
+        if outputBaseName is None:
+            outputBaseName = miniMtzsOut[:]  # Copy the list
+
+        if infileList is None:
+            infileList = [str(self.workDirectory / 'hklout.mtz')]
+
+        # Validate arguments
+        if len(miniMtzsOut) != len(programColumnNames):
+            error.append(
+                klass=self.__class__.__name__,
+                code=305,
+                details=f"miniMtzsOut and programColumnNames must have same length. "
+                        f"Got {len(miniMtzsOut)} vs {len(programColumnNames)}"
+            )
+            return error
+
+        if len(miniMtzsOut) != len(outputBaseName):
+            error.append(
+                klass=self.__class__.__name__,
+                code=306,
+                details=f"miniMtzsOut and outputBaseName must have same length. "
+                        f"Got {len(miniMtzsOut)} vs {len(outputBaseName)}"
+            )
+            return error
+
+        if outputContentFlags and len(miniMtzsOut) != len(outputContentFlags):
+            error.append(
+                klass=self.__class__.__name__,
+                code=307,
+                details=f"miniMtzsOut and outputContentFlags must have same length. "
+                        f"Got {len(miniMtzsOut)} vs {len(outputContentFlags)}"
+            )
+            return error
+
+        logger.debug(f'[DEBUG splitHkloutList] Processing {len(infileList)} input files')
+        logger.debug(f'[DEBUG splitHkloutList] Output objects: {miniMtzsOut}')
+        logger.debug(f'[DEBUG splitHkloutList] Output base names: {outputBaseName}')
+
+        # Process each input file
+        for file_index, infile in enumerate(infileList):
+            # Handle file objects vs. string paths
+            if hasattr(infile, '__str__'):
+                infile_path = str(infile)
+            elif hasattr(infile, 'getFullPath'):
+                infile_path = infile.getFullPath()
+            else:
+                infile_path = infile
+
+            logger.debug(f'[DEBUG splitHkloutList] Processing file {file_index + 1}: {infile_path}')
+
+            # Validate input file exists
+            if not Path(infile_path).exists():
+                error.append(
+                    klass=self.__class__.__name__,
+                    code=308,
+                    details=f"Input file not found: {infile_path}"
+                )
+                continue
+
+            # Prepare output file objects and paths
+            outfiles = []
+            for obj_index, (obj_name, col_string, base_name) in enumerate(
+                zip(miniMtzsOut, programColumnNames, outputBaseName)
+            ):
+                # Get or create output list object
+                if not hasattr(self.container.outputData, obj_name):
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=309,
+                        details=f"Output object '{obj_name}' not found in container.outputData"
+                    )
+                    continue
+
+                obj_list = getattr(self.container.outputData, obj_name)
+
+                # Get file type label for output filename suffix
+                file_type_label = ''
+                if hasattr(obj_list, 'subItemQualifiers') and callable(obj_list.subItemQualifiers):
+                    try:
+                        label = obj_list.subItemQualifiers('label')
+                        if label and label is not NotImplemented and len(label) > 0:
+                            file_type_label = '_' + label
+                    except Exception:
+                        pass
+
+                # Get GUI label for annotation
+                gui_label = 'Output '
+                if hasattr(obj_list, 'subItemQualifiers') and callable(obj_list.subItemQualifiers):
+                    try:
+                        label = obj_list.subItemQualifiers('guiLabel')
+                        if label and label is not NotImplemented and len(label) > 0:
+                            gui_label = label + ' '
+                    except Exception:
+                        pass
+
+                # Ensure the list has enough items (expand if necessary)
+                while file_index >= len(obj_list):
+                    obj_list.append(obj_list.makeItem())
+
+                # Construct output file path: baseName_fileIndex_typeLabel.mtz
+                output_filename = f"{base_name}_{file_index + 1}{file_type_label}.mtz"
+                output_path = str(self.workDirectory / output_filename)
+
+                # Set the path on the output file object
+                obj_list[file_index].setFullPath(output_path)
+
+                # Set annotation
+                annotation_text = f"{gui_label}{file_index + 1}"
+                if hasattr(obj_list[file_index], 'annotation'):
+                    if hasattr(obj_list[file_index].annotation, 'set'):
+                        obj_list[file_index].annotation.set(annotation_text)
+                    else:
+                        obj_list[file_index].annotation = annotation_text
+
+                # Set contentFlag if provided
+                if outputContentFlags and obj_index < len(outputContentFlags):
+                    if hasattr(obj_list[file_index], 'contentFlag'):
+                        if hasattr(obj_list[file_index].contentFlag, 'set'):
+                            obj_list[file_index].contentFlag.set(outputContentFlags[obj_index])
+                        else:
+                            obj_list[file_index].contentFlag = outputContentFlags[obj_index]
+
+                # Add to outfiles for splitMtz: [path, input_columns, output_columns]
+                # Input and output columns are the same
+                outfiles.append([output_path, col_string, col_string])
+
+                logger.debug(f'[DEBUG splitHkloutList]   {obj_name}[{file_index}] -> {output_path} (columns: {col_string})')
+
+            # Call splitMtz to split this input file
+            if outfiles:
+                result = self.splitMtz(infile_path, outfiles, logFile)
+
+                if result == self.FAILED:
+                    error.append(
+                        klass=self.__class__.__name__,
+                        code=310,
+                        details=f"splitMtz failed for input file: {infile_path}"
+                    )
+
+        return error
+
     def appendCommandScript(self, text=None, fileName=None, oneLine=False, clear=False):
         """
         Add text to the command script (list of lines for stdin/script file).
