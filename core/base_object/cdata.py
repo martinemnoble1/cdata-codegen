@@ -463,6 +463,7 @@ class CData(HierarchicalObject):
             field_name = "value"
 
         # If the attribute exists and is a CData object, delegate to it
+        # This includes CDataFile objects which have special isSet() logic that checks baseName
         if hasattr(self, field_name):
             attr = getattr(self, field_name, None)
             if isinstance(attr, CData) and hasattr(attr, 'isSet'):

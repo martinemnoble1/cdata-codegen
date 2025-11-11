@@ -771,8 +771,12 @@ class CString(CData):
         self.value = value
 
     def __hash__(self):
-        """Make CString hashable by object identity for use in sets and as dict keys."""
-        return hash(id(self))
+        """Make CString hashable by value for use in sets and as dict keys.
+
+        This allows CString objects to be used as dict keys and compared with plain strings.
+        For example: {'PROTEIN': value}[CString('PROTEIN')] will work correctly.
+        """
+        return hash(self.value)
 
     def __delattr__(self, name):
         """Prevent deletion of _value attribute during garbage collection."""
