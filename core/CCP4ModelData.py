@@ -14,13 +14,105 @@ from core.cdata_stubs.CCP4ModelData import CAsuContentStub, CAsuContentSeqStub, 
 class CAsuContent(CAsuContentStub):
     """
     Base class for classes holding file contents
-    
+
     Extends CAsuContentStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def loadFile(self, file_path: str = None):
+        """
+        Load ASU XML file and populate seqList.
+
+        This method:
+        1. Reads ASU XML file using ElementTree
+        2. Extracts sequence information
+        3. Populates seqList attribute with CAsuContentSeq objects
+
+        Args:
+            file_path: Optional path to ASU XML file. If None, gets path from parent CDataFile.
+
+        Returns:
+            CErrorReport with any errors encountered
+
+        Example:
+            # Load from parent file's path
+            >>> asu_file = CAsuDataFile()
+            >>> asu_file.setFullPath('/path/to/sequences.asu.xml')
+            >>> asu_file.loadFile()  # Base CDataFile.loadFile() calls content.loadFile()
+        """
+        from core.base_object.error_reporting import CErrorReport
+        from pathlib import Path
+
+        error = CErrorReport()
+
+        # If no path provided, get from parent CDataFile
+        if file_path is None:
+            parent = self.get_parent()
+            if parent is not None and hasattr(parent, 'getFullPath'):
+                file_path = parent.getFullPath()
+
+        # Validate file path
+        if not file_path:
+            return error
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            error.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f"ASU XML file does not exist or is not a file: '{file_path}'",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+            return error
+
+        try:
+            import xml.etree.ElementTree as ET
+
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+
+            # Parse sequences from XML
+            # Handle namespace
+            ns = {'ccp4': 'http://www.ccp4.ac.uk/ccp4ns'}
+            body = root.find('.//ccp4i2_body', ns) or root.find('.//ccp4i2_body')
+
+            if body is not None:
+                seqList_elem = body.find('seqList')
+                if seqList_elem is not None:
+                    for seq_elem in seqList_elem.findall('CAsuContentSeq'):
+                        seq_obj = CAsuContentSeq(parent=self.seqList, name=None)
+
+                        # Parse sequence fields using smart assignment
+                        if seq_elem.find('sequence') is not None:
+                            seq_obj.sequence = seq_elem.find('sequence').text or ''
+                        if seq_elem.find('nCopies') is not None:
+                            seq_obj.nCopies = int(seq_elem.find('nCopies').text or '1')
+                        if seq_elem.find('polymerType') is not None:
+                            seq_obj.polymerType = seq_elem.find('polymerType').text or ''
+                        if seq_elem.find('name') is not None:
+                            seq_obj.name = seq_elem.find('name').text or ''
+                        if seq_elem.find('description') is not None:
+                            seq_obj.description = seq_elem.find('description').text or ''
+
+                        # Add to seqList
+                        self.seqList.append(seq_obj)
+
+        except ET.ParseError as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f"Error parsing ASU XML file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+        except Exception as e:
+            error.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details=f"Error reading ASU XML file '{file_path}': {e}",
+                name=self.object_name() if hasattr(self, 'object_name') else ''
+            )
+
+        return error
 
 
 class CAsuContentSeq(CAsuContentSeqStub):
@@ -80,87 +172,8 @@ class CAsuDataFile(CAsuDataFileStub):
     Extends CAsuDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
-
-    def loadFile(self):
-        """
-        Load the XML file and populate fileContent with CAsuContent.
-
-        This method reads the XML file at the path specified by getFullPath()
-        and parses it into the fileContent attribute.
-        """
-        # Check if already loaded
-        if hasattr(self, 'fileContent') and self.fileContent is not None:
-            return
-
-        # Get the file path
-        file_path = self.getFullPath()
-        if not file_path:
-            print(f"Debug: getFullPath() returned empty for CAsuDataFile")
-            return
-
-        print(f"Debug: Loading ASU file from {file_path}")
-
-        # Parse the XML file
-        import xml.etree.ElementTree as ET
-        from pathlib import Path
-
-        if not Path(file_path).exists():
-            return
-
-        try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-
-            # Create CAsuContent object
-            # Import here to avoid circular imports
-            from core.cdata_stubs.CCP4ModelData import CAsuContentStub, CAsuContentSeqStub
-
-            # Find the class - it might be in stubs or in this file
-            try:
-                from core.CCP4ModelData import CAsuContent
-            except ImportError:
-                CAsuContent = CAsuContentStub
-
-            try:
-                from core.CCP4ModelData import CAsuContentSeq
-            except ImportError:
-                CAsuContentSeq = CAsuContentSeqStub
-
-            # Create fileContent
-            self.fileContent = CAsuContent(parent=self, name='fileContent')
-
-            # Parse sequences from XML
-            # Handle namespace
-            ns = {'ccp4': 'http://www.ccp4.ac.uk/ccp4ns'}
-            body = root.find('.//ccp4i2_body', ns) or root.find('.//ccp4i2_body')
-
-            if body is not None:
-                seqList_elem = body.find('seqList')
-                if seqList_elem is not None:
-                    for seq_elem in seqList_elem.findall('CAsuContentSeq'):
-                        seq_obj = CAsuContentSeq(parent=self.fileContent.seqList, name=None)
-
-                        # Parse sequence fields
-                        if seq_elem.find('sequence') is not None:
-                            seq_obj.sequence = seq_elem.find('sequence').text or ''
-                        if seq_elem.find('nCopies') is not None:
-                            seq_obj.nCopies = int(seq_elem.find('nCopies').text or '1')
-                        if seq_elem.find('polymerType') is not None:
-                            seq_obj.polymerType = seq_elem.find('polymerType').text or ''
-                        if seq_elem.find('name') is not None:
-                            seq_obj.name = seq_elem.find('name').text or ''
-                        if seq_elem.find('description') is not None:
-                            seq_obj.description = seq_elem.find('description').text or ''
-
-                        # Add to seqList
-                        self.fileContent.seqList.append(seq_obj)
-
-        except ET.ParseError as e:
-            print(f"Error parsing XML file {file_path}: {e}")
-        except Exception as e:
-            print(f"Error loading file {file_path}: {e}")
-            import traceback
-            traceback.print_exc()
+    # No custom overrides needed - base CDataFile.loadFile() handles everything!
+    # Just need CAsuContent.loadFile() implementation below
 
     def saveFile(self, dbInfo=None):
         """
