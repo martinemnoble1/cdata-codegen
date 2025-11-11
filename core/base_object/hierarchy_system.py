@@ -731,8 +731,14 @@ class HierarchicalObject(ABC):
                         from .hierarchy_system import ObjectState
                         if child.state == ObjectState.DESTROYED:
                             continue
-                    # Check if name matches
-                    if hasattr(child, 'name') and child.name == name:
+                    # Check if name matches (check both 'name' attribute and objectName() method)
+                    child_name = None
+                    if hasattr(child, 'name') and child.name:
+                        child_name = child.name
+                    elif hasattr(child, 'objectName'):
+                        child_name = child.objectName()
+
+                    if child_name == name:
                         return child
 
             # Not found in immediate children - search recursively
@@ -759,8 +765,14 @@ class HierarchicalObject(ABC):
                     from .hierarchy_system import ObjectState
                     if child.state == ObjectState.DESTROYED:
                         continue
-                # Check if name matches
-                if hasattr(child, 'name') and child.name == first_name:
+                # Check if name matches (check both 'name' attribute and objectName() method)
+                child_name = None
+                if hasattr(child, 'name') and child.name:
+                    child_name = child.name
+                elif hasattr(child, 'objectName'):
+                    child_name = child.objectName()
+
+                if child_name == first_name:
                     # Found first component - recurse for remaining path
                     if hasattr(child, 'find'):
                         return child.find(remaining_path)
