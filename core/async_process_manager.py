@@ -51,6 +51,10 @@ class ProcessInfo:
     # Process object
     process: Optional[asyncio.subprocess.Process] = None
 
+    # File handles for log files (direct I/O, no buffering)
+    stdout_file: Optional[Any] = None
+    stderr_file: Optional[Any] = None
+
 
 class AsyncProcessManager:
     """
@@ -306,21 +310,49 @@ class AsyncProcessManager:
             # Prepare stdin
             stdin_dest = asyncio.subprocess.PIPE if proc_info.inputFile else None
 
-            # Prepare stdout/stderr
-            stdout_dest = asyncio.subprocess.PIPE
-            stderr_dest = asyncio.subprocess.PIPE
+            # Prepare stdout/stderr - use direct file descriptors for real-time logging
+            stdout_dest = None
+            stderr_dest = None
+            stdout_file = None
+            stderr_file = None
+
+            if proc_info.logFile:
+                # Create parent directory if needed
+                Path(proc_info.logFile).parent.mkdir(parents=True, exist_ok=True)
+                # Open log file for direct writing (real-time, no buffering)
+                stdout_file = open(proc_info.logFile, 'w')
+                stdout_dest = stdout_file
+                # Stderr to separate file
+                err_file_path = str(Path(proc_info.logFile).with_suffix('')) + '_err.txt'
+                stderr_file = open(err_file_path, 'w')
+                stderr_dest = stderr_file
+            else:
+                # No log file - still need to capture output
+                stdout_dest = asyncio.subprocess.PIPE
+                stderr_dest = asyncio.subprocess.PIPE
 
             # Launch subprocess
-            process = await asyncio.create_subprocess_exec(
-                *full_command,
-                stdin=stdin_dest,
-                stdout=stdout_dest,
-                stderr=stderr_dest,
-                cwd=proc_info.cwd,
-                env=proc_info.env
-            )
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *full_command,
+                    stdin=stdin_dest,
+                    stdout=stdout_dest,
+                    stderr=stderr_dest,
+                    cwd=proc_info.cwd,
+                    env=proc_info.env
+                )
+            except Exception as e:
+                # Close file handles if subprocess launch failed
+                if stdout_file:
+                    stdout_file.close()
+                if stderr_file:
+                    stderr_file.close()
+                raise
 
             proc_info.process = process
+            # Store file handles so we can close them later
+            proc_info.stdout_file = stdout_file
+            proc_info.stderr_file = stderr_file
 
             # Send input file if needed
             if proc_info.inputFile and process.stdin:
@@ -339,8 +371,9 @@ class AsyncProcessManager:
                 timeout_seconds = proc_info.timeout / 1000.0
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
+                # Wait for process to complete (no buffering - logs written in real-time)
+                await asyncio.wait_for(
+                    process.wait(),
                     timeout=timeout_seconds
                 )
             except asyncio.TimeoutError:
@@ -352,24 +385,12 @@ class AsyncProcessManager:
                 proc_info.exitStatus = 1
                 await self._handle_finish(pid, -1, 1)
                 return
-
-            # Save output to log files
-            if proc_info.logFile:
-                try:
-                    # Create parent directory if needed
-                    Path(proc_info.logFile).parent.mkdir(parents=True, exist_ok=True)
-
-                    # Write stdout
-                    with open(proc_info.logFile, 'wb') as f:
-                        f.write(stdout or b'')
-
-                    # Write stderr to separate file
-                    if stderr:
-                        err_file = str(Path(proc_info.logFile).with_suffix('')) + '_err.txt'
-                        with open(err_file, 'wb') as f:
-                            f.write(stderr)
-                except Exception as e:
-                    logger.error(f"Error writing log files for process {pid}: {e}")
+            finally:
+                # Close file handles now that process is done
+                if stdout_file:
+                    stdout_file.close()
+                if stderr_file:
+                    stderr_file.close()
 
             # Update process info
             proc_info.exitCode = process.returncode
