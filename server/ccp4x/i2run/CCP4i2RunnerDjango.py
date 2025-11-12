@@ -259,7 +259,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             # Use exclude_unset=False to ensure input files are saved to input_params.xml
             # The files have full absolute paths at this point, but that's OK - the import
             # process will copy them to CCP4_IMPORTED_FILES and update input_params.xml
-            save_params_for_job(thePlugin, the_job=job, exclude_unset=False)
+            save_params_for_job(thePlugin, the_job=job, exclude_unset=True)
             print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
 
         return thePlugin

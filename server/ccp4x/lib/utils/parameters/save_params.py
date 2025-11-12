@@ -61,9 +61,8 @@ def save_params_for_job(
     f.header.setCurrent()
     f.header.pluginName.set(the_job.task_name)
     f.header.userId.set(getpass.getuser())
-    old_job_container: CCP4Container.CContainer = the_job_plugin.container
 
     # Use the exclude_unset parameter passed to this function
-    body_etree = old_job_container.getEtree(excludeUnset=exclude_unset)
+    body_etree = the_job_plugin.container.getEtree(excludeUnset=exclude_unset)
 
     f.saveFile(bodyEtree=body_etree)
