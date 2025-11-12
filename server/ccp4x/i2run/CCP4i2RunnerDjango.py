@@ -278,7 +278,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             raise ValueError("projectId not set - cannot execute")
 
         # Save params.xml (job output metadata)
-        thePlugin.saveParams()
+        thePlugin.saveParams(exclude_unset=True)
         print(self.jobId)
 
         # Validate plugin configuration before execution
