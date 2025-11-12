@@ -124,6 +124,32 @@ class CAsuContentSeq(CAsuContentSeqStub):
     Add file I/O, validation, and business logic here.
     """
 
+    def numberOfResidues(self, countMulti=False):
+        """
+        Calculate the number of residues in the sequence.
+
+        Args:
+            countMulti: If True, multiply by nCopies
+
+        Returns:
+            int: Number of residues (sequence length), optionally multiplied by nCopies
+        """
+        # Get sequence value - handle both CString and plain string
+        sequence = self.sequence
+        if hasattr(sequence, 'value'):
+            seq_str = str(sequence.value)
+        else:
+            seq_str = str(sequence)
+
+        # Count non-whitespace characters
+        num_residues = len(seq_str.replace(' ', '').replace('\n', '').replace('\t', ''))
+
+        # Multiply by nCopies if requested
+        if countMulti and hasattr(self, 'nCopies') and self.nCopies.isSet():
+            num_residues *= int(self.nCopies.value)
+
+        return num_residues
+
     def molecularWeight(self, polymerType="PROTEIN"):
         """
         Calculate molecular weight of the sequence.
