@@ -1813,10 +1813,6 @@ class CPluginScript(CData):
         import os
         from pathlib import Path
 
-        # TODO: In database-backed mode, if reportToDatabase is True and _dbHandler exists,
-        # would call self._dbHandler.createJob() to register sub-job in database
-        # For now (standalone mode), we skip database registration
-
         # Increment child job counter
         self._childJobCounter += 1
 
@@ -1896,9 +1892,36 @@ class CPluginScript(CData):
             if hasattr(self, '_dbProjectId') and self._dbProjectId is not None:
                 plugin_instance._dbProjectId = self._dbProjectId
                 logger.debug(f"[DEBUG makePluginObject] Propagated dbProjectId to nested plugin")
-            if hasattr(self, '_dbJobId') and self._dbJobId is not None:
-                plugin_instance._dbJobId = self._dbJobId
-                logger.debug(f"[DEBUG makePluginObject] Propagated dbJobId to nested plugin")
+
+            # Handle database job creation for sub-job
+            # In database-backed mode with reportToDatabase=True, delegate to dbHandler
+            if reportToDatabase and hasattr(self, '_dbHandler') and self._dbHandler is not None and hasattr(self._dbHandler, 'createSubJob'):
+                try:
+                    parent_job_id = self._dbJobId if hasattr(self, '_dbJobId') else None
+                    if parent_job_id:
+                        job_number = str(self._childJobCounter)
+                        # Delegate to dbHandler for clean separation of concerns
+                        new_job_id = self._dbHandler.createSubJob(
+                            taskName=taskName,
+                            parentJobId=parent_job_id,
+                            jobNumber=job_number
+                        )
+                        plugin_instance._dbJobId = new_job_id
+                        logger.debug(f"[DEBUG makePluginObject] Assigned new job ID to sub-job: {new_job_id}")
+                    else:
+                        logger.debug(f"[DEBUG makePluginObject] No parent job ID, skipping sub-job creation")
+                except Exception as e:
+                    logger.warning(f"[WARNING makePluginObject] Failed to create database job for sub-job: {e}")
+                    # Fall back to propagating parent's job ID (old behavior)
+                    if hasattr(self, '_dbJobId') and self._dbJobId is not None:
+                        plugin_instance._dbJobId = self._dbJobId
+                        logger.debug(f"[DEBUG makePluginObject] Falling back to parent's job ID due to error")
+            else:
+                # Not in database mode or reportToDatabase is False
+                # Still propagate parent's job ID for backward compatibility
+                if hasattr(self, '_dbJobId') and self._dbJobId is not None:
+                    plugin_instance._dbJobId = self._dbJobId
+                    logger.debug(f"[DEBUG makePluginObject] Propagated parent's dbJobId to nested plugin (no database creation)")
             logger.debug(f"[DEBUG makePluginObject] Created sub-plugin '{taskName}' as '{actual_name}' in '{actual_workdir}'")
             return plugin_instance
         except Exception as e:

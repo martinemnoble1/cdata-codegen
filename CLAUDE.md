@@ -99,6 +99,10 @@ pip install autopep8 pytest
 # Symlink mrbump module from CCP4 distribution
 # Required for MrBUMP pipeline tests
 ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/mrbump .venv/lib/python3.11/site-packages/mrbump
+
+# Symlink chem_data directory from CCP4 distribution
+# Required for validation (iris_validation, MolProbity) - provides Top8000 Ramachandran/rotamer database
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/chem_data .venv/lib/python3.11/site-packages/chem_data
 ```
 
 **Initial Setup for Python 3.9:**
@@ -112,6 +116,10 @@ pip install autopep8 pytest
 
 # Symlink mrbump module from CCP4-9
 ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/mrbump .venv.old-py39/lib/python3.9/site-packages/mrbump
+
+# Symlink chem_data directory from CCP4-9
+# Required for validation (iris_validation, MolProbity) - provides Top8000 Ramachandran/rotamer database
+ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/chem_data .venv.old-py39/lib/python3.9/site-packages/chem_data
 ```
 
 **Why Multiple Environments?**

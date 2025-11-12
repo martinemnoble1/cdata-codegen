@@ -47,15 +47,21 @@ class coot_find_waters(CPluginScript):
         from core import CCP4File
         root = etree.Element('coot_find_waters')
 
-        cootlines = open(self.makeFileName('LOG')).readlines()
-        for line in cootlines:
-            if line.startswith('INFO:: found'):
-                nWatersElement = etree.SubElement(root,'WatersFound')
-                lineElements = line.split()
-                nWatersElement.text = lineElements[2]
-    
+        # Safely read log file - may not exist yet if process still running
+        log_file = self.makeFileName('LOG')
+        if os.path.exists(log_file) and os.path.getsize(log_file) > 0:
+            try:
+                cootlines = open(log_file).readlines()
+                for line in cootlines:
+                    if line.startswith('INFO:: found'):
+                        nWatersElement = etree.SubElement(root,'WatersFound')
+                        lineElements = line.split()
+                        nWatersElement.text = lineElements[2]
+            except Exception as e:
+                print(f'Warning: Failed to parse coot log file: {e}')
+
         self.container.outputData.XYZOUT.subType = 1
-        
+
         f = CCP4File.CXmlDataFile(fullPath=self.makeFileName('PROGRAMXML'))
         f.saveFile(root)
         return status

@@ -120,9 +120,9 @@ class ObsDataConverter:
         if wrapper_class is None:
             raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
-        # Create instance with working directory
-        ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
-        wrapper = wrapper_class(parent=obs_file, workDirectory=ctruncate_work)
+        # Create instance with working directory (use parent's work directory directly)
+        # Don't create subdirectory - output paths expect files in parent work directory
+        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
 
         # Configure container
         inp = wrapper.container.inputData
@@ -169,14 +169,14 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output paths
-        # NOTE: Output files are written to ctruncate_work directory, not parent work_directory
+        # NOTE: Output files are now written to work_directory (not a subdirectory)
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(ctruncate_work) / hklout_name)
+            hklout_path = str(Path(work_directory) / hklout_name)
             obsout_name = f"{input_path.stem}_as_FPAIR{input_path.suffix}"
-            obsout_path = str(Path(ctruncate_work) / obsout_name)
+            obsout_path = str(Path(work_directory) / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
@@ -195,7 +195,8 @@ class ObsDataConverter:
             error_msg = f"ctruncate conversion failed with status {status}."
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            error_msg += f"\nCheck logs in {ctruncate_work}"
+            if work_directory:
+                error_msg += f"\nCheck logs in {work_directory}"
             raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ
@@ -238,7 +239,6 @@ class ObsDataConverter:
         Raises:
             CException: If validation fails, unsupported conversion, or ctruncate fails
         """
-        import os
         from core.CCP4PluginScript import CPluginScript
         from core.CCP4TaskManager import TASKMANAGER
         from core.base_object.fundamental_types import CInt, CBoolean
@@ -272,9 +272,9 @@ class ObsDataConverter:
         if wrapper_class is None:
             raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
-        # Create ctruncate instance with working directory
-        ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
-        wrapper = wrapper_class(parent=obs_file, workDirectory=ctruncate_work)
+        # Create ctruncate instance with working directory (use parent's work directory directly)
+        # Don't create subdirectory - output paths expect files in parent work directory
+        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
 
         # Populate container manually
         inp = wrapper.container.inputData
@@ -325,14 +325,14 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output file paths
-        # NOTE: Output files are written to ctruncate_work directory, not parent work_directory
+        # NOTE: Output files are now written to work_directory (not a subdirectory)
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(ctruncate_work) / hklout_name)
+            hklout_path = str(Path(work_directory) / hklout_name)
             obsout_name = f"{input_path.stem}_as_IMEAN{input_path.suffix}"
-            obsout_path = str(Path(ctruncate_work) / obsout_name)
+            obsout_path = str(Path(work_directory) / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
@@ -351,7 +351,8 @@ class ObsDataConverter:
             error_msg = f"ctruncate conversion failed with status {status}."
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            error_msg += f"\nCheck logs in {ctruncate_work}"
+            if work_directory:
+                error_msg += f"\nCheck logs in {work_directory}"
             raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ
@@ -394,7 +395,6 @@ class ObsDataConverter:
         Raises:
             CException: If validation fails, unsupported conversion, or conversion fails
         """
-        import os
         from core.CCP4PluginScript import CPluginScript
         from core.CCP4TaskManager import TASKMANAGER
         from core.base_object.fundamental_types import CInt, CBoolean
@@ -425,9 +425,9 @@ class ObsDataConverter:
         if wrapper_class is None:
             raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
-        # Create ctruncate instance with working directory
-        ctruncate_work = os.path.join(work_directory, "ctruncate") if work_directory else "ctruncate"
-        wrapper = wrapper_class(parent=obs_file, workDirectory=ctruncate_work)
+        # Create ctruncate instance with working directory (use parent's work directory directly)
+        # Don't create subdirectory - output paths expect files in parent work directory
+        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
 
         # Populate container
         inp = wrapper.container.inputData
@@ -547,7 +547,8 @@ class ObsDataConverter:
             error_msg = f"ctruncate conversion failed with status {status}."
             if wrapper.errorReport.count() > 0:
                 error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            error_msg += f"\nCheck logs in {ctruncate_work}"
+            if work_directory:
+                error_msg += f"\nCheck logs in {work_directory}"
             raise CException(ObsDataConverter, 5, details=error_msg)
 
         # Manually call processOutputFiles to create the mini-MTZ

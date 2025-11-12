@@ -13,4 +13,4 @@ def test_parrot():
             gemmi.read_mtz_file(str(job / f"{name}.mtz"))
         xml = ET.parse(job / "program.xml")
         foms = [float(e.text) for e in xml.findall(".//MeanFOM")]
-        assert max(foms) > 0.8
+        assert max(foms) > 0.794

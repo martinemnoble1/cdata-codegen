@@ -198,7 +198,8 @@ class AsyncDatabaseHandler:
         @sync_to_async
         def _update():
             with transaction.atomic():
-                job = models.Job.objects.get(uuid=uuid.UUID(job_uuid))
+                # job_uuid is already a UUID object (see parameter type hint)
+                job = models.Job.objects.get(uuid=job_uuid)
                 job.status = status
 
                 if status == models.Job.Status.FINISHED:

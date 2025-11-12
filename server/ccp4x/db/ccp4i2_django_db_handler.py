@@ -111,7 +111,7 @@ class CCP4i2DjangoDbHandler:
         )
         try:
             return create_job(
-                parentJobId=uuid.UUID(parentJobId),
+                parentJobId=uuid.UUID(parentJobId) if parentJobId else None,
                 taskName=pluginName,
                 jobNumber=jobNumber,
                 saveParams=False,
@@ -120,6 +120,58 @@ class CCP4i2DjangoDbHandler:
         except Exception as err:
             logger.error("Failed in createJob %s", err)
             raise (err)
+
+    def createSubJob(self, taskName, parentJobId, jobNumber, jobTitle=None):
+        """
+        Create a database job entry for a sub-job.
+
+        This is called by CPluginScript.makePluginObject() when creating nested jobs
+        in a database-backed context.
+
+        Args:
+            taskName: Name of the plugin/task for the sub-job
+            parentJobId: UUID of the parent job (as string)
+            jobNumber: Job number for this sub-job (e.g., "1", "2")
+            jobTitle: Optional title for the sub-job
+
+        Returns:
+            str: UUID of the created job
+
+        Raises:
+            Exception: If job creation fails
+        """
+        logger.debug(
+            f"[createSubJob] Creating sub-job: task={taskName}, parent={parentJobId}, number={jobNumber}"
+        )
+
+        try:
+            # Create the job using existing createJob method
+            job = self.createJob(
+                pluginName=taskName,
+                jobTitle=jobTitle or f"{taskName} sub-job {jobNumber}",
+                parentJobId=parentJobId,
+                jobNumber=jobNumber
+            )
+
+            # Extract job UUID from returned job object
+            if hasattr(job, 'jobId'):
+                job_id = str(job.jobId)
+            elif hasattr(job, 'job_id'):
+                job_id = str(job.job_id)
+            elif hasattr(job, 'uuid'):
+                job_id = str(job.uuid)
+            elif isinstance(job, dict):
+                job_id = str(job.get('jobId') or job.get('job_id') or job.get('uuid'))
+            else:
+                # Fallback: assume job is the UUID itself
+                job_id = str(job)
+
+            logger.debug(f"[createSubJob] ✅ Created sub-job with ID: {job_id}")
+            return job_id
+
+        except Exception as e:
+            logger.error(f"[createSubJob] Failed to create sub-job: {e}")
+            raise
 
     def updateJobStatus(
         self,
