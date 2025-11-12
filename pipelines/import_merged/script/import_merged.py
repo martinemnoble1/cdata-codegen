@@ -52,7 +52,7 @@ class import_merged(CPluginScript):
     def process(self):
       self.container.inputData.HKLIN.loadFile()
       self.fformat = self.container.inputData.HKLIN.getFormat()
-      # Type(self.fformat) can be either [mtz] <class 'CCP4Data.CString'> or [mmcif] str  WHY? 
+      # Type(self.fformat) can be either [mtz] <class 'CCP4Data.CString'> or [mmcif] str  WHY?
       print("process self.fformat", type(self.fformat))
       merged = self.container.inputData.HKLIN.getMerged()
       self.isintensity = 0  # unknown I or F

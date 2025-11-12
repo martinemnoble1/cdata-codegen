@@ -30,8 +30,8 @@ class crank2_basepipe():
 
   def CheckStartEnd(self, step):
     return step in self.base_steps and \
-           self.base_steps_ind[self.container.inputData.START_PIPELINE] <= self.base_steps_ind[step] and \
-           self.base_steps_ind[self.container.inputData.END_PIPELINE] >= self.base_steps_ind[step]
+           self.base_steps_ind[str(self.container.inputData.START_PIPELINE)] <= self.base_steps_ind[step] and \
+           self.base_steps_ind[str(self.container.inputData.END_PIPELINE)] >= self.base_steps_ind[step]
 
   def ToggleDetection(self):
     return self.CheckStartEnd('substrdet')

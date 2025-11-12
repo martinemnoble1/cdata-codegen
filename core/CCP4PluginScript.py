@@ -492,26 +492,27 @@ class CPluginScript(CData):
         )
         return error
 
-    def saveDataToXml(self, fileName: str) -> CErrorReport:
+    def saveDataToXml(self, fileName: str, exclude_unset: bool = True) -> CErrorReport:
         """
         Save parameter values to a PARAMS file using ParamsXmlHandler.
 
         Args:
             fileName: Path to output .params.xml file
+            exclude_unset: If True, only save parameters that have been explicitly set
 
         Returns:
             CErrorReport indicating success or failure
         """
         import logging
         logger = logging.getLogger(f"ccp4x:{__name__}")
-        logger.info(f"saveDataToXml called with fileName: {fileName}")
+        logger.info(f"saveDataToXml called with fileName: {fileName}, exclude_unset: {exclude_unset}")
 
         error = CErrorReport()
         try:
             # Use ParamsXmlHandler to export params
             logger.info(f"Calling _params_handler.export_params_xml...")
             success = self._params_handler.export_params_xml(
-                self.container, fileName)
+                self.container, fileName, exclude_unset=exclude_unset)
             logger.info(f"export_params_xml returned: {success}")
 
             if not success:
@@ -2311,7 +2312,7 @@ class CPluginScript(CData):
 
         raise ValueError(f"No content flag name found for value {content_flag}")
 
-    def makeHklin(self, miniMtzsIn: list, hklin: str = 'hklin') -> tuple:
+    def makeHklin(self, miniMtzsIn: list, hklin: str = 'hklin', ignoreErrorCodes: list = []) -> tuple:
         """
         Merge mini-MTZ files into HKLIN (backward-compatible legacy API).
 
@@ -2328,6 +2329,7 @@ class CPluginScript(CData):
                        converts file to target format first (handled by makeHklinGemmi)
 
             hklin: Base name for output file (default: 'hklin')
+            ignoreErrorCodes: Error codes to ignore (for compatibility, not used)
 
         Returns:
             tuple: (hklin_filename, CErrorReport) where:

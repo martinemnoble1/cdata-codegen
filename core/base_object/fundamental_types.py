@@ -907,6 +907,10 @@ class CString(CData):
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
+        For CString, empty strings are treated as "not set" to support legacy
+        plugin code that uses empty string to mean "auto-detect" (e.g., x2mtz
+        column selection).
+
         Args:
             field_name: Optional field name. If not provided, checks if 'value' is set.
             allowUndefined: If True, allow None/undefined values to be considered "set"
@@ -914,12 +918,26 @@ class CString(CData):
             allSet: For container types (unused for fundamental types)
 
         Returns:
-            True if the value (or specified field) has been set, False otherwise.
+            True if the value (or specified field) has been set to a non-empty string,
+            False otherwise (including empty string case).
         """
         if field_name is None:
             field_name = "value"
-        return super().isSet(field_name, allowUndefined=allowUndefined,
-                           allowDefault=allowDefault, allSet=allSet)
+
+        # First check parent's isSet logic (state tracking, etc.)
+        parent_is_set = super().isSet(field_name, allowUndefined=allowUndefined,
+                                     allowDefault=allowDefault, allSet=allSet)
+
+        # If parent says it's not set, respect that
+        if not parent_is_set:
+            return False
+
+        # If parent says it IS set, also check if the value is empty string
+        # Empty strings are treated as "not set" for CString
+        if field_name == "value" and self.value == "":
+            return False
+
+        return True
 
     def _is_value_type(self) -> bool:
         return True
@@ -1034,6 +1052,90 @@ class CString(CData):
             list: List of lines
         """
         return self.value.splitlines(keepends)
+
+    def startswith(self, prefix, start=None, end=None):
+        """
+        Check if string starts with prefix.
+
+        Delegates to underlying string value's startswith method.
+
+        Args:
+            prefix: String prefix to check (or tuple of prefixes)
+            start: Optional start index (default: None)
+            end: Optional end index (default: None)
+
+        Returns:
+            bool: True if string starts with prefix, False otherwise
+        """
+        if self.value is None:
+            return False
+        return str(self.value).startswith(prefix, start, end)
+
+    def endswith(self, suffix, start=None, end=None):
+        """
+        Check if string ends with suffix.
+
+        Delegates to underlying string value's endswith method.
+
+        Args:
+            suffix: String suffix to check (or tuple of suffixes)
+            start: Optional start index (default: None)
+            end: Optional end index (default: None)
+
+        Returns:
+            bool: True if string ends with suffix, False otherwise
+        """
+        if self.value is None:
+            return False
+        return str(self.value).endswith(suffix, start, end)
+
+    def upper(self):
+        """Convert string to uppercase."""
+        return CString(self.value.upper() if self.value else "")
+
+    def lower(self):
+        """Convert string to lowercase."""
+        return CString(self.value.lower() if self.value else "")
+
+    def strip(self, chars=None):
+        """Remove leading and trailing characters."""
+        return CString(self.value.strip(chars) if self.value else "")
+
+    def lstrip(self, chars=None):
+        """Remove leading characters."""
+        return CString(self.value.lstrip(chars) if self.value else "")
+
+    def rstrip(self, chars=None):
+        """Remove trailing characters."""
+        return CString(self.value.rstrip(chars) if self.value else "")
+
+    def replace(self, old, new, count=-1):
+        """Replace occurrences of substring."""
+        return CString(self.value.replace(old, new, count) if self.value else "")
+
+    def find(self, sub, start=None, end=None):
+        """Find substring, return index or -1."""
+        if self.value is None:
+            return -1
+        return self.value.find(sub, start, end)
+
+    def rfind(self, sub, start=None, end=None):
+        """Find substring from right, return index or -1."""
+        if self.value is None:
+            return -1
+        return self.value.rfind(sub, start, end)
+
+    def index(self, sub, start=None, end=None):
+        """Find substring, raise ValueError if not found."""
+        if self.value is None:
+            raise ValueError("substring not found")
+        return self.value.index(sub, start, end)
+
+    def rindex(self, sub, start=None, end=None):
+        """Find substring from right, raise ValueError if not found."""
+        if self.value is None:
+            raise ValueError("substring not found")
+        return self.value.rindex(sub, start, end)
 
 
 @cdata_class(

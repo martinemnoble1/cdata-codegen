@@ -33,7 +33,7 @@ class ParamsXmlHandler:
         self.namespace_prefix = "ccp4"
 
     def export_params_xml(
-        self, task: CData, output_path: str, user_id: str = None
+        self, task: CData, output_path: str, user_id: str = None, exclude_unset: bool = True
     ) -> bool:
         """
         Export explicitly set parameters from a task hierarchy to a .params.xml file.
@@ -42,6 +42,7 @@ class ParamsXmlHandler:
             task: The root task object (from .def.xml parsing)
             output_path: Path where to save the .params.xml file
             user_id: User ID for the header (defaults to current user)
+            exclude_unset: If True, only export explicitly set parameters (default: True)
 
         Returns:
             bool: True if successful, False otherwise

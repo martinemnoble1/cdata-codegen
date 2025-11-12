@@ -540,7 +540,8 @@ class CGenericReflDataFile(CGenericReflDataFileStub):
         file_path_lower = str(file_path).lower()
         if file_path_lower.endswith('.mtz'):
             return 'mtz'
-        elif file_path_lower.endswith('.cif') or file_path_lower.endswith('.mmcif'):
+        elif file_path_lower.endswith('.cif') or file_path_lower.endswith('.mmcif') or file_path_lower.endswith('.ent'):
+            # .ent files are PDB entry files (modern format is mmCIF)
             return 'mmcif'
         else:
             return 'unknown'
