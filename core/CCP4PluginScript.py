@@ -533,7 +533,7 @@ class CPluginScript(CData):
 
         return error
 
-    def saveParams(self, fileName: Optional[str] = None) -> CErrorReport:
+    def saveParams(self, fileName: Optional[str] = None, exclude_unset: bool = True) -> CErrorReport:
         """
         Save current parameters to PARAMS file using ParamsXmlHandler.
 
@@ -542,6 +542,7 @@ class CPluginScript(CData):
 
         Args:
             fileName: Path to output file (defaults to auto-generated name)
+            exclude_unset: If True, only save parameters that have been explicitly set
 
         Returns:
             CErrorReport indicating success or failure
@@ -550,7 +551,7 @@ class CPluginScript(CData):
             # Use TASKNAME (not self.name which may contain spaces/special chars from job title)
             fileName = str(self.workDirectory / f"{self.TASKNAME}.params.xml")
 
-        return self.saveDataToXml(fileName)
+        return self.saveDataToXml(fileName, exclude_unset=exclude_unset)
 
     # =========================================================================
     # Process workflow methods
@@ -886,18 +887,31 @@ class CPluginScript(CData):
 
                             file_name = slugify(obj_name)
                             if not any(file_name.endswith(ext) for ext in ['.mtz', '.pdb', '.cif', '.log', '.xml']):
-                                # Get default extension from class metadata fileExtensions
+                                # Get default extension - prefer calling method over qualifier
                                 default_ext = '.mtz'  # Fallback default
-                                from core.base_object.class_metadata import get_class_metadata_by_type
-                                try:
-                                    meta = get_class_metadata_by_type(type(child))
-                                    if meta and meta.qualifiers and 'fileExtensions' in meta.qualifiers:
-                                        file_exts = meta.qualifiers['fileExtensions']
+
+                                # First try calling fileExtensions() method if it exists (e.g., CPdbDataFile)
+                                # This allows classes to determine extension dynamically based on contentFlag
+                                if hasattr(child, 'fileExtensions') and callable(child.fileExtensions):
+                                    try:
+                                        file_exts = child.fileExtensions()
                                         if file_exts and isinstance(file_exts, list) and len(file_exts) > 0:
                                             default_ext = '.' + file_exts[0].lstrip('.')
-                                            logger.debug(f'[DEBUG checkOutputData] Using default extension {default_ext} from fileExtensions={file_exts}')
-                                except Exception as e:
-                                    logger.debug(f'[DEBUG checkOutputData] Failed to get class metadata: {e}')
+                                            logger.debug(f'[DEBUG checkOutputData] Using extension {default_ext} from fileExtensions() method')
+                                    except Exception as e:
+                                        logger.debug(f'[DEBUG checkOutputData] Failed to call fileExtensions() method: {e}')
+                                else:
+                                    # Fallback: use qualifier from class metadata
+                                    from core.base_object.class_metadata import get_class_metadata_by_type
+                                    try:
+                                        meta = get_class_metadata_by_type(type(child))
+                                        if meta and meta.qualifiers and 'fileExtensions' in meta.qualifiers:
+                                            file_exts = meta.qualifiers['fileExtensions']
+                                            if file_exts and isinstance(file_exts, list) and len(file_exts) > 0:
+                                                default_ext = '.' + file_exts[0].lstrip('.')
+                                                logger.debug(f'[DEBUG checkOutputData] Using default extension {default_ext} from fileExtensions qualifier={file_exts}')
+                                    except Exception as e:
+                                        logger.debug(f'[DEBUG checkOutputData] Failed to get class metadata: {e}')
                                 file_name += default_ext
 
                             file_path = os.path.join(self.workDirectory, file_name)

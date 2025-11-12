@@ -3,7 +3,6 @@ import logging
 import traceback
 import uuid
 
-from ..lib.utils.files.glean_files import glean_job_files
 from ..lib.utils.files.get_by_context import get_file_by_job_context
 from . import models
 from .ccp4i2_static_data import FILETYPELIST
@@ -318,21 +317,6 @@ class CCP4i2DjangoDbApi(object):
         except Exception as err:
             logger.exception("Err in getJobInfo", exc_info=err)
         return None
-
-    def gleanJobFiles(
-        self,
-        jobId: str = None,
-        container=None,
-        dbOutputData=None,
-        roleList=[0, 1],
-        unSetMissingFiles=True,
-    ):
-        return glean_job_files(
-            jobId,
-            container=container,
-            roleList=roleList,
-            unSetMissingFiles=unSetMissingFiles,
-        )
 
     def jobDirectory(self, jobId=None, projectName=None, jobNumber=None, create=False, projectId=None, projectDirectory=None):
         logger.debug("in CCP4i2DjangoDbApi %s, %s, %s", jobId, projectName, jobNumber)

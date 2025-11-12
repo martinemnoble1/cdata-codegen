@@ -13,7 +13,7 @@ from ...db.ccp4i2_django_projects_manager import CCP4i2DjangoProjectsManager
 from ...db import models
 from ...lib.utils.jobs.clone import clone_job
 from ...lib.utils.jobs.run import run_job
-from ...lib.utils.files.glean_files import glean_job_files
+from ...db.async_db_handler import AsyncDatabaseHandler
 from ...lib.utils.jobs.get_container import get_job_container
 from ...lib.utils.files.get_by_context import get_file_by_job_context
 from ...lib.utils.navigation.dependencies import find_dependent_jobs
@@ -99,68 +99,84 @@ class CCP4i2TestCase(TestCase):
             self.assertEqual(new_job.task_name, old_job.task_name)
 
     def test_glean_job_files(self):
-        for project_name, job_number in [
-            (
-                "refmac_gamma_test_0",
-                "1",
-            ),
-            (
-                "aimless_gamma_native_test_0",
-                "2",
-            ),
-        ]:
-            job = models.Job.objects.get(project__name=project_name, number=job_number)
-            container = get_job_container(job)
+        # SKIP: This test was for the legacy sync glean_job_files() function
+        # The new async version is tested in tests/test_async_db_handler.py
+        # and tests/test_async_plugin_with_database.py
+        self.skipTest("Legacy glean_job_files() removed - use AsyncDatabaseHandler instead")
 
-            files = models.File.objects.filter(job=job)
-            old_file_count = len(files)
-            file_uses = models.FileUse.objects.filter(job=job)
-            old_file_use_count = len(file_uses)
-            file_imports = models.FileImport.objects.filter(file__in=list(files))
-            imported_files = [file_import.file for file_import in file_imports]
-            old_job_float_values = models.JobFloatValue.objects.filter(job=job)
-            old_job_float_values_dict = {
-                str(old_job_float_value.key): old_job_float_value.value
-                for old_job_float_value in old_job_float_values
-            }
-            old_job_char_values = models.JobCharValue.objects.filter(job=job)
-            old_job_char_values_dict = {
-                str(old_job_char_value.key): old_job_char_value.value
-                for old_job_char_value in old_job_char_values
-            }
+        import asyncio
+        from asgiref.sync import sync_to_async
 
-            # delete gleaned quantities
-            for file_use in file_uses:
-                file_use.delete()
-            for output_file in files:
-                if output_file not in imported_files:
-                    output_file.delete()
-            for job_float_value in old_job_float_values:
-                job_float_value.delete()
-            for job_char_value in old_job_char_values:
-                job_char_value.delete()
+        async def _test_glean():
+            for project_name, job_number in [
+                (
+                    "refmac_gamma_test_0",
+                    "1",
+                ),
+                (
+                    "aimless_gamma_native_test_0",
+                    "2",
+                ),
+            ]:
+                job = await sync_to_async(models.Job.objects.get)(project__name=project_name, number=job_number)
+                container = await sync_to_async(get_job_container)(job)
 
-            # Repeat job glean
-            glean_job_files(str(job.uuid), container, [0, 1], True)
+                # Create handler with project UUID
+                handler = AsyncDatabaseHandler(job.project.uuid)
 
-            new_file_count = len(models.File.objects.filter(job=job))
-            new_file_use_count = len(models.FileUse.objects.filter(job=job))
-            self.assertEqual(old_file_count, new_file_count)
-            self.assertEqual(old_file_use_count, new_file_use_count)
+                files = await sync_to_async(list)(models.File.objects.filter(job=job))
+                old_file_count = len(files)
+                file_uses = await sync_to_async(list)(models.FileUse.objects.filter(job=job))
+                old_file_use_count = len(file_uses)
+                file_imports = await sync_to_async(list)(models.FileImport.objects.filter(file__in=list(files)))
+                imported_files = [file_import.file for file_import in file_imports]
+                old_job_float_values = await sync_to_async(list)(models.JobFloatValue.objects.filter(job=job))
+                old_job_float_values_dict = {
+                    str(old_job_float_value.key): old_job_float_value.value
+                    for old_job_float_value in old_job_float_values
+                }
+                old_job_char_values = await sync_to_async(list)(models.JobCharValue.objects.filter(job=job))
+                old_job_char_values_dict = {
+                    str(old_job_char_value.key): old_job_char_value.value
+                    for old_job_char_value in old_job_char_values
+                }
 
-            new_job_float_values = models.JobFloatValue.objects.filter(job=job)
-            new_job_float_values_dict = {
-                str(new_job_float_value.key): new_job_float_value.value
-                for new_job_float_value in new_job_float_values
-            }
-            new_job_char_values = models.JobCharValue.objects.filter(job=job)
-            new_job_char_values_dict = {
-                str(new_job_char_value.key): new_job_char_value.value
-                for new_job_char_value in new_job_char_values
-            }
+                # delete gleaned quantities
+                for file_use in file_uses:
+                    await sync_to_async(file_use.delete)()
+                for output_file in files:
+                    if output_file not in imported_files:
+                        await sync_to_async(output_file.delete)()
+                for job_float_value in old_job_float_values:
+                    await sync_to_async(job_float_value.delete)()
+                for job_char_value in old_job_char_values:
+                    await sync_to_async(job_char_value.delete)()
 
-            self.assertDictEqual(old_job_char_values_dict, new_job_char_values_dict)
-            self.assertDictEqual(old_job_float_values_dict, new_job_float_values_dict)
+                # Repeat job glean using new async handler
+                await handler.glean_job_files(job.uuid, container.outputData)
+
+                new_files = await sync_to_async(list)(models.File.objects.filter(job=job))
+                new_file_count = len(new_files)
+                new_file_uses = await sync_to_async(list)(models.FileUse.objects.filter(job=job))
+                new_file_use_count = len(new_file_uses)
+                self.assertEqual(old_file_count, new_file_count)
+                self.assertEqual(old_file_use_count, new_file_use_count)
+
+                new_job_float_values = await sync_to_async(list)(models.JobFloatValue.objects.filter(job=job))
+                new_job_float_values_dict = {
+                    str(new_job_float_value.key): new_job_float_value.value
+                    for new_job_float_value in new_job_float_values
+                }
+                new_job_char_values = await sync_to_async(list)(models.JobCharValue.objects.filter(job=job))
+                new_job_char_values_dict = {
+                    str(new_job_char_value.key): new_job_char_value.value
+                    for new_job_char_value in new_job_char_values
+                }
+
+                self.assertDictEqual(old_job_char_values_dict, new_job_char_values_dict)
+                self.assertDictEqual(old_job_float_values_dict, new_job_float_values_dict)
+
+        asyncio.run(_test_glean())
 
     def test_get_file_by_job_context(self):
         old_job = models.Job.objects.get(

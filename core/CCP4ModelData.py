@@ -1634,8 +1634,9 @@ class CPdbDataFile(CPdbDataFileStub):
                 content_flag = int(self.contentFlag) if self.contentFlag else 0
 
         # contentFlag: 2 = mmCIF, anything else = PDB (default)
+        # Note: mmCIF files use .cif extension (not .mmcif)
         if content_flag == self.CONTENT_FLAG_MMCIF:
-            return ['mmcif']
+            return ['cif']
         else:
             return ['pdb']
 
@@ -1656,29 +1657,41 @@ class CPdbDataFile(CPdbDataFileStub):
             ...     print("File is in mmCIF format")
         """
         # First, try quick check based on file extension
+        # Note: We can trust .cif/.mmcif extensions, but NOT .pdb extensions
+        # (legacy wrappers may copy mmCIF files to .pdb paths)
         full_path = self.getFullPath()
         if full_path:
             from pathlib import Path
             suffix = Path(full_path).suffix.lower()
             if suffix in ['.cif', '.mmcif']:
                 return True
-            elif suffix in ['.pdb', '.ent']:
-                return False
+            # Don't quick-fail on .pdb - it might actually be mmCIF content
+            # Fall through to content checking below
 
-        # If file content is already loaded, delegate to it
-        if hasattr(self, 'fileContent') and self.fileContent is not None:
-            if hasattr(self.fileContent, 'isMMCIF'):
-                return self.fileContent.isMMCIF()
-
-        # Otherwise, load the file and check
+        # Quick file content check (before trying to load with gemmi)
+        # This is faster and avoids triggering loadFile() which might fail
         if full_path:
             from pathlib import Path
             if Path(full_path).exists():
-                # Ensure fileContent exists
-                self.loadFile()
-                if hasattr(self, 'fileContent') and self.fileContent is not None:
-                    if hasattr(self.fileContent, 'isMMCIF'):
-                        return self.fileContent.isMMCIF()
+                try:
+                    # Quick check: read first line to see if it starts with mmCIF markers
+                    with open(full_path, 'r') as f:
+                        first_line = f.readline().strip()
+                        # mmCIF files start with "data_" or have "loop_" structures early on
+                        if first_line.startswith('data_'):
+                            return True
+                        # Also check second line for loop_ (some mmCIF files have comments first)
+                        second_line = f.readline().strip()
+                        if second_line.startswith('data_') or first_line.startswith('loop_') or second_line.startswith('loop_'):
+                            return True
+                except Exception:
+                    pass  # If we can't read, fall through to other checks
+
+        # If file content is already loaded (from previous loadFile call), check it
+        # Note: We check this AFTER the quick file peek to avoid triggering loadFile()
+        if hasattr(self, '_fileContent') and self._fileContent is not None:
+            if hasattr(self._fileContent, 'isMMCIF'):
+                return self._fileContent.isMMCIF()
 
         # Fallback: check contentFlag
         if hasattr(self, 'contentFlag') and self.contentFlag is not None:

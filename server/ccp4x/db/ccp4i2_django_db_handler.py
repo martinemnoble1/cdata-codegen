@@ -8,7 +8,6 @@ from django.utils import timezone
 from core.CCP4PluginScript import CPluginScript
 
 from . import models
-from ..lib.utils.jobs.create import create_job
 from .ccp4i2_django_dbapi import CCP4i2DjangoDbApi
 from .ccp4i2_static_data import (
     JOB_STATUS_FAILED,
@@ -110,6 +109,9 @@ class CCP4i2DjangoDbHandler:
             "Creating job %s %s %s %s", pluginName, jobTitle, parentJobId, jobNumber
         )
         try:
+            # Deferred import to avoid circular dependency
+            from ..lib.utils.jobs.create import create_job
+
             return create_job(
                 parentJobId=uuid.UUID(parentJobId) if parentJobId else None,
                 taskName=pluginName,

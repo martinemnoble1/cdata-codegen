@@ -570,6 +570,50 @@ class AsyncDatabaseHandler:
                 # Get full file path
                 file_path = Path(str(file_obj))
 
+                # Handle CPdbDataFile: rename mmcif files to .cif extension
+                from core.CCP4ModelData import CPdbDataFile
+                if isinstance(file_obj, CPdbDataFile):
+                    print(f"[GLEAN DEBUG] Found CPdbDataFile: {file_obj.objectName()}")
+                    print(f"[GLEAN DEBUG]   Current file_path: {file_path}")
+                    print(f"[GLEAN DEBUG]   Current suffix: {file_path.suffix}")
+                    logger.debug(f"[GLEAN DEBUG] Found CPdbDataFile: {file_obj.objectName()}")
+                    logger.debug(f"[GLEAN DEBUG]   Current file_path: {file_path}")
+                    logger.debug(f"[GLEAN DEBUG]   Current suffix: {file_path.suffix}")
+                    try:
+                        print(f"[GLEAN DEBUG]   About to call isMMCIF()...")
+                        is_mmcif = file_obj.isMMCIF()
+                        print(f"[GLEAN DEBUG]   isMMCIF() returned: {is_mmcif}")
+                        logger.debug(f"[GLEAN DEBUG]   isMMCIF() returned: {is_mmcif}")
+
+                        if is_mmcif:
+                            print(f"[GLEAN DEBUG]   File IS mmCIF format")
+                            # Check if file needs renaming (wrong extension for mmCIF)
+                            current_suffix = file_path.suffix.lower()
+                            logger.debug(f"[GLEAN DEBUG]   File is mmCIF, checking suffix: {current_suffix}")
+
+                            if current_suffix in ['.pdb', '.ent', '.mmcif']:
+                                # New path with .cif extension
+                                new_file_path = file_path.with_suffix('.cif')
+                                logger.debug(f"[GLEAN DEBUG]   Will rename to: {new_file_path}")
+
+                                # 1. Rename file on disk
+                                import shutil
+                                shutil.move(str(file_path), str(new_file_path))
+                                logger.info(f"✅ Renamed mmCIF file from {file_path.name} to {new_file_path.name}")
+
+                                # 2. Update file_obj baseName (update the CDataFile metadata)
+                                file_obj.baseName.set(new_file_path.name)
+
+                                # 3. Update file_path variable for database registration
+                                file_path = new_file_path
+                            else:
+                                logger.debug(f"[GLEAN DEBUG]   Suffix {current_suffix} is already correct, no rename needed")
+                    except Exception as e:
+                        logger.warning(f"Failed to rename mmCIF file {file_path.name}: {e}")
+                        import traceback
+                        logger.warning(traceback.format_exc())
+                        # Continue with original path if rename fails
+
                 # Register the file in database
                 file_record = await self.register_output_file(
                     job_uuid=job_uuid,
