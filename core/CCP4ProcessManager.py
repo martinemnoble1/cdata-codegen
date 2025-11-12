@@ -421,7 +421,7 @@ class CProcessManager:
                 )
                 print(f"Error in handler callback: {e}")
 
-    def getJobData(self, pid: int, attribute: str) -> Any:
+    def getJobData(self, pid: int, attribute: str = 'exitStatus') -> Any:
         """
         Get process information by attribute name.
 
@@ -431,11 +431,13 @@ class CProcessManager:
         Args:
             pid: Process ID returned by startProcess()
             attribute: Data attribute name (exitCode, exitStatus, status, startTime, qprocess, etc.)
+                      Defaults to 'exitStatus' for backward compatibility with legacy code.
 
         Returns:
             Requested value or None if not found
 
         Example:
+            status = pm.getJobData(pid)  # Returns exitStatus (legacy API)
             exitCode = pm.getJobData(pid, attribute='exitCode')
             status = pm.getJobData(pid, attribute='status')
             qprocess = pm.getJobData(pid, attribute='qprocess')
