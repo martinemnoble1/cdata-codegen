@@ -649,21 +649,71 @@ class CData(HierarchicalObject):
         """
         return []
 
-    def getEtree(self, name: str = None, excludeUnset: bool = False):
+    def _check_all_registered_attributes_set(self) -> bool:
+        """Check if all registered attributes (from @cdata_class) are set.
+
+        This method inspects the class metadata to find all attributes
+        defined in the @cdata_class decorator and checks if each one
+        has been explicitly set.
+
+        Returns:
+            True if all registered attributes are set, False otherwise.
+            Returns True if no metadata is found (backward compatibility).
+        """
+        # Get class metadata
+        metadata = getattr(self.__class__, '_metadata', None)
+        if metadata is None:
+            # No metadata - assume all set for backward compatibility
+            return True
+
+        # Get registered attributes from metadata
+        registered_attrs = metadata.attributes if hasattr(metadata, 'attributes') else {}
+        if not registered_attrs:
+            # No registered attributes - assume all set
+            return True
+
+        # Check each registered attribute
+        for attr_name in registered_attrs.keys():
+            if not hasattr(self, attr_name):
+                # Attribute doesn't exist - not set
+                return False
+
+            attr_value = getattr(self, attr_name)
+            if isinstance(attr_value, CData):
+                # For CData children, check if they're set
+                if not attr_value.isSet(allowDefault=False):
+                    return False
+            else:
+                # For non-CData attributes, check value state
+                state = self._value_states.get(attr_name, ValueState.NOT_SET)
+                if state == ValueState.NOT_SET:
+                    return False
+
+        return True
+
+    def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False):
         """Serialize this object to an XML ElementTree element.
 
         Args:
-            name: Optional name for the XML element (uses self.name if not provided)
+            name: Optional name for the XML element (uses self.objectName() if not provided)
             excludeUnset: If True, only serialize fields that have been explicitly set
+            allSet: If True, only serialize if ALL registered attributes are set.
+                   This checks all attributes defined in the @cdata_class decorator.
 
         Returns:
-            xml.etree.ElementTree.Element representing this object
+            xml.etree.ElementTree.Element representing this object, or empty element
+            if allSet=True and not all attributes are set
         """
         import xml.etree.ElementTree as ET
 
         # Use objectName() to get hierarchical object name, not CData 'name' attribute
         element_name = name if name is not None else (self.objectName() if hasattr(self, 'objectName') else 'data')
         elem = ET.Element(element_name)
+
+        # If allSet is True, check if ALL registered attributes are set
+        if allSet:
+            if not self._check_all_registered_attributes_set():
+                return elem  # Return empty element
 
         # For simple value types, store the value as text
         if hasattr(self, 'value'):
@@ -694,34 +744,18 @@ class CData(HierarchicalObject):
                     if not attr_value.isSet(allowDefault=False):
                         continue  # Skip unset children
 
-                child_elem = attr_value.getEtree(attr_name, excludeUnset=excludeUnset)
+                # Pass allSet and excludeUnset to children
+                child_elem = attr_value.getEtree(attr_name, excludeUnset=excludeUnset, allSet=allSet)
 
                 # Only append if the child element has content
-                if excludeUnset:
+                if excludeUnset or allSet:
                     # Check if element has text or children
                     if child_elem.text or len(child_elem) > 0:
                         elem.append(child_elem)
                 else:
                     elem.append(child_elem)
 
-        # Special handling for CContainer - also serialize _container_items
-        if hasattr(self, '_container_items'):
-            for item in self._container_items:
-                if isinstance(item, CData):
-                    # Check if item should be excluded
-                    if excludeUnset and hasattr(item, 'isSet'):
-                        if not item.isSet(allowDefault=False):
-                            continue  # Skip unset items
-
-                    # Use class name as the tag for list items (e.g., "CAsuContentSeq")
-                    item_name = item.__class__.__name__
-                    child_elem = item.getEtree(item_name, excludeUnset=excludeUnset)
-                    # Only append if the child element has content
-                    if excludeUnset:
-                        if child_elem.text or len(child_elem) > 0:
-                            elem.append(child_elem)
-                    else:
-                        elem.append(child_elem)
+        # NOTE: Special handling for _container_items removed - now handled by CContainer.getEtree() override
 
         return elem
 

@@ -227,6 +227,50 @@ class CContainer(CData):
                 # Now populate it with the source data
                 new_item.setEtree(source_etree, ignore_missing=True)
 
+    def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False):
+        """Override getEtree to serialize CContainer with proper item structure.
+
+        For CContainer, we serialize both:
+        1. Named attributes (via parent class)
+        2. _container_items (anonymous items added via add_item)
+
+        Args:
+            name: Optional element name
+            excludeUnset: If True, only serialize explicitly set fields
+            allSet: If True, only serialize if ALL registered attributes are set
+
+        Returns:
+            ET.Element with container structure
+        """
+        # Start with base class serialization (handles named attributes)
+        elem = super().getEtree(name=name, excludeUnset=excludeUnset, allSet=allSet)
+
+        # Add _container_items (items added via add_item, not as named attributes)
+        for item in self._container_items:
+            if isinstance(item, CData):
+                # Check if item should be excluded
+                if excludeUnset and hasattr(item, 'isSet'):
+                    if not item.isSet(allowDefault=False):
+                        continue  # Skip unset items
+
+                # Check allSet condition for the item
+                if allSet and hasattr(item, '_check_all_registered_attributes_set'):
+                    if not item._check_all_registered_attributes_set():
+                        continue  # Skip items that don't have all attributes set
+
+                # Use class name as the tag for container items (CCP4i2 convention)
+                item_name = item.__class__.__name__
+                child_elem = item.getEtree(item_name, excludeUnset=excludeUnset, allSet=allSet)
+
+                # Only append if the child element has content
+                if excludeUnset or allSet:
+                    if child_elem.text or len(child_elem) > 0:
+                        elem.append(child_elem)
+                else:
+                    elem.append(child_elem)
+
+        return elem
+
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""
         # Get list of all content items

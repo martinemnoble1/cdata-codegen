@@ -166,44 +166,15 @@ class ParamsXmlHandler:
     def _export_container(self, container: CData, parent_elem: ET.Element, parent_context: str = None):
         """Recursively export container contents, only including explicitly set values.
 
+        Uses the new object-oriented getEtree() approach where each CData type
+        (CContainer, CList, fundamental types) handles its own serialization.
+
         Args:
             container: CData container to export
             parent_elem: XML element to append to
             parent_context: Name of parent container (e.g., 'inputData', 'outputData') for context-aware export
         """
         from core.base_object.fundamental_types import CList
-
-        # Debug: show what type of container we're exporting
-        container_name = getattr(container, 'name', 'unnamed')
-        container_type = type(container).__name__
-        is_clist = isinstance(container, CList)
-        if 'UNMERGED' in container_name.upper() or 'UNMERGED' in container_type.upper() or 'inputData' in container_name:
-            pass  # DEBUG: print(f"[DEBUG _export_container] Container: {container_name}, type: {container_type}, is_clist: {is_clist}, parent_context: {parent_context}")
-
-        # Special handling for CList: export list items stored in _items
-        # For CList items, we don't check if they're "explicitly set" - the fact that
-        # they exist in the list means they should be exported (even if their attributes are unset)
-        if isinstance(container, CList):
-            # Access the internal items list directly
-            has_items = hasattr(container, '_items')
-            pass  # DEBUG: print(f"[DEBUG _export_container] CList has _items: {has_items}")
-            if has_items:
-                items = container._items
-                container_name = getattr(container, 'name', 'unnamed')
-                pass  # DEBUG: print(f"[DEBUG _export_container] Exporting CList '{container_name}' with {len(items)} items")
-                for i, item in enumerate(items):
-                    # Use the item's class name as the XML tag (CCP4i2 convention)
-                    # e.g., <CImportUnmerged> instead of <0>
-                    item_class_name = type(item).__name__
-                    item_elem = ET.SubElement(parent_elem, item_class_name)
-                    pass  # DEBUG: print(f"[DEBUG _export_container] Creating element for item {i}: {item_class_name}")
-
-                    # Always call _export_container for list items to properly traverse their CData attributes
-                    # This ensures we export nested structures like file, crystalName, etc.
-                    self._export_container(item, item_elem, parent_context=parent_context or container_name)
-            else:
-                pass  # DEBUG: print(f"[DEBUG _export_container] CList does NOT have _items!")
-            return  # CList items are handled, no need to process other attributes
 
         # Get all attributes that are CData objects
         skip_attrs = [
@@ -220,21 +191,6 @@ class ParamsXmlHandler:
             "state",
         ]
 
-        # Debug for inputData - show what attributes it has
-        if 'inputData' in container_name:
-            all_attrs = [a for a in dir(container) if not a.startswith('_') and a not in skip_attrs]
-            pass  # DEBUG: print(f"[DEBUG] inputData has {len(all_attrs)} non-private attributes")
-            # Show first 20
-            pass  # DEBUG: print(f"[DEBUG] First 20 attrs: {all_attrs[:20]}")
-            # Check specifically for UNMERGEDFILES
-            has_unmerged = hasattr(container, 'UNMERGEDFILES')
-            pass  # DEBUG: print(f"[DEBUG] hasattr(inputData, 'UNMERGEDFILES'): {has_unmerged}")
-            if has_unmerged:
-                unmerged = getattr(container, 'UNMERGEDFILES')
-                pass  # DEBUG: print(f"[DEBUG] UNMERGEDFILES type: {type(unmerged).__name__}, isinstance CList: {isinstance(unmerged, CList)}")
-                pass  # DEBUG: print(f"[DEBUG] UNMERGEDFILES length: {len(unmerged) if hasattr(unmerged, '__len__') else 'N/A'}")
-                pass  # DEBUG: print(f"[DEBUG] UNMERGEDFILES isSet: {unmerged.isSet() if hasattr(unmerged, 'isSet') else 'N/A'}")
-
         for attr_name in sorted(dir(container)):
             # Skip private, signal, and special attributes
             if attr_name.startswith("_") or attr_name in skip_attrs:
@@ -250,46 +206,46 @@ class ParamsXmlHandler:
 
                 # Only export CData objects (not Signal, ObjectInfo, or other internal objects)
                 if not isinstance(attr, CData):
-                    if attr_name in ['CONTENTS', 'child_added', 'object_info', 'state']:
-                        pass  # DEBUG: print(f"[DEBUG] Skipping non-CData attr '{attr_name}': type={type(attr).__name__}, is_CData={isinstance(attr, CData)}")
                     continue
 
                 if hasattr(attr, "name"):  # It's a CData object
 
                     if isinstance(attr, CList):
-                        # Special handling for CList: use its getEtree() method
+                        # Use CList's object-oriented getEtree() method
                         # CList.getEtree() handles serialization with proper class name tags
-                        pass  # DEBUG: print(f"[DEBUG] Found CList attribute: '{attr_name}', calling getEtree()")
                         if hasattr(attr, 'getEtree'):
                             # excludeUnset=True to skip parameters that haven't been explicitly set
                             list_etree = attr.getEtree(excludeUnset=True)
-                            # Append the list's etree as a child
-                            parent_elem.append(list_etree)
-                        else:
-                            pass  # DEBUG: print(f"[DEBUG] Warning: CList '{attr_name}' has no getEtree() method")
+                            # Only append if the list has content
+                            if list_etree.text or len(list_etree) > 0:
+                                parent_elem.append(list_etree)
 
                     elif isinstance(attr, CContainer):
-                        # Create container element and recurse
-                        pass  # DEBUG: print(f"[DEBUG] Found CContainer attribute: '{attr_name}', creating element and recursing")
+                        # Use CContainer's object-oriented getEtree() method
+                        # CContainer.getEtree() handles recursion and serialization
                         container_elem = ET.SubElement(parent_elem, attr_name)
-                        # Pass container name as parent_context for nested export
-                        self._export_container(attr, container_elem, parent_context=attr_name)
+
+                        # Get the container's serialized content
+                        # Note: we don't pass a name here because we already created the parent element
+                        container_etree = attr.getEtree(name=None, excludeUnset=True)
+
+                        # Copy the children from the etree to our container element
+                        for child in container_etree:
+                            container_elem.append(child)
 
                         # Remove empty containers EXCEPT for standard sub-containers
                         # Legacy code expects inputData, outputData, and controlParameters
                         # to always be present, even if empty
                         standard_containers = {'inputData', 'outputData', 'controlParameters'}
-                        elem_count = len(container_elem)
-                        pass  # DEBUG: print(f"[DEBUG] Container '{attr_name}' has {elem_count} child elements, is_standard={attr_name in standard_containers}")
                         if len(container_elem) == 0 and attr_name not in standard_containers:
-                            pass  # DEBUG: print(f"[DEBUG] Removing empty non-standard container '{attr_name}'")
                             parent_elem.remove(container_elem)
 
                     else:
-                        # For parameters in inputData, export if file has baseName set
-                        # regardless of ValueState (fixes issue with params loaded from input_params.xml)
+                        # For simple CData types (CInt, CFloat, CString, CDataFile, etc.)
+                        # Check if it should be exported based on context and value state
                         should_export = False
                         attr_type = type(attr).__name__
+
                         if parent_context == 'inputData':
                             # In inputData, export CDataFile objects if they have a baseName
                             try:
@@ -298,16 +254,10 @@ class ParamsXmlHandler:
                                     has_basename = hasattr(attr, 'baseName')
                                     basename_isset = attr.baseName.isSet() if has_basename else False
                                     basename_val = attr.baseName.value if (has_basename and basename_isset) else None
-                                    pass  # DEBUG: print(f"[DEBUG] Checking inputData '{attr_name}' (type: {attr_type}): has_basename={has_basename}, isset={basename_isset}, value='{basename_val}'")
 
                                     if has_basename and basename_isset:
                                         if basename_val and str(basename_val).strip():
-                                            pass  # DEBUG: print(f"[DEBUG] Exporting inputData file '{attr_name}' with baseName='{basename_val}'")
                                             should_export = True
-                                        else:
-                                            pass  # DEBUG: print(f"[DEBUG] Skipping inputData file '{attr_name}' - baseName is empty")
-                                    else:
-                                        pass  # DEBUG: print(f"[DEBUG] Skipping inputData file '{attr_name}' - baseName not set")
                             except ImportError:
                                 pass
 
@@ -315,10 +265,7 @@ class ParamsXmlHandler:
                         if not should_export:
                             is_explicitly_set = self._is_explicitly_set(attr)
                             if is_explicitly_set:
-                                pass  # DEBUG: print(f"[DEBUG] Exporting '{attr_name}' (type: {attr_type}) - explicitly set")
                                 should_export = True
-                            else:
-                                pass  # DEBUG: print(f"[DEBUG] Skipping '{attr_name}' (type: {attr_type}) - not explicitly set, parent_context={parent_context}")
 
                         if should_export:
                             param_elem = ET.SubElement(parent_elem, attr_name)

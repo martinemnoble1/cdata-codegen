@@ -119,6 +119,17 @@ class CInt(CData):
         self.value = value
         return self
 
+    def get(self, child_name=None):
+        """Get the primitive int value for legacy API compatibility.
+
+        Args:
+            child_name: Ignored for fundamental types (provided for API compatibility)
+
+        Returns:
+            int: The primitive integer value
+        """
+        return self.value
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
@@ -486,6 +497,17 @@ class CFloat(CData):
         """Set the value directly using .set() method."""
         self.value = value
         return self
+
+    def get(self, child_name=None):
+        """Get the primitive float value for legacy API compatibility.
+
+        Args:
+            child_name: Ignored for fundamental types (provided for API compatibility)
+
+        Returns:
+            float: The primitive float value
+        """
+        return self.value
 
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
@@ -1102,6 +1124,20 @@ class CBoolean(CData):
         self.value = value
         return self
 
+    def get(self, child_name=None):
+        """Get the primitive boolean value for legacy API compatibility.
+
+        Legacy wrapper code expects .get() to return the primitive value, not a dict.
+        Example: int(cpar.AWA_NCS_RESTRAINTS.get()) expects a boolean that can be converted to int.
+
+        Args:
+            child_name: Ignored for fundamental types (provided for API compatibility)
+
+        Returns:
+            bool: The primitive boolean value
+        """
+        return self.value
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if the value has been set.
@@ -1423,7 +1459,7 @@ class CList(CData):
         """
         return [str(i) for i in range(len(self._items))]
 
-    def getEtree(self, name: str = None, excludeUnset: bool = False) -> 'ET.Element':
+    def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False) -> 'ET.Element':
         """Override getEtree to serialize CList with proper item structure.
 
         For CList, we create a container element with child elements for each item.
@@ -1432,6 +1468,7 @@ class CList(CData):
         Args:
             name: Optional element name (not used for CList, uses objectName instead)
             excludeUnset: If True, pass this flag to item's getEtree() calls
+            allSet: If True, only serialize items where all registered attributes are set
 
         Returns:
             ET.Element with list items as children
@@ -1460,13 +1497,28 @@ class CList(CData):
             item_class_name = type(item).__name__
 
             if isinstance(item, CData):
+                # Check if item should be excluded based on excludeUnset
+                if excludeUnset and hasattr(item, 'isSet'):
+                    if not item.isSet(allowDefault=False):
+                        continue  # Skip unset items
+
+                # Check allSet condition for the item
+                if allSet and hasattr(item, '_check_all_registered_attributes_set'):
+                    if not item._check_all_registered_attributes_set():
+                        continue  # Skip items that don't have all attributes set
+
                 # If item is CData, recursively get its etree
                 # But we need to change the root tag to the class name
                 if hasattr(item, 'getEtree'):
-                    item_etree = item.getEtree(excludeUnset=excludeUnset)
+                    item_etree = item.getEtree(excludeUnset=excludeUnset, allSet=allSet)
                     # Change the tag to the class name
                     item_etree.tag = item_class_name
-                    container_elem.append(item_etree)
+                    # Only append if element has content when filtering
+                    if excludeUnset or allSet:
+                        if item_etree.text or len(item_etree) > 0:
+                            container_elem.append(item_etree)
+                    else:
+                        container_elem.append(item_etree)
                 else:
                     # Fallback: create element with item's string representation
                     item_elem = ET.Element(item_class_name)
