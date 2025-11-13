@@ -1527,6 +1527,30 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         return ObsDataConverter.to_fmean(self, work_directory=work_directory)
 
 
+class CPhaserSolDataFile(CPhaserSolDataFileStub):
+    """
+    Phaser solution data file (pickle format).
+
+    Extends CPhaserSolDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
+class CPhaserRFileDataFile(CPhaserRFileDataFileStub):
+    """
+    Phaser R-list data file (pickle format).
+
+    Extends CPhaserRFileDataFileStub with implementation-specific methods.
+    Add file I/O, validation, and business logic here.
+    """
+
+    # Add your methods here
+    pass
+
+
 class CProgramColumnGroup(CProgramColumnGroupStub):
     """
     A group of MTZ columns required for program input.

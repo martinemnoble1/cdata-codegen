@@ -53,8 +53,11 @@ The `stubs/` directory contains minimal stub implementations for legacy ccp4-pyt
 - `ccp4mg.py` - CCP4 Molecular Graphics (imported but not used by acedrgNew)
 - `mmdb2.py` - Macromolecular Database (provides constants and stub classes)
 - `ccp4srs.py` - Structure Refinement Suite (provides stub Manager, Graph, GraphMatch)
+- `mmut.py.stub` - mmCIF Utilities (required by phaser pipelines, symlinked as `mmut.py` in venv)
 
-These stubs allow plugins like `acedrgNew` to import successfully. The stubs raise `NotImplementedError` if their methods are actually called, which is acceptable since most tests don't exercise the atom matching functionality that requires them.
+These stubs allow plugins like `acedrgNew` and phaser pipelines to import successfully. The stubs raise `NotImplementedError` if their methods are actually called, which is acceptable since most tests don't exercise the atom matching functionality that requires them.
+
+**IMPORTANT**: The mmut stub must be symlinked into the venv site-packages as `mmut.py` (see "Initial Setup" sections above).
 
 ### CCP4I2_ROOT Environment Variable
 
@@ -103,6 +106,10 @@ ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions
 # Symlink chem_data directory from CCP4 distribution
 # Required for validation (iris_validation, MolProbity) - provides Top8000 Ramachandran/rotamer database
 ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/chem_data .venv/lib/python3.11/site-packages/chem_data
+
+# Symlink mmut stub from project stubs directory
+# Required for phaser pipelines that import mmut (mmCIF utilities)
+ln -sf /Users/nmemn/Developer/cdata-codegen/stubs/mmut.py.stub .venv/lib/python3.11/site-packages/mmut.py
 ```
 
 **Initial Setup for Python 3.9:**
@@ -120,6 +127,10 @@ ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3
 # Symlink chem_data directory from CCP4-9
 # Required for validation (iris_validation, MolProbity) - provides Top8000 Ramachandran/rotamer database
 ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/chem_data .venv.old-py39/lib/python3.9/site-packages/chem_data
+
+# Symlink mmut stub from project stubs directory
+# Required for phaser pipelines that import mmut (mmCIF utilities)
+ln -sf /Users/nmemn/Developer/cdata-codegen/stubs/mmut.py.stub .venv.old-py39/lib/python3.9/site-packages/mmut.py
 ```
 
 **Why Multiple Environments?**

@@ -741,7 +741,8 @@ class CData(HierarchicalObject):
                 # Check if child should be excluded
                 if excludeUnset and hasattr(attr_value, 'isSet'):
                     # For CData objects, check if they have any set values
-                    if not attr_value.isSet(allowDefault=False):
+                    # Use allSet=False to check if ANY child is set, not requiring ALL children
+                    if not attr_value.isSet(allowDefault=False, allSet=False):
                         continue  # Skip unset children
 
                 # Pass allSet and excludeUnset to children

@@ -76,7 +76,7 @@ class ParamsXmlHandler:
 
             # Export all containers and their explicitly set parameters
             # No parent_context at top level (task is the root container)
-            self._export_container(task, body, parent_context=None)
+            self._export_container(task, body, parent_context=None, exclude_unset=exclude_unset)
 
             # Write to file with proper formatting
             self._write_formatted_xml(root, output_path)
@@ -164,8 +164,8 @@ class ParamsXmlHandler:
             traceback.print_exc()
             return False
 
-    def _export_container(self, container: CData, parent_elem: ET.Element, parent_context: str = None):
-        """Recursively export container contents, only including explicitly set values.
+    def _export_container(self, container: CData, parent_elem: ET.Element, parent_context: str = None, exclude_unset: bool = True):
+        """Recursively export container contents.
 
         Uses the new object-oriented getEtree() approach where each CData type
         (CContainer, CList, fundamental types) handles its own serialization.
@@ -174,8 +174,14 @@ class ParamsXmlHandler:
             container: CData container to export
             parent_elem: XML element to append to
             parent_context: Name of parent container (e.g., 'inputData', 'outputData') for context-aware export
+            exclude_unset: If True, only export explicitly set parameters (default: True)
         """
         from core.base_object.fundamental_types import CList
+
+        # DEBUG: Print what container we're exporting
+        container_name = getattr(container, 'name', 'unnamed')
+        container_type = type(container).__name__
+        print(f"[DEBUG _export_container] Exporting container: {container_name} (type: {container_type})")
 
         # Get all attributes that are CData objects
         skip_attrs = [
@@ -192,6 +198,7 @@ class ParamsXmlHandler:
             "state",
         ]
 
+        cdata_attrs_found = 0
         for attr_name in sorted(dir(container)):
             # Skip private, signal, and special attributes
             if attr_name.startswith("_") or attr_name in skip_attrs:
@@ -209,14 +216,16 @@ class ParamsXmlHandler:
                 if not isinstance(attr, CData):
                     continue
 
+                cdata_attrs_found += 1
+                print(f"[DEBUG] Found CData attribute: {attr_name} (type: {type(attr).__name__})")
+
                 if hasattr(attr, "name"):  # It's a CData object
 
                     if isinstance(attr, CList):
                         # Use CList's object-oriented getEtree() method
                         # CList.getEtree() handles serialization with proper class name tags
                         if hasattr(attr, 'getEtree'):
-                            # excludeUnset=True to skip parameters that haven't been explicitly set
-                            list_etree = attr.getEtree(excludeUnset=True)
+                            list_etree = attr.getEtree(excludeUnset=exclude_unset)
                             # Only append if the list has content
                             if list_etree.text or len(list_etree) > 0:
                                 parent_elem.append(list_etree)
@@ -228,7 +237,7 @@ class ParamsXmlHandler:
 
                         # Get the container's serialized content
                         # Note: we don't pass a name here because we already created the parent element
-                        container_etree = attr.getEtree(name=None, excludeUnset=True)
+                        container_etree = attr.getEtree(name=None, excludeUnset=exclude_unset)
 
                         # Copy the children from the etree to our container element
                         for child in container_etree:
@@ -275,6 +284,8 @@ class ParamsXmlHandler:
             except Exception as e:
                 print(f"Warning: Error processing {attr_name}: {e}")
                 continue
+
+        print(f"[DEBUG _export_container] Finished exporting {container_name}: found {cdata_attrs_found} CData attributes")
 
     def _is_explicitly_set(self, param: CData) -> bool:
         """Check if a parameter has been explicitly set by the user."""
