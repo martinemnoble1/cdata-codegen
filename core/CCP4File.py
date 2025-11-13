@@ -141,7 +141,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         #print(f"[DEBUG CI2XmlDataFile.saveFile] Called at {traceback.format_stack()}")
         # Create root element
         root = ET.Element('ccp4i2')
-        traceback.print_stack(file=sys.stdout)
+        #traceback.print_stack(file=sys.stdout)
         # Add header
         if hasattr(self, 'header') and self.header is not None:
             header_elem = self.header.getEtree()
@@ -169,12 +169,12 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
             # Create empty body
             body = ET.Element('ccp4i2_body')
             root.append(body)
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Root etree: {ET.tostring(root, encoding='unicode') if root is not None else 'None'}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Root etree: {ET.tostring(root, encoding='unicode') if root is not None else 'None'}")
 
         # Create tree and write to file
         tree = ET.ElementTree(root)
         full_path_str = self.getFullPath()
-        print(f"[DEBUG CI2XmlDataFile.saveFile] getFullPath() returned: '{full_path_str}'")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] getFullPath() returned: '{full_path_str}'")
 
         if not full_path_str or full_path_str.strip() == '':
             pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] ERROR: getFullPath() returned empty string!")
@@ -182,18 +182,18 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
             return False
 
         file_path = Path(full_path_str)
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Writing XML file to: {file_path}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Writing XML file to: {file_path}")
         
         # Ensure directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write with pretty formatting
-        #ET.indent(root, space='  ')
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Root etree: {ET.tostring(root, encoding='unicode') if root is not None else 'None'}")
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Etree that will be written: {ET.tostring(root, encoding='unicode')}")
+        ET.indent(root, space='  ')
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Root etree: {ET.tostring(root, encoding='unicode') if root is not None else 'None'}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Etree that will be written: {ET.tostring(root, encoding='unicode')}")
         # Instead of tree.write(file_path, encoding='utf-8', xml_declaration=True)
         xml_string = ET.tostring(root, encoding='unicode')
-        print(f"[DEBUG] Type of xml_string: {type(xml_string)}")
+        #print(f"[DEBUG] Type of xml_string: {type(xml_string)}")
         print(f"[DEBUG CI2XmlDataFile.saveFile] Final XML string to write:\n{xml_string}")
         with open(file_path, 'w', encoding='utf-8') as f:  # Note: 'wb' for bytes
             f.write(xml_string)
