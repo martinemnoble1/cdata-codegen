@@ -255,10 +255,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
 
         # Save params to database (creates input_params.xml)
         if job is not None:
-            print(f"[DEBUG pluginWithArgs] About to call save_params_for_job, exclude_unset=False")
-            # Use exclude_unset=False to ensure input files are saved to input_params.xml
-            # The files have full absolute paths at this point, but that's OK - the import
-            # process will copy them to CCP4_IMPORTED_FILES and update input_params.xml
+            print(f"[DEBUG pluginWithArgs] About to call save_params_for_job, exclude_unset=True")
             save_params_for_job(thePlugin, the_job=job, exclude_unset=True)
             print(f"[DEBUG pluginWithArgs] save_params_for_job returned")
 
@@ -278,7 +275,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
             raise ValueError("projectId not set - cannot execute")
 
         # Save params.xml (job output metadata)
-        thePlugin.saveParams()
+        #thePlugin.saveParams()
         print(self.jobId)
 
         # Validate plugin configuration before execution
@@ -311,7 +308,7 @@ class CCP4i2RunnerDjango(CCP4i2RunnerBase):
         # and needs to populate it with the command-line arguments we just processed
         from ..db import models
         job = models.Job.objects.get(uuid=self.jobId)
-        save_params_for_job(thePlugin, the_job=job, mode="JOB_INPUT", exclude_unset=False)
+        save_params_for_job(thePlugin, the_job=job, mode="JOB_INPUT", exclude_unset=True)
         logger.info(f"Saved input parameters to input_params.xml for async runner to load")
 
         # Execute job using async runner

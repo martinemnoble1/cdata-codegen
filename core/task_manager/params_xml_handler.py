@@ -71,12 +71,18 @@ class ParamsXmlHandler:
                 task, "name", "unknown_task"
             )
 
-            # Create body
-            body = ET.SubElement(root, "ccp4i2_body")
+            # Create body - the container's CHILDREN go directly into ccp4i2_body
+            # (not wrapped in a <container> element, per original CCP4i2 format)
+            container = task.getEtree(excludeUnset=True)
+            body = ET.Element('ccp4i2_body')
+            # Append each child of the container directly to body (unwrap the container)
+            for child in container:
+                body.append(child)
+            root.append(body)
 
             # Export all containers and their explicitly set parameters
             # No parent_context at top level (task is the root container)
-            self._export_container(task, body, parent_context=None, exclude_unset=exclude_unset)
+            #self._export_container(task, body, parent_context=None, exclude_unset=exclude_unset)
 
             # Write to file with proper formatting
             self._write_formatted_xml(root, output_path)
@@ -177,7 +183,9 @@ class ParamsXmlHandler:
             exclude_unset: If True, only export explicitly set parameters (default: True)
         """
         from core.base_object.fundamental_types import CList
-
+        import traceback
+        import sys
+        traceback.print_stack(file=sys.stdout)
         # DEBUG: Print what container we're exporting
         container_name = getattr(container, 'name', 'unnamed')
         container_type = type(container).__name__

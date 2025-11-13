@@ -877,15 +877,23 @@ class CData(HierarchicalObject):
         """Handle smart assignment from another CData object.
 
         For containers, this merges children from source into self.
-        For value types, this copies the value.
+        For value types, this copies the value AND the value state.
         """
         if self._is_value_type() and source._is_value_type():
-            # Value assignment: copy the underlying value
+            # Value assignment: copy the underlying value AND preserve value state
             # For simple types, copy their primary value attribute
             primary_attrs = ["value", "text", "string", "content"]
             for attr in primary_attrs:
                 if hasattr(source, attr):
+                    # Set the value
                     setattr(self, attr, getattr(source, attr))
+                    # IMPORTANT: Copy the value state from source AFTER setting value
+                    # This overwrites the EXPLICITLY_SET state that setattr() created
+                    if hasattr(source, '_value_states') and attr in source._value_states:
+                        if hasattr(self, '_value_states'):
+                            import sys
+                            print(f"[DEBUG _smart_assign_from_cdata] Copying value state for {self.objectName() if hasattr(self, 'objectName') else 'unknown'}.{attr}: {source._value_states[attr]} -> self", file=sys.stderr)
+                            self._value_states[attr] = source._value_states[attr]
                     return
 
             # If no primary attribute found, copy all non-internal attributes

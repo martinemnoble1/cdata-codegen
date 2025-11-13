@@ -377,7 +377,10 @@ class refmac_i2(CPluginScript):
 
         # Main refinement options, and rigid body
         
+        # DEBUG: Log REFINEMENT_MODE state
+        self.appendCommandScript("REM DEBUG: REFINEMENT_MODE.isSet() = %s" % self.container.controlParameters.REFINEMENT_MODE.isSet())
         if self.container.controlParameters.REFINEMENT_MODE.isSet():
+           self.appendCommandScript("REM DEBUG: REFINEMENT_MODE = %s" % str(self.container.controlParameters.REFINEMENT_MODE))
            if str(self.container.controlParameters.REFINEMENT_MODE) == 'RIGID':
               self.appendCommandScript("MODE RIGID")
               if self.container.controlParameters.NCYCRIGID.isSet():
@@ -389,8 +392,16 @@ class refmac_i2(CPluginScript):
                       rigidText = "RIGID GROUP %s FROM %s %s TO %s %s" % (str(sel['groupId']),str(sel['firstRes']),str(sel['chainId']),str(sel['lastRes']),str(sel['chainId']))
                       self.appendCommandScript(rigidText + '\n')
            else:
+              # DEBUG: Check NCYCLES value and state
+              ncycles = self.container.controlParameters.NCYCLES
+              self.appendCommandScript("REM DEBUG: NCYCLES value = %s" % (ncycles.value if hasattr(ncycles, 'value') else ncycles))
+              self.appendCommandScript("REM DEBUG: NCYCLES.isSet() = %s" % ncycles.isSet())
+              self.appendCommandScript("REM DEBUG: NCYCLES.getValueState() = %s" % (ncycles.getValueState() if hasattr(ncycles, 'getValueState') else 'N/A'))
               if self.container.controlParameters.NCYCLES.isSet():
                   self.appendCommandScript("NCYCLES %s"%(str(self.container.controlParameters.NCYCLES)))
+                  self.appendCommandScript("REM DEBUG: Added NCYCLES command")
+              else:
+                  self.appendCommandScript("REM DEBUG: NCYCLES not set, skipping command")
 
               # Occupancy refinement
               if self.container.controlParameters.OCCUPANCY_GROUPS:

@@ -551,7 +551,7 @@ class CPluginScript(CData):
         if fileName is None:
             # Use TASKNAME (not self.name which may contain spaces/special chars from job title)
             fileName = str(self.workDirectory / f"{self.TASKNAME}.params.xml")
-
+        print(f"[DEBUG saveParams] Saving params to: {fileName} (exclude_unset={exclude_unset})")
         return self.saveDataToXml(fileName, exclude_unset=exclude_unset)
 
     # =========================================================================
