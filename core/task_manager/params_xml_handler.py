@@ -189,7 +189,7 @@ class ParamsXmlHandler:
         # DEBUG: Print what container we're exporting
         container_name = getattr(container, 'name', 'unnamed')
         container_type = type(container).__name__
-        print(f"[DEBUG _export_container] Exporting container: {container_name} (type: {container_type})")
+        pass # print(f"[DEBUG _export_container] Exporting container: {container_name} (type: {container_type})")
 
         # Get all attributes that are CData objects
         skip_attrs = [
@@ -293,7 +293,7 @@ class ParamsXmlHandler:
                 print(f"Warning: Error processing {attr_name}: {e}")
                 continue
 
-        print(f"[DEBUG _export_container] Finished exporting {container_name}: found {cdata_attrs_found} CData attributes")
+        pass #print(f"[DEBUG _export_container] Finished exporting {container_name}: found {cdata_attrs_found} CData attributes")
 
     def _is_explicitly_set(self, param: CData) -> bool:
         """Check if a parameter has been explicitly set by the user."""

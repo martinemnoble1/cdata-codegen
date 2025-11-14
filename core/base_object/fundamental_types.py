@@ -131,7 +131,7 @@ class CInt(CData):
         return self.value
 
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
-              allowDefault: bool = False, allSet: bool = True) -> bool:
+              allowDefault: bool = True, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
@@ -510,7 +510,7 @@ class CFloat(CData):
         return self.value
 
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
-              allowDefault: bool = False, allSet: bool = True) -> bool:
+              allowDefault: bool = True, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:
@@ -904,7 +904,7 @@ class CString(CData):
         return self.value
 
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
-              allowDefault: bool = False, allSet: bool = True) -> bool:
+              allowDefault: bool = True, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         For CString, empty strings are treated as "not set" to support legacy
@@ -1241,7 +1241,7 @@ class CBoolean(CData):
         return self.value
 
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
-              allowDefault: bool = False, allSet: bool = True) -> bool:
+              allowDefault: bool = True, allSet: bool = True) -> bool:
         """Check if the value has been set.
 
         Args:

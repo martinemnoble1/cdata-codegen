@@ -3,22 +3,21 @@ from __future__ import print_function
 """
     refmac.py: CCP4 GUI Project
     Copyright (C) 2010 University of York
-
+    
     This library is free software: you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public License
     version 3, modified in accordance with the provisions of the
     license to address the requirements of UK law.
-
+    
     You should have received a copy of the modified GNU Lesser General
     Public License along with this library.  If not, copies may be
     downloaded from http://www.ccp4.ac.uk/ccp4license.php
-
+    
     This program is distributed in the hope that it will be useful,S
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
     """
-import sys
 from PySide2 import QtCore
 from core.CCP4PluginScript import CPluginScript
 from core import CCP4ErrorHandling
@@ -78,6 +77,7 @@ class refmac_i2(CPluginScript):
         if len(newXml)>self.xmlLength:
             self.xmlLength = len(newXml)
             with open (self.makeFileName('PROGRAMXML')+'_tmp','w') as programXmlFile:
+                import sys
                 if sys.version_info > (3,0):
                     programXmlFile.write(newXml.decode("utf-8"))
                 else:
@@ -377,10 +377,7 @@ class refmac_i2(CPluginScript):
 
         # Main refinement options, and rigid body
         
-        # DEBUG: Log REFINEMENT_MODE state
-        self.appendCommandScript("REM DEBUG: REFINEMENT_MODE.isSet() = %s" % self.container.controlParameters.REFINEMENT_MODE.isSet())
         if self.container.controlParameters.REFINEMENT_MODE.isSet():
-           self.appendCommandScript("REM DEBUG: REFINEMENT_MODE = %s" % str(self.container.controlParameters.REFINEMENT_MODE))
            if str(self.container.controlParameters.REFINEMENT_MODE) == 'RIGID':
               self.appendCommandScript("MODE RIGID")
               if self.container.controlParameters.NCYCRIGID.isSet():
@@ -392,16 +389,8 @@ class refmac_i2(CPluginScript):
                       rigidText = "RIGID GROUP %s FROM %s %s TO %s %s" % (str(sel['groupId']),str(sel['firstRes']),str(sel['chainId']),str(sel['lastRes']),str(sel['chainId']))
                       self.appendCommandScript(rigidText + '\n')
            else:
-              # DEBUG: Check NCYCLES value and state
-              ncycles = self.container.controlParameters.NCYCLES
-              self.appendCommandScript("REM DEBUG: NCYCLES value = %s" % (ncycles.value if hasattr(ncycles, 'value') else ncycles))
-              self.appendCommandScript("REM DEBUG: NCYCLES.isSet() = %s" % ncycles.isSet())
-              self.appendCommandScript("REM DEBUG: NCYCLES.getValueState() = %s" % (ncycles.getValueState() if hasattr(ncycles, 'getValueState') else 'N/A'))
               if self.container.controlParameters.NCYCLES.isSet():
                   self.appendCommandScript("NCYCLES %s"%(str(self.container.controlParameters.NCYCLES)))
-                  self.appendCommandScript("REM DEBUG: Added NCYCLES command")
-              else:
-                  self.appendCommandScript("REM DEBUG: NCYCLES not set, skipping command")
 
               # Occupancy refinement
               if self.container.controlParameters.OCCUPANCY_GROUPS:

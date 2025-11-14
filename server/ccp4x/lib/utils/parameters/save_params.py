@@ -64,5 +64,6 @@ def save_params_for_job(
 
     # Use the exclude_unset parameter passed to this function
     body_etree = the_job_plugin.container.getEtree(excludeUnset=exclude_unset)
+    ET.indent(body_etree, space="  ")
     print(f"[DEBUG save_params_for_job] Generated body_etree with excludeUnset={exclude_unset} {ET.tostring(body_etree, encoding='unicode')}")
     f.saveFile(bodyEtree=body_etree)
