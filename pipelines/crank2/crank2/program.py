@@ -91,7 +91,9 @@ class program(object):
        If 'silent' then False is returned on non-existence otherwise error message is printed (False by default)
        If 'try_run' then an attempt is made to run the binary with no args and errors reported if not 'silent'
     """
-    if not spawn.find_executable(self.binary):
+    binary_path = spawn.find_executable(self.binary)
+    print(f"[DEBUG] CheckBinary: binary='{self.binary}', found_path='{binary_path}', on_path={binary_path is not None}")
+    if not binary_path:
       if silent:
         return False
       else:
@@ -375,16 +377,19 @@ class program(object):
 
   def Run(self,rundir=None,restore=True,clear_out=True,check_bin=False,lock=None,return_to_orig_filenames=True,restore_env=True):
     """run the program"""
+    print ('[DEBUG program] Running program: {}'.format(self.name))
     if check_bin:
      self.CheckBinary()
     self.SetRunDir(rundir,change_cwd=True)
     self.BackupAnyPars()
     self.env_backup=dict(self.env)
+    print ('[DEBUG program] Current working directory: {}'.format(os.getcwd()))
     if clear_out:
       self.out.ClearAll(propagate=False)
     # merge and treat parameters and input
     self.MergeMTZ( *self.CatchMTZObjects() )
     self.TreatParams()
+    print ('[DEBUG program] Current working directory: {}'.format(os.getcwd()))
     self.TreatInput()
     #define and treat output
     self.DefineOutput()
@@ -396,6 +401,7 @@ class program(object):
     # create the actual script
     args, scr_lines = self.GetRunLists()
     # run!
+    print ('[DEBUG program] Running ExternalRun for program: {}'.format(self.name))
     log = self.ExternalRun(args,scr_lines,lock=lock)
     # return to unprocessed parameters for case we will want to rerun
     if restore_env:
@@ -972,6 +978,7 @@ class program(object):
 
   # unified routine for external program calling
   def ExternalRun(self, args, inp_scr_lines, clean=0, lock=None):
+    print('[DEBUG program] ExternalRun called for program: {}'.format(self.name)  )
     #clean = 0 if self.debug>1  else 1
     self.prun=prog_run()
     #clean=0
@@ -1017,12 +1024,19 @@ class program(object):
     # runs the program in a separate thread, allowing to process its output simultanously
     # the output lines are passed one by one to the Interact_output method of the program
     if self.interact_output:
+      print('[DEBUG program] Running interact_output for program: {}'.format(self.name))
       self.prun.values=[]
       self.q=Queue()
+      print('[DEBUG program] Starting Popen for program: {}'.format(self.name))
+      print(' [DEBUG program] Args: {}'.format(args))
       self.prun.popen = subprocess.Popen( args, stdin=subprocess.PIPE, stderr=subprocess.PIPE, \
               stdout=subprocess.PIPE, env=self.env, cwd=self.rundir, bufsize=1, startupinfo=startupinfo, universal_newlines=True )
+      print('[DEBUG program] Writing to stdin for program: {}'.format(self.name))
+      print(inp_scr)
       self.prun.popen.stdin.write(inp_scr)
       self.prun.popen.stdin.close()
+      print('[DEBUG program] Started queued output thread for program: {}'.format(self.name))
+      
       # releasing lock, thus the variables used below should not be local (or another lock would be needed)
       if lock and lock.locked():
         lock.release()
@@ -1036,7 +1050,9 @@ class program(object):
           with program.lock_int:
             self.prun.line = self.q.get_nowait()
             try:
+              #print('[DEBUG program] Interacting with output for program: {}'.format(self.name))
               self.Interact_output(self.prun.line,self.prun.popen,empty=self.q.empty())
+              #print('[DEBUG program] Interaction done for program: {}'.format(self.name))
               if self.log_suffix is not None:
                 self.prun.out_f.write(self.prun.line)
               else:
@@ -1046,12 +1062,14 @@ class program(object):
               self.prun.popen.terminate()
               raise
       self.prun.values='\n'.join(self.prun.values)
+      print('[DEBUG program] Waiting for process to end for program: {}'.format(self.name))
       self.prun.popen.wait()
       self.prun.err=self.prun.popen.stderr.read()
       self.prun.popen.stdout.close()
       self.prun.popen.stderr.close()
     # non-interactive output
     else:
+      print('[DEBUG program] Running non-interactive ExternalRun for program: {}'.format(self.name))
       if self.log_suffix is not None:
         stdo=self.prun.out_f
       else:

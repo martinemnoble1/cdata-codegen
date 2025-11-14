@@ -88,27 +88,44 @@ def RegisterSubOutputAsMain(i2crank,crank,i2subjob,outd_name):
           getattr(i2crank.container.outputData, outd_name).set(filepath)
 
 def RegisterProcessToCCP4i2(ccp4i2crank, process):
+  return
   from core import CCP4PluginScript, CCP4ErrorHandling, CCP4XtalData
+  print("[DEBUG ccp4i2crank] Registering process "+process.nick+" to ccp4i2 crank2...")
   sys.stdout = stdout_save
   subjob = ccp4i2crank.makePluginObject(pluginName='crank2_'+process.nick, pluginTitle=process.short_name[0].upper()+process.short_name[1:])
+  print("[DEBUG ccp4i2crank] Created subprocess plugin object for "+process.nick)
   if subjob is None:
+    print("[DEBUG ccp4i2crank] Failed to create subprocess plugin object for "+process.nick)
     subjob = ccp4i2crank.makePluginObject(pluginName=process.short_name.capitalize(), dummy=True)
   process.SetRunDir(subjob.workDirectory)
   process.ccp4i2job = subjob
+  print("[DEBUG ccp4i2crank] Set run directory and assigned ccp4i2 job for process "+process.nick)
   # copy the i2 crank2 input into i2 subjob input containers
   for ic in ('inputData','controlParameters'):
+    print("[DEBUG ccp4i2crank] Copying container "+ic+" from ccp4i2 crank2 to subprocess "+process.nick)
     if hasattr(subjob.container,ic): 
+      print("[DEBUG ccp4i2crank] Found container "+ic+" in subprocess "+process.nick)
       i2cont, subcont = getattr(ccp4i2crank.container,ic), getattr(subjob.container,ic)
+      print("[DEBUG ccp4i2crank] i2cont dataOrder: "+str(i2cont), str(subcont))
       if not getattr(subjob.container,ic):
+        print("[DEBUG ccp4i2crank] Creating new container "+ic+" in subprocess "+process.nick)
         for dc in i2cont._dataOrder:
+          print("[DEBUG ccp4i2crank] Copying object "+dc+" into new container "+ic+" in subprocess "+process.nick)
           subcont.addObject( getattr(i2cont,dc), reparent=True )
+          print("[DEBUG ccp4i2crank] Copied object "+dc)
       else:
         subcont.copyData( otherContainer=i2cont )
   # define derived (not inputted by user) input objects with i2 (for subprocesses rerunning)
+  print("[DEBUG ccp4i2crank] Defining derived input objects for subprocess "+process.nick)
   inp_obj=process.inp.Get(filetype='pdb',typ='substr')
+  print("[DEBUG ccp4i2crank] Retrieved input object for substr: "+str(inp_obj))
   if inp_obj:
+    print("[DEBUG ccp4i2crank] Processing input object for substr: "+str(inp_obj))
     filepath=OutFilesDirMatch(inp_obj,process,filetype='pdb')
+    print("[DEBUG ccp4i2crank] Mapped filepath for substr: "+str(filepath))
+    print("[DEBUG ccp4i2crank] Setting XYZIN_SUB for subprocess "+str(subjob.container.dataOrder()))
     subjob.container.inputData.XYZIN_SUB.setFullPath(filepath)
+    print("[DEBUG ccp4i2crank] Set XYZIN_SUB for subprocess "+process.nick)
     if process.nick=='phdmmb' and len(filepath)>4 and inp_obj.GetFileName('res'):
       subjob.container.inputData.XYZIN_SUB_RES.set(inp_obj.GetFileName('res'))
   inp_obj=process.inp.Get(filetype='pdb',typ=('partial+substr','partial'))

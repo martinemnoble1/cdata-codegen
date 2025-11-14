@@ -746,6 +746,7 @@ class crank(process):
         o.resol = resol
 
   def RunSubProcess(self,p_run,ip):
+    print("[DEBUG RunSubProcess] Running subprocess: {}".format(p_run.name))
     # skip ref if nothing was obtained
     prev_proc=self.run.processes[ip-1]
     if prev_proc.nick in ('mbref','comb_phdmmb') and prev_proc.mb_res_all and prev_proc.mb_res_all[-1][1]==0:

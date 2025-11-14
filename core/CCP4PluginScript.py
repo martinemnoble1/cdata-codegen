@@ -86,6 +86,7 @@ class CPluginScript(CData):
                  name: Optional[str] = None,
                  xmlFile: Optional[str] = None,
                  workDirectory: Optional[str | Path] = None,
+                 dummy: bool = False,
                  **kwargs):
         """
         Initialize CPluginScript.
@@ -95,10 +96,14 @@ class CPluginScript(CData):
             name: Script instance name
             xmlFile: Path to input_params.xml file to load
             workDirectory: Working directory for the script (str or Path, optional)
+            dummy: If True, skip def.xml loading and create minimal container (legacy API)
             **kwargs: Additional arguments
         """
         # Initialize CData base class (provides hierarchy and event system)
         super().__init__(parent=parent, name=name or self.TASKNAME, **kwargs)
+
+        # Store dummy flag for later reference
+        self._dummy = dummy
 
         # Create finished signal (inherits SignalManager from HierarchicalObject)
         # This signal is emitted when the plugin completes execution
@@ -155,11 +160,13 @@ class CPluginScript(CData):
         # Load DEF file if available (defines container structure)
         # This will create inputData, outputData, controlParameters, guiAdmin
         # as children of self.container
-        if self.TASKNAME:
+        # Skip def.xml loading if dummy=True (creates minimal container only)
+        if self.TASKNAME and not dummy:
             self._loadDefFile()
 
         # Create default empty sub-containers ONLY if they don't exist after .def.xml loading
         # This ensures backward compatibility for plugins without .def.xml files
+        # Also used for dummy plugins which skip def.xml loading entirely
         self._ensure_standard_containers()
 
         # Load PARAMS file if provided (actual parameter values)
@@ -293,26 +300,16 @@ class CPluginScript(CData):
             else:
                 logger.info(f"[DEBUG _loadDefFile] Successfully loaded .def.xml")
         else:
-            # FATAL ERROR: .def.xml is required for all plugins
-            error_msg = (
-                f"\n{'='*80}\n"
-                f"FATAL ERROR: Cannot load plugin '{self.TASKNAME}'\n"
-                f"{'='*80}\n"
-                f"The .def.xml file is required but could not be found.\n\n"
-                f"Task name: {self.TASKNAME}\n"
-                f"Looked for .def.xml at: {def_path}\n\n"
-                f"This usually means:\n"
-                f"  1. CCP4I2_ROOT environment variable is not set correctly\n"
-                f"     Current CCP4I2_ROOT: {os.environ.get('CCP4I2_ROOT', 'NOT SET')}\n\n"
-                f"  2. The plugin is not in the expected location:\n"
-                f"     Expected: $CCP4I2_ROOT/wrappers/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n"
-                f"     or: $CCP4I2_ROOT/wrappers2/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n"
-                f"     or: $CCP4I2_ROOT/pipelines/{self.TASKNAME}/script/{self.TASKNAME}.def.xml\n\n"
-                f"  3. The defxml_lookup.json registry is out of date\n"
-                f"{'='*80}\n"
+            # WARNING: .def.xml not found - plugin will use default containers
+            # This is normal for some legacy plugins (e.g., crank2 sub-wrappers)
+            # that inherit container structure from parent classes
+            warning_msg = (
+                f"[WARNING] No .def.xml file found for task '{self.TASKNAME}'\n"
+                f"  Looked at: {def_path}\n"
+                f"  Default containers (inputData, outputData, etc.) will be created.\n"
+                f"  This is normal for some legacy plugins (e.g., crank2 sub-wrappers)."
             )
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            logger.warning(warning_msg)
 
     def _locateDefFile(self) -> Optional[Path]:
         """
@@ -1799,7 +1796,7 @@ class CPluginScript(CData):
     # Utility methods for backward compatibility with old API
     # =========================================================================
 
-    def makePluginObject(self, taskName: str, version: Optional[str] = None,
+    def makePluginObject(self, taskName: str = None, version: Optional[str] = None,
                          reportToDatabase: bool = True, **kwargs) -> Optional['CPluginScript']:
         """
         Create a sub-plugin (sub-job) instance using TASKMANAGER.
@@ -1813,7 +1810,7 @@ class CPluginScript(CData):
         The working directory is created if it doesn't exist.
 
         Args:
-            taskName: Name of the task to instantiate
+            taskName: Name of the task to instantiate (or use legacy pluginName= kwarg)
             version: Optional version of the task (defaults to latest)
             reportToDatabase: Whether to report this job to the database (default True).
                             In database-backed environments (CCP4i2 GUI), this controls
@@ -1821,12 +1818,21 @@ class CPluginScript(CData):
                             In standalone mode, this parameter is ignored.
             **kwargs: Additional arguments passed to the plugin constructor
                      (workDirectory will be overridden based on convention)
+                     Legacy: also accepts 'pluginName' as alias for taskName
 
         Returns:
             New CPluginScript instance, or None if plugin not found
         """
         import os
         from pathlib import Path
+
+        # Legacy compatibility: accept pluginName= as alias for taskName=
+        if taskName is None and 'pluginName' in kwargs:
+            taskName = kwargs.pop('pluginName')
+            logger.debug(f"[makePluginObject] Legacy pluginName parameter used: {taskName}")
+
+        if taskName is None:
+            raise ValueError("makePluginObject requires taskName parameter (or legacy pluginName)")
 
         # Increment child job counter
         self._childJobCounter += 1
@@ -1850,24 +1856,35 @@ class CPluginScript(CData):
         # Create name following convention: parent_name_N
         child_name = f"{self.objectName()}_{self._childJobCounter}" if self.objectName() else f"job_{self._childJobCounter}"
 
+        # Check if dummy mode requested (extract from kwargs)
+        dummy_mode = kwargs.get('dummy', False)
+
         # Use TASKMANAGER to get the plugin class
         task_manager = TASKMANAGER()
         plugin_class = task_manager.get_plugin_class(taskName, version=version)
 
         if plugin_class is None:
-            # Log error
-            self.errorReport.append(
-                klass=self.__class__.__name__,
-                code=108,
-                details=f"Plugin '{taskName}' not found in registry",
-                name=taskName
-            )
-            return None
+            # If dummy=True, create a generic CPluginScript instead of failing
+            if dummy_mode:
+                logger.debug(f"[makePluginObject] Plugin '{taskName}' not found, creating dummy CPluginScript")
+                plugin_class = CPluginScript
+            else:
+                # Log error and return None
+                self.errorReport.append(
+                    klass=self.__class__.__name__,
+                    code=108,
+                    details=f"Plugin '{taskName}' not found in registry",
+                    name=taskName
+                )
+                return None
 
         # Instantiate the plugin with computed workDirectory and name
         # Use automatic workDirectory/name unless explicitly provided in kwargs
         try:
             plugin_kwargs = kwargs.copy()
+
+            # Extract pluginTitle (handled separately, not passed to __init__)
+            plugin_title = plugin_kwargs.pop('pluginTitle', None)
 
             # Use automatic workDirectory unless explicitly overridden
             if 'workDirectory' not in plugin_kwargs:
@@ -1897,7 +1914,15 @@ class CPluginScript(CData):
                 except Exception as e:
                     logger.debug(f"[DEBUG makePluginObject] Warning: Exception saving params.xml: {e}")
 
+            print(f"[DEBUG makePluginObject] About to instantiate {taskName} with kwargs: name={plugin_kwargs.get('name')}, workDirectory={plugin_kwargs.get('workDirectory')}")
             plugin_instance = plugin_class(**plugin_kwargs)
+            print(f"[DEBUG makePluginObject] Successfully instantiated {taskName}")
+
+            # Set pluginTitle on container header if provided (legacy CCP4i2 API)
+            if plugin_title is not None and hasattr(plugin_instance, 'container') and plugin_instance.container is not None:
+                if hasattr(plugin_instance.container, 'header'):
+                    plugin_instance.container.header.pluginTitle = plugin_title
+                    logger.debug(f"[DEBUG makePluginObject] Set pluginTitle to '{plugin_title}'")
 
             # Propagate database context to nested plugin so it can resolve file paths
             # Nested plugins need the dbHandler to lookup files via dbFileId
@@ -2004,6 +2029,38 @@ class CPluginScript(CData):
         """
         return self._dbProjectId
 
+    def projectId(self):
+        """Legacy alias for getProjectId() (compatibility with old CCP4i2 code).
+
+        Returns:
+            Project ID in database, or None if not running in database-backed mode
+        """
+        return self._dbProjectId
+
+    def relPath(self, jobNumber=None):
+        """Get relative path to job directory from project root (legacy CCP4i2 API).
+
+        Args:
+            jobNumber: Job number string (e.g., "1.2.3"). If None, uses self._dbJobNumber.
+
+        Returns:
+            Relative path string like "CCP4_JOBS/job_1/job_2/job_3"
+        """
+        import os
+        if jobNumber is None:
+            jobNumber = self._dbJobNumber
+        if jobNumber is None:
+            # Fallback: extract from workDirectory if it contains CCP4_JOBS
+            if 'CCP4_JOBS' in str(self.workDirectory):
+                work_dir = str(self.workDirectory)
+                return work_dir[work_dir.index('CCP4_JOBS'):]
+            return None
+        numList = str(jobNumber).split('.')
+        path = os.path.join('CCP4_JOBS', 'job_' + numList[0])
+        for num in numList[1:]:
+            path = os.path.join(path, 'job_' + num)
+        return path
+
     def getChildJobNumber(self):
         """Get the current child job counter.
 
@@ -2032,6 +2089,19 @@ class CPluginScript(CData):
             return work_dir[work_dir.index('CCP4_JOBS'):]
         else:
             return work_dir
+
+    def testForInterrupt(self) -> bool:
+        """Test if user has requested pipeline interruption.
+
+        Checks for existence of 'INTERRUPT' file in the working directory.
+        This is used by pipelines (e.g., crank2) to detect user cancellation.
+
+        Returns:
+            True if INTERRUPT file exists, False otherwise
+        """
+        import os
+        interrupt_file = os.path.join(self.getWorkDirectory(), 'INTERRUPT')
+        return os.path.exists(interrupt_file)
 
     # connectSignal() is now inherited from HierarchicalObject base class
     # with automatic signature adaptation for legacy int handlers

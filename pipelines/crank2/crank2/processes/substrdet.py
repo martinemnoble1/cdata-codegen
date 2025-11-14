@@ -407,8 +407,11 @@ class substrdet(process):
     return cutoffs
 
   def RunBody(self,*args,**kwargs):
+    print('[DEBUG substrdet] Running RunBody()')
     prog0=self.GetProg(supported=True)
+    print('[DEBUG substrdet] prog0.nick = {}'.format(prog0.nick))
     if self.GetParam('high_res_cutoff_radius') and self.GetParam('high_res_cutoff'):
+      print('[DEBUG substrdet] Running with high resolution cutoff search')
       cutoffs=self.Cutoffs()
       tot_trials=self.GetParam('num_trials')
       self.Info('The following high resolution cutoffs will be tried: '+', '.join(format(r,"2.2f") for r in cutoffs))
@@ -442,7 +445,9 @@ class substrdet(process):
       self.programs.remove(prog0)
     else:
       try:
+        print('[DEBUG substrdet] Running prog0.Run() without high resolution cutoff search')
         prog0.Run()#restore=False)
+        print('[DEBUG substrdet] prog0.Run() finished')
       except program.from_name('shelxd',None).Exception_ShelxD_TooSmall:
         self.Info('ShelxD arrays too small - trying with -L20')
         prog0.ClearAllArgs()

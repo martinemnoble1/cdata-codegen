@@ -80,6 +80,9 @@ class CAsuContent(CAsuContentStub):
             if body is not None:
                 seqList_elem = body.find('seqList')
                 if seqList_elem is not None:
+                    # Clear existing sequences before loading to avoid duplicates
+                    self.seqList.clear()
+
                     for seq_elem in seqList_elem.findall('CAsuContentSeq'):
                         seq_obj = CAsuContentSeq(parent=self.seqList, name=None)
 

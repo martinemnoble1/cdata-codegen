@@ -82,12 +82,15 @@ class CContainer(CData):
         self._data_order.append(name)
         return new_obj
 
-    def addObject(self, obj: CData, name: str = None):
+    def addObject(self, obj: CData, name: str = None, reparent: bool = True):
         """Add an existing object to the container (old API compatibility).
 
         Args:
             obj: The CData object to add
             name: Optional name for the object (uses obj.objectName() if not provided)
+            reparent: If True (default), set this container as the object's parent.
+                     If False, preserve the object's existing parent relationship.
+                     Legacy CCP4i2 compatibility parameter.
 
         Returns:
             The added object
@@ -99,9 +102,10 @@ class CContainer(CData):
         if not obj_name:
             raise ValueError("Object must have a name")
 
-        # Set parent relationship
-        obj.set_parent(self)
-        obj._name = obj_name
+        # Set parent relationship (unless reparent=False)
+        if reparent:
+            obj.set_parent(self)
+            obj._name = obj_name
 
         # Add to container
         setattr(self, obj_name, obj)
@@ -153,6 +157,18 @@ class CContainer(CData):
         # return names from children. This handles the case where parameters
         # were loaded from def.xml rather than added via addContent().
         return [child.objectName() for child in self.children()]
+
+    @property
+    def _dataOrder(self) -> list:
+        """Legacy alias for _data_order (camelCase naming from old CCP4i2).
+
+        The old CCP4i2 code directly accessed container._dataOrder. We use
+        _data_order (snake_case), so provide this as a property alias.
+
+        Returns:
+            List of names in the order they were added
+        """
+        return self._data_order
 
     def copyData(self, otherContainer, dataList: Optional[List[str]] = None):
         """Copy data from another container into this container.

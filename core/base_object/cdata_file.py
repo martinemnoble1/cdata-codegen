@@ -192,8 +192,8 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
-        pass  # DEBUG: print(f"[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}, input path: {path}")
-        pass  # DEBUG: print(f"[DEBUG setFullPath] hasattr baseName: {hasattr(self, 'baseName')}")
+        print(f"[DEBUG setFullPath] Called for {self.name if hasattr(self, 'name') else 'unnamed'}, input path: {path}")
+        print(f"[DEBUG setFullPath] hasattr baseName: {hasattr(self, 'baseName')}")
         if hasattr(self, 'baseName'):
             pass  # DEBUG: print(f"[DEBUG setFullPath] baseName type: {type(self.baseName)}, baseName is None: {self.baseName is None}")
             if self.baseName is not None:
@@ -253,6 +253,17 @@ class CDataFile(CData):
                     self.relPath.value if hasattr(self, 'relPath') and hasattr(self.relPath, 'value') else 'N/A')
         logger.debug("  FINAL: project = %s",
                     self.project.value if hasattr(self, 'project') and hasattr(self.project, 'value') else 'N/A')
+
+        # After path is set, attempt to auto-detect content flag if file exists
+        try:
+            final_path = self.getFullPath()
+            if final_path and Path(final_path).exists():
+                logger.debug("[setFullPath] File exists at %s, attempting to detect content flag", final_path)
+                self.setContentFlag()  # Auto-detect based on file introspection
+        except Exception as e:
+            # Don't fail setFullPath if content detection fails
+            # This is an optional enhancement, not a critical operation
+            logger.debug("[setFullPath] Failed to auto-detect content flag: %s", e)
 
     def _find_plugin_parent(self):
         """Walk up the parent hierarchy to find the CPluginScript parent."""
