@@ -147,7 +147,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
             header_elem = self.header.getEtree()
             if header_elem is not None:
                 root.append(header_elem)
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Header etree: {ET.tostring(header_elem, encoding='unicode')}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Header etree: {ET.tostring(header_elem, encoding='unicode')}")
         # Add body
         if bodyEtree is not None:
             # If bodyEtree is provided, use it as the body
@@ -177,8 +177,8 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         #print(f"[DEBUG CI2XmlDataFile.saveFile] getFullPath() returned: '{full_path_str}'")
 
         if not full_path_str or full_path_str.strip() == '':
-            pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] ERROR: getFullPath() returned empty string!")
-            pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] baseName.value: {self.baseName.value if hasattr(self, 'baseName') else 'N/A'}")
+            #pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] ERROR: getFullPath() returned empty string!")
+            #pass  # DEBUG: print(f"[DEBUG CI2XmlDataFile.saveFile] baseName.value: {self.baseName.value if hasattr(self, 'baseName') else 'N/A'}")
             return False
 
         file_path = Path(full_path_str)
@@ -194,15 +194,15 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         # Instead of tree.write(file_path, encoding='utf-8', xml_declaration=True)
         xml_string = ET.tostring(root, encoding='unicode')
         #print(f"[DEBUG] Type of xml_string: {type(xml_string)}")
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Final XML string to write:\n{xml_string}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Final XML string to write:\n{xml_string}")
         with open(file_path, 'w', encoding='utf-8') as f:  # Note: 'wb' for bytes
             f.write(xml_string)
             f.flush()
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            print(f"[DEBUG CI2XmlDataFile.saveFile] Written file content:\n{content}")
+        #with open(file_path, 'r', encoding='utf-8') as f:
+        #    content = f.read()
+        #    #print(f"[DEBUG CI2XmlDataFile.saveFile] Written file content:\n{content}")
         #tree.write(file_path, encoding='utf-8', xml_declaration=True)
-        print(f"[DEBUG CI2XmlDataFile.saveFile] Successfully wrote file to: {file_path}")
+        #print(f"[DEBUG CI2XmlDataFile.saveFile] Successfully wrote file to: {file_path}")
 
         return True
 
