@@ -906,6 +906,7 @@ class CData(HierarchicalObject):
                 ]:
                     setattr(self, key, value)
         else:
+            print(f"[DEBUG _smart_assign_from_cdata] Handling complex type assignment for {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
             # Complex type assignment (like containers and lists)
             # For CList types, copy items from source to self
             from .fundamental_types import CList
@@ -922,6 +923,7 @@ class CData(HierarchicalObject):
             if isinstance(self, CContainer) and isinstance(source, CContainer):
                 # Container merging: iterate over source's public attributes (those added via setattr)
                 # These may not be in children() yet if they're being parsed
+                print(f"[DEBUG _smart_assign_from_cdata] Merging CContainer {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
                 for key in dir(source):
                     if not key.startswith("_") and key[0].isupper():  # Skip private and methods
                         try:
@@ -947,6 +949,7 @@ class CData(HierarchicalObject):
                             pass
             else:
                 # Non-container complex type: copy all attributes
+                print(f"[DEBUG _smart_assign_from_cdata] Copying attributes for complex type {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
                 for key, value in source.__dict__.items():
                     # Note: 'name' is NOT in this filter list - it's a regular CData attribute that should be copied
                     # HierarchicalObject's hierarchical name is stored separately in '_name'
