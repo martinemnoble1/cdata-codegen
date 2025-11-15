@@ -105,7 +105,7 @@ def RegisterProcessToCCP4i2(ccp4i2crank, process):
     if hasattr(subjob.container,ic): 
       print("[DEBUG ccp4i2crank] Found container "+ic+" in subprocess "+process.nick)
       i2cont, subcont = getattr(ccp4i2crank.container,ic), getattr(subjob.container,ic)
-      print("[DEBUG ccp4i2crank] i2cont dataOrder: "+str(i2cont), str(subcont))
+      print("[DEBUG ccp4i2crank] i2cont  "+str(i2cont.objectName()), str(subcont.objectName()), bool(subcont))
       if not getattr(subjob.container,ic):
         print("[DEBUG ccp4i2crank] Creating new container "+ic+" in subprocess "+process.nick)
         for dc in i2cont._dataOrder:
