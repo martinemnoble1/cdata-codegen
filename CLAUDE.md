@@ -294,9 +294,13 @@ Objects maintain their position in the hierarchy:
 ```python
 container = CContainer(name="root")
 item = CInt(name="counter")
-container.add_item(item)
+container.counter = item  # Add as named attribute
 print(item.object_path())  # "root.counter"
 ```
+
+**Note**: CContainer items must be added as named attributes (via `setattr` or direct assignment).
+The legacy `add_item()` method has been removed. Use `addContent()`, `addObject()`, or direct
+attribute assignment instead. Access children via `children()` method or by index (`container[0]`).
 
 #### 5. Qualifier System
 Qualifiers provide:
@@ -519,9 +523,12 @@ def test_cdata_assignment():
 def test_hierarchy():
     parent = CContainer(name="parent")
     child = CInt(5, name="child")
-    parent.add_item(child)
+    parent.child = child  # Add as named attribute
     assert child.get_parent() == parent
     assert child.object_path() == "parent.child"
+    # Access via children() or by index
+    assert parent.children()[0] == child
+    assert parent[0] == child
 ```
 
 ### Testing Qualifiers
