@@ -1445,7 +1445,7 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         """
         if not hasattr(container, name) or getattr(container, name) is None:
             child = child_class(name=name)
-            container.add_item(child)
+            setattr(container, name, child)
         return getattr(container, name)
 
     def as_FPAIR(self, work_directory: Optional[Any] = None) -> str:

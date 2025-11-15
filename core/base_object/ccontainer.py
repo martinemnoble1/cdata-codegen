@@ -1,18 +1,18 @@
 """
 CContainer - Container class for heterogeneous collections of CData objects.
 
-Provides list-like collection management with:
-- add_item() / get_items() for item management
+Provides container management with:
 - addContent() / addObject() for child object creation
 - deleteObject() for removal
 - dataOrder() for ordered access
+- children() for accessing all child items (from HierarchicalObject)
 - XML serialization (loadContentsFromXml, saveContentsToXml)
 - DEF file support (loadDefFile, saveDefFile)
 - Params file support (loadParamsFile, saveParamsFile)
 
 Supports both list-style and dict-style access:
-- container[0] - Access by index
-- container.itemName - Access by name (if item has name attribute)
+- container[0] - Access by index (via children())
+- container.itemName - Access by name (named attributes)
 """
 
 from typing import List, Optional
@@ -24,23 +24,20 @@ from .hierarchy_system import HierarchicalObject
 class CContainer(CData):
     """Base class for container CData classes."""
 
-    def __init__(self, items=None, parent=None, name=None, **kwargs):
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize a CContainer.
+
+        Args:
+            parent: Optional parent object
+            name: Optional name for this container
+            **kwargs: Additional arguments passed to parent CData class
+
+        Note: Items should be added to containers using addContent(), addObject(),
+        or direct attribute assignment. Access children via the children() method
+        (inherited from HierarchicalObject) or by index (container[0]).
+        """
         super().__init__(parent=parent, name=name, **kwargs)
-        self._container_items = []
         self._data_order = []  # Track order of content items for dataOrder()
-        if items is not None:
-            for item in items:
-                self.add_item(item)
-
-    def add_item(self, item):
-        """Add an item to the container."""
-        if isinstance(item, CData):
-            item.set_parent(self)
-        self._container_items.append(item)
-
-    def get_items(self):
-        """Get all container items."""
-        return self._container_items[:]
 
     def addContent(self, content_class, name: str, **kwargs):
         """Add a new content item to the container (old API compatibility).
@@ -246,9 +243,9 @@ class CContainer(CData):
     def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False):
         """Override getEtree to serialize CContainer with proper item structure.
 
-        For CContainer, we serialize both:
-        1. Named attributes (via parent class)
-        2. _container_items (anonymous items added via add_item)
+        The parent class CData.getEtree() already handles serializing all CData
+        children (via dir(self) and checking isinstance(attr, CData)). This method
+        just calls the parent implementation.
 
         Args:
             name: Optional element name
@@ -258,34 +255,9 @@ class CContainer(CData):
         Returns:
             ET.Element with container structure
         """
-        # Start with base class serialization (handles named attributes)
-        elem = super().getEtree(name=name, excludeUnset=excludeUnset, allSet=allSet)
-
-        # Add _container_items (items added via add_item, not as named attributes)
-        for item in self._container_items:
-            if isinstance(item, CData):
-                # Check if item should be excluded
-                if excludeUnset and hasattr(item, 'isSet'):
-                    if not item.isSet(allowDefault=False):
-                        continue  # Skip unset items
-
-                # Check allSet condition for the item
-                if allSet and hasattr(item, '_check_all_registered_attributes_set'):
-                    if not item._check_all_registered_attributes_set():
-                        continue  # Skip items that don't have all attributes set
-
-                # Use class name as the tag for container items (CCP4i2 convention)
-                item_name = item.__class__.__name__
-                child_elem = item.getEtree(item_name, excludeUnset=excludeUnset, allSet=allSet)
-
-                # Only append if the child element has content
-                if excludeUnset or allSet:
-                    if child_elem.text or len(child_elem) > 0:
-                        elem.append(child_elem)
-                else:
-                    elem.append(child_elem)
-
-        return elem
+        # Parent class handles all CData children (both named attributes and
+        # children from HierarchicalObject.children())
+        return super().getEtree(name=name, excludeUnset=excludeUnset, allSet=allSet)
 
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""
@@ -404,17 +376,25 @@ class CContainer(CData):
             if container:  # Check if container exists
 
         To check if a container is empty, use:
-            if len(container) == 0:  # or: if not container._container_items:
+            if len(container) == 0:
         """
         return True
 
     def __len__(self):
-        """Return number of items in container."""
-        return len(self._container_items)
+        """Return number of child items in container.
+
+        Uses HierarchicalObject.children() to get the count.
+        """
+        return len(self.children())
 
     def __getitem__(self, index):
-        """Get item by index."""
-        return self._container_items[index]
+        """Get child item by index.
+
+        Uses HierarchicalObject.children() to access children by index.
+        Note: The order of children may not be deterministic if not added
+        via named attributes tracked in _data_order.
+        """
+        return self.children()[index]
 
     def __getattr__(self, name: str):
         """Allow attribute-style access to children by name.
@@ -454,15 +434,6 @@ class CContainer(CData):
                     # Check if name matches
                     if hasattr(child, 'objectName') and child.objectName() == search_name:
                         return child
-            except (AttributeError, TypeError):
-                pass
-
-            # Also check _container_items
-            try:
-                container_items = object.__getattribute__(self, '_container_items')
-                for item in container_items:
-                    if hasattr(item, 'objectName') and item.objectName() == search_name:
-                        return item
             except (AttributeError, TypeError):
                 pass
 

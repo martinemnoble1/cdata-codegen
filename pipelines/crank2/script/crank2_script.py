@@ -84,6 +84,7 @@ class crank2(CPluginScript):
 
     defaults = False
     if container:
+      sys.exit("[ERROR crank2_script] ERROR: crank2_script.process() does not accept a container argument anymore.")
       self.container = container
       defaults = True
     # fixbrokenpluginname:

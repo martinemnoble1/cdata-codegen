@@ -56,11 +56,17 @@ def test_clist_basic():
     assert l.qualifiers['minLength'] == 1
 
 def test_ccontainer_basic():
-    c = CContainer([CInt(1), CString('a')], qualifiers={'containerType': 'mixed'})
+    # Create container and add items via attribute assignment
+    c = CContainer(qualifiers={'containerType': 'mixed'})
+    c.item1 = CInt(1, name='item1')
+    c.item2 = CString('a', name='item2')
     assert len(c) == 2
     assert isinstance(c[0], CInt)
     assert isinstance(c[1], CString)
-    c.add_item(CFloat(2.5))
+
+    # Add another item
+    c.item3 = CFloat(2.5, name='item3')
     assert len(c) == 3
+
     # Qualifiers
     assert c.qualifiers['containerType'] == 'mixed'

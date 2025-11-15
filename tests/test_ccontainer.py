@@ -18,28 +18,37 @@ class TestExample:
 
     def test_ccontainer_methods(self):
         c = CContainer(name="container")
-        # Check that CContainer has methods from its parent class
-        assert hasattr(c, "add_item")
-        b=CInt(10, name="test_int")
-        d=CDataFile(name="test_file")
+        # Test adding items via attribute assignment (new API)
+        b = CInt(10, name="test_int")
+        d = CDataFile(name="test_file")
         d.update({"baseName": "changed"})
-        c.add_item(b)
-        c.add_item(d)
-        items = c.get_items()
+
+        # Add items as named attributes
+        c.test_int = b
+        c.test_file = d
+
+        # Access via children() method
+        items = c.children()
         assert len(items) == 2
         assert b.name == "test_int"
         assert b.object_path() == "container.test_int"
         assert d.name == "test_file"
         assert d.object_path() == "container.test_file"
-        l=CList(name="test_list")
-        c.add_item(l)
-        items = c.get_items()
+
+        # Add another item
+        l = CList(name="test_list")
+        c.test_list = l
+        items = c.children()
         assert len(items) == 3
-        the_list:CList = items[2]
+
+        # Access by index
+        the_list: CList = c[2]
         assert the_list.name == "test_list"
         assert the_list.object_path() == "container.test_list"
         assert isinstance(the_list, CList)
         assert l is the_list
+
+        # Test qualifiers
         print(b.get_qualifier("min"))
         b.set_qualifier("min", 2)
         b.set_qualifier("max", 100)
