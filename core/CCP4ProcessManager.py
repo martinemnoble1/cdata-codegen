@@ -322,6 +322,11 @@ class CProcessManager:
         info['startTime'] = time.time()
         info['status'] = 'running'
 
+        # Track file handles we open for proper cleanup
+        stdin_file = None
+        stdout_file = None
+        stderr_file = None
+
         try:
             # Prepare subprocess arguments
             kwargs = {
@@ -329,17 +334,23 @@ class CProcessManager:
                 'cwd': info['cwd']
             }
 
-            # Handle I/O redirection
+            # Handle I/O redirection using context managers to ensure cleanup
+            # Open file handles and track them for cleanup
             if info['inputFile']:
-                kwargs['stdin'] = open(info['inputFile'], 'r')
+                stdin_file = open(info['inputFile'], 'r')
+                kwargs['stdin'] = stdin_file
+            else:
+                kwargs['stdin'] = None
 
             if info['logFile']:
-                kwargs['stdout'] = open(info['logFile'], 'w')
+                stdout_file = open(info['logFile'], 'w')
+                kwargs['stdout'] = stdout_file
             else:
                 kwargs['stdout'] = subprocess.PIPE
 
             if info['stderrFile']:
-                kwargs['stderr'] = open(info['stderrFile'], 'w')
+                stderr_file = open(info['stderrFile'], 'w')
+                kwargs['stderr'] = stderr_file
             else:
                 kwargs['stderr'] = subprocess.PIPE
 
@@ -379,13 +390,22 @@ class CProcessManager:
             print(f"❌ Process failed: {e}")
 
         finally:
-            # Close file handles
-            if 'stdin' in kwargs and hasattr(kwargs['stdin'], 'close'):
-                kwargs['stdin'].close()
-            if 'stdout' in kwargs and hasattr(kwargs['stdout'], 'close'):
-                kwargs['stdout'].close()
-            if 'stderr' in kwargs and hasattr(kwargs['stderr'], 'close'):
-                kwargs['stderr'].close()
+            # Close file handles we explicitly opened (not subprocess.PIPE constants)
+            if stdin_file is not None:
+                try:
+                    stdin_file.close()
+                except Exception:
+                    pass  # Best effort cleanup
+            if stdout_file is not None:
+                try:
+                    stdout_file.close()
+                except Exception:
+                    pass
+            if stderr_file is not None:
+                try:
+                    stderr_file.close()
+                except Exception:
+                    pass
 
         # Call handler if provided
         self._call_handler(pid)
