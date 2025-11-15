@@ -127,6 +127,10 @@ def i2run(args: list[str], project_name: str = None):
             print(f"=== stderr ===")
             print(stderr_capture.getvalue())
             raise
+        finally:
+            # Explicitly close StringIO objects to free file descriptors
+            stdout_capture.close()
+            stderr_capture.close()
 
     finally:
         # Restore original sys.argv
