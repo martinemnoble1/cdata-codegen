@@ -192,6 +192,56 @@ class CContainer(CData):
         """
         return self._data_order
 
+    @property
+    def RESOLUTION_LOW(self):
+        """Legacy resolution low limit accessor with truncation fallback.
+
+        Provides backward compatibility for legacy code that accesses
+        RESOLUTION_LOW. First tries to find a child named RESOLUTION_LOW,
+        then falls back to RESO_LOW. Returns an unset CFloat if neither
+        exists (so .isSet() works).
+
+        Used by legacy phaser code (phaser_MR_AUTO.py:98).
+        """
+        # Try to find existing child via normal getattr mechanism
+        # This will trigger __getattr__ which handles truncation
+        try:
+            get_child = object.__getattribute__(self, '_get_child')
+            result = get_child('RESOLUTION_LOW') or get_child('RESO_LOW')
+            if result:
+                return result
+        except (AttributeError, KeyError):
+            pass
+
+        # Return unset CFloat for backward compatibility with .isSet()
+        from .fundamental_types import CFloat
+        return CFloat(name='RESOLUTION_LOW')
+
+    @property
+    def RESOLUTION_HIGH(self):
+        """Legacy resolution high limit accessor with truncation fallback.
+
+        Provides backward compatibility for legacy code that accesses
+        RESOLUTION_HIGH. First tries to find a child named RESOLUTION_HIGH,
+        then falls back to RESO_HIGH. Returns an unset CFloat if neither
+        exists (so .isSet() works).
+
+        Used by legacy phaser code (phaser_MR_AUTO.py:100).
+        """
+        # Try to find existing child via normal getattr mechanism
+        # This will trigger __getattr__ which handles truncation
+        try:
+            get_child = object.__getattribute__(self, '_get_child')
+            result = get_child('RESOLUTION_HIGH') or get_child('RESO_HIGH')
+            if result:
+                return result
+        except (AttributeError, KeyError):
+            pass
+
+        # Return unset CFloat for backward compatibility with .isSet()
+        from .fundamental_types import CFloat
+        return CFloat(name='RESOLUTION_HIGH')
+
     def copyData(self, otherContainer, dataList: Optional[List[str]] = None):
         """Copy data from another container into this container.
 
