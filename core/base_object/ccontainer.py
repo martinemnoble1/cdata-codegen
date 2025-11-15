@@ -395,6 +395,19 @@ class CContainer(CData):
         # Save only data values, not structure
         self.saveDataToXml(filename)
 
+    def __bool__(self):
+        """Return True for boolean conversion.
+
+        Containers always evaluate to True when they exist, regardless of whether
+        they contain items. This matches normal Python object behavior and supports
+        legacy code patterns like:
+            if container:  # Check if container exists
+
+        To check if a container is empty, use:
+            if len(container) == 0:  # or: if not container._container_items:
+        """
+        return True
+
     def __len__(self):
         """Return number of items in container."""
         return len(self._container_items)
