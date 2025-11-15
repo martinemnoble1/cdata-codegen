@@ -88,7 +88,6 @@ def RegisterSubOutputAsMain(i2crank,crank,i2subjob,outd_name):
           getattr(i2crank.container.outputData, outd_name).set(filepath)
 
 def RegisterProcessToCCP4i2(ccp4i2crank, process):
-  return
   from core import CCP4PluginScript, CCP4ErrorHandling, CCP4XtalData
   print("[DEBUG ccp4i2crank] Registering process "+process.nick+" to ccp4i2 crank2...")
   sys.stdout = stdout_save
