@@ -84,7 +84,6 @@ class crank2(CPluginScript):
 
     defaults = False
     if container:
-      sys.exit("[ERROR crank2_script] ERROR: crank2_script.process() does not accept a container argument anymore.")
       self.container = container
       defaults = True
     # fixbrokenpluginname:
@@ -113,7 +112,6 @@ class crank2(CPluginScript):
       anom = getattr(inp,'F_SIGFanom'+sif)
       dn = getattr(inp,'DNAME'+si)
       dnstr = "dname="+str(dn)  if dn  else ""
-      print('[DEBUG crank2_script] Processing dataset {}: anom fullPath={}, contentFlag={}'.format(si, anom.fullPath if anom.fullPath else 'N/A', anom.contentFlag if anom.contentFlag.isSet() else 'N/A'))
       if anom.fullPath.isSet() and (anom.contentFlag.isSet() or inp.NON_MTZ) and (not i or getattr(inp,'MAD'+si)):
         saved_fpm = getattr(inp,'SAVED_FPMFILE'+si)
         if saved_fpm and defaults and os.path.isfile(str(saved_fpm)):
@@ -133,7 +131,6 @@ class crank2(CPluginScript):
           crank_lines[-1] += " wavel={}".format(getattr(inp,'WAVELENGTH'+si))
         if self.CheckUse(inp,'FPRIME'+si) or self.CheckUse(inp,'FDPRIME'+si):
           fpfpp[dn] = [getattr(inp,'FPRIME'+si), getattr(inp,'FDPRIME'+si)]
-        print('[DEBUG crank2_script] Added fsigf lines for dataset {}: '.format(si), crank_lines)
 
     native = inp.F_SIGFnative_nonmtz  if inp.NON_MTZ  else inp.F_SIGFnative
     if inp.NATIVE and native.fullPath.isSet() and native.contentFlag.isSet():

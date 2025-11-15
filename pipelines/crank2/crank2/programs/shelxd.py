@@ -46,12 +46,10 @@ class shelxd(program):
       Exception.__init__(self, message)
 
   def Interact_output(self, line, popen, empty):
-    #print('[DEBUG shelxd] Interact_output called with line: {}'.format(line))
     if self.GetStatGrep('error_cannot',from_str=line):
       common.Error('{0} failed with error message: {1}'.format(self.name,line))
     if self.GetStatGrep('error_toosmall',from_str=line):
       raise self.Exception_ShelxD_TooSmall(line)
-    #print('[DEBUG shelxd] Interact_output processing line: {}'.format(line))
     self.process.UpdateInfo(line)
 
   def Stop(self,popen=None):

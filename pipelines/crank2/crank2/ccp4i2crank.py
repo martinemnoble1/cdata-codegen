@@ -27,9 +27,7 @@ def CallCrankFromCCP4i2(ccp4i2crank, xmlfile=None, inpfile=None, defaults=False,
     error=0
     try:
       crank = parser.ParseAndRun(ccp4i2crank,defaults,rvapi_style=rvapi_style)
-      print("[DEBUG ccp4i2crank] Crank2 pipeline executed.")
     except Exception as e:
-      print("[ERROR ccp4i2crank] Exception occurred during Crank2 pipeline execution: {}".format(e))
       error=e
     else:
       crank.ccp4i2job = ccp4i2crank
@@ -45,16 +43,9 @@ def CallCrankFromCCP4i2(ccp4i2crank, xmlfile=None, inpfile=None, defaults=False,
         raise error
   # register output objects from the last step... (or from previous step if not present in last)
   if not defaults:
-    print("[DEBUG ccp4i2crank] Registering output objects from last step...")
     if hasattr(crank.processes[-1],'ccp4i2job'):
-      print("[DEBUG ccp4i2crank] Last process has ccp4i2job attribute.")
       last_job = crank.processes[-1].ccp4i2job
-      print("[DEBUG ccp4i2crank] LastJob objectName: "+last_job.objectName())
-      print("[DEBUG ccp4i2crank] Last job inputData _dataOrder: "+str(last_job.container.inputData._dataOrder))
-      print("[DEBUG ccp4i2crank] Last job outputData _dataOrder: "+str(last_job.container.outputData._dataOrder))
-      print("[DEBUG ccp4i2crank] Last job outputData children: "+str(last_job.container.outputData.children()))
       for outd_name in last_job.container.outputData._dataOrder:
-        print("[DEBUG ccp4i2crank] Registering output "+outd_name+" from last job outputData.")
         RegisterSubOutputAsMain(ccp4i2crank,crank,last_job,outd_name)
       if not ccp4i2crank.container.outputData.XYZOUT_SUBSTR.isSet() and len(crank.processes)>=2 and \
          hasattr(crank.processes[-2].ccp4i2job.container.outputData,'XYZOUT_SUBSTR'):
@@ -83,14 +74,10 @@ def CallCrankFromCCP4i2(ccp4i2crank, xmlfile=None, inpfile=None, defaults=False,
   return crank
 
 def RegisterSubOutputAsMain(i2crank,crank,i2subjob,outd_name):
-  print ("[DEBUG ccp4i2crank] Registering subjob output "+outd_name+" to main ccp4i2 crank2...")
   if outd_name in i2crank.container.outputData._dataOrder:
-    print ("[DEBUG ccp4i2crank] Found output "+outd_name+" in main ccp4i2 crank2...")
     i2_subjob_obj = getattr(i2subjob.container.outputData, outd_name)
-    print ("[DEBUG ccp4i2crank] Retrieved subjob output object: "+str(i2_subjob_obj))
     setattr( i2crank.container.outputData, outd_name, i2_subjob_obj )
-    print ("[DEBUG ccp4i2crank] Set subjob output object to main ccp4i2 crank2 output container." + outd_name)
-    if outd_name not in ['PERFORMANCE']:
+    if outd_name not in('PERFORMANCE',):
       filepath=OutFilesDirMatch(str(i2_subjob_obj),crank)
       if filepath:
         from core import CCP4ErrorHandling
@@ -102,45 +89,26 @@ def RegisterSubOutputAsMain(i2crank,crank,i2subjob,outd_name):
 
 def RegisterProcessToCCP4i2(ccp4i2crank, process):
   from core import CCP4PluginScript, CCP4ErrorHandling, CCP4XtalData
-  print("[DEBUG ccp4i2crank] Registering process "+process.nick+" to ccp4i2 crank2...")
   sys.stdout = stdout_save
   subjob = ccp4i2crank.makePluginObject(pluginName='crank2_'+process.nick, pluginTitle=process.short_name[0].upper()+process.short_name[1:])
-  print("[DEBUG ccp4i2crank] Created subprocess plugin object for "+process.nick)
   if subjob is None:
-    print("[DEBUG ccp4i2crank] Failed to create subprocess plugin object for "+process.nick)
     subjob = ccp4i2crank.makePluginObject(pluginName=process.short_name.capitalize(), dummy=True)
   process.SetRunDir(subjob.workDirectory)
   process.ccp4i2job = subjob
-  print("[DEBUG ccp4i2crank] Set run directory and assigned ccp4i2 job for process "+process.nick)
   # copy the i2 crank2 input into i2 subjob input containers
   for ic in ('inputData','controlParameters'):
-    print("[DEBUG ccp4i2crank] Copying container "+ic+" from ccp4i2 crank2 to subprocess "+process.nick)
     if hasattr(subjob.container,ic): 
-      print("[DEBUG ccp4i2crank] Found container "+ic+" in subprocess "+process.nick)
       i2cont, subcont = getattr(ccp4i2crank.container,ic), getattr(subjob.container,ic)
-      print("[DEBUG ccp4i2crank] i2cont  "+str(i2cont.objectName()), str(subcont.objectName()), bool(subcont))
       if not getattr(subjob.container,ic):
-        print("[DEBUG ccp4i2crank] Creating new container "+ic+" in subprocess "+process.nick)
         for dc in i2cont._dataOrder:
-          print("[DEBUG ccp4i2crank] Copying object "+dc+" into new container "+ic+" in subprocess "+process.nick)
           subcont.addObject( getattr(i2cont,dc), reparent=True )
-          print("[DEBUG ccp4i2crank] Copied object "+dc)
       else:
-        print("[DEBUG ccp4i2crank] Copying data from container "+ic+" into existing container in subprocess "+process.nick)
         subcont.copyData( otherContainer=i2cont )
-        print("[DEBUG ccp4i2crank] subcont._data_order after copyData: "+str(subcont._data_order))
-  print("[DEBUG ccp4i2crank] Copied containers to subprocess "+process.nick)
   # define derived (not inputted by user) input objects with i2 (for subprocesses rerunning)
-  print("[DEBUG ccp4i2crank] Defining derived input objects for subprocess "+process.nick)
   inp_obj=process.inp.Get(filetype='pdb',typ='substr')
-  print("[DEBUG ccp4i2crank] Retrieved input object for substr: "+str(inp_obj))
   if inp_obj:
-    print("[DEBUG ccp4i2crank] Processing input object for substr: "+str(inp_obj))
     filepath=OutFilesDirMatch(inp_obj,process,filetype='pdb')
-    print("[DEBUG ccp4i2crank] Mapped filepath for substr: "+str(filepath))
-    print("[DEBUG ccp4i2crank] Setting XYZIN_SUB for subprocess "+str(subjob.container.dataOrder()))
     subjob.container.inputData.XYZIN_SUB.setFullPath(filepath)
-    print("[DEBUG ccp4i2crank] Set XYZIN_SUB for subprocess "+process.nick)
     if process.nick=='phdmmb' and len(filepath)>4 and inp_obj.GetFileName('res'):
       subjob.container.inputData.XYZIN_SUB_RES.set(inp_obj.GetFileName('res'))
   inp_obj=process.inp.Get(filetype='pdb',typ=('partial+substr','partial'))
@@ -202,28 +170,16 @@ annotations = { 'FPHOUT_HAND2':    '"Best" density - other hand (not chosen)', \
               }
 
 def RegisterOutputToCCP4i2(process,error,nosuccess=False):
-  print("[DEBUG ccp4i2crank] Registering outputs from process "+process.nick+" to ccp4i2 crank2...")
   from core import CCP4PluginScript, CCP4ErrorHandling, CCP4XtalData
   sys.stdout = stdout_save
   i2job=process.ccp4i2job
   if error:
-    print("[DEBUG ccp4i2crank] Error detected in process "+process.nick+", reporting failure to ccp4i2 job.")
     i2job.reportStatus(CCP4PluginScript.CPluginScript.FAILED)
     raise_(error,None,sys.exc_info()[2])
   else:
-    print("[DEBUG ccp4i2crank] No error detected in process "+process.nick+", registering outputs.")
-    print("[DEBUG ccp4i2crank] i2job class: "+str(i2job.__class__.__name__))
-    print("[DEBUG ccp4i2crank] i2job class has out_params: "+str(hasattr(i2job.__class__, 'out_params')))
-    if hasattr(i2job.__class__, 'out_params'):
-      print("[DEBUG ccp4i2crank] i2job CLASS out_params: "+str(i2job.__class__.out_params))
-    print("[DEBUG ccp4i2crank] i2job INSTANCE out_params (via getattr): "+str(getattr(i2job,'out_params',None)))
-    print("[DEBUG ccp4i2crank] i2job has out_params in __dict__? "+str('out_params' in i2job.__dict__))
-    print("[DEBUG ccp4i2crank] i2job outputData _dataOrder: "+str(i2job.container.outputData._dataOrder))
     for outd_name in i2job.container.outputData._dataOrder:
-     print("[DEBUG ccp4i2crank] Processing output "+outd_name+" for registration.")
      if not hasattr(i2job,'out_params') or outd_name in i2job.out_params:
       outd_obj = getattr(i2job.container.outputData, outd_name)
-      print("[DEBUG ccp4i2crank] Retrieved output object: "+str(outd_obj))
       if outd_name.startswith('XYZOUT'):
         ft='pdb'
         if outd_name=='XYZOUT':
@@ -290,11 +246,8 @@ def RegisterOutputToCCP4i2(process,error,nosuccess=False):
         if outd_name=='FPHOUT_DIFFANOM' and process.GetParam('target')=='SAD':
           outd_obj.annotation.set("Anomalous gradient LLG (difference) map")
     if 'PERFORMANCE' in i2job.container.outputData._dataOrder:
-      print("[DEBUG ccp4i2crank] Registering PERFORMANCE metrics for process "+process.nick)
       for perf_name in i2job.container.outputData.PERFORMANCE.CONTENTS_ORDER:
-        print("[DEBUG ccp4i2crank] Processing PERFORMANCE metric "+perf_name)
         if hasattr(i2job,'perform') and perf_name in i2job.perform:
-          print("[DEBUG ccp4i2crank] Found PERFORMANCE metric "+perf_name+" in i2job.perform")
           if perf_name=='RFactor' and hasattr(process,'report_R'):
             i2job.container.outputData.PERFORMANCE.RFactor.set(process.report_R)
           elif perf_name=='RFree' and hasattr(process,'report_Rfree'):
@@ -315,24 +268,17 @@ def RegisterOutputToCCP4i2(process,error,nosuccess=False):
     raise
 
 def OutFilesDirMatch(out_obj,process,filetype=None):
-  print("[DEBUG ccp4i2crank] Mapping output file for process "+process.nick+"...")
   # makes sure the output file in the output directory expected by ccp4i2
   try:
     f=out_obj.GetFileName(filetype=filetype)
-    print("[DEBUG ccp4i2crank] Found output file: "+str(f))
   except AttributeError:
     f=out_obj
-    print("[DEBUG ccp4i2crank] Using output object directly as file path: "+str(f))
   if not f:
     return None
-  print("[DEBUG ccp4i2crank] Checking if output file exists: "+str(f))
   prefix, f2 = '', f
   while os.path.isfile(f2):
-    print("[DEBUG ccp4i2crank] Output file exists: "+str(f2))
     f2 = os.path.join(process.ccp4i2job.workDirectory, prefix+os.path.basename(f))
     prefix=prefix+'n_'
-    print("[DEBUG ccp4i2crank] New output file path: "+str(f2))
   if os.path.isfile(f):
-    print("[DEBUG ccp4i2crank] Copying output file to new location: "+str(f2))
     shutil.copy(f,f2)
   return f2
