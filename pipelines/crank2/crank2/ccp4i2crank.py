@@ -50,7 +50,9 @@ def CallCrankFromCCP4i2(ccp4i2crank, xmlfile=None, inpfile=None, defaults=False,
       print("[DEBUG ccp4i2crank] Last process has ccp4i2job attribute.")
       last_job = crank.processes[-1].ccp4i2job
       print("[DEBUG ccp4i2crank] LastJob objectName: "+last_job.objectName())
+      print("[DEBUG ccp4i2crank] Last job inputData _dataOrder: "+str(last_job.container.inputData._dataOrder))
       print("[DEBUG ccp4i2crank] Last job outputData _dataOrder: "+str(last_job.container.outputData._dataOrder))
+      print("[DEBUG ccp4i2crank] Last job outputData children: "+str(last_job.container.outputData.children()))
       for outd_name in last_job.container.outputData._dataOrder:
         print("[DEBUG ccp4i2crank] Registering output "+outd_name+" from last job outputData.")
         RegisterSubOutputAsMain(ccp4i2crank,crank,last_job,outd_name)
@@ -87,8 +89,8 @@ def RegisterSubOutputAsMain(i2crank,crank,i2subjob,outd_name):
     i2_subjob_obj = getattr(i2subjob.container.outputData, outd_name)
     print ("[DEBUG ccp4i2crank] Retrieved subjob output object: "+str(i2_subjob_obj))
     setattr( i2crank.container.outputData, outd_name, i2_subjob_obj )
-    print ("[DEBUG ccp4i2crank] Set subjob output object to main ccp4i2 crank2 output container.")
-    if outd_name not in('PERFORMANCE',):
+    print ("[DEBUG ccp4i2crank] Set subjob output object to main ccp4i2 crank2 output container." + outd_name)
+    if outd_name not in ['PERFORMANCE']:
       filepath=OutFilesDirMatch(str(i2_subjob_obj),crank)
       if filepath:
         from core import CCP4ErrorHandling
@@ -210,6 +212,12 @@ def RegisterOutputToCCP4i2(process,error,nosuccess=False):
     raise_(error,None,sys.exc_info()[2])
   else:
     print("[DEBUG ccp4i2crank] No error detected in process "+process.nick+", registering outputs.")
+    print("[DEBUG ccp4i2crank] i2job class: "+str(i2job.__class__.__name__))
+    print("[DEBUG ccp4i2crank] i2job class has out_params: "+str(hasattr(i2job.__class__, 'out_params')))
+    if hasattr(i2job.__class__, 'out_params'):
+      print("[DEBUG ccp4i2crank] i2job CLASS out_params: "+str(i2job.__class__.out_params))
+    print("[DEBUG ccp4i2crank] i2job INSTANCE out_params (via getattr): "+str(getattr(i2job,'out_params',None)))
+    print("[DEBUG ccp4i2crank] i2job has out_params in __dict__? "+str('out_params' in i2job.__dict__))
     print("[DEBUG ccp4i2crank] i2job outputData _dataOrder: "+str(i2job.container.outputData._dataOrder))
     for outd_name in i2job.container.outputData._dataOrder:
      print("[DEBUG ccp4i2crank] Processing output "+outd_name+" for registration.")
@@ -282,8 +290,11 @@ def RegisterOutputToCCP4i2(process,error,nosuccess=False):
         if outd_name=='FPHOUT_DIFFANOM' and process.GetParam('target')=='SAD':
           outd_obj.annotation.set("Anomalous gradient LLG (difference) map")
     if 'PERFORMANCE' in i2job.container.outputData._dataOrder:
+      print("[DEBUG ccp4i2crank] Registering PERFORMANCE metrics for process "+process.nick)
       for perf_name in i2job.container.outputData.PERFORMANCE.CONTENTS_ORDER:
+        print("[DEBUG ccp4i2crank] Processing PERFORMANCE metric "+perf_name)
         if hasattr(i2job,'perform') and perf_name in i2job.perform:
+          print("[DEBUG ccp4i2crank] Found PERFORMANCE metric "+perf_name+" in i2job.perform")
           if perf_name=='RFactor' and hasattr(process,'report_R'):
             i2job.container.outputData.PERFORMANCE.RFactor.set(process.report_R)
           elif perf_name=='RFree' and hasattr(process,'report_Rfree'):
@@ -304,17 +315,24 @@ def RegisterOutputToCCP4i2(process,error,nosuccess=False):
     raise
 
 def OutFilesDirMatch(out_obj,process,filetype=None):
+  print("[DEBUG ccp4i2crank] Mapping output file for process "+process.nick+"...")
   # makes sure the output file in the output directory expected by ccp4i2
   try:
     f=out_obj.GetFileName(filetype=filetype)
+    print("[DEBUG ccp4i2crank] Found output file: "+str(f))
   except AttributeError:
     f=out_obj
+    print("[DEBUG ccp4i2crank] Using output object directly as file path: "+str(f))
   if not f:
     return None
+  print("[DEBUG ccp4i2crank] Checking if output file exists: "+str(f))
   prefix, f2 = '', f
   while os.path.isfile(f2):
+    print("[DEBUG ccp4i2crank] Output file exists: "+str(f2))
     f2 = os.path.join(process.ccp4i2job.workDirectory, prefix+os.path.basename(f))
     prefix=prefix+'n_'
+    print("[DEBUG ccp4i2crank] New output file path: "+str(f2))
   if os.path.isfile(f):
+    print("[DEBUG ccp4i2crank] Copying output file to new location: "+str(f2))
     shutil.copy(f,f2)
   return f2

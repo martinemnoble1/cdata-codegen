@@ -435,6 +435,36 @@ class CData(HierarchicalObject):
 
         return cdata_attributes
 
+    @property
+    def CONTENTS_ORDER(self):
+        """Get the order of contents for this CData object.
+
+        This provides backward compatibility with legacy CCP4i2 code that
+        expects CONTENTS_ORDER to be available on all CData objects.
+
+        For CContainer subclasses, returns _data_order.
+        For other CData subclasses, returns contents_order from metadata if available,
+        otherwise returns list of child attribute names in alphabetical order.
+
+        Returns:
+            List of child names in order
+        """
+        # Import CContainer here to avoid circular imports
+        from .ccontainer import CContainer
+
+        # For CContainer, delegate to _data_order (already handles metadata)
+        if isinstance(self, CContainer):
+            return self._data_order
+
+        # For other CData types, check metadata
+        if hasattr(self, '_metadata') and hasattr(self._metadata, 'contents_order'):
+            contents_order = self._metadata.contents_order
+            if contents_order:
+                return list(contents_order)
+
+        # Fallback: return CONTENTS (attribute names) in alphabetical order
+        return sorted(self.CONTENTS)
+
     def isSet(self, field_name: str = None, allowUndefined: bool = False,
               allowDefault: bool = False, allSet: bool = True) -> bool:
         """Check if a field has been explicitly set.

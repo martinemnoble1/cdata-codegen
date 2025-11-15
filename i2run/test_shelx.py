@@ -3,6 +3,23 @@ from gemmi import read_mtz_file, read_pdb
 from .utils import demoData, i2run
 
 
+def test_substrdet():
+    args = ["shelx"]
+    args += [
+        "--F_SIGFanom",
+        f"fullPath={demoData('gamma', 'merged_intensities_Xe.mtz')}",
+        "columnLabels=/*/*/[Iplus,SIGIplus,Iminus,SIGIminus]"
+    ]
+    args += ["--SEQIN", demoData("gamma", "gamma.asu.xml")]
+    args += ["--ATOM_TYPE", "Xe"]
+    args += ["--NUMBER_SUBSTRUCTURE", "2"]
+    args += ["--WAVELENGTH", "1.54179"]
+    args += ["--FPRIME", "-0.79"]
+    args += ["--FDPRIME", "7.36"]
+    args += ["--END_PIPELINE", "substrdet"]
+    with i2run(args) as job:
+        read_pdb(str(job / "PDBCUR.pdb"))
+
 def test_gamma_sad():
     args = ["shelx"]
     args += [

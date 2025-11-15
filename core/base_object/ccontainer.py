@@ -36,8 +36,18 @@ class CContainer(CData):
         or direct attribute assignment. Access children via the children() method
         (inherited from HierarchicalObject) or by index (container[0]).
         """
+        # Must call super().__init__() FIRST to set up base CData methods
         super().__init__(parent=parent, name=name, **kwargs)
-        self._data_order = []  # Track order of content items for dataOrder()
+
+        # Initialize _data_order from metadata contents_order if available
+        if hasattr(self, '_metadata') and hasattr(self._metadata, 'contents_order'):
+            contents_order = self._metadata.contents_order
+            if contents_order:
+                self._data_order = list(contents_order)  # Copy to avoid aliasing
+            else:
+                self._data_order = []
+        else:
+            self._data_order = []  # Track order of content items
 
     def addContent(self, content_class, name: str, **kwargs):
         """Add a new content item to the container (old API compatibility).
@@ -161,6 +171,21 @@ class CContainer(CData):
 
         The old CCP4i2 code directly accessed container._dataOrder. We use
         _data_order (snake_case), so provide this as a property alias.
+
+        Returns:
+            List of names in the order they were added
+        """
+        return self._data_order
+
+    @property
+    def CONTENTS_ORDER(self) -> list:
+        """Legacy alias for _data_order (old CCP4i2 class attribute).
+
+        In old CCP4i2, CONTENTS_ORDER was a class attribute defined in the
+        metadata. In our new system, this is an instance attribute _data_order
+        that tracks the order children were added.
+
+        Used by legacy code like ccp4i2crank.py line 294.
 
         Returns:
             List of names in the order they were added
@@ -395,6 +420,23 @@ class CContainer(CData):
         via named attributes tracked in _data_order.
         """
         return self.children()[index]
+
+    def __setattr__(self, name: str, value):
+        """Override setattr to maintain _data_order list.
+
+        When a CData object is set as an attribute, add its name to _data_order
+        to maintain the order of children for iteration.
+        """
+        # Call parent setattr first
+        super().__setattr__(name, value)
+
+        # If this is a CData child being added (not an internal attribute),
+        # add it to _data_order if not already there
+        if (not name.startswith('_')
+            and hasattr(self, '_data_order')
+            and isinstance(value, CData)
+            and name not in self._data_order):
+            self._data_order.append(name)
 
     def __getattr__(self, name: str):
         """Allow attribute-style access to children by name.

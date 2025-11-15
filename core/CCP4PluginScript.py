@@ -162,7 +162,30 @@ class CPluginScript(CData):
         # as children of self.container
         # Skip def.xml loading if dummy=True (creates minimal container only)
         if self.TASKNAME and not dummy:
-            self._loadDefFile()
+            # Check if parent class is a CPluginScript-derived class (not base CPluginScript)
+            # If so, try to inherit container structure from parent's TASKNAME
+            parent_classes = [c for c in self.__class__.__mro__[1:]
+                            if c.__name__ != 'CPluginScript'
+                            and issubclass(c, CPluginScript)
+                            and hasattr(c, 'TASKNAME')]
+            if parent_classes and parent_classes[0].TASKNAME:
+                # Parent is a CPluginScript subclass with a TASKNAME - try to load parent's def file
+                parent_taskname = parent_classes[0].TASKNAME
+                logger.info(f"[DEBUG _loadDefFile] Parent class {parent_classes[0].__name__} has TASKNAME='{parent_taskname}', trying to inherit structure")
+
+                # Temporarily swap TASKNAME to load parent's def file
+                original_taskname = self.TASKNAME
+                self.TASKNAME = parent_taskname
+                self._loadDefFile()  # This will load parent's def.xml
+                self.TASKNAME = original_taskname  # Restore our TASKNAME
+
+                # DEBUG: Check if _dataOrder was populated
+                if hasattr(self.container, 'outputData'):
+                    logger.info(f"[DEBUG inheritance] After loading parent def, outputData._dataOrder: {self.container.outputData._dataOrder}")
+                    logger.info(f"[DEBUG inheritance] outputData children: {[c.objectName() for c in self.container.outputData.children()]}")
+            else:
+                # No CPluginScript parent with TASKNAME - load our own def file
+                self._loadDefFile()
 
         # Create default empty sub-containers ONLY if they don't exist after .def.xml loading
         # This ensures backward compatibility for plugins without .def.xml files
