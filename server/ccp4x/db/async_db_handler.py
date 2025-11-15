@@ -588,13 +588,15 @@ class AsyncDatabaseHandler:
                         if is_mmcif:
                             print(f"[GLEAN DEBUG]   File IS mmCIF format")
                             # Check if file needs renaming (wrong extension for mmCIF)
+                            # ONLY rename .pdb files to .cif to avoid mislabeled PDB files that are actually mmCIF
+                            # Do NOT rename .mmcif or .ent files - those are valid extensions
                             current_suffix = file_path.suffix.lower()
                             logger.debug(f"[GLEAN DEBUG]   File is mmCIF, checking suffix: {current_suffix}")
 
-                            if current_suffix in ['.pdb', '.ent', '.mmcif']:
-                                # New path with .cif extension
+                            if current_suffix == '.pdb':
+                                # New path with .cif extension (to fix mislabeled .pdb files that are actually mmCIF)
                                 new_file_path = file_path.with_suffix('.cif')
-                                logger.debug(f"[GLEAN DEBUG]   Will rename to: {new_file_path}")
+                                logger.debug(f"[GLEAN DEBUG]   Will rename .pdb to .cif: {new_file_path}")
 
                                 # 1. Rename file on disk
                                 import shutil
@@ -607,7 +609,7 @@ class AsyncDatabaseHandler:
                                 # 3. Update file_path variable for database registration
                                 file_path = new_file_path
                             else:
-                                logger.debug(f"[GLEAN DEBUG]   Suffix {current_suffix} is already correct, no rename needed")
+                                logger.debug(f"[GLEAN DEBUG]   Suffix {current_suffix} is already correct (.cif, .mmcif, .ent are all valid), no rename needed")
                     except Exception as e:
                         logger.warning(f"Failed to rename mmCIF file {file_path.name}: {e}")
                         import traceback
