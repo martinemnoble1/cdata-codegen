@@ -710,11 +710,24 @@ class PluginPopulator:
 
                 # Convert sequence file to ASU XML
                 logger.info(f"Converting {seq_file_path} to ASU XML: {asu_xml_path}")
+
+                # Get project_id - use _dbProjectId attribute instead of projectId() method to avoid serialization issues
+                project_id = '00000000000000000000000000000000'
+                if plugin_parent:
+                    # Try _dbProjectId first (the actual data attribute)
+                    project_id = getattr(plugin_parent, '_dbProjectId', None)
+                    # If still None, try calling projectId() method if it exists
+                    if project_id is None and hasattr(plugin_parent, 'projectId') and callable(getattr(plugin_parent, 'projectId')):
+                        project_id = plugin_parent.projectId()
+                    # Fall back to default if still None
+                    if project_id is None:
+                        project_id = '00000000000000000000000000000000'
+
                 convert_sequence_file_to_asu(
                     input_file=seq_file_path,
                     output_file=asu_xml_path,
                     project_name=getattr(plugin_parent, 'projectName', 'i2run_project') if plugin_parent else 'i2run_project',
-                    project_id=getattr(plugin_parent, 'projectId', '00000000000000000000000000000000') if plugin_parent else '00000000000000000000000000000000'
+                    project_id=project_id
                 )
 
                 # Replace seqFile with fullPath to the generated ASU XML
