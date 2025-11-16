@@ -26,7 +26,7 @@ def test_8xfm_basic(cif8xfm, mtz8xfm):
     args += ["--RUN_ADP_ANALYSIS", "False"]
     args += ["--RUN_COORDADPDEV_ANALYSIS", "False"]
     with i2run(args) as job:
-        assert hasLongLigandName(job / "CIFFILE.pdb")
+        assert hasLongLigandName(job / "CIFFILE.cif")
         xml = ET.parse(job / "program.xml")
         check_program_xml_pipeline(xml, args)
         # With NCYCLES=2 and ADD_WATERS=False: initial + 2 cycles = 3 measurements
