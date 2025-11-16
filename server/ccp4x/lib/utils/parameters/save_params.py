@@ -38,7 +38,7 @@ def save_params_for_job(
     # Rework to the directory of "the_job"
     relocated_file_path = the_job.directory / pathlib.Path(fileName).name
 
-    print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path.name}")
+    #print(f"[DEBUG save_params_for_job] mode={mode}, fileName={fileName}, relocated_file_path={relocated_file_path.name}")
 
     if relocated_file_path.exists():
         CCP4Utils.backupFile(str(relocated_file_path), delete=False)
@@ -65,5 +65,5 @@ def save_params_for_job(
     # Use the exclude_unset parameter passed to this function
     body_etree = the_job_plugin.container.getEtree(excludeUnset=exclude_unset)
     ET.indent(body_etree, space="  ")
-    print(f"[DEBUG save_params_for_job] Generated body_etree with excludeUnset={exclude_unset} {ET.tostring(body_etree, encoding='unicode')}")
+    #print(f"[DEBUG save_params_for_job] Generated body_etree with excludeUnset={exclude_unset} {ET.tostring(body_etree, encoding='unicode')}")
     f.saveFile(bodyEtree=body_etree)
