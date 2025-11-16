@@ -192,55 +192,6 @@ class CContainer(CData):
         """
         return self._data_order
 
-    @property
-    def RESOLUTION_LOW(self):
-        """Legacy resolution low limit accessor with truncation fallback.
-
-        Provides backward compatibility for legacy code that accesses
-        RESOLUTION_LOW. First tries to find a child named RESOLUTION_LOW,
-        then falls back to RESO_LOW. Returns an unset CFloat if neither
-        exists (so .isSet() works).
-
-        Used by legacy phaser code (phaser_MR_AUTO.py:98).
-        """
-        # Try to find existing child via normal getattr mechanism
-        # This will trigger __getattr__ which handles truncation
-        try:
-            get_child = object.__getattribute__(self, '_get_child')
-            result = get_child('RESOLUTION_LOW') or get_child('RESO_LOW')
-            if result:
-                return result
-        except (AttributeError, KeyError):
-            pass
-
-        # Return unset CFloat for backward compatibility with .isSet()
-        from .fundamental_types import CFloat
-        return CFloat(name='RESOLUTION_LOW')
-
-    @property
-    def RESOLUTION_HIGH(self):
-        """Legacy resolution high limit accessor with truncation fallback.
-
-        Provides backward compatibility for legacy code that accesses
-        RESOLUTION_HIGH. First tries to find a child named RESOLUTION_HIGH,
-        then falls back to RESO_HIGH. Returns an unset CFloat if neither
-        exists (so .isSet() works).
-
-        Used by legacy phaser code (phaser_MR_AUTO.py:100).
-        """
-        # Try to find existing child via normal getattr mechanism
-        # This will trigger __getattr__ which handles truncation
-        try:
-            get_child = object.__getattribute__(self, '_get_child')
-            result = get_child('RESOLUTION_HIGH') or get_child('RESO_HIGH')
-            if result:
-                return result
-        except (AttributeError, KeyError):
-            pass
-
-        # Return unset CFloat for backward compatibility with .isSet()
-        from .fundamental_types import CFloat
-        return CFloat(name='RESOLUTION_HIGH')
 
     def copyData(self, otherContainer, dataList: Optional[List[str]] = None):
         """Copy data from another container into this container.
@@ -538,37 +489,65 @@ class CContainer(CData):
 
         # CCP4i2 truncation fallback: try truncating long keywords to 4 characters
         # Examples: RESOLUTION_HIGH -> RESO_HIGH, RESOLUTION_LOW -> RESO_LOW
+        # Truncate ALL parts of compound names longer than 4 characters
         # Only apply to uppercase names with underscores (typical CCP4 parameters)
-        if '_' in name and name.isupper() and len(name) > 10:
-            # Split on underscores and truncate first part to 4 characters
+        if '_' in name and name.isupper():
             parts = name.split('_')
-            if len(parts) >= 2 and len(parts[0]) > 4:
-                truncated_name = parts[0][:4] + '_' + '_'.join(parts[1:])
+            # Truncate each part that's longer than 4 characters
+            truncated_parts = [part[:4] if len(part) > 4 else part for part in parts]
+            truncated_name = '_'.join(truncated_parts)
+            # Only try if truncation actually changed something
+            if truncated_name != name:
                 result = find_child(truncated_name)
                 if result is not None:
                     return result
 
         # CCP4i2 truncation fallback (REVERSE): try expanding short keywords
-        # Examples: RESO_HIGH -> RESOLUTION_HIGH, RESO_LOW -> RESOLUTION_LOW
-        # If name has underscore and first part is exactly 4 characters, try common expansions
+        # Examples: INPU_FIXED -> INPUT_FIXED, RESO_HIGH -> RESOLUTION_HIGH
+        # For each 4-character part, try expanding to known common keywords
         if '_' in name and name.isupper():
             parts = name.split('_')
-            if len(parts) >= 2 and len(parts[0]) == 4:
-                # Common CCP4i2 keyword expansions
-                # These are from analyzing legacy .def.xml files
-                expansions = {
-                    'RESO': 'RESOLUTION',
-                    'SEQU': 'SEQUENCE',
-                    'COMP': 'COMPOSITION',
-                    'SPAC': 'SPACEGROUP',
-                    # Add more as needed
-                }
-                if parts[0] in expansions:
-                    expanded_name = expansions[parts[0]] + '_' + '_'.join(parts[1:])
-                    result = find_child(expanded_name)
-                    if result is not None:
-                        return result
+            # Common CCP4i2 keyword expansions (4-char -> full word)
+            # These are from analyzing legacy .def.xml files
+            expansions = {
+                'RESO': 'RESOLUTION',
+                'SEQU': 'SEQUENCE',
+                'COMP': 'COMPOSITION',
+                'SPAC': 'SPACEGROUP',
+                'INPU': 'INPUT',
+                'OUTP': 'OUTPUT',
+                'ENSE': 'ENSEMBLE',
+                'ATOM': 'ATOM',  # No change but included for consistency
+                'CRYS': 'CRYSTAL',
+                'SYMM': 'SYMMETRY',
+                'REFM': 'REFMAC',
+                # Add more as needed
+            }
 
-        # Not found - raise AttributeError
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+            # Try expanding each 4-character part
+            expanded_parts = []
+            any_expanded = False
+            for part in parts:
+                if len(part) == 4 and part in expansions:
+                    expanded_parts.append(expansions[part])
+                    any_expanded = True
+                else:
+                    expanded_parts.append(part)
+
+            # Only try if at least one part was expanded
+            if any_expanded:
+                expanded_name = '_'.join(expanded_parts)
+                result = find_child(expanded_name)
+                if result is not None:
+                    return result
+
+        # Not found - raise AttributeError with debug info
+        # List available children for debugging
+        try:
+            children_method = object.__getattribute__(self, 'children')
+            available_names = [child.objectName() for child in children_method() if hasattr(child, 'objectName')]
+            debug_info = f" Available children: {available_names}" if available_names else ""
+        except:
+            debug_info = ""
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'.{debug_info}")
 

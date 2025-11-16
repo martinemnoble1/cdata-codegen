@@ -161,31 +161,49 @@ class CPluginScript(CData):
         # This will create inputData, outputData, controlParameters, guiAdmin
         # as children of self.container
         # Skip def.xml loading if dummy=True (creates minimal container only)
+        #
+        # IMPORTANT: Handle TWO inheritance patterns:
+        #
+        # Pattern 1 - XML-based inheritance (phaser, prosmart_refmac):
+        #   - Child class inherits from parent (pythonic)
+        #   - Child has .def.xml with <file>parent.def.xml</file> tag
+        #   - load_nested_xml() automatically merges parent and child .def.xml
+        #   - Example: phaser_simple.def.xml contains <file>phaser_pipeline.def.xml</file>
+        #
+        # Pattern 2 - Pythonic-only inheritance (crank2 sub-wrappers):
+        #   - Child class inherits from parent (pythonic)
+        #   - Child has NO .def.xml file
+        #   - Must load parent's .def.xml using parent's TASKNAME
+        #   - Example: crank2_refatompick has no .def.xml, inherits from crank2
+        #
+        # Strategy: Try to load child's .def.xml. If not found AND parent class exists,
+        # try loading parent's .def.xml.
         if self.TASKNAME and not dummy:
-            # Check if parent class is a CPluginScript-derived class (not base CPluginScript)
-            # If so, try to inherit container structure from parent's TASKNAME
-            parent_classes = [c for c in self.__class__.__mro__[1:]
-                            if c.__name__ != 'CPluginScript'
-                            and issubclass(c, CPluginScript)
-                            and hasattr(c, 'TASKNAME')]
-            if parent_classes and parent_classes[0].TASKNAME:
-                # Parent is a CPluginScript subclass with a TASKNAME - try to load parent's def file
-                parent_taskname = parent_classes[0].TASKNAME
-                logger.info(f"[DEBUG _loadDefFile] Parent class {parent_classes[0].__name__} has TASKNAME='{parent_taskname}', trying to inherit structure")
+            def_path = self._locateDefFile()
 
-                # Temporarily swap TASKNAME to load parent's def file
-                original_taskname = self.TASKNAME
-                self.TASKNAME = parent_taskname
-                self._loadDefFile()  # This will load parent's def.xml
-                self.TASKNAME = original_taskname  # Restore our TASKNAME
-
-                # DEBUG: Check if _dataOrder was populated
-                if hasattr(self.container, 'outputData'):
-                    logger.info(f"[DEBUG inheritance] After loading parent def, outputData._dataOrder: {self.container.outputData._dataOrder}")
-                    logger.info(f"[DEBUG inheritance] outputData children: {[c.objectName() for c in self.container.outputData.children()]}")
-            else:
-                # No CPluginScript parent with TASKNAME - load our own def file
+            if def_path and def_path.exists():
+                # Pattern 1: Child has .def.xml (may contain <file> tag for parent)
+                logger.info(f"[DEBUG __init__] Loading .def.xml for {self.TASKNAME}")
                 self._loadDefFile()
+            else:
+                # Pattern 2: No .def.xml for child - try parent's TASKNAME
+                parent_classes = [c for c in self.__class__.__mro__[1:]
+                                if c.__name__ != 'CPluginScript'
+                                and issubclass(c, CPluginScript)
+                                and hasattr(c, 'TASKNAME')]
+
+                if parent_classes and parent_classes[0].TASKNAME:
+                    parent_taskname = parent_classes[0].TASKNAME
+                    logger.info(f"[DEBUG __init__] No .def.xml for {self.TASKNAME}, trying parent {parent_taskname}")
+
+                    # Temporarily swap TASKNAME to load parent's def file
+                    original_taskname = self.TASKNAME
+                    self.TASKNAME = parent_taskname
+                    self._loadDefFile()
+                    self.TASKNAME = original_taskname
+                else:
+                    # No .def.xml and no parent - will use default containers
+                    logger.warning(f"[DEBUG __init__] No .def.xml found for {self.TASKNAME} and no parent class")
 
         # Create default empty sub-containers ONLY if they don't exist after .def.xml loading
         # This ensures backward compatibility for plugins without .def.xml files
@@ -273,8 +291,10 @@ class CPluginScript(CData):
             try:
                 # Try to access via __getattr__ (which searches children)
                 container = getattr(self.container, container_name)
+                logger.info(f"[DEBUG _ensure_standard_containers] {container_name} already exists with {len(container.children())} children")
             except AttributeError:
                 # Container doesn't exist - create it
+                logger.info(f"[DEBUG _ensure_standard_containers] Creating new {container_name} container")
                 # Store in __dict__ to avoid __setattr__ while keeping references
                 container = CContainer(
                     parent=self.container,
