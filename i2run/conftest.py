@@ -81,13 +81,22 @@ def test_projects_dir():
 
 
 @fixture(scope="session", autouse=True)
-def django_db_setup(django_db_blocker):
-    """Set up test database for Django. Auto-use ensures it runs for all tests."""
+def django_db_setup(django_db_blocker, worker_id):
+    """Set up test database for Django. Auto-use ensures it runs for all tests.
+
+    When using pytest-xdist, each worker gets its own database to prevent race conditions.
+    """
     from django.core.management import call_command
     from django.conf import settings
 
-    # Use a test-specific database in test_projects directory
-    test_db_path = TEST_PROJECTS_DIR / "test_ccp4x.sqlite"
+    # Use a worker-specific database when running with pytest-xdist
+    # worker_id is 'master' when not using xdist, or 'gw0', 'gw1', etc. with xdist
+    if worker_id == 'master':
+        test_db_path = TEST_PROJECTS_DIR / "test_ccp4x.sqlite"
+    else:
+        # Each worker gets its own database: test_ccp4x_gw0.sqlite, test_ccp4x_gw1.sqlite, etc.
+        test_db_path = TEST_PROJECTS_DIR / f"test_ccp4x_{worker_id}.sqlite"
+
     settings.DATABASES['default']['NAME'] = str(test_db_path)
 
     # Also set CCP4I2_PROJECTS_DIR in settings to match our test directory
@@ -101,6 +110,35 @@ def django_db_setup(django_db_blocker):
     yield
 
     # Don't clean up database - leave for inspection
+
+
+@fixture(autouse=True)
+def cleanup_after_test(django_db_blocker):
+    """Clean up database and temp directories after each test for proper isolation."""
+    import shutil
+    from django.core.management import call_command
+    from django.conf import settings
+
+    # Run the test
+    yield
+
+    # Clean up temp project directories created during the test
+    # Keep only the most recent 5 for debugging
+    temp_dirs = sorted(TEST_PROJECTS_DIR.glob("tmp_*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for temp_dir in temp_dirs[5:]:  # Keep newest 5, delete older ones
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception as e:
+            print(f"Warning: Failed to clean up {temp_dir}: {e}")
+
+    # Clean up database: flush all data but keep schema
+    # This is faster than recreating the database from scratch
+    with django_db_blocker.unblock():
+        try:
+            # Flush database (delete all data, keep schema)
+            call_command('flush', '--no-input', verbosity=0)
+        except Exception as e:
+            print(f"Warning: Failed to flush database: {e}")
 
 
 @fixture(scope="session")

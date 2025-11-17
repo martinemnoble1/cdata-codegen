@@ -159,9 +159,13 @@ class phaser_MR(CPluginScript):
     def parseEnsembles(self, inputObject):
         inputData = self.container.inputData
         if True:
+            print("[DEBUG phaser_MR.parseEnsembles] Starting to parse ensembles", str(inputData.ENSEMBLES))
             for i, ensemble in enumerate(inputData.ENSEMBLES):
+                print(f"[DEBUG phaser_MR.parseEnsembles] Parsing ensemble {i} with label {ensemble.label} and number {ensemble.number}")
                 for j, pdbItem in enumerate(ensemble.pdbItemList):
+                    print(f"[DEBUG phaser_MR.parseEnsembles] Parsing pdbItem {j} with structure {pdbItem.structure}")
                     #Get selected subset of atoms if appropriate
+                    print(f"[DEBUG phaser_MR.parseEnsembles] Checking if selection is set for pdbItem {j}")
                     atomsFile = str(pdbItem.structure)
                     #MN added following to force the selection of coordinates to make
                     #sure that the file used is a PDB (as output from getSelectedAtomsPdbFile(atomsFile)
@@ -169,11 +173,17 @@ class phaser_MR(CPluginScript):
                     #if not pdbItem.structure.isSelectionSet():
                     #   pdbItem.structure.selection.text="*"
                     #End MN edit
+                    print(f"[DEBUG phaser_MR.parseEnsembles] Selection set for pdbItem {j}: {pdbItem.structure.isSelectionSet()}")
                     if pdbItem.structure.isSelectionSet():
+                        print(f"[DEBUG phaser_MR.parseEnsembles] Getting selected atoms pdb file for pdbItem {j}")
                         try:
+                            print(f"[DEBUG phaser_MR.parseEnsembles] Writing selected atoms pdb file for pdbItem {j}")
                             atomsFile = os.path.join(self.workDirectory,'selectedAtomModel_'+str(i)+'_'+str(j)+'.pdb')
+                            print(f"[DEBUG phaser_MR.parseEnsembles] Selected atoms pdb file path for pdbItem {j}: {atomsFile}")
                             pdbItem.structure.getSelectedAtomsPdbFile(atomsFile)
+                            print(f"[DEBUG phaser_MR.parseEnsembles] Selected atoms pdb file created for pdbItem {j}")
                         except:
+                            print(f"[DEBUG phaser_MR.parseEnsembles] Failed to create selected atoms pdb file for pdbItem {j}")
                             self.appendErrorReport(107,'Issue with getSelected')
                             return CPluginScript.FAILED
                     # CARD ON is selected by unSet pdbItem.identity_to_target and pdbItem.rms_to_target  

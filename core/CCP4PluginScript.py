@@ -1212,6 +1212,24 @@ class CPluginScript(CData):
             fileName = base + '_' + str(qualifier) + '.' + ext
         return os.path.join(self.workDirectory, fileName)
 
+    def renameFile(self, src, dst):
+        """
+        Atomically rename a file from src to dst.
+
+        This is used for atomic file writes - write to a temp file, then rename it.
+        Renaming is atomic on most filesystems, preventing partial reads.
+
+        Args:
+            src: Source file path
+            dst: Destination file path
+        """
+        try:
+            os.rename(src, dst)
+        except OSError as e:
+            # If rename fails (e.g., cross-device link), fall back to copy+delete
+            import shutil
+            shutil.move(src, dst)
+
     def logFileText(self) -> str:
         """
         Read and return the contents of the log file.

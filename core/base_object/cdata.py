@@ -261,8 +261,14 @@ class CData(HierarchicalObject):
             if k in values:
                 current = getattr(self, k, None)
                 new_value = values[k]
-                # Smart assignment: if current is a CData value type, update its value
-                if hasattr(current, 'value') and not isinstance(new_value, type(current)):
+
+                # Check if current has a set() method (CLists, CContainers, etc.)
+                # If so, use it instead of direct assignment
+                if hasattr(current, 'set') and callable(getattr(current, 'set')):
+                    # Use the object's set() method for proper deep copying
+                    current.set(new_value)
+                # Smart assignment: if current is a simple CData value type, update its value
+                elif hasattr(current, 'value') and not isinstance(new_value, type(current)):
                     current.value = new_value
                 else:
                     setattr(self, k, new_value)
@@ -327,8 +333,14 @@ class CData(HierarchicalObject):
 
             # Handle CData objects recursively
             if isinstance(value, CData):
+                # For CList and CContainer, return the object itself
+                # (so set() can call their set() methods)
+                from .fundamental_types import CList
+                from .ccontainer import CContainer
+                if isinstance(value, (CList, CContainer)):
+                    result[field_name] = value
                 # If it has a value attribute, use that
-                if hasattr(value, 'value'):
+                elif hasattr(value, 'value'):
                     result[field_name] = value.value
                 else:
                     # Otherwise recurse

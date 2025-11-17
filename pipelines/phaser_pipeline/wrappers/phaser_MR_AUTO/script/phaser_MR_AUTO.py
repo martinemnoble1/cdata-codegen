@@ -114,22 +114,30 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
     
     def startProcess(self, command, **kw):
         import phaser
+        print("[DEBUG phaser_MR_AUTO.startProcess] called")
         outputObject = phaser.Output()
+        print("[DEBUG phaser_MR_AUTO.startProcess] Output object created")
         outputObject.setPhenixCallback(self.callbackObject)
-
+        print("[DEBUG phaser_MR_AUTO.startProcess] Phenix callback set on output object")
         self.prepareCaptureCPlusPlusStdoutToLog()
+        print("[DEBUG phaser_MR_AUTO.startProcess] Starting runMR_DAT")
         resultObject = self.runMR_DAT(outputObject)
+        print("[DEBUG phaser_MR_AUTO.startProcess] runMR_DAT finished")
         self.finishCaptureCPlusPlusStdout()
 
         if resultObject == CPluginScript.FAILED: return CPluginScript.FAILED
-
+        print("[DEBUG phaser_MR_AUTO.startProcess] Result object checked for failure")
         self.inputHall = resultObject.getSpaceGroupHall()
+        print("[DEBUG phaser_MR_AUTO.startProcess] Input Hall set to", self.inputHall)
         self.inputSpaceGroup = resultObject.getSpaceGroupName()
+        print("[DEBUG phaser_MR_AUTO.startProcess] Input Space Group set to", self.inputSpaceGroup)
         inputObject = phaser.InputMR_AUTO()
         inputObject.setKILL_FILE(os.path.join(self.getWorkDirectory(),'INTERRUPT'))
-
+        print("[DEBUG phaser_MR_AUTO.startProcess] Input object created and KILL_FILE set")
         inputObject.setSPAC_HALL(resultObject.getSpaceGroupHall())
+        print("[DEBUG phaser_MR_AUTO.startProcess] Space Group Hall set on input object")
         inputObject.setCELL6(resultObject.getUnitCell())
+        print("[DEBUG phaser_MR_AUTO.startProcess] Unit Cell set on input object")
         #print '\n\n\nresutObject',dir(resultObject)
         if self.container.inputData.F_OR_I.isSet() and self.container.inputData.F_OR_I.__str__() == 'I':
             inputObject.setREFL_I_SIGI(resultObject.getMiller(),resultObject.getIobs(),resultObject.getSigIobs())
@@ -137,39 +145,53 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
             inputObject.setREFL_F_SIGF(resultObject.getMiller(),resultObject.getFobs(),resultObject.getSigFobs())
         if self.setKeywords(inputObject) == CPluginScript.FAILED:
             return CPluginScript.FAILED
+        print("[DEBUG phaser_MR_AUTO.startProcess] Keywords set on input object")
         if self.parseContent(inputObject) == CPluginScript.FAILED:
             return CPluginScript.FAILED
+        print("[DEBUG phaser_MR_AUTO.startProcess] Content parsed on input object")
         if self.parseEnsembles(inputObject) == CPluginScript.FAILED:
             return CPluginScript.FAILED
+        print("[DEBUG phaser_MR_AUTO.startProcess] Ensembles parsed on input object")   
         if self.addSearches(inputObject) == CPluginScript.FAILED:
             return CPluginScript.FAILED
+        print("[DEBUG phaser_MR_AUTO.startProcess] Searches added to input object")
         if self.parseSolutions(inputObject) == CPluginScript.FAILED:
             return CPluginScript.FAILED
+        print("[DEBUG phaser_MR_AUTO.startProcess] Solutions parsed on input object")   
         if self.container.inputData.KILLFILEPATH.isSet():
             inputObject.setKILL_FILE(self.container.inputData.KILLFILEPATH.__str__())
         else:
             inputObject.setKILL_FILE(os.path.join(self.getWorkDirectory(),'INTERRUPT'))
-
+        print("[DEBUG phaser_MR_AUTO.startProcess] KILL_FILE set on input object")
         #Alternative space groups
         #print '\n\n\n****Dir of autoMR input object'
         #print [word+'\n' for word in dir(inputObject) if 'sg' in word.lower()]
         inp = self.container.inputData
         if inp.SGALT_SELECT.isSet():
+            print("[DEBUG phaser_MR_AUTO.startProcess] SGALT_SELECT is set to", inp.SGALT_SELECT)
             inputObject.setSGAL_SELE(str(inp.SGALT_SELECT))
             #print 'Setting SGAL_SELE to ',str(inp.SGALT_SELECT)
             if inp.SGALT_SELECT.__str__() == 'LIST' and inp.SGALT_TEST.isSet():
+                print("[DEBUG phaser_MR_AUTO.startProcess] SGALT_TEST is set")
                 for sgAltTest in inp.SGALT_TEST:
+                    print("[DEBUG phaser_MR_AUTO.startProcess] Adding SGALT_TEST:", sgAltTest)
                     inputObject.addSGAL_TEST(sgAltTest.__str__())
 
         #Now run the main calculation....do something to catch the stdout from the
         #underlying C++ calls
+        print("[DEBUG phaser_MR_AUTO.startProcess] Running main calculation")
         inputObject.setMUTE(False)
+        print("[DEBUG phaser_MR_AUTO.startProcess] MUTE set to False on input object")
         self.prepareCaptureCPlusPlusStdoutToLog()
-
+        print("[DEBUG phaser_MR_AUTO.startProcess] Prepared to capture C++ stdout to log")
         inputObject.setKEYW(True)
+        print("[DEBUG phaser_MR_AUTO.startProcess] KEYW set to True on input object")
         try:
+            print("[DEBUG phaser_MR_AUTO.startProcess] Calling phaser.runMR_AUTO")
             self.resultObject = phaser.runMR_AUTO(inputObject, outputObject)
+            print("[DEBUG phaser_MR_AUTO.startProcess] phaser.runMR_AUTO finished")
         except RuntimeError as e:
+            print("[DEBUG phaser_MR_AUTO.startProcess] RuntimeError caught:", e)
             self.finishCaptureCPlusPlusStdout()
             self.appendErrorReport(105, str(e))
             return CPluginScript.FAILED

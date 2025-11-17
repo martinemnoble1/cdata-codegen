@@ -37,13 +37,14 @@ class phaser_pipeline(CPluginScript):
     '''
     
     def process(self):
+        print("[DEBUG phaser_pipeline.process] called")
         invalidFiles = self.checkInputData()
         if len(invalidFiles)>0:
             self.reportStatus(CPluginScript.FAILED)
         self.checkOutputData()
-
+        print("[DEBUG phaser_pipeline.process] Input and output data checked")
         self.xmlroot = etree.Element('PhaserPipeline')
-        
+        print("[DEBUG phaser_pipeline.process] XML root element created")
         if self.container.inputData.MODE_TY == "MR_FRF":
             self.phaserPlugin = self.makePluginObject('phaser_MR_FRF')
         elif self.container.inputData.MODE_TY == "MR_FTF":
@@ -54,7 +55,8 @@ class phaser_pipeline(CPluginScript):
             self.phaserPlugin = self.makePluginObject('phaser_MR_RNP')
         else:
             self.phaserPlugin = self.makePluginObject('phaser_MR_AUTO')
-        
+        print("[DEBUG phaser_pipeline.process] Phaser plugin object created", self.phaserPlugin)   
+
         #This funky arrangement is the way to ensure that the plugin behaves the same
         #when it is a part of the pipeline as it does when it is run alone...something about defaults I guess
         #Note without allSet=False isSet() returns False for a CContainer containing any items that are unset
@@ -65,16 +67,20 @@ class phaser_pipeline(CPluginScript):
                     print("Setting",attrName,attr)
                     #setattr(self.phaserPlugin.container.keywords,attrName,attr)
                     getattr(self.phaserPlugin.container.keywords,attrName).set(attr)
+        print("[DEBUG phaser_pipeline.process] Phaser plugin keywords set")
         self.phaserPlugin.container.inputData.set(self.container.inputData)
         self.phaserPlugin.container.inputData.KILLFILEPATH.set(os.path.join(self.getWorkDirectory(),'INTERRUPT'))
         self.phaserPlugin.doAsync = False
+        print("[DEBUG phaser_pipeline.process] Phaser plugin input data set and doAsync set to False")  
         #self.phaserPlugin.waitForFinished = -1
         #self.phaserPlugin.setFinishHandler(self.phaser_MR_AUTO_Finished)
         self.connectSignal(self.phaserPlugin,'finished', self.phaserFinished)
         self.oldXMLLength = 0
+        print("[DEBUG phaser_pipeline.process] Connected finished signal and initialized oldXMLLength")
         self.phaserPlugin.callbackObject.addResponder(self.phaserXMLUpdated)
         print('Off to see the wizard')
         rv = self.phaserPlugin.process()
+        print("[DEBUG phaser_pipeline.process] Phaser plugin process called")
         sys.stdout.flush()
         print('Rv', rv)
         sys.stdout.flush()
@@ -102,6 +108,7 @@ class phaser_pipeline(CPluginScript):
 
     @QtCore.Slot(dict)
     def phaserFinished(self, statusDict = {}):
+        print('In phaserFinished')
         sys.stdout.flush()
         if self.container.inputData.MODE_TY in ['MR_FRF', 'MR_FTF', 'MR_PAK']:
             pluginOutputs=self.phaserPlugin.container.outputData
