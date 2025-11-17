@@ -896,6 +896,12 @@ class CDataFile(CData):
         elif isinstance(value, CDataFile):
             # Another CDataFile: copy its attributes
             super().set(value.get())
+            # IMPORTANT: Also copy non-metadata attributes like 'content'
+            # that are set directly in __init__ but not tracked by metadata
+            if hasattr(value, 'content'):
+                self.content = value.content
+            if hasattr(value, 'file_path'):
+                self.file_path = value.file_path
         elif isinstance(value, dict):
             # Dict: handle special cases for file paths
             if 'fullPath' in value:

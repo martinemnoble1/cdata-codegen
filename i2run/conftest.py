@@ -81,22 +81,13 @@ def test_projects_dir():
 
 
 @fixture(scope="session", autouse=True)
-def django_db_setup(django_db_blocker, worker_id):
-    """Set up test database for Django. Auto-use ensures it runs for all tests.
-
-    When using pytest-xdist, each worker gets its own database to prevent race conditions.
-    """
+def django_db_setup(django_db_blocker):
+    """Set up test database for Django. Auto-use ensures it runs for all tests."""
     from django.core.management import call_command
     from django.conf import settings
 
-    # Use a worker-specific database when running with pytest-xdist
-    # worker_id is 'master' when not using xdist, or 'gw0', 'gw1', etc. with xdist
-    if worker_id == 'master':
-        test_db_path = TEST_PROJECTS_DIR / "test_ccp4x.sqlite"
-    else:
-        # Each worker gets its own database: test_ccp4x_gw0.sqlite, test_ccp4x_gw1.sqlite, etc.
-        test_db_path = TEST_PROJECTS_DIR / f"test_ccp4x_{worker_id}.sqlite"
-
+    # Use single test database for sequential test execution
+    test_db_path = TEST_PROJECTS_DIR / "test_ccp4x.sqlite"
     settings.DATABASES['default']['NAME'] = str(test_db_path)
 
     # Also set CCP4I2_PROJECTS_DIR in settings to match our test directory

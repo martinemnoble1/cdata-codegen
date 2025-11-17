@@ -253,14 +253,23 @@ write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
             if XYZIN is not None: self.sheetbendPlugin.container.inputData.XYZIN.set(XYZIN)
             if F_SIGF is not None: self.sheetbendPlugin.container.inputData.F_SIGF.set(F_SIGF)
             if FREERFLAG is not None: self.sheetbendPlugin.container.inputData.FREERFLAG.set(FREERFLAG)
+            print('[DEBUG phaser_pipeline.runSheetbend] sheetbend plugin inputs set')
             self.sheetbendPlugin.doAsync=False
+            print('[DEBUG phaser_pipeline.runSheetbend] sheetbend plugin prepared')
             rv = self.sheetbendPlugin.process()
+            print('[DEBUG phaser_pipeline.runSheetbend] sheetbend process returned', rv)
             if rv == CPluginScript.FAILED: self.reportStatus(rv)
+            print('[DEBUG phaser_pipeline.runSheetbend] sheetbend process succeeded')
             pluginOutputs=self.sheetbendPlugin.container.outputData
+            print('[DEBUG phaser_pipeline.runSheetbend] harvested plugin outputs')
             pipelineOutputs = self.container.outputData
+            print('[DEBUG phaser_pipeline.runSheetbend] got pipeline outputs')
             self.harvestFile(pluginOutputs.XYZOUT, pipelineOutputs.XYZOUT_SHEETBEND)
+            print('[DEBUG phaser_pipeline.runSheetbend] harvested XYZOUT_SHEETBEND')
             pipelineOutputs.XYZOUT_SHEETBEND.annotation.set('Atomic model after Shift field refinement')
+            print('[DEBUG phaser_pipeline.runSheetbend] set annotation for XYZOUT_SHEETBEND')
             self.appendXML(self.sheetbendPlugin.makeFileName('PROGRAMXML'), 'SheetbendResult')
+            print('[DEBUG phaser_pipeline.runSheetbend] appended XML from sheetbend')
         except Exception as e:
             self.appendErrorReport(204,'sheetbend: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)

@@ -11,6 +11,22 @@ def test_gamma_basic():
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
     args += ["--XYZIN", demoData("gamma", "gamma_model.pdb")]
     args += ["--RUNREFMAC", "False"]
+    args += ["--RUNSHEETBEND", "False"]
+    with i2run(args) as job:
+        for name in ["PHASER.1"]:
+            gemmi.read_pdb(str(job / f"{name}.pdb"))
+        for name in ["DIFMAPOUT_1", "MAPOUT_1", "PHASEOUT_1"]:
+            gemmi.read_mtz_file(str(job / f"{name}.mtz"))
+        xml = ET.parse(job / "program.xml")
+        llgs = [float(e.text) for e in xml.findall(".//Solution/LLG")]
+        assert max(llgs) > 1000
+
+def test_gamma_sheetbend():
+    args = ["phaser_simple"]
+    args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
+    args += ["--XYZIN", demoData("gamma", "gamma_model.pdb")]
+    args += ["--RUNREFMAC", "False"]
+    args += ["--RUNSHEETBEND", "True"]
     with i2run(args) as job:
         for name in ["PHASER.1", "XYZOUT_SHEETBEND"]:
             gemmi.read_pdb(str(job / f"{name}.pdb"))
