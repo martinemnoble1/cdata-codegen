@@ -580,15 +580,26 @@ A single ensemble is a CList of structures.
         # Set the subItem qualifier for pdbItemList to specify that it contains CPdbEnsembleItem objects
         if self.pdbItemList is not None:
             self.pdbItemList.set_qualifier('subItem', {
-                'class': CPdbEnsembleItemStub,
+                'class': CPdbEnsembleItem,  # Use implementation class, not stub
                 'qualifiers': {}
             })
 
+        # Set default number of copies to 1 (not 0, which means "no search")
+        if hasattr(self, 'number') and self.number is not None:
+            # Check if number is unset OR explicitly set to 0
+            if not self.number.isSet() or self.number.value == 0:
+                self.number.value = 1
+
+            # NOTE: Temporarily disabled default item creation to fix i2run nested path parsing
             # Legacy code expects pdbItemList to have at least one item by default
             # phaser_simple.py line 33-35 assumes: elements = ensemble.pdbItemList; pdbItem = elements[-1]
-            if len(self.pdbItemList) == 0:
-                # Add one default item to the pdbItemList
-                self.pdbItemList.append(self.pdbItemList.makeItem())
+            # However, this causes issues with i2run argument parsing creating duplicate items
+            # The default item gets created, i2run sets attributes on it, but then XML shows both
+            # the original empty state AND the modified state as separate items
+            # TODO: Investigate why XML serialization duplicates the item
+            # if len(self.pdbItemList) == 0:
+            #     # Add one default item to the pdbItemList
+            #     self.pdbItemList.append(self.pdbItemList.makeItem())
 
 
 class CEnsembleList(CEnsembleListStub):
@@ -609,6 +620,28 @@ class CEnsembleList(CEnsembleListStub):
             'class': CEnsemble,
             'qualifiers': {}
         })
+
+    def makeItem(self, *args, **kwargs):
+        """
+        Create a new CEnsemble item with auto-generated label.
+
+        Legacy expectation: When a CEnsemble is created via makeItem(),
+        it should automatically get a label "Ensemble_{index}" where
+        index is the current length of the list.
+
+        Returns:
+            CEnsemble: A new ensemble with auto-generated label
+        """
+        # Create the item using parent's makeItem
+        item = super().makeItem(*args, **kwargs)
+
+        # Auto-generate label based on current list length
+        if hasattr(item, 'label') and item.label is not None:
+            if not item.label.isSet():
+                index = len(self)  # Current length before appending
+                item.label.value = f"Ensemble_{index}"
+
+        return item
 
 
 class CEnsemblePdbDataFile(CEnsemblePdbDataFileStub):
@@ -1778,13 +1811,79 @@ class CPdbDataFileList(CPdbDataFileListStub):
 class CPdbEnsembleItem(CPdbEnsembleItemStub):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
+
     Extends CPdbEnsembleItemStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def isSet(self, attributeName=None, allowDefault=True):
+        """
+        Override isSet() to ensure ensemble items without a structure file
+        are not considered "set" during XML serialization.
+
+        An ensemble item is only meaningful if it has a structure file.
+        This prevents partial/empty items from being saved to XML.
+        """
+        if attributeName is None:
+            # Check if the entire object is set - requires structure to be set
+            return hasattr(self, 'structure') and self.structure.isSet()
+        else:
+            # Check specific attribute using parent's implementation
+            return super().isSet(attributeName, allowDefault=allowDefault)
+
+    def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False):
+        """
+        Override getEtree() to conditionally serialize identity_to_target OR rms_to_target.
+
+        Legacy expectation: Only ONE of identity_to_target or rms_to_target should be
+        written to XML, with preference given to whichever is non-default/non-zero.
+
+        Args:
+            name: Optional name for the XML element
+            excludeUnset: If True, only serialize fields that have been explicitly set
+            allSet: If True, only serialize if ALL registered attributes are set
+
+        Returns:
+            xml.etree.ElementTree.Element representing this object
+        """
+        import xml.etree.ElementTree as ET
+
+        # Call parent to get the base element
+        elem = super().getEtree(name=name, excludeUnset=excludeUnset, allSet=allSet)
+
+        # Determine which similarity metric to keep (if any)
+        identity_val = 0.0
+        rms_val = 0.0
+        identity_is_set = False
+        rms_is_set = False
+
+        if hasattr(self, 'identity_to_target') and self.identity_to_target is not None:
+            identity_val = getattr(self.identity_to_target, 'value', 0.0)
+            identity_is_set = self.identity_to_target.isSet()
+
+        if hasattr(self, 'rms_to_target') and self.rms_to_target is not None:
+            rms_val = getattr(self.rms_to_target, 'value', 0.0)
+            rms_is_set = self.rms_to_target.isSet()
+
+        # Decide which one to keep based on legacy rules:
+        # - Keep identity if it's non-zero/non-default (preferred)
+        # - Otherwise keep rms if it's non-zero/non-default
+        # - Remove the other one from XML
+        keep_identity = identity_is_set and identity_val != 0.0
+        keep_rms = rms_is_set and rms_val != 0.0
+
+        # If both are set and non-zero, prefer identity (legacy expectation)
+        if keep_identity:
+            # Remove rms_to_target from XML
+            for child in elem.findall('rms_to_target'):
+                elem.remove(child)
+        elif keep_rms:
+            # Remove identity_to_target from XML
+            for child in elem.findall('identity_to_target'):
+                elem.remove(child)
+        # If neither is non-zero, keep both (or neither if excludeUnset=True handled by parent)
+
+        return elem
 
 
 class CResidueRange(CResidueRangeStub):
