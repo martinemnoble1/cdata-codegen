@@ -490,15 +490,38 @@ class PluginPopulator:
                             val = parts[1] if len(parts) > 1 else ""
                             logger.info(f"  Setting {key}={val!r}")
 
-                            # Handle nested paths like "source/baseName"
+                            # Handle nested paths like "source/baseName" or "pdbItemList/structure"
                             if "/" in key:
                                 nested_parts = key.split("/")
                                 current = target
+                                print(f"\n[DEBUG] Processing nested path: {key}={val}")
+                                print(f"[DEBUG]   Starting from target: {type(target).__name__} at {target.object_path() if hasattr(target, 'object_path') else 'N/A'}")
                                 for nested_key in nested_parts[:-1]:
-                                    current = getattr(current, nested_key, None)
-                                    if current is None:
+                                    attr = getattr(current, nested_key, None)
+                                    if attr is None:
                                         logger.warning(f"Could not navigate to {nested_key}")
                                         break
+
+                                    print(f"[DEBUG]   Navigated to {nested_key}: {type(attr).__name__} at {attr.object_path() if hasattr(attr, 'object_path') else 'N/A'}")
+
+                                    # If this attribute is a CList, we need to handle it specially
+                                    if isinstance(attr, CCP4Data.CList):
+                                        # Check if list already has an item; if not, create one
+                                        if len(attr) == 0:
+                                            # Create first item in the list
+                                            item = attr.makeItem()
+                                            attr.append(item)
+                                            print(f"[DEBUG]   Created NEW item in empty CList {nested_key}")
+                                        else:
+                                            print(f"[DEBUG]   CList {nested_key} already has {len(attr)} items, using last one")
+                                        # Navigate to the LAST item in the list (the one we just appended to)
+                                        current = attr[-1]
+                                        print(f"[DEBUG]   Navigating to last item: {type(current).__name__} at {current.object_path() if hasattr(current, 'object_path') else 'N/A'}")
+                                    else:
+                                        # Normal CData object - navigate directly
+                                        current = attr
+                                        print(f"[DEBUG]   Normal CData, continuing navigation")
+
                                 if current is not None:
                                     final_key = nested_parts[-1]
                                     # For CData objects, attributes are created dynamically
@@ -522,6 +545,7 @@ class PluginPopulator:
                                             # Simply use setattr - no special handling needed!
                                             setattr(current, final_key, val)
 
+                                        print(f"[DEBUG]   ✓ Set {final_key}={val!r} on {type(current).__name__}")
                                         logger.info(f"    ✓ Set {'.'.join(nested_parts)}={val!r}")
                                     except Exception as e:
                                         logger.warning(f"Could not set {nested_key}.{final_key}={val}: {e}")
@@ -554,6 +578,22 @@ class PluginPopulator:
 
                     # Debug: verify attributes were set
                     print(f"[DEBUG] After setting attributes on {type(target).__name__}:")
+                    # Check for pdbItemList specifically
+                    if hasattr(target, 'pdbItemList') and target.pdbItemList is not None:
+                        print(f"[DEBUG]   pdbItemList has {len(target.pdbItemList)} items:")
+                        for idx, item in enumerate(target.pdbItemList):
+                            print(f"[DEBUG]     Item {idx}: {type(item).__name__}")
+                            if hasattr(item, 'structure') and item.structure is not None:
+                                if hasattr(item.structure, 'baseName') and item.structure.baseName is not None:
+                                    bn = item.structure.baseName.value if hasattr(item.structure.baseName, 'value') else item.structure.baseName
+                                    print(f"[DEBUG]       structure.baseName: {bn}")
+                                else:
+                                    print(f"[DEBUG]       structure: (no baseName)")
+                            else:
+                                print(f"[DEBUG]       structure: None")
+                            if hasattr(item, 'identity_to_target') and item.identity_to_target is not None:
+                                ident = item.identity_to_target.value if hasattr(item.identity_to_target, 'value') else item.identity_to_target
+                                print(f"[DEBUG]       identity_to_target: {ident}")
                     for key_to_check in ['sequence', 'nCopies', 'name', 'polymerType', 'description']:
                         if hasattr(target, key_to_check):
                             attr = getattr(target, key_to_check, None)
@@ -730,8 +770,10 @@ class PluginPopulator:
                     project_id=project_id
                 )
 
-                # Replace seqFile with fullPath to the generated ASU XML
-                parsed_values["fullPath"] = str(asu_xml_path)
+                # Replace seqFile with baseName to the generated ASU XML
+                # Use just the filename (not the full path) so that when serialized to XML,
+                # it remains relative to the job directory
+                parsed_values["baseName"] = asu_xml_path.name
                 del parsed_values["seqFile"]
                 logger.info(f"Converted sequence file to ASU XML: {asu_xml_path.name}")
 
