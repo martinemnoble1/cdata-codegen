@@ -6,8 +6,8 @@ from pathlib import Path
 from pytest import fixture
 
 # Add server directory and project root to Python path
-server_path = Path(__file__).parent.parent / "server"
-project_root = Path(__file__).parent.parent
+server_path = Path(__file__).parent.parent.parent / "server"
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(server_path))
 sys.path.insert(0, str(project_root))
 
