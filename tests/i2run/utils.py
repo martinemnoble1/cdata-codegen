@@ -61,14 +61,39 @@ def i2run(args: list[str], project_name: str = None):
 
     Args:
         args: List of arguments starting with task name, followed by task parameters
-        project_name: Optional project name (defaults to tmp_<random>).
+        project_name: Optional project name (defaults to derived from test name).
                      Should reflect the test name for better organization.
     """
     # Generate project name if not provided
     if project_name is None:
-        chars = ascii_letters + digits
-        project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
-        project_name = project_name.lower()
+        # Try to get the current test name from pytest's request context
+        # This requires the test to pass request fixture, but we can't access it here
+        # Instead, try to get it from the current pytest node
+        try:
+            import pytest
+            # Get the current pytest item (test) being executed
+            current_item = pytest.current_test_node if hasattr(pytest, 'current_test_node') else None
+            if current_item:
+                # Use the same naming logic as conftest.py for consistency
+                test_name = current_item.name.replace("[", "_").replace("]", "_").replace("/", "_")
+                project_name = f"tmp_{test_name}"
+            else:
+                # Fallback to inspecting the call stack to find the test function name
+                import inspect
+                for frame_info in inspect.stack():
+                    # Look for a frame with 'test_' in the function name
+                    if frame_info.function.startswith('test_'):
+                        test_name = frame_info.function
+                        project_name = f"tmp_{test_name}"
+                        break
+        except Exception:
+            pass
+
+        # Final fallback: random name
+        if project_name is None:
+            chars = ascii_letters + digits
+            project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
+            project_name = project_name.lower()
         
     # Check if we're running in test environment with CCP4I2_PROJECTS_DIR set
     projects_dir = environ.get("CCP4I2_PROJECTS_DIR")

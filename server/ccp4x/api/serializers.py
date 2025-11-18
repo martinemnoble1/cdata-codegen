@@ -69,7 +69,7 @@ class ProjectSerializer(ModelSerializer):
 
     def create(self, validated_data):
 
-        Path(validated_data["directory"]).mkdir(parents=True)
+        Path(validated_data["directory"]).mkdir(parents=True, exist_ok=True)
 
         for sub_dir in [
             "CCP4_JOBS",
@@ -78,7 +78,7 @@ class ProjectSerializer(ModelSerializer):
             "CCP4_TMP",
             "CCP4_PROJECT_FILES",
         ]:
-            (Path(validated_data["directory"]) / sub_dir).mkdir()
+            (Path(validated_data["directory"]) / sub_dir).mkdir(exist_ok=True)
 
         return models.Project.objects.create(**validated_data)
 

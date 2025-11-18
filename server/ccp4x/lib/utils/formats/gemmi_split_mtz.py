@@ -29,23 +29,31 @@ def gemmi_split_mtz(
     Returns:
         pathlib.Path: Path to the newly created MTZ file with the selected columns.
     """
+    logger.warning("Starting gemmi_split_mtz with input_file_path=%s, input_column_path=%s, preferred_dest=%s",
+                   input_file_path, input_column_path, preferred_dest)  
+    
     if input_file_path is None:
         raise Exception("smartSplitMTZ Exception:", "Must provide an input file")
     if not input_file_path.is_file():
         raise Exception(
             "smartSplitMTZ Exception:", "inputFile must exist" + str(input_file_path)
         )
+        
+    logger.warning("Input file exists: %s", input_file_path)
     if input_column_path is None:
         raise Exception(
             "smartSplitMTZ Exception:",
             "Must provide an input columnPath e.g. '/*/*/[F,SIGFP]'",
         )
+    logger.warning("Input column path provided: %s", input_column_path)
+    
     if preferred_dest is None:
         raise Exception(
             "smartSplitMTZ Exception:",
             "Provide first guess for destination of split file",
         )
-
+    logger.warning("Preferred destination provided: %s", preferred_dest)
+    
     mtzin = gemmi.read_mtz_file(str(input_file_path))
     mtzin.ensure_asu()
 
@@ -87,6 +95,7 @@ def gemmi_split_mtz(
         ds.wavelength = dataset.wavelength
 
     output_column_labels = []
+    logger.warning("Type signature: %s", type_signature)
     labels_dict = {
         "FQ": {"cls": CCP4XtalData.CObsDataFile, "contentType": 4},
         "JQ": {"cls": CCP4XtalData.CObsDataFile, "contentType": 3},
@@ -99,13 +108,15 @@ def gemmi_split_mtz(
         "AAAA": {"cls": CCP4XtalData.CPhsDataFile, "contentType": 1},
         "PW": {"cls": CCP4XtalData.CPhsDataFile, "contentType": 2},
         "I": {"cls": CCP4XtalData.CFreeRDataFile, "contentType": 1},
+        # map coefficient files
+        "FP": {"cls": CCP4XtalData.CMapCoeffsDataFile, "contentType": 1},
     }
     output_column_labels.extend(
         getattr(labels_dict[type_signature]["cls"], "CONTENT_SIGNATURE_LIST")[
             labels_dict[type_signature]["contentType"] - 1
         ]
     )
-
+    logger.warning("Output column labels: %s", str(output_column_labels))
     for i, column in enumerate(output_columns):
         new_column = mtzout.copy_column(-1, column)
         new_column.label = output_column_labels[i]

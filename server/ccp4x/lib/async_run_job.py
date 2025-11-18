@@ -157,6 +157,12 @@ async def create_plugin_for_job(job, db_handler):
         name=job.title,
     )
 
+    # Force synchronous execution for i2run top-level jobs
+    # This overrides ASYNCHRONOUS=True class variable to ensure subprocess completion
+    # before returning control to tests. Pipelines can still use async for sub-jobs.
+    plugin.doAsync = False
+    logger.info(f"Set plugin.doAsync=False to force synchronous execution (was ASYNCHRONOUS={plugin.ASYNCHRONOUS})")
+
     # Set database context using the proper API
     plugin.setDbData(
         handler=db_handler,

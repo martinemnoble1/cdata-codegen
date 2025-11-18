@@ -13,7 +13,7 @@ __pycache__/
 *.swo
 *.DS_Store
 **/job_utils_legacy
-i2run/test_projects
+tests/i2run/test_projects
 rstdocs
 # Test artifacts that sometimes get created in project root
 /input_params.xml

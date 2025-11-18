@@ -73,6 +73,14 @@ def pytest_collection_modifyitems(items):
         item.add_marker(pytest.mark.django_db(transaction=True))
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item):
+    """Hook to capture test results for cleanup decisions."""
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, f"rep_{rep.when}", rep)
+
+
 @fixture(scope="session")
 def test_projects_dir():
     """Create and return test projects directory."""
@@ -82,39 +90,86 @@ def test_projects_dir():
 
 
 @fixture(scope="session", autouse=True)
-def django_db_setup(django_db_blocker):
-    """Set up test database for Django. Auto-use ensures it runs for all tests."""
-    from django.core.management import call_command
+def django_db_setup():
+    """Set up test database directory for Django."""
     from django.conf import settings
 
-    # Use single test database for sequential test execution
-    test_db_path = TEST_PROJECTS_DIR / "test_ccp4x.sqlite"
-    settings.DATABASES['default']['NAME'] = str(test_db_path)
+    # Ensure test projects directory exists
+    TEST_PROJECTS_DIR.mkdir(exist_ok=True)
 
-    # Also set CCP4I2_PROJECTS_DIR in settings to match our test directory
+    # Set CCP4I2_PROJECTS_DIR in settings to match our test directory
     settings.CCP4I2_PROJECTS_DIR = TEST_PROJECTS_DIR
-
-    # Unblock database access for migrations
-    with django_db_blocker.unblock():
-        # Create tables
-        call_command('migrate', '--run-syncdb', verbosity=0)
 
     yield
 
-    # Don't clean up database - leave for inspection
+    # Session cleanup: remove old test databases (keep most recent 10)
+    old_dbs = sorted(TEST_PROJECTS_DIR.glob("test_*.sqlite*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for old_db in old_dbs[10:]:  # Keep newest 10
+        try:
+            old_db.unlink()
+        except Exception as e:
+            print(f"Warning: Failed to clean up old database {old_db}: {e}")
 
 
 @fixture(autouse=True)
-def cleanup_after_test(django_db_blocker):
-    """Clean up database and temp directories after each test for proper isolation."""
+def isolated_test_db(request, django_db_blocker, monkeypatch):
+    """Create isolated database for each test with proper Django connection management."""
     import shutil
     from django.core.management import call_command
     from django.conf import settings
+    from django.db import connections
+
+    # Generate unique project directory name based on test name
+    test_name = request.node.name.replace("[", "_").replace("]", "_").replace("/", "_")
+    test_project_name = f"test_{test_name}_{id(request)}"
+    test_project_dir = TEST_PROJECTS_DIR / test_project_name
+
+    # Create project directory
+    test_project_dir.mkdir(exist_ok=True)
+
+    # Place SQLite database inside the test's project directory
+    test_db_path = test_project_dir / f"{test_project_name}.sqlite"
+
+    # Close any existing connections to ensure clean slate
+    connections.close_all()
+
+    # Store original database configuration
+    original_db_settings = settings.DATABASES['default'].copy()
+
+    # Update database configuration for this test
+    # Use monkeypatch to ensure settings are properly isolated per-test
+    monkeypatch.setitem(settings.DATABASES['default'], 'NAME', str(test_db_path))
+
+    # Unblock database access for migrations
+    with django_db_blocker.unblock():
+        # Create and migrate the test database
+        call_command('migrate', '--run-syncdb', verbosity=0)
 
     # Run the test
     yield
 
-    # Clean up temp project directories created during the test
+    # Clean up: close connections before deleting database file
+    with django_db_blocker.unblock():
+        connections.close_all()
+
+    # Restore database configuration (monkeypatch will auto-restore on test end, but be explicit)
+    settings.DATABASES['default'] = original_db_settings
+
+    # Only remove the test project directory if the test passed
+    # Keep failed test directories for debugging
+    test_failed = request.node.rep_call.failed if hasattr(request.node, 'rep_call') else False
+
+    if not test_failed:
+        # Test passed - clean up the project directory
+        try:
+            shutil.rmtree(test_project_dir, ignore_errors=True)
+        except Exception as e:
+            print(f"Warning: Failed to clean up test project directory {test_project_dir}: {e}")
+    else:
+        # Test failed - preserve directory for debugging
+        print(f"Test failed - preserving project directory: {test_project_dir}")
+
+    # Clean up temp project directories created during the test (non-test directories)
     # Keep only the most recent 5 for debugging
     temp_dirs = sorted(TEST_PROJECTS_DIR.glob("tmp_*"), key=lambda p: p.stat().st_mtime, reverse=True)
     for temp_dir in temp_dirs[5:]:  # Keep newest 5, delete older ones
@@ -122,15 +177,6 @@ def cleanup_after_test(django_db_blocker):
             shutil.rmtree(temp_dir)
         except Exception as e:
             print(f"Warning: Failed to clean up {temp_dir}: {e}")
-
-    # Clean up database: flush all data but keep schema
-    # This is faster than recreating the database from scratch
-    with django_db_blocker.unblock():
-        try:
-            # Flush database (delete all data, keep schema)
-            call_command('flush', '--no-input', verbosity=0)
-        except Exception as e:
-            print(f"Warning: Failed to flush database: {e}")
 
 
 @fixture(scope="session")

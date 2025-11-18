@@ -347,11 +347,6 @@ class PluginPopulator:
             object_path: Dot-separated path to parameter (e.g., "inputData.XYZIN")
             value: Value(s) to set (may be list)
         """
-        # Debug logging for UNMERGEDFILES
-        if "UNMERGEDFILES" in object_path:
-            print(f"\n[DEBUG] _handle_item for {object_path}")
-            pass  # DEBUG: print(f"[DEBUG] value type: {type(value)}, value: {value}")
-
         # Navigate to the target object
         path_parts = object_path.split(".")
         current = plugin
@@ -369,11 +364,6 @@ class PluginPopulator:
         if target is None:
             logger.warning(f"Could not find {target_name} in {object_path}")
             return
-
-        # Debug logging
-        if "UNMERGEDFILES" in object_path:
-            pass  # DEBUG: print(f"[DEBUG] target type: {type(target).__name__}")
-            pass  # DEBUG: print(f"[DEBUG] isinstance(value, list): {isinstance(value, list)}")
 
         # Handle list of values
         if isinstance(value, list):
@@ -397,36 +387,17 @@ class PluginPopulator:
         # For CList, add each item
         if isinstance(target, CCP4Data.CList):
             logger.warning(f"Handling CList {type(target).__name__} with {len(values)} values")
-            # Debug for UNMERGEDFILES
-            if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                print(f"\n[DEBUG] _handle_item_or_list for UNMERGEDFILES")
-                pass  # DEBUG: print(f"[DEBUG] values: {values}")
-                pass  # DEBUG: print(f"[DEBUG] list length before: {len(target)}")
 
             for val in values:
                 # Create a new item for the list
                 new_item = target.makeItem()
                 logger.warning(f"Created list item: {type(new_item).__name__}, setting value: {val}")
 
-                # Debug for UNMERGEDFILES
-                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                    pass  # DEBUG: print(f"[DEBUG] Created item: {type(new_item).__name__}")
-                    pass  # DEBUG: print(f"[DEBUG] Setting value: {val}")
-
                 # Set the value on the new item (not on the CList itself)
-                PluginPopulator._handle_single_value(new_item, val, is_list=False)
-
-                # Debug for UNMERGEDFILES
-                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                    if hasattr(new_item, 'file'):
-                        pass  # DEBUG: print(f"[DEBUG] new_item.file type: {type(new_item.file).__name__}")
-                        pass  # DEBUG: print(f"[DEBUG] new_item.file.isSet('baseName'): {new_item.file.isSet('baseName')}")
-                        if hasattr(new_item.file, 'baseName') and new_item.file.baseName is not None:
-                            if hasattr(new_item.file.baseName, 'value'):
-                                pass  # DEBUG: print(f"[DEBUG] new_item.file.baseName.value: {new_item.file.baseName.value}")
-                            else:
-                                pass  # DEBUG: print(f"[DEBUG] new_item.file.baseName: {new_item.file.baseName}")
-                        pass  # DEBUG: print(f"[DEBUG] new_item.file.fullPath: {new_item.file.fullPath}")
+                if isinstance(new_item, CDataFile):
+                    PluginPopulator._handle_file_with_subvalues(new_item, values)
+                else:
+                    PluginPopulator._handle_single_value(new_item, val, is_list=False)
 
                 # Add the item to the list
                 target.append(new_item)
@@ -446,11 +417,9 @@ class PluginPopulator:
                                 val_repr = attr.value if hasattr(attr, 'value') else attr
                                 print(f"[DEBUG]   last_item.{attr_name} = {val_repr!r}"[:100])
 
-                # Debug for UNMERGEDFILES
-                if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
-                    pass  # DEBUG: print(f"[DEBUG] list length after append: {len(target)}")
         # For single-value file objects, process all subvalues
         elif isinstance(target, CDataFile):
+            logger.warning(f"Handling CDataFile {type(target).__name__} with {len(values)} values")
             PluginPopulator._handle_file_with_subvalues(target, values)
         else:
             # Single value object - take first value
@@ -791,13 +760,14 @@ class PluginPopulator:
         # Special handling for MTZ files with columnLabels
         if has_key_value_syntax and "fullPath" in parsed_values and "columnLabels" in parsed_values:
             file_path = Path(parsed_values["fullPath"])
+            logger.info(f"Checking for MTZ splitting on file: {file_path}")
             if file_path.suffix.lower() == ".mtz" and file_path.exists():
                 try:
                     from ccp4x.lib.utils.formats.gemmi_split_mtz import gemmi_split_mtz
                     import tempfile
                     import os
 
-                    logger.info(
+                    logger.warning(
                         f"MTZ file with columnLabels detected: {file_path.name}, "
                         f"columns={parsed_values['columnLabels']}"
                     )
@@ -827,7 +797,7 @@ class PluginPopulator:
                     os.close(fd)  # Close the file descriptor, we just need the unique name
                     split_dest = Path(temp_path)
 
-                    logger.info(f"Splitting MTZ to: {split_dest}")
+                    logger.warning(f"Splitting MTZ to: {split_dest}")
 
                     # Split the MTZ with specified columns
                     split_file = gemmi_split_mtz(
@@ -838,7 +808,7 @@ class PluginPopulator:
 
                     # Use the split file instead of original
                     parsed_values["fullPath"] = str(split_file)
-                    logger.info(f"Using split MTZ file with standardized columns: {split_file.name}")
+                    logger.warning(f"Using split MTZ file with standardized columns: {split_file.name}")
 
                 except Exception as e:
                     logger.warning(
