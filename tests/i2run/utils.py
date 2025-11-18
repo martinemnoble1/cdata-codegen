@@ -67,25 +67,30 @@ def i2run(args: list[str], project_name: str = None):
     # Generate project name if not provided
     if project_name is None:
         # Try to get the current test name from pytest's request context
-        # This requires the test to pass request fixture, but we can't access it here
-        # Instead, try to get it from the current pytest node
+        # Include test file name to avoid collisions between tests with same name in different files
         try:
-            import pytest
-            # Get the current pytest item (test) being executed
-            current_item = pytest.current_test_node if hasattr(pytest, 'current_test_node') else None
-            if current_item:
-                # Use the same naming logic as conftest.py for consistency
-                test_name = current_item.name.replace("[", "_").replace("]", "_").replace("/", "_")
-                project_name = f"tmp_{test_name}"
-            else:
-                # Fallback to inspecting the call stack to find the test function name
-                import inspect
-                for frame_info in inspect.stack():
-                    # Look for a frame with 'test_' in the function name
-                    if frame_info.function.startswith('test_'):
-                        test_name = frame_info.function
-                        project_name = f"tmp_{test_name}"
-                        break
+            import inspect
+            # Walk up the stack to find the test function and file
+            test_function = None
+            test_file = None
+            for frame_info in inspect.stack():
+                # Look for a frame with 'test_' in the function name
+                if frame_info.function.startswith('test_'):
+                    test_function = frame_info.function
+                    # Extract just the test file name without path or extension
+                    # e.g., /path/to/test_phaser_simple.py -> phaser_simple
+                    test_file_path = Path(frame_info.filename)
+                    if test_file_path.stem.startswith('test_'):
+                        test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
+                    break
+
+            if test_function and test_file:
+                # Format: tmp_{file}_{function}
+                # e.g., tmp_phaser_simple_test_gamma
+                project_name = f"tmp_{test_file}_{test_function}"
+            elif test_function:
+                # Fallback: just function name
+                project_name = f"tmp_{test_function}"
         except Exception:
             pass
 
@@ -94,6 +99,9 @@ def i2run(args: list[str], project_name: str = None):
             chars = ascii_letters + digits
             project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
             project_name = project_name.lower()
+
+        # Clean up project name (replace special chars)
+        project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
         
     # Check if we're running in test environment with CCP4I2_PROJECTS_DIR set
     projects_dir = environ.get("CCP4I2_PROJECTS_DIR")
@@ -185,7 +193,7 @@ def i2run(args: list[str], project_name: str = None):
         yield directory
     except Exception as e:
         error_occurred = True
-        print(f"\n!!! Test failed - preserving job directory for inspection: {project_path}")
+        print(f"\n!!! Test failed - preserving project directory for inspection: {project_path}")
         raise
     finally:
         # Force garbage collection to release gemmi file handles
@@ -195,10 +203,17 @@ def i2run(args: list[str], project_name: str = None):
         gc.collect()  # Run twice to catch circular references
 
         # Only clean up if no error occurred
+        # Note: Failed test directories are preserved in test_projects/tmp_{file}_{test}/
+        # The conftest.py also preserves test_*/ directories for failed tests
         if not error_occurred:
+            # Clean up project directory and database files
             rmtree(str(project_path), ignore_errors=True)
             for extension in ("sqlite", "sqlite-shm", "sqlite-wal"):
                 Path(f"{project_path}.{extension}").unlink(missing_ok=True)
+        else:
+            # Test failed - directory already logged above
+            # Both tmp_* (CCP4_JOBS) and test_* (SQLite DB) will be preserved
+            pass
 
 
 def demoData(*paths):
