@@ -1296,28 +1296,38 @@ class CPluginScript(CData):
             return error
 
         # Check if async execution is requested
-        # Multiple ways to request async:
-        # 1. ASYNCHRONOUS class variable (set in plugin definition)
-        # 2. doAsync instance variable (set by parent pipeline)
+        # Priority order for execution mode:
+        # 1. doAsync instance variable (explicit override - highest priority)
+        #    - doAsync=False OVERRIDES ASYNCHRONOUS=True
+        #    - This allows i2run tests to force synchronous execution
+        # 2. ASYNCHRONOUS class variable (set in plugin definition)
         # 3. waitForFinished = -1 (legacy compatibility)
-        if self.ASYNCHRONOUS or self.doAsync or self.waitForFinished == -1:
+        if self.doAsync is False:
+            # Explicit synchronous override
+            return self._startProcessSync()
+        elif self.ASYNCHRONOUS or self.doAsync or self.waitForFinished == -1:
             return self._startProcessAsync()
         else:
             return self._startProcessSync()
 
-    def _startProcessSync(self) -> CErrorReport:
-        """Synchronous process execution using subprocess.run()."""
-        import subprocess
+    def _prepareProcessExecution(self):
+        """
+        Common setup for both sync and async process execution.
+
+        Returns:
+            dict with keys:
+                - command: List of command parts [exe_path, *args]
+                - command_script_file: Path to script file or None
+                - stdout_path: Path to LOG file
+                - stderr_path: Path to STDERR file
+                - env: Copy of os.environ
+                - stdin_input: String to send to stdin or None
+        """
         import os
-
-        error = CErrorReport()
-
-        # Register with PROCESSMANAGER so it can return our exit code
-        from core.CCP4Modules import PROCESSMANAGER
-        PROCESSMANAGER().register(self)
+        from pathlib import Path
+        import shutil
 
         # Ensure working directory exists
-        from pathlib import Path
         work_dir_path = Path(self.workDirectory)
         if not work_dir_path.exists():
             work_dir_path.mkdir(parents=True, exist_ok=True)
@@ -1330,12 +1340,10 @@ class CPluginScript(CData):
 
         # Prepare log file paths
         # Use LOG for program output (not STDOUT) to match CCP4 conventions
-        # This allows wrappers to find the logfile via makeFileName('LOG')
         stdout_path = self.makeFileName('LOG')
         stderr_path = self.makeFileName('STDERR')
 
         # Find full path to executable to ensure subprocess can find it
-        import shutil
         exe_path = shutil.which(self.TASKCOMMAND)
         if exe_path:
             # Use full path if found
@@ -1344,32 +1352,56 @@ class CPluginScript(CData):
             # Fall back to command name
             command = [self.TASKCOMMAND] + self.commandLine
 
+        # Copy environment to ensure subprocess inherits all variables
+        env = os.environ.copy()
+
+        # Prepare stdin input
+        stdin_input = None
+        if self.commandScript:
+            # Join command script lines into single string
+            stdin_input = ''.join(self.commandScript)
+
         print(f"\n{'='*60}")
-        print(f"Running: {' '.join(command)}")
+        print(f"Command: {' '.join(command)}")
         print(f"Working directory: {self.workDirectory}")
         print(f"Log file: {stdout_path}")
         print(f"Stderr file: {stderr_path}")
         if command_script_file:
             print(f"Command script: {command_script_file}")
+        print(f"Environment CBIN: {env.get('CBIN', 'NOT SET')}")
+        print(f"Environment CCP4: {env.get('CCP4', 'NOT SET')}")
+        print(f"Environment CLIB: {env.get('CLIB', 'NOT SET')}")
         print(f"{'='*60}\n")
 
+        return {
+            'command': command,
+            'command_script_file': command_script_file,
+            'stdout_path': stdout_path,
+            'stderr_path': stderr_path,
+            'env': env,
+            'stdin_input': stdin_input
+        }
+
+    def _startProcessSync(self) -> CErrorReport:
+        """Synchronous process execution using subprocess.run()."""
+        import subprocess
+        import os
+
+        error = CErrorReport()
+
+        # Register with PROCESSMANAGER so it can return our exit code
+        from core.CCP4Modules import PROCESSMANAGER
+        PROCESSMANAGER().register(self)
+
+        # Prepare execution environment (common setup)
+        prep = self._prepareProcessExecution()
+        command = prep['command']
+        stdout_path = prep['stdout_path']
+        stderr_path = prep['stderr_path']
+        stdin_input = prep['stdin_input']
+        env = prep['env']
+
         try:
-            # Run the process
-            # Copy environment to ensure subprocess inherits all variables
-            env = os.environ.copy()
-
-            # Debug: print environment variables
-            print(f"Environment CBIN: {env.get('CBIN', 'NOT SET')}")
-            print(f"Environment CCP4: {env.get('CCP4', 'NOT SET')}")
-            print(f"Environment CLIB: {env.get('CLIB', 'NOT SET')}")
-
-            # Prepare stdin input
-            # When using input= parameter, do NOT set stdin= parameter
-            # The input= parameter automatically opens stdin as PIPE, writes data, and closes (sends EOF)
-            stdin_input = None
-            if self.commandScript:
-                # Join command script lines into single string
-                stdin_input = ''.join(self.commandScript)
 
             with open(stdout_path, 'w') as stdout_file, open(stderr_path, 'w') as stderr_file:
                 # Write formatted header to stdout
@@ -1466,38 +1498,17 @@ class CPluginScript(CData):
         4. Handler calls postProcess() which emits finished signal
         """
         import os
-        from pathlib import Path
         from core.async_process_manager import ASYNC_PROCESSMANAGER
 
         error = CErrorReport()
 
-        # Ensure working directory exists
-        work_dir_path = Path(self.workDirectory)
-        if not work_dir_path.exists():
-            work_dir_path.mkdir(parents=True, exist_ok=True)
-            print(f"Created working directory: {self.workDirectory}")
-
-        # Write command script to file if present
-        command_script_file = None
-        if self.commandScript:
-            command_script_file = self.writeCommandFile()
-
-        # Prepare log file paths
-        stdout_path = self.makeFileName('LOG')
-        stderr_path = self.makeFileName('STDERR')
-
-        # Find full path to executable
-        import shutil
-        exe_path = shutil.which(self.TASKCOMMAND)
-        command = exe_path if exe_path else self.TASKCOMMAND
-
-        print(f"\n{'='*60}")
-        print(f"Starting ASYNC: {command} {' '.join(self.commandLine)}")
-        print(f"Working directory: {self.workDirectory}")
-        print(f"Log file: {stdout_path}")
-        if command_script_file:
-            print(f"Command script: {command_script_file}")
-        print(f"{'='*60}\n")
+        # Prepare execution environment (common setup)
+        prep = self._prepareProcessExecution()
+        command = prep['command']
+        command_script_file = prep['command_script_file']
+        stdout_path = prep['stdout_path']
+        stderr_path = prep['stderr_path']
+        env = prep['env']
 
         try:
             # Get async process manager
@@ -1510,13 +1521,14 @@ class CPluginScript(CData):
             handler = [self._onProcessFinished, {}]
 
             # Start async process
+            # Note: command[0] is the executable path, command[1:] are the arguments
             self._runningProcessId = pm.startProcess(
-                command=command,
-                args=self.commandLine,
+                command=command[0],
+                args=command[1:],
                 inputFile=input_file,
                 logFile=stdout_path,
                 cwd=str(self.workDirectory),
-                env=os.environ.copy(),
+                env=env,
                 handler=handler,
                 timeout=-1,  # No timeout
                 ifAsync=True

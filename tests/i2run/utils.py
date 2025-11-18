@@ -188,6 +188,12 @@ def i2run(args: list[str], project_name: str = None):
         print(f"\n!!! Test failed - preserving job directory for inspection: {project_path}")
         raise
     finally:
+        # Force garbage collection to release gemmi file handles
+        # This helps prevent resource exhaustion in long test runs
+        import gc
+        gc.collect()
+        gc.collect()  # Run twice to catch circular references
+
         # Only clean up if no error occurred
         if not error_occurred:
             rmtree(str(project_path), ignore_errors=True)

@@ -115,9 +115,17 @@ def django_db_setup():
 def isolated_test_db(request, django_db_blocker, monkeypatch):
     """Create isolated database for each test with proper Django connection management."""
     import shutil
+    import gc
+    import resource
     from django.core.management import call_command
     from django.conf import settings
     from django.db import connections
+
+    # Monitor file descriptors at test start (for debugging resource leaks)
+    try:
+        fd_start = len(os.listdir('/dev/fd'))
+    except Exception:
+        fd_start = None
 
     # Generate unique project directory name based on test name
     test_name = request.node.name.replace("[", "_").replace("]", "_").replace("/", "_")
@@ -148,12 +156,31 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     # Run the test
     yield
 
-    # Clean up: close connections before deleting database file
+    # === AGGRESSIVE RESOURCE CLEANUP ===
+    # This section addresses resource exhaustion issues that cause
+    # order-dependent test failures (e.g., phaser tests failing after 40+ tests)
+
+    # 1. Force garbage collection to release gemmi objects (known to leak file handles)
+    gc.collect()
+    gc.collect()  # Run twice to catch circular references
+
+    # 2. Close all Django database connections
     with django_db_blocker.unblock():
         connections.close_all()
 
-    # Restore database configuration (monkeypatch will auto-restore on test end, but be explicit)
+    # 3. Restore database configuration (monkeypatch will auto-restore on test end, but be explicit)
     settings.DATABASES['default'] = original_db_settings
+
+    # 4. Monitor file descriptor leaks
+    if fd_start is not None:
+        try:
+            fd_end = len(os.listdir('/dev/fd'))
+            fd_leaked = fd_end - fd_start
+            if fd_leaked > 5:  # Allow small variations
+                print(f"⚠️  File descriptor leak detected: {fd_leaked} FDs leaked in {test_name}")
+                print(f"   Start: {fd_start} FDs, End: {fd_end} FDs")
+        except Exception:
+            pass
 
     # Only remove the test project directory if the test passed
     # Keep failed test directories for debugging
