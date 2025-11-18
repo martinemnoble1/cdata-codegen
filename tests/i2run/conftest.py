@@ -127,16 +127,45 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     except Exception:
         fd_start = None
 
-    # Generate unique project directory name based on test name
-    test_name = request.node.name.replace("[", "_").replace("]", "_").replace("/", "_")
-    test_project_name = f"test_{test_name}_{id(request)}"
-    test_project_dir = TEST_PROJECTS_DIR / test_project_name
+    # Generate project directory name matching utils.py i2run() naming convention
+    # Format: tmp_{test_file}_{test_function}
+    # This matches the project directories created by i2run() for consistency
+    import inspect
+    test_function = None
+    test_file = None
+
+    # Walk up the stack to find the test function and file
+    for frame_info in inspect.stack():
+        if frame_info.function.startswith('test_'):
+            test_function = frame_info.function
+            # Extract just the test file name without path or extension
+            # e.g., /path/to/test_phaser_simple.py -> phaser_simple
+            test_file_path = Path(frame_info.filename)
+            if test_file_path.stem.startswith('test_'):
+                test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
+            break
+
+    # Build consistent project name
+    if test_function and test_file:
+        project_name = f"tmp_{test_file}_{test_function}"
+    elif test_function:
+        project_name = f"tmp_{test_function}"
+    else:
+        # Fallback to pytest node name
+        test_name = request.node.name.replace("[", "_").replace("]", "_").replace("/", "_")
+        project_name = f"tmp_{test_name}"
+
+    # Clean up project name (replace special chars)
+    project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
+
+    test_project_dir = TEST_PROJECTS_DIR / project_name
 
     # Create project directory
     test_project_dir.mkdir(exist_ok=True)
 
-    # Place SQLite database inside the test's project directory
-    test_db_path = test_project_dir / f"{test_project_name}.sqlite"
+    # Place SQLite database inside the project directory
+    # This consolidates all test artifacts (CCP4_JOBS + database) in one location
+    test_db_path = test_project_dir / "project.sqlite"
 
     # Close any existing connections to ensure clean slate
     connections.close_all()
@@ -182,28 +211,30 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
         except Exception:
             pass
 
-    # Only remove the test project directory if the test passed
+    # Only remove the project directory if the test passed
     # Keep failed test directories for debugging
+    # Note: With consolidated structure, both CCP4_JOBS and database are in the same directory
     test_failed = request.node.rep_call.failed if hasattr(request.node, 'rep_call') else False
 
     if not test_failed:
-        # Test passed - clean up the project directory
+        # Test passed - clean up the project directory (includes both CCP4_JOBS and database)
         try:
             shutil.rmtree(test_project_dir, ignore_errors=True)
         except Exception as e:
             print(f"Warning: Failed to clean up test project directory {test_project_dir}: {e}")
     else:
         # Test failed - preserve directory for debugging
+        # Directory contains both CCP4_JOBS/job_1 and project.sqlite for inspection
         print(f"Test failed - preserving project directory: {test_project_dir}")
 
-    # Clean up temp project directories created during the test (non-test directories)
-    # Keep only the most recent 5 for debugging
-    temp_dirs = sorted(TEST_PROJECTS_DIR.glob("tmp_*"), key=lambda p: p.stat().st_mtime, reverse=True)
-    for temp_dir in temp_dirs[5:]:  # Keep newest 5, delete older ones
+    # Clean up old project directories from previous test runs
+    # Keep only the most recent 10 for debugging
+    old_dirs = sorted(TEST_PROJECTS_DIR.glob("tmp_*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for old_dir in old_dirs[10:]:  # Keep newest 10, delete older ones
         try:
-            shutil.rmtree(temp_dir)
+            shutil.rmtree(old_dir)
         except Exception as e:
-            print(f"Warning: Failed to clean up {temp_dir}: {e}")
+            print(f"Warning: Failed to clean up {old_dir}: {e}")
 
 
 @fixture(scope="session")

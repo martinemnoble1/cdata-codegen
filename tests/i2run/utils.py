@@ -204,15 +204,13 @@ def i2run(args: list[str], project_name: str = None):
 
         # Only clean up if no error occurred
         # Note: Failed test directories are preserved in test_projects/tmp_{file}_{test}/
-        # The conftest.py also preserves test_*/ directories for failed tests
+        # With consolidated structure, both CCP4_JOBS and database are in the same directory
         if not error_occurred:
-            # Clean up project directory and database files
+            # Clean up project directory (includes both CCP4_JOBS and project.sqlite)
             rmtree(str(project_path), ignore_errors=True)
-            for extension in ("sqlite", "sqlite-shm", "sqlite-wal"):
-                Path(f"{project_path}.{extension}").unlink(missing_ok=True)
         else:
             # Test failed - directory already logged above
-            # Both tmp_* (CCP4_JOBS) and test_* (SQLite DB) will be preserved
+            # Directory contains both CCP4_JOBS/job_1 and project.sqlite for inspection
             pass
 
 
