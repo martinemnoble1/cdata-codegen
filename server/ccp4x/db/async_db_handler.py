@@ -20,7 +20,8 @@ from core.CCP4PluginScript import CPluginScript
 # DISABLED: Old ccp4i2 import
 # from ccp4i2.dbapi import CCP4DbApi
 
-from . import models
+# Import using Django's registered app name to avoid app registry errors
+from ccp4x.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -918,6 +919,60 @@ class AsyncDatabaseHandler:
         except Exception as e:
             logger.debug(f"Error getting file path: {e}")
             return None
+
+    def parse_file_path(self, file_path: str) -> Optional[Dict[str, str]]:
+        """
+        Parse a full file path into its components: project UUID, job number, filename.
+
+        Used by CDataFile.setFullPath() to extract database context from file paths.
+
+        Args:
+            file_path: Full absolute path to the file
+
+        Returns:
+            Dict with keys: project_id, rel_path, filename, or None if parsing fails
+        """
+        file_path_path = Path(file_path)
+        project_id_dir_tuples = models.Project.objects.all().values_list('uuid', 'directory')
+        # Use next() with default value to avoid StopIteration if no match found
+        project_id_dir = next(
+            (project_id_dir_tuple for project_id_dir_tuple
+             in project_id_dir_tuples if
+             str(file_path).startswith(str(project_id_dir_tuple[1]))),
+            None  # Return None if no matching project directory found
+        )
+        if not project_id_dir:
+            return None
+        project_id = str(project_id_dir[0])
+        project_dir = project_id_dir[1]
+
+        if Path(project_dir) / "CCP4_IMPORTED_FILES" is file_path_path.parent:
+            # Imported file - no job number
+            filename = file_path_path.name
+            return {
+                'project_id': project_id,
+                'rel_path': 'CCP4_IMPORTED_FILES',
+                'filename': filename,
+            }
+        
+        job_number_dirs = [(job.number, job.directory) for job in models.Job.objects.filter(
+            project__uuid=uuid.UUID(project_id)
+        )]
+        # Use next() with default value to avoid StopIteration if no match found
+        job_number_dir = next(
+            (job_number_dir for job_number_dir in job_number_dirs
+             if str(file_path_path.parent) == str(job_number_dir[1])),
+            None  # Return None if no matching job directory found
+        )
+        if not job_number_dir:
+            return None
+        filename = file_path_path.name
+        rel_path = str(file_path_path.parent.relative_to(project_dir))
+        return {
+            'project_id': project_id,
+            'rel_path': rel_path,
+            'filename': filename,
+        }
 
     def getProjectDirectory(self, project_id: str) -> Optional[str]:
         """

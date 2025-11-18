@@ -295,10 +295,10 @@ class ArgumentBuilder:
                 metavar=keyword["object"].__class__.__name__,
                 help=f"(Alias for --{keyword['minimumPath']}, shortest match)"
             )
-            logger.debug(f"Added alias: {simple_arg} -> --{keyword['minimumPath']}")
+            logger.warning(f"Added alias: {simple_arg} -> --{keyword['minimumPath']}")
         except Exception as err:
             # Alias conflicts or already exists - skip silently
-            logger.debug(f"Could not add alias {simple_arg}: {err}")
+            logger.warning(f"Could not add alias {simple_arg}: {err}")
 
 
 # ============================================================================
@@ -396,7 +396,7 @@ class PluginPopulator:
 
         # For CList, add each item
         if isinstance(target, CCP4Data.CList):
-            logger.debug(f"Handling CList {type(target).__name__} with {len(values)} values")
+            logger.warning(f"Handling CList {type(target).__name__} with {len(values)} values")
             # Debug for UNMERGEDFILES
             if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
                 print(f"\n[DEBUG] _handle_item_or_list for UNMERGEDFILES")
@@ -406,7 +406,7 @@ class PluginPopulator:
             for val in values:
                 # Create a new item for the list
                 new_item = target.makeItem()
-                logger.debug(f"Created list item: {type(new_item).__name__}, setting value: {val}")
+                logger.warning(f"Created list item: {type(new_item).__name__}, setting value: {val}")
 
                 # Debug for UNMERGEDFILES
                 if hasattr(target, 'name') and 'UNMERGEDFILES' in str(target.name):
@@ -430,7 +430,7 @@ class PluginPopulator:
 
                 # Add the item to the list
                 target.append(new_item)
-                logger.debug(f"Appended item to list, list now has {len(target)} items")
+                logger.warning(f"Appended item to list, list now has {len(target)} items")
 
                 # Debug: verify the item was actually added
                 print(f"[DEBUG] After append: target list has {len(target)} items")
@@ -733,11 +733,11 @@ class PluginPopulator:
                     # Use the plugin's work directory
                     work_dir = plugin_parent.workDirectory
                     dest_dir = Path(str(work_dir))
-                    logger.debug(f"Using plugin workDirectory for ASU XML: {dest_dir}")
+                    logger.warning(f"Using plugin workDirectory for ASU XML: {dest_dir}")
                 else:
                     # Fallback: use temp directory
                     dest_dir = Path(tempfile.gettempdir())
-                    logger.debug(f"No plugin workDirectory found, using temp dir: {dest_dir}")
+                    logger.warning(f"No plugin workDirectory found, using temp dir: {dest_dir}")
 
                 # Generate unique filename for ASU XML
                 fd, temp_path = tempfile.mkstemp(
@@ -773,9 +773,11 @@ class PluginPopulator:
                 # Replace seqFile with baseName to the generated ASU XML
                 # Use just the filename (not the full path) so that when serialized to XML,
                 # it remains relative to the job directory
-                parsed_values["baseName"] = asu_xml_path.name
+                print(f"Replacing seqFile with ASU XML baseName: {asu_xml_path}")
+                parsed_values["fullPath"] = str(asu_xml_path)
+                print(f"Set fullPath to ASU XML: {parsed_values['fullPath']}")
                 del parsed_values["seqFile"]
-                logger.info(f"Converted sequence file to ASU XML: {asu_xml_path.name}")
+                print(f"Converted sequence file to ASU XML: {asu_xml_path.name}")
 
             except Exception as e:
                 logger.error(
@@ -810,11 +812,11 @@ class PluginPopulator:
                         work_dir = plugin_parent.workDirectory
                         # workDirectory might be a Path or a CString - use str() to handle both
                         dest_dir = Path(str(work_dir))
-                        logger.debug(f"Using plugin workDirectory for MTZ split: {dest_dir}")
+                        logger.warning(f"Using plugin workDirectory for MTZ split: {dest_dir}")
                     else:
                         # Fallback: use temp directory
                         dest_dir = Path(tempfile.gettempdir())
-                        logger.debug(f"No plugin workDirectory found, using temp dir: {dest_dir}")
+                        logger.warning(f"No plugin workDirectory found, using temp dir: {dest_dir}")
 
                     # Generate unique filename to avoid collisions
                     fd, temp_path = tempfile.mkstemp(
@@ -846,8 +848,10 @@ class PluginPopulator:
 
         # Now apply all values using original behavior
         # If we modified parsed_values (MTZ splitting), reconstruct the values list
+        print(f"[DEBUG] Checking for MTZ splitting... {has_key_value_syntax} or asu file conversion {parsed_values}")
         if has_key_value_syntax and parsed_values:
             for key, val in parsed_values.items():
+                print(f"[DEBUG] Setting {key}={val} on {type(target).__name__}")
                 PluginPopulator._handle_single_value(target, f"{key}={val}")
         else:
             # No key=value syntax or no modifications - use original behavior

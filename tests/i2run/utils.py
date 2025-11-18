@@ -20,7 +20,7 @@ try:
 except ImportError:
     # Fallback: use demo_data from current project
     def getCCP4I2Dir():
-        return str(Path(__file__).parent.parent)
+        return str(Path(__file__).parent.parent.parent)
 
 
 @contextmanager

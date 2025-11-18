@@ -45,6 +45,7 @@ class phaser_simple(phaser_pipeline.phaser_pipeline):
         elements = ensemble.pdbItemList
         print(f"[DEBUG phaser_simple.createEnsembleElements] pdbItemList elements: {elements}")
         while len(elements) > 1: elements.remove(elements[-1])
+        while len(elements) < 1: elements.append(elements.makeItem())
         print(f"[DEBUG phaser_simple.createEnsembleElements] pdbItemList elements after removing extras: {elements}")
         pdbItem = elements[-1]
         print(f"[DEBUG phaser_simple.createEnsembleElements] pdbItem: {pdbItem}")
