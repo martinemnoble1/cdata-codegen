@@ -36,7 +36,8 @@ set -e  # Exit on error
 # Set up environment
 export CCP4I2_ROOT=$(pwd)
 export PYTHONPATH=$(pwd):$(pwd)/server:$PYTHONPATH
-export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-ccp4x.config.settings}"
+# Use test settings for pytest, production settings otherwise
+export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-ccp4x.config.test_settings}"
 
 # Activate virtual environment (.venv is always a symlink to the correct venv)
 if [ -L .venv ] || [ -d .venv ]; then
