@@ -212,7 +212,7 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
             pass
 
     # Only remove the project directory if the test passed
-    # Keep failed test directories for debugging
+    # Keep ALL failed test directories for debugging (no limit)
     # Note: With consolidated structure, both CCP4_JOBS and database are in the same directory
     test_failed = request.node.rep_call.failed if hasattr(request.node, 'rep_call') else False
 
@@ -226,15 +226,6 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
         # Test failed - preserve directory for debugging
         # Directory contains both CCP4_JOBS/job_1 and project.sqlite for inspection
         print(f"Test failed - preserving project directory: {test_project_dir}")
-
-    # Clean up old project directories from previous test runs
-    # Keep only the most recent 10 for debugging
-    old_dirs = sorted(TEST_PROJECTS_DIR.glob("tmp_*"), key=lambda p: p.stat().st_mtime, reverse=True)
-    for old_dir in old_dirs[10:]:  # Keep newest 10, delete older ones
-        try:
-            shutil.rmtree(old_dir)
-        except Exception as e:
-            print(f"Warning: Failed to clean up {old_dir}: {e}")
 
 
 @fixture(scope="session")
