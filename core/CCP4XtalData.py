@@ -102,13 +102,35 @@ class CAsuComponentList(CAsuComponentListStub):
 class CCell(CCellStub):
     """
     A unit cell
-    
+
     Extends CCellStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def guiLabel(self) -> str:
+        """
+        Return a compact string representation of cell parameters.
+        Format: "a=XX.XX b=XX.XX c=XX.XX α=XX.XX β=XX.XX γ=XX.XX"
+        Used by legacy code for logging and display.
+
+        Returns:
+            Formatted string with cell parameters (2 decimal places)
+        """
+        parts = []
+        if self.a and self.a.isSet():
+            parts.append(f"a={self.a.value:.2f}")
+        if self.b and self.b.isSet():
+            parts.append(f"b={self.b.value:.2f}")
+        if self.c and self.c.isSet():
+            parts.append(f"c={self.c.value:.2f}")
+        if self.alpha and self.alpha.isSet():
+            parts.append(f"α={self.alpha.value:.2f}")
+        if self.beta and self.beta.isSet():
+            parts.append(f"β={self.beta.value:.2f}")
+        if self.gamma and self.gamma.isSet():
+            parts.append(f"γ={self.gamma.value:.2f}")
+
+        return " ".join(parts) if parts else "Cell parameters not set"
 
 
 class CCellAngle(CCellAngleStub):

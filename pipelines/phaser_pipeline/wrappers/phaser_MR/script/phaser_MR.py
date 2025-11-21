@@ -52,6 +52,7 @@ class CallbackObject(object):
         self.notifyResponders()
     def call_back(self, arg1, arg2):
         #print '\n**call_back called: *Arg1:', arg1, '*Arg2:', arg2
+        print("[DEBUG phaser_MR.CallbackObject.call_back] arg1:", arg1, " arg2:", arg2  )
         self.notifyResponders()
     def notifyResponders(self):
         try:

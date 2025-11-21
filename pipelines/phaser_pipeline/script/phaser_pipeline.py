@@ -98,13 +98,22 @@ class phaser_pipeline(CPluginScript):
         return CPluginScript.SUCCEEDED
 
     def phaserXMLUpdated(self, newXML):
+        print("[DEBUG phaserXMLUpdated] ========== CALLBACK FIRED ==========")
+        sys.stdout.flush()
         for oldNode in self.xmlroot.xpath('PhaserMrResults'): self.xmlroot.remove(oldNode)
         from copy import deepcopy
         self.xmlroot.append(deepcopy(newXML))
         tmpFilename = self.makeFileName('PROGRAMXML')+'_tmp'
+        print(f"[DEBUG phaserXMLUpdated] Writing XML to tmp file: {tmpFilename}")
+        sys.stdout.flush()
         with open(tmpFilename,'w') as xmlfile:
             CCP4Utils.writeXML(xmlfile,etree.tostring(self.xmlroot,pretty_print=True))
-        self.renameFile(tmpFilename,self.makeFileName('PROGRAMXML'))
+        finalFilename = self.makeFileName('PROGRAMXML')
+        print(f"[DEBUG phaserXMLUpdated] Renaming {tmpFilename} -> {finalFilename}")
+        sys.stdout.flush()
+        self.renameFile(tmpFilename,finalFilename)
+        print(f"[DEBUG phaserXMLUpdated] ========== CALLBACK COMPLETE ==========")
+        sys.stdout.flush()
 
     @QtCore.Slot(dict)
     def phaserFinished(self, statusDict = {}):
@@ -328,15 +337,29 @@ write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
             self.reportStatus(CPluginScript.FAILED)
 
     def appendXML(self, changedFile, replacingElementOfType=None):
+        import os
+        print(f"[DEBUG appendXML] Called with changedFile={changedFile}, replacingElementOfType={replacingElementOfType}")
+        print(f"[DEBUG appendXML] File exists? {os.path.exists(changedFile)}")
+        sys.stdout.flush()
         for oldNode in self.xmlroot.xpath(replacingElementOfType):
             self.xmlroot.remove(oldNode)
         try:
             newXML = CCP4Utils.openFileToEtree(changedFile)
-        except:
+            print(f"[DEBUG appendXML] Successfully loaded XML from {changedFile}")
+            sys.stdout.flush()
+        except Exception as e:
+            print(f"[DEBUG appendXML] Failed to load XML: {e}")
+            print(f"[DEBUG appendXML] Creating empty element: {replacingElementOfType}")
+            sys.stdout.flush()
             newXML = etree.Element(replacingElementOfType)
         self.xmlroot.append(newXML)
-        with open(self.makeFileName('PROGRAMXML'),'w') as xmlfile:
+        output_file = self.makeFileName('PROGRAMXML')
+        print(f"[DEBUG appendXML] Writing pipeline program.xml to: {output_file}")
+        sys.stdout.flush()
+        with open(output_file,'w') as xmlfile:
             CCP4Utils.writeXML(xmlfile,etree.tostring(self.xmlroot,pretty_print=True))
+        print(f"[DEBUG appendXML] Pipeline program.xml written successfully")
+        sys.stdout.flush()
 
     def checkFinishStatus( self, statusDict,failedErrCode,outputFile = None,noFileErrCode= None):
         if len(statusDict)>0 and statusDict['finishStatus'] == CPluginScript.FAILED:

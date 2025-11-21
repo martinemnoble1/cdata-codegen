@@ -1,7 +1,14 @@
 import gemmi
+import pytest
 from .utils import demoData, i2run
 
 
+# NOTE: All phaser tests run FIRST (order=1) to avoid RDKit pickle contamination
+# RDKit (imported by acedrg tests) modifies pickle module's dispatch table,
+# causing phaser's pickle.dump() to fail. Running phaser tests before acedrg
+# ensures pickle module is clean when phaser needs it.
+
+@pytest.mark.order("first")
 def test_phaser_ep():
     args = ["phaser_EP"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]

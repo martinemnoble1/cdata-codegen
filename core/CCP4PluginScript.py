@@ -1909,6 +1909,7 @@ class CPluginScript(CData):
 
         # Increment child job counter
         self._childJobCounter += 1
+        print(f"[DEBUG makePluginObject] Parent {self.objectName()} (id={id(self)}) incremented counter to {self._childJobCounter}")
 
         # Create subdirectory following convention: job_1, job_2, etc.
         child_work_dir = Path(self.workDirectory) / f"job_{self._childJobCounter}"
@@ -1989,6 +1990,10 @@ class CPluginScript(CData):
 
             print(f"[DEBUG makePluginObject] About to instantiate {taskName} with kwargs: name={plugin_kwargs.get('name')}, workDirectory={plugin_kwargs.get('workDirectory')}")
             plugin_instance = plugin_class(**plugin_kwargs)
+            # Debug: Check counter value and instance ID after instantiation
+            print(f"[DEBUG makePluginObject] Created instance id={id(plugin_instance)}, counter={plugin_instance._childJobCounter}")
+            # Ensure child job counter is reset for new instance (prevents state pollution)
+            plugin_instance._childJobCounter = 0
             print(f"[DEBUG makePluginObject] Successfully instantiated {taskName}")
 
             # Set pluginTitle on container header if provided (legacy CCP4i2 API)

@@ -1086,13 +1086,35 @@ class CData(HierarchicalObject):
                 # from marking FRAC as set when FREER_FRACTION is just a default
                 return
 
-            if name in ['contentFlag', 'subType']:  # DEBUG
-                logger.debug("Branch: CData to CData for %s", name)  # DEBUG
-            existing_attr._smart_assign_from_cdata(value)
-            # Mark as explicitly set since we're assigning a new value
-            if hasattr(self, "_value_states"):
-                self._value_states[name] = ValueState.EXPLICITLY_SET
-            return  # Don't replace the object, just update it
+            # IMPORTANT: Detect plugin reassignment (different instances)
+            # When SubstituteLigand does: self.aimlessPlugin = self.makePluginObject('aimless_pipe')
+            # twice, we want to REPLACE the reference, not update the old instance in-place.
+            # Otherwise the old instance's state (_childJobCounter=5) gets preserved.
+            #
+            # Check if both are CPluginScript instances (or subclasses) using isinstance().
+            # Use deferred import to avoid circular dependency since CCP4PluginScript imports from base_object.
+            is_plugin_reassignment = False
+            if id(existing_attr) != id(value):
+                try:
+                    from core.CCP4PluginScript import CPluginScript
+                    is_plugin_reassignment = isinstance(existing_attr, CPluginScript) and isinstance(value, CPluginScript)
+                except ImportError:
+                    # CPluginScript not yet loaded, fall back to smart assignment
+                    pass
+
+            if is_plugin_reassignment:
+                # Different plugin instances - bypass smart assignment and replace the reference
+                # Fall through to normal assignment logic below
+                pass
+            else:
+                # Same instance or non-plugin objects - use smart assignment
+                if name in ['contentFlag', 'subType']:  # DEBUG
+                    logger.debug("Branch: CData to CData for %s", name)  # DEBUG
+                existing_attr._smart_assign_from_cdata(value)
+                # Mark as explicitly set since we're assigning a new value
+                if hasattr(self, "_value_states"):
+                    self._value_states[name] = ValueState.EXPLICITLY_SET
+                return  # Don't replace the object, just update it
 
         elif (
             hasattr(existing_attr, 'setFullPath')

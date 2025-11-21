@@ -1,6 +1,7 @@
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import gemmi
+import pytest
 from .utils import demoData, i2run
 
 
@@ -41,6 +42,12 @@ def _check_output(job: Path, include_refinement: bool=True):
     assert max(llgs) > 1000
 
 
+# NOTE: All phaser tests run FIRST (order=1) to avoid RDKit pickle contamination
+# RDKit (imported by acedrg tests) modifies pickle module's dispatch table,
+# causing phaser's pickle.dump() to fail. Running phaser tests before acedrg
+# ensures pickle module is clean when phaser needs it.
+
+@pytest.mark.order("first")
 def test_beta_blip_default():
     args = _beta_blip_args()
     args += ["--COMP_BY", "DEFAULT"]
@@ -48,6 +55,7 @@ def test_beta_blip_default():
         _check_output(job)
 
 
+@pytest.mark.order("first")
 def test_beta_blip_asu():
     args = _beta_blip_args()
     args += [

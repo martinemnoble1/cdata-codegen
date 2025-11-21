@@ -168,15 +168,41 @@ class ObsDataConverter:
                 if hasattr(group, '_column_mapping'):
                     group._column_mapping = {}
 
-        # Set output paths
-        # NOTE: Output files are now written to work_directory (not a subdirectory)
+        # Set output file paths
+        # IMPORTANT: Output files must go in CCP4_IMPORTED_FILES, not ctruncate subdirectory
+        # This ensures makeHklin0 and other code can find the converted files
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
+
+            # Determine CCP4_IMPORTED_FILES directory (same logic as to_imean/to_fmean)
+            if 'CCP4_IMPORTED_FILES' in str(input_path):
+                imported_files_dir = input_path.parent
+            else:
+                # work_directory is typically {project}/CCP4_JOBS/job_N
+                # Or with isolated ctruncate: {project}/CCP4_JOBS/job_N/job_N
+                # We want {project}/CCP4_IMPORTED_FILES
+                work_path = Path(work_directory)
+
+                # Walk up the directory tree to find CCP4_JOBS
+                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
+                    work_path = work_path.parent
+
+                if work_path.name == 'CCP4_JOBS':
+                    # Go up to project root
+                    project_root = work_path.parent
+                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
+                else:
+                    # Fallback: use work_directory/../CCP4_IMPORTED_FILES
+                    imported_files_dir = work_path.parent / 'CCP4_IMPORTED_FILES'
+
+            # Ensure directory exists
+            imported_files_dir.mkdir(parents=True, exist_ok=True)
+
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
+            hklout_path = str(imported_files_dir / hklout_name)
             obsout_name = f"{input_path.stem}_as_FPAIR{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
+            obsout_path = str(imported_files_dir / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
@@ -272,9 +298,16 @@ class ObsDataConverter:
         if wrapper_class is None:
             raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
-        # Create ctruncate instance with working directory (use parent's work directory directly)
-        # Don't create subdirectory - output paths expect files in parent work directory
-        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
+        # Create ctruncate instance with isolated subdirectory to prevent program.xml pollution
+        # This prevents ctruncate's program.xml from being picked up by the parent pipeline
+        # Output files still go to CCP4_IMPORTED_FILES or parent work directory (configured below)
+        if work_directory:
+            from pathlib import Path
+            ctruncate_work_dir = Path(work_directory) / 'ctruncate'
+            ctruncate_work_dir.mkdir(parents=True, exist_ok=True)
+            wrapper = wrapper_class(parent=obs_file, workDirectory=str(ctruncate_work_dir))
+        else:
+            wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
 
         # Populate container manually
         inp = wrapper.container.inputData
@@ -325,14 +358,40 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output file paths
-        # NOTE: Output files are now written to work_directory (not a subdirectory)
+        # IMPORTANT: Output files must go in CCP4_IMPORTED_FILES, not ctruncate subdirectory
+        # This ensures makeHklin0 and other code can find the converted files
         if work_directory:
             from pathlib import Path
             input_path = Path(obs_file.getFullPath())
+
+            # Determine CCP4_IMPORTED_FILES directory (same logic as to_fmean)
+            if 'CCP4_IMPORTED_FILES' in str(input_path):
+                imported_files_dir = input_path.parent
+            else:
+                # work_directory is typically {project}/CCP4_JOBS/job_N
+                # Or with isolated ctruncate: {project}/CCP4_JOBS/job_N/ctruncate
+                # We want {project}/CCP4_IMPORTED_FILES
+                work_path = Path(work_directory)
+
+                # Walk up the directory tree to find CCP4_JOBS
+                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
+                    work_path = work_path.parent
+
+                if work_path.name == 'CCP4_JOBS':
+                    # Go up to project root
+                    project_root = work_path.parent
+                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
+                else:
+                    # Fallback: use work_directory/../CCP4_IMPORTED_FILES
+                    imported_files_dir = work_path.parent / 'CCP4_IMPORTED_FILES'
+
+            # Ensure directory exists
+            imported_files_dir.mkdir(parents=True, exist_ok=True)
+
             hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(Path(work_directory) / hklout_name)
+            hklout_path = str(imported_files_dir / hklout_name)
             obsout_name = f"{input_path.stem}_as_IMEAN{input_path.suffix}"
-            obsout_path = str(Path(work_directory) / obsout_name)
+            obsout_path = str(imported_files_dir / obsout_name)
         else:
             hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
             obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
@@ -425,9 +484,16 @@ class ObsDataConverter:
         if wrapper_class is None:
             raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
 
-        # Create ctruncate instance with working directory (use parent's work directory directly)
-        # Don't create subdirectory - output paths expect files in parent work directory
-        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
+        # Create ctruncate instance with isolated subdirectory to prevent program.xml pollution
+        # This prevents ctruncate's program.xml from being picked up by the parent pipeline
+        # Output files still go to CCP4_IMPORTED_FILES (configured below)
+        if work_directory:
+            from pathlib import Path
+            ctruncate_work_dir = Path(work_directory) / 'ctruncate'
+            ctruncate_work_dir.mkdir(parents=True, exist_ok=True)
+            wrapper = wrapper_class(parent=obs_file, workDirectory=str(ctruncate_work_dir))
+        else:
+            wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
 
         # Populate container
         inp = wrapper.container.inputData

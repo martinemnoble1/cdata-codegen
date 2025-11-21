@@ -169,7 +169,20 @@ def i2run(args: list[str], project_name: str = None):
         # Restore original sys.argv
         sys.argv = original_sys_argv
 
-    directory = project_path / "CCP4_JOBS" / "job_1"
+    # Find the actual job directory created (may be job_1, job_2, etc. due to database state)
+    # In comprehensive tests, Django may reuse database with existing jobs, causing auto-increment
+    jobs_dir = project_path / "CCP4_JOBS"
+    if jobs_dir.exists():
+        # Find the highest-numbered job directory (most recent)
+        job_dirs = sorted([d for d in jobs_dir.iterdir() if d.is_dir() and d.name.startswith("job_")],
+                         key=lambda d: int(d.name.split("_")[1]))
+        if job_dirs:
+            directory = job_dirs[-1]  # Use the most recent job directory
+        else:
+            # Fallback: assume job_1
+            directory = jobs_dir / "job_1"
+    else:
+        directory = project_path / "CCP4_JOBS" / "job_1"
 
     # Debug: Show what was actually created
     if directory.exists():

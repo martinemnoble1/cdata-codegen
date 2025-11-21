@@ -236,8 +236,13 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
     # also writes the XML file, previously done by postProcess()
     def processOutputFiles(self):
         import phaser
+        import sys
+        print("[DEBUG phaser_MR_AUTO.processOutputFiles] ========== METHOD CALLED ==========")
+        sys.stdout.flush()
         resultObject = self.resultObject
         num_sol = len(resultObject.getPdbFiles())
+        print(f"[DEBUG phaser_MR_AUTO.processOutputFiles] Found {num_sol} solutions")
+        sys.stdout.flush()
         for i in range(1,num_sol+1):
             xyzout = os.path.join(self.getWorkDirectory(), "PHASER."+str(i)+".pdb")
             if os.path.exists(xyzout):
@@ -389,14 +394,22 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
 
     def flushXML(self, xml):
         from lxml import etree
+        import sys
         tmpFilename = self.makeFileName('PROGRAMXML')+'_tmp'
+        finalFilename = self.makeFileName('PROGRAMXML')
+        print(f"[DEBUG phaser_MR_AUTO.flushXML] Writing phaser program.xml")
+        print(f"[DEBUG phaser_MR_AUTO.flushXML]   tmp: {tmpFilename}")
+        print(f"[DEBUG phaser_MR_AUTO.flushXML]   final: {finalFilename}")
+        sys.stdout.flush()
         with open(tmpFilename,'w') as tmpFile:
             xmlText = etree.tostring(xml, pretty_print=True)
             CCP4Utils.writeXML(tmpFile,xmlText)
             #Here adapt the update frequency to depend on the size of the current XML structure
             xmlUpdateDelay = max(5, int(len(xmlText)/100000))
             self.callbackObject.minimumDelayInSeconds = xmlUpdateDelay
-        self.renameFile(tmpFilename, self.makeFileName('PROGRAMXML'))
+        self.renameFile(tmpFilename, finalFilename)
+        print(f"[DEBUG phaser_MR_AUTO.flushXML] Phaser program.xml written successfully")
+        sys.stdout.flush()
 
     def prepareCaptureCPlusPlusStdoutToLog(self):
         # This suggested by Stack Overflow

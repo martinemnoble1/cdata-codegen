@@ -68,9 +68,25 @@ from i2run.utils import download
 
 
 def pytest_collection_modifyitems(items):
-    """Automatically add django_db marker to all test items."""
+    """Automatically add django_db marker to all test items and reorder phaser tests first."""
     for item in items:
         item.add_marker(pytest.mark.django_db(transaction=True))
+
+    # Manually reorder tests to run phaser tests before acedrg tests
+    # This avoids RDKit pickle contamination (acedrg imports RDKit which breaks phaser's pickle.dump())
+    phaser_tests = []
+    other_tests = []
+
+    for item in items:
+        # Check if test is in a phaser-related file or substitute_ligand (uses DIMPLE which depends on phaser)
+        test_file = item.nodeid.lower()
+        if 'phaser' in test_file or 'substitute_ligand' in test_file:
+            phaser_tests.append(item)
+        else:
+            other_tests.append(item)
+
+    # Reorder: phaser tests first, then everything else
+    items[:] = phaser_tests + other_tests
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -130,20 +146,20 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     # Generate project directory name matching utils.py i2run() naming convention
     # Format: tmp_{test_file}_{test_function}
     # This matches the project directories created by i2run() for consistency
-    import inspect
-    test_function = None
-    test_file = None
+    #
+    # IMPORTANT: Use request.node instead of inspect.stack() to get reliable test file/function info
+    # pytest's node object contains the correct fspath and name regardless of how tests are collected
+    # (single-file vs multi-file comprehensive runs)
 
-    # Walk up the stack to find the test function and file
-    for frame_info in inspect.stack():
-        if frame_info.function.startswith('test_'):
-            test_function = frame_info.function
-            # Extract just the test file name without path or extension
-            # e.g., /path/to/test_phaser_simple.py -> phaser_simple
-            test_file_path = Path(frame_info.filename)
-            if test_file_path.stem.startswith('test_'):
-                test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
-            break
+    # Extract test function name from node
+    test_function = request.node.name
+
+    # Extract test file name from node's fspath
+    # e.g., /path/to/test_phaser_simple.py -> phaser_simple
+    test_file_path = Path(str(request.node.fspath))
+    test_file = None
+    if test_file_path.stem.startswith('test_'):
+        test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
 
     # Build consistent project name
     if test_function and test_file:
@@ -151,9 +167,8 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     elif test_function:
         project_name = f"tmp_{test_function}"
     else:
-        # Fallback to pytest node name
-        test_name = request.node.name.replace("[", "_").replace("]", "_").replace("/", "_")
-        project_name = f"tmp_{test_name}"
+        # Fallback (should never happen with pytest node)
+        project_name = f"tmp_{request.node.nodeid.replace('/', '_').replace('::', '_')}"
 
     # Clean up project name (replace special chars)
     project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
@@ -192,6 +207,33 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     # 1. Force garbage collection to release gemmi objects (known to leak file handles)
     gc.collect()
     gc.collect()  # Run twice to catch circular references
+
+    # 1b. Clean up RDKit pickle pollution
+    # RDKit modifies the pickle module's dispatch table when imported (by acedrg tests)
+    # This causes phaser's pickle.dump() to fail with "rdkit.rdBase._vectd instances cannot be pickled"
+    # Solution: Unload RDKit modules completely and reload pickle/phaser modules
+    import sys
+    if 'rdkit' in sys.modules:
+        # Remove all rdkit modules from sys.modules to prevent pickle contamination
+        rdkit_modules = [m for m in list(sys.modules.keys()) if m.startswith('rdkit')]
+        for module_name in rdkit_modules:
+            del sys.modules[module_name]
+
+        # Reload pickle and any phaser modules that import pickle
+        # This clears RDKit's dispatch table modifications
+        if 'pickle' in sys.modules:
+            import importlib
+            importlib.reload(sys.modules['pickle'])
+
+            # Also reload phaser_MR_AUTO module if it was imported
+            # This ensures it gets the clean pickle module
+            phaser_modules = [m for m in list(sys.modules.keys()) if 'phaser' in m.lower()]
+            for module_name in phaser_modules:
+                try:
+                    importlib.reload(sys.modules[module_name])
+                except Exception:
+                    # Some modules may not support reloading - that's okay
+                    pass
 
     # 2. Close all Django database connections
     with django_db_blocker.unblock():

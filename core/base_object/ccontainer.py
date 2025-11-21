@@ -126,9 +126,11 @@ class CContainer(CData):
 
         Args:
             name: Name of the object to delete
+
+        Note: Silently succeeds if object doesn't exist (legacy code expects this behavior)
         """
         if not hasattr(self, name):
-            raise AttributeError(f"Container has no object named '{name}'")
+            return  # Silently succeed (legacy code expects defensive deletes)
 
         obj = getattr(self, name)
 

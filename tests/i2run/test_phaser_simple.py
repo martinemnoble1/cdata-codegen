@@ -1,11 +1,17 @@
 import xml.etree.ElementTree as ET
 import gemmi
+import pytest
 from .utils import demoData, i2run
 
 
 # TODO: Test long ligand names (e.g. 8xfm)
 
+# NOTE: All phaser tests run FIRST (order="first") to avoid RDKit pickle contamination
+# RDKit (imported by acedrg tests) modifies pickle module's dispatch table,
+# causing phaser's pickle.dump() to fail. Running phaser tests before acedrg
+# ensures pickle module is clean when phaser needs it.
 
+@pytest.mark.order("first")
 def test_gamma_basic():
     args = ["phaser_simple"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
@@ -21,6 +27,7 @@ def test_gamma_basic():
         llgs = [float(e.text) for e in xml.findall(".//Solution/LLG")]
         assert max(llgs) > 1000
 
+@pytest.mark.order("first")
 def test_gamma_sheetbend():
     args = ["phaser_simple"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
@@ -36,6 +43,7 @@ def test_gamma_sheetbend():
         llgs = [float(e.text) for e in xml.findall(".//Solution/LLG")]
         assert max(llgs) > 1000
 
+@pytest.mark.order("first")
 def test_gamma():
     args = ["phaser_simple"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
@@ -53,6 +61,7 @@ def test_gamma():
         assert max(llgs) > 1000
 
 
+@pytest.mark.order("first")
 def test_no_solution():
     args = ["phaser_simple"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
