@@ -1,0 +1,35 @@
+{
+  "name": "mtz-viewer",
+  "displayName": "MTZ File Viewer",
+  "description": "Preview MTZ crystallographic data files",
+  "version": "0.1.0",
+  "publisher": "cdata-codegen",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mtzViewer.preview"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mtzViewer.preview",
+        "title": "Preview MTZ File",
+        "category": "MTZ"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .mtz",
+          "command": "mtzViewer.preview",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}
