@@ -1186,16 +1186,22 @@ class CMtzData(CMtzDataStub):
                 self.resolutionRange.high = mtz.resolution_high()
 
             # Extract column information as CMtzColumn objects
+            # Skip H-type columns (Miller indices H, K, L)
             if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
                 # Create CMtzColumn objects with columnLabel and columnType
                 mtz_columns = []
                 for col in mtz.columns:
+                    # Skip Miller indices (type 'H')
+                    if col.type == 'H':
+                        continue
+
                     mtz_col = CMtzColumn(name=col.label)
                     mtz_col.columnLabel = col.label
                     mtz_col.columnType = col.type
-                    # Get dataset name if available
+                    # Get dataset name and use dataset ID as groupIndex
                     if col.dataset:
                         mtz_col.dataset = col.dataset.dataset_name
+                        mtz_col.groupIndex = col.dataset.id
                     mtz_columns.append(mtz_col)
                 self.listOfColumns = mtz_columns
 
@@ -1324,6 +1330,216 @@ class CMtzData(CMtzDataStub):
 
         # Final fallback: return empty list
         return []
+
+    def getColumnGroups(self):
+        """
+        Build list of column groups from MTZ column info (for mini-mtz's).
+
+        This method analyzes the columns in listOfColumns and groups them by:
+        1. Dataset and groupIndex
+        2. Special handling for map coefficients (F-Phi pairs)
+        3. Assigns column group types (Obs, Phs, MapCoeffs, FreeR) based on signatures
+
+        Returns:
+            list: List of CColumnGroup objects with columnList, columnGroupType, contentFlag
+
+        Example:
+            >>> groups = mtz_data.getColumnGroups()
+            >>> for group in groups:
+            ...     print(f"{group.columnGroupType}: {group.columnList}")
+        """
+        groupIndex = 0  # MapCoeffs broken KJS
+        groupList = []
+
+        # Get listOfColumns - handle both CList and plain list
+        if not hasattr(self, 'listOfColumns') or self.listOfColumns is None:
+            return groupList
+
+        columns = self.listOfColumns.value if hasattr(self.listOfColumns, 'value') else self.listOfColumns
+        if not columns:
+            return groupList
+
+        # Sort listOfColumns into a list of grouped columns
+        for ii in range(len(columns)):
+            fileColumn = columns[ii]
+            col_group_idx = fileColumn.groupIndex.value if hasattr(fileColumn.groupIndex, 'value') else fileColumn.groupIndex
+
+            if col_group_idx != groupIndex:
+                col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+                groupList.append(CColumnGroup(dataset=str(col_dataset)))
+                groupIndex = int(col_group_idx)
+
+            # Ensure we have at least one group (defensive check for first column)
+            if not groupList:
+                col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+                groupList.append(CColumnGroup(dataset=str(col_dataset)))
+                groupIndex = int(col_group_idx)
+
+            col_label = fileColumn.columnLabel.value if hasattr(fileColumn.columnLabel, 'value') else fileColumn.columnLabel
+            col_type = fileColumn.columnType.value if hasattr(fileColumn.columnType, 'value') else fileColumn.columnType
+            col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+            col_group_idx = fileColumn.groupIndex.value if hasattr(fileColumn.groupIndex, 'value') else fileColumn.groupIndex
+
+            groupList[-1].columnList.append(CMtzColumn(
+                columnLabel=col_label,
+                columnType=col_type,
+                groupIndex=col_group_idx,
+                dataset=col_dataset
+            ))
+
+        # Loop over and catch map-coefs (F-Phi pairs)
+        for i, col1 in enumerate(columns[:-1]):
+            col2 = columns[i+1]
+            col1_type = col1.columnType.value if hasattr(col1.columnType, 'value') else col1.columnType
+            col2_type = col2.columnType.value if hasattr(col2.columnType, 'value') else col2.columnType
+            MapT = (col1_type == 'F' and col2_type == 'P')  # Map (FP): F-Phi / Phases (PW): Phi-FOM
+
+            if MapT:
+                col1_dataset = col1.dataset.value if hasattr(col1.dataset, 'value') else col1.dataset
+                groupList.append(CColumnGroup(dataset=str(col1_dataset)))
+
+                col1_label = col1.columnLabel.value if hasattr(col1.columnLabel, 'value') else col1.columnLabel
+                col1_group = col1.groupIndex.value if hasattr(col1.groupIndex, 'value') else col1.groupIndex
+                col2_label = col2.columnLabel.value if hasattr(col2.columnLabel, 'value') else col2.columnLabel
+                col2_group = col2.groupIndex.value if hasattr(col2.groupIndex, 'value') else col2.groupIndex
+
+                groupList[-1].columnList.append(CMtzColumn(
+                    columnLabel=col1_label,
+                    columnType=col1_type,
+                    groupIndex=col1_group,
+                    dataset=col1_dataset
+                ))
+                groupList[-1].columnList.append(CMtzColumn(
+                    columnLabel=col2_label,
+                    columnType=col2_type,
+                    groupIndex=col2_group,
+                    dataset=col1_dataset
+                ))
+
+        # Assign the columnGroupType and contentFlag based on column signatures
+        for group in groupList:
+            signature = ''
+            labels = []
+            col_list = group.columnList.value if hasattr(group.columnList, 'value') else group.columnList
+            for col in col_list:
+                col_type = col.columnType.value if hasattr(col.columnType, 'value') else col.columnType
+                col_label = col.columnLabel.value if hasattr(col.columnLabel, 'value') else col.columnLabel
+
+                # Skip H-type columns (Miller indices H, K, L) when building signature
+                if col_type != 'H':
+                    signature = signature + str(col_type)
+                    labels.append(str(col_label))
+
+            # Check against known column signatures for each data type
+            from core.base_object.class_metadata import get_class_metadata_by_type
+            for cls, label in [[CObsDataFile, 'Obs'], [CPhsDataFile, 'Phs'],
+                              [CMapCoeffsDataFile, 'MapCoeffs'], [CFreeRDataFile, 'FreeR']]:
+                meta = get_class_metadata_by_type(cls)
+                correct_columns = meta.qualifiers.get('correctColumns') if meta and meta.qualifiers else None
+                if correct_columns and signature in correct_columns:
+                    if label == 'FreeR':
+                        # Is this really FreeR? check column label
+                        if (len(labels) == 1) and ('free' in str(labels[0]).lower()):
+                            print(f"Column recognised as FreeR, label: {str(labels[0])}")
+                            group.columnGroupType = label
+                            group.contentFlag = correct_columns.index(signature) + 1
+                    else:
+                        group.columnGroupType = label
+                        group.contentFlag = correct_columns.index(signature) + 1
+
+            # Handle special cases if columnGroupType not set
+            if not group.columnGroupType.isSet():
+                if signature == 'FPW':
+                    group.columnGroupType = 'Phs'
+                    group.contentFlag = 2
+                    col_list.pop(0)
+                elif signature == 'PWF':
+                    group.columnGroupType = 'Phs'
+                    group.contentFlag = 2
+                    col_list.pop(2)
+                elif signature == 'FQDQ':
+                    group.columnGroupType = 'Obs'
+                    col_list.pop(3)
+                    col_list.pop(2)
+                    group.contentFlag = 4
+
+        return groupList
+
+    def clipperSameCell(self, other_content, tolerance=None):
+        """
+        Compare unit cells between two MTZ data contents.
+
+        Args:
+            other_content: Another CMtzData or CUnmergedDataContent instance
+            tolerance: Cell difference tolerance in Angstroms (default 0.01 if None)
+
+        Returns:
+            dict with keys:
+                'validity': bool - True if cells are similar within tolerance
+                'tolerance': float - the tolerance value
+                'difference': float - average cell difference in Angstroms
+                'maximumResolution1': float - max resolution for this cell
+                'maximumResolution2': float - max resolution for other cell
+        """
+        import math
+
+        # Use default tolerance if None
+        if tolerance is None:
+            tolerance = 0.01
+
+        # Get cell parameters for both contents
+        cell1 = self.cell
+        cell2 = other_content.cell
+
+        # Calculate cell differences for each parameter
+        # Cell parameters: a, b, c (lengths in Angstroms), alpha, beta, gamma (angles in degrees)
+        if not cell1 or not cell2:
+            # If either cell is missing, return invalid
+            return {
+                'validity': False,
+                'tolerance': tolerance,
+                'difference': float('inf'),
+                'maximumResolution1': 0.0,
+                'maximumResolution2': 0.0
+            }
+
+        # Extract cell parameters
+        a1, b1, c1 = cell1.a, cell1.b, cell1.c
+        alpha1, beta1, gamma1 = cell1.alpha, cell1.beta, cell1.gamma
+
+        a2, b2, c2 = cell2.a, cell2.b, cell2.c
+        alpha2, beta2, gamma2 = cell2.alpha, cell2.beta, cell2.gamma
+
+        # Calculate absolute differences
+        da = abs(a1 - a2)
+        db = abs(b1 - b2)
+        dc = abs(c1 - c2)
+
+        # For angles, convert to radians and calculate difference in arc length
+        # at the average cell edge length to get a metric in Angstroms
+        avg_length = (a1 + b1 + c1 + a2 + b2 + c2) / 6.0
+        dalpha = abs(alpha1 - alpha2) * math.pi / 180.0 * avg_length
+        dbeta = abs(beta1 - beta2) * math.pi / 180.0 * avg_length
+        dgamma = abs(gamma1 - gamma2) * math.pi / 180.0 * avg_length
+
+        # Average cell difference
+        avg_diff = (da + db + dc + dalpha + dbeta + dgamma) / 6.0
+
+        # Determine validity based on tolerance
+        validity = avg_diff <= tolerance
+
+        # Calculate maximum resolutions based on cell size
+        # Resolution = smallest cell dimension / 2 (rough approximation)
+        max_res1 = min(a1, b1, c1) / 2.0
+        max_res2 = min(a2, b2, c2) / 2.0
+
+        return {
+            'validity': validity,
+            'tolerance': tolerance,
+            'difference': avg_diff,
+            'maximumResolution1': max_res1,
+            'maximumResolution2': max_res2
+        }
 
 
 class CMtzDataFile(CMtzDataFileStub):
@@ -2024,16 +2240,22 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
                 self.numberLattices = len(mtz.batches)
 
         # Extract column information as CMtzColumn objects
+        # Skip H-type columns (Miller indices H, K, L)
         if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
             # Create CMtzColumn objects with columnLabel and columnType
             mtz_columns = []
             for col in mtz.columns:
+                # Skip Miller indices (type 'H')
+                if col.type == 'H':
+                    continue
+
                 mtz_col = CMtzColumn(name=col.label)
                 mtz_col.columnLabel = col.label
                 mtz_col.columnType = col.type
-                # Get dataset name if available
+                # Get dataset name and use dataset ID as groupIndex
                 if col.dataset:
                     mtz_col.dataset = col.dataset.dataset_name
+                    mtz_col.groupIndex = col.dataset.id
                 mtz_columns.append(mtz_col)
             self.listOfColumns = mtz_columns
 
@@ -2258,6 +2480,210 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
                 details=f"Error parsing Scalepack file '{file_path}': {e}",
                 name=self.object_name() if hasattr(self, 'object_name') else ''
             )
+
+    def getColumnGroups(self):
+        """
+        Build list of column groups from MTZ column info (for mini-mtz's).
+
+        This method is identical to CMtzData.getColumnGroups() since CUnmergedDataContent
+        also has listOfColumns populated with CMtzColumn objects.
+
+        Returns:
+            list: List of CColumnGroup objects with columnList, columnGroupType, contentFlag
+
+        Example:
+            >>> groups = unmerged.getColumnGroups()
+            >>> for group in groups:
+            ...     print(f"{group.columnGroupType}: {group.columnList}")
+        """
+        groupIndex = 0  # MapCoeffs broken KJS
+        groupList = []
+
+        # Get listOfColumns - handle both CList and plain list
+        if not hasattr(self, 'listOfColumns') or self.listOfColumns is None:
+            return groupList
+
+        columns = self.listOfColumns.value if hasattr(self.listOfColumns, 'value') else self.listOfColumns
+        if not columns:
+            return groupList
+
+        # Sort listOfColumns into a list of grouped columns
+        for ii in range(len(columns)):
+            fileColumn = columns[ii]
+            col_group_idx = fileColumn.groupIndex.value if hasattr(fileColumn.groupIndex, 'value') else fileColumn.groupIndex
+
+            if col_group_idx != groupIndex:
+                col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+                groupList.append(CColumnGroup(dataset=str(col_dataset)))
+                groupIndex = int(col_group_idx)
+
+            # Ensure we have at least one group (defensive check for first column)
+            if not groupList:
+                col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+                groupList.append(CColumnGroup(dataset=str(col_dataset)))
+                groupIndex = int(col_group_idx)
+
+            col_label = fileColumn.columnLabel.value if hasattr(fileColumn.columnLabel, 'value') else fileColumn.columnLabel
+            col_type = fileColumn.columnType.value if hasattr(fileColumn.columnType, 'value') else fileColumn.columnType
+            col_dataset = fileColumn.dataset.value if hasattr(fileColumn.dataset, 'value') else fileColumn.dataset
+            col_group_idx = fileColumn.groupIndex.value if hasattr(fileColumn.groupIndex, 'value') else fileColumn.groupIndex
+
+            groupList[-1].columnList.append(CMtzColumn(
+                columnLabel=col_label,
+                columnType=col_type,
+                groupIndex=col_group_idx,
+                dataset=col_dataset
+            ))
+
+        # Loop over and catch map-coefs (F-Phi pairs)
+        for i, col1 in enumerate(columns[:-1]):
+            col2 = columns[i+1]
+            col1_type = col1.columnType.value if hasattr(col1.columnType, 'value') else col1.columnType
+            col2_type = col2.columnType.value if hasattr(col2.columnType, 'value') else col2.columnType
+            MapT = (col1_type == 'F' and col2_type == 'P')  # Map (FP): F-Phi / Phases (PW): Phi-FOM
+
+            if MapT:
+                col1_dataset = col1.dataset.value if hasattr(col1.dataset, 'value') else col1.dataset
+                groupList.append(CColumnGroup(dataset=str(col1_dataset)))
+
+                col1_label = col1.columnLabel.value if hasattr(col1.columnLabel, 'value') else col1.columnLabel
+                col1_group = col1.groupIndex.value if hasattr(col1.groupIndex, 'value') else col1.groupIndex
+                col2_label = col2.columnLabel.value if hasattr(col2.columnLabel, 'value') else col2.columnLabel
+                col2_group = col2.groupIndex.value if hasattr(col2.groupIndex, 'value') else col2.groupIndex
+
+                groupList[-1].columnList.append(CMtzColumn(
+                    columnLabel=col1_label,
+                    columnType=col1_type,
+                    groupIndex=col1_group,
+                    dataset=col1_dataset
+                ))
+                groupList[-1].columnList.append(CMtzColumn(
+                    columnLabel=col2_label,
+                    columnType=col2_type,
+                    groupIndex=col2_group,
+                    dataset=col1_dataset
+                ))
+
+        # Assign the columnGroupType and contentFlag based on column signatures
+        for group in groupList:
+            signature = ''
+            labels = []
+            col_list = group.columnList.value if hasattr(group.columnList, 'value') else group.columnList
+            for col in col_list:
+                col_type = col.columnType.value if hasattr(col.columnType, 'value') else col.columnType
+                col_label = col.columnLabel.value if hasattr(col.columnLabel, 'value') else col.columnLabel
+
+                # Skip H-type columns (Miller indices H, K, L) when building signature
+                if col_type != 'H':
+                    signature = signature + str(col_type)
+                    labels.append(str(col_label))
+
+            # Check against known column signatures for each data type
+            from core.base_object.class_metadata import get_class_metadata_by_type
+            for cls, label in [[CObsDataFile, 'Obs'], [CPhsDataFile, 'Phs'],
+                              [CMapCoeffsDataFile, 'MapCoeffs'], [CFreeRDataFile, 'FreeR']]:
+                meta = get_class_metadata_by_type(cls)
+                correct_columns = meta.qualifiers.get('correctColumns') if meta and meta.qualifiers else None
+                if correct_columns and signature in correct_columns:
+                    if label == 'FreeR':
+                        # Is this really FreeR? check column label
+                        if (len(labels) == 1) and ('free' in str(labels[0]).lower()):
+                            print(f"Column recognised as FreeR, label: {str(labels[0])}")
+                            group.columnGroupType = label
+                            group.contentFlag = correct_columns.index(signature) + 1
+                    else:
+                        group.columnGroupType = label
+                        group.contentFlag = correct_columns.index(signature) + 1
+
+            # Handle special cases if columnGroupType not set
+            if not group.columnGroupType.isSet():
+                if signature == 'FPW':
+                    group.columnGroupType = 'Phs'
+                    group.contentFlag = 2
+                    col_list.pop(0)
+                elif signature == 'PWF':
+                    group.columnGroupType = 'Phs'
+                    group.contentFlag = 2
+                    col_list.pop(2)
+                elif signature == 'FQDQ':
+                    group.columnGroupType = 'Obs'
+                    col_list.pop(3)
+                    col_list.pop(2)
+                    group.contentFlag = 4
+
+        return groupList
+
+    def clipperSameCell(self, other_content, tolerance=0.01):
+        """
+        Compare unit cells between two unmerged data contents.
+
+        Args:
+            other_content: Another CUnmergedDataContent or CMtzData instance
+            tolerance: Cell difference tolerance in Angstroms (default 0.01)
+
+        Returns:
+            dict with keys:
+                'validity': bool - True if cells are similar within tolerance
+                'tolerance': float - the tolerance value
+                'difference': float - average cell difference in Angstroms
+                'maximumResolution1': float - max resolution for this cell
+                'maximumResolution2': float - max resolution for other cell
+        """
+        import math
+
+        # Get cell parameters for both contents
+        cell1 = self.cell
+        cell2 = other_content.cell
+
+        # Calculate cell differences for each parameter
+        # Cell parameters: a, b, c (lengths in Angstroms), alpha, beta, gamma (angles in degrees)
+        if not cell1 or not cell2:
+            # If either cell is missing, return invalid
+            return {
+                'validity': False,
+                'tolerance': tolerance,
+                'difference': float('inf'),
+                'maximumResolution1': 0.0,
+                'maximumResolution2': 0.0
+            }
+
+        # Extract cell parameters
+        a1, b1, c1 = cell1.a, cell1.b, cell1.c
+        alpha1, beta1, gamma1 = cell1.alpha, cell1.beta, cell1.gamma
+
+        a2, b2, c2 = cell2.a, cell2.b, cell2.c
+        alpha2, beta2, gamma2 = cell2.alpha, cell2.beta, cell2.gamma
+
+        # Calculate absolute differences
+        da = abs(a1 - a2)
+        db = abs(b1 - b2)
+        dc = abs(c1 - c2)
+
+        # For angles, convert to radians and calculate difference in arc length
+        # at the average cell edge length to get a metric in Angstroms
+        avg_length = (a1 + b1 + c1 + a2 + b2 + c2) / 6.0
+        dalpha = abs(alpha1 - alpha2) * math.pi / 180.0 * avg_length
+        dbeta = abs(beta1 - beta2) * math.pi / 180.0 * avg_length
+        dgamma = abs(gamma1 - gamma2) * math.pi / 180.0 * avg_length
+
+        # Average cell difference
+        avg_diff = (da + db + dc + dalpha + dbeta + dgamma) / 6.0
+
+        # Determine validity based on tolerance
+        validity = avg_diff <= tolerance
+
+        # Calculate maximum resolutions based on cell size
+        # Resolution = smallest cell dimension / 2 (rough approximation)
+        max_res1 = min(a1, b1, c1) / 2.0
+        max_res2 = min(a2, b2, c2) / 2.0
+
+        return {
+            'validity': validity,
+            'tolerance': tolerance,
+            'difference': avg_diff,
+            'maximumResolution1': max_res1,
+            'maximumResolution2': max_res2
+        }
 
 
 class CUnmergedDataFile(CUnmergedDataFileStub):
