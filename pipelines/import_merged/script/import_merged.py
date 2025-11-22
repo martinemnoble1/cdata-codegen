@@ -523,7 +523,7 @@ class import_merged(CPluginScript):
             wdir = os.path.join(wd, 'job_1')
             if not os.path.exists(wdir):
                 os.mkdir(wdir, 0o777)
-                freerfile = os.path.join(wdir, 'FREEOUT.mtz')
+            freerfile = os.path.join(wdir, 'FREEOUT.mtz')
 
         self.freeout = freerfile
         reducehkl = True  # for now
