@@ -4,14 +4,39 @@ This guide walks through setting up a complete development environment for cdata
 
 ## Prerequisites
 
-- **CCP4 Suite 9.x** installed on your system
-- **Python 3.9** (must match CCP4's Python version)
+- **CCP4 Suite 2024/2025** installed on your system (tested with CCP4-20251105)
+- **Python 3.11** (must match CCP4's Python version)
 - **Git** for version control
 - **macOS, Linux, or WSL** (Unix-like environment)
 
 ## Overview
 
-The cdata-codegen project requires integration with CCP4's crystallographic libraries (clipper, mmdb2, phaser, CCTBX stack). Since these are compiled Python extensions built for Python 3.9, we create a Python 3.9 virtual environment and symlink the CCP4 modules into it.
+The cdata-codegen project requires integration with CCP4's crystallographic libraries (clipper, mmdb2, phaser, RDKit, CCTBX stack). Since these are compiled Python extensions built for Python 3.11, we create a Python 3.11 virtual environment and symlink the CCP4 modules into it.
+
+## Package Management Strategy
+
+This project uses a **hybrid approach** combining pip-installed packages and symlinked CCP4 modules:
+
+### Pip-Installed Packages (from PyPI)
+Standard Python packages installed via `pip install -r requirements.txt`:
+- **Web framework**: Django, djangorestframework, django-cors-headers
+- **Scientific computing**: numpy, scipy, pandas, matplotlib
+- **Structural biology**: biopython, gemmi, mrcfile
+- **Testing**: pytest, pytest-django, pytest-asyncio, pytest-xdist
+- **Utilities**: autopep8, lxml, PyYAML, requests, svgwrite
+
+### Symlinked CCP4 Modules (from CCP4 distribution)
+CCP4-specific modules that must be symlinked from the CCP4 installation:
+- **Crystallography**: clipper, ccp4mg (includes mmdb2)
+- **Chemistry**: rdkit (CCP4's v2023.03.3 for compatibility)
+- **Molecular replacement**: phaser, mrbump
+- **Validation**: iris_validation, chem_data (Top8000 database)
+- **Reporting**: pyrvapi
+
+**Why symlink?** These modules are either:
+1. Compiled against CCP4's specific library versions
+2. Not available on PyPI
+3. Different versions than PyPI (e.g., RDKit v2023.03.3 vs v2025.09.1)
 
 ---
 
@@ -21,22 +46,26 @@ CCP4 installations vary by platform and installation method. Use these commands 
 
 ### macOS
 ```bash
-# Standard installation
-CCP4_ROOT=/Applications/ccp4-9
+# CCP4-20251105 (Python 3.11)
+CCP4_ROOT=/Users/nmemn/Developer/ccp4-20251105
 
-# Verify Python location
-ls -la $CCP4_ROOT/Frameworks/Python.framework/Versions/3.9/bin/python3.9
+# Or standard installation location
+CCP4_ROOT=/Applications/ccp4-20251105
+
+# Verify Python location (should be 3.11.x)
+ls -la $CCP4_ROOT/Frameworks/Python.framework/Versions/3.11/bin/python3.11
 ```
 
 ### Linux
 ```bash
 # Common locations
-CCP4_ROOT=/opt/ccp4-9.0
+CCP4_ROOT=/opt/ccp4-20251105
 # Or
-CCP4_ROOT=$HOME/ccp4-9.0
+CCP4_ROOT=$HOME/ccp4-20251105
 
 # Verify Python location
 ls -la $CCP4_ROOT/bin/ccp4-python
+$CCP4_ROOT/bin/ccp4-python --version  # Should show 3.11.x
 ```
 
 ### Finding CCP4 Automatically
@@ -61,35 +90,32 @@ export CCP4_ROOT=/path/to/your/ccp4-9
 
 ## Step 2: Determine CCP4 Python Paths
 
-CCP4 provides Python 3.9 with crystallographic libraries. We need to locate:
+CCP4 provides Python 3.11 with crystallographic libraries. We need to locate:
 1. Python executable
 2. site-packages directory
-3. share directory
 
-### macOS Paths
+### macOS Paths (CCP4-20251105)
 ```bash
-CCP4_PYTHON="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.9/bin/python3.9"
-CCP4_SITE_PACKAGES="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages"
-CCP4_SHARE="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.9/share"
+CCP4_PYTHON="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.11/bin/python3.11"
+CCP4_SITE_PACKAGES="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages"
 ```
 
 ### Linux Paths
 ```bash
 CCP4_PYTHON="$CCP4_ROOT/bin/ccp4-python"
-CCP4_SITE_PACKAGES="$CCP4_ROOT/lib/python3.9/site-packages"
-CCP4_SHARE="$CCP4_ROOT/share"
+CCP4_SITE_PACKAGES="$CCP4_ROOT/lib/python3.11/site-packages"
 ```
 
 ### Verify Paths
 ```bash
-# Check Python version (must be 3.9.x)
+# Check Python version (must be 3.11.x)
 $CCP4_PYTHON --version
 
 # Check site-packages exists
 ls "$CCP4_SITE_PACKAGES" | head -5
 
 # Check for key modules
-ls "$CCP4_SITE_PACKAGES" | grep -E "(clipper|phaser|cctbx|mmdb)"
+ls "$CCP4_SITE_PACKAGES" | grep -E "(clipper|phaser|rdkit|mrbump|iris_validation)"
 ```
 
 ---
@@ -140,9 +166,24 @@ pip install "numpy<2"
 
 ## Step 5: Symlink CCP4 Modules
 
+### Summary of Required Symlinks
+
+The following 10 symlinks are **required** for the comprehensive test suite (77% pass rate):
+
+| Module | Type | Purpose | Test Impact |
+|--------|------|---------|-------------|
+| `clipper.py` + `_clipper.so` | Library | Crystallographic calculations | Core refmac, ctruncate tests |
+| `ccp4mg/` | Package | Molecular graphics (includes mmdb2) | Model manipulation, validation |
+| `pyrvapi.so` + `pyrvapi_ext/` | Library | Report viewing API | HTML report generation |
+| `rdkit/` | Package | Chemistry toolkit (v2023.03.3) | **CRITICAL**: acedrg, phaser compatibility |
+| `phaser/` | Package | Molecular replacement | phaser_* tests (18 tests) |
+| `mrbump/` | Package | MR pipeline | mrbump tests |
+| `iris_validation/` | Package | Structure validation | validate_protein tests |
+| `chem_data/` | Data | Top8000 Ramachandran/rotamer database | MolProbity validation |
+
 ### 5.1 Core Crystallographic Modules
 ```bash
-cd .venv/lib/python3.9/site-packages
+cd .venv/lib/python3.11/site-packages
 
 # Clipper (crystallographic library)
 ln -sf "$CCP4_SITE_PACKAGES/clipper.py" .
@@ -156,99 +197,79 @@ ln -sf "$CCP4_SITE_PACKAGES/pyrvapi.so" .
 ln -sf "$CCP4_SITE_PACKAGES/pyrvapi_ext" .
 ```
 
-### 5.2 Full CCTBX Stack (for Phaser and advanced features)
-
-Symlink all CCTBX-related modules:
-
+### 5.2 Chemistry and Molecular Replacement
 ```bash
-cd .venv/lib/python3.9/site-packages
+cd .venv/lib/python3.11/site-packages
 
-# List of all CCTBX modules to symlink
-CCTBX_MODULES=(
-    annlib_adaptbx
-    boost_adaptbx
-    cbflib_adaptbx
-    ccp4io_adaptbx
-    cctbx
-    chiltbx
-    cootbx
-    dxtbx
-    gltbx
-    iotbx
-    libtbx
-    mmtbx
-    omptbx
-    phaser
-    phaser_voyager
-    phasertng
-    rstbx
-    scitbx
-    serialtbx
-    simtbx
-    smtbx
-    tbxx
-    tntbx
-    wxtbx
-)
+# RDKit (CRITICAL: Use CCP4's v2023.03.3, not pip's v2025.09.1)
+# Phaser's pickle implementation requires this specific version
+ln -sf "$CCP4_SITE_PACKAGES/rdkit" .
 
-# Create symlinks
-for module in "${CCTBX_MODULES[@]}"; do
-    if [ -e "$CCP4_SITE_PACKAGES/$module" ]; then
-        ln -sf "$CCP4_SITE_PACKAGES/$module" .
-        echo "✓ Symlinked $module"
-    else
-        echo "⚠ Module $module not found (may not be needed)"
-    fi
-done
+# Phaser (molecular replacement)
+ln -sf "$CCP4_SITE_PACKAGES/phaser" .
+
+# MrBUMP (molecular replacement pipeline)
+ln -sf "$CCP4_SITE_PACKAGES/mrbump" .
 ```
 
-### 5.3 Additional CCP4 Modules (Optional - enables 158 plugins)
-
-For maximum plugin discovery, symlink additional specialized modules:
-
+### 5.3 Validation and Data
 ```bash
-cd .venv/lib/python3.9/site-packages
+cd .venv/lib/python3.11/site-packages
 
-# Additional CCP4 modules for specialized plugins
-ADDITIONAL_MODULES=(
-    dials          # Diffraction Integration for Advanced Light Sources
-    dials_data     # DIALS test data
-    ample          # Ab-initio Molecular replacement Pipeline for Ensembles
-    simbad         # Sequence Independent Molecular replacement Based on Available Database
-    iris_validation # Structure validation tools
-    onedep         # One-stop Data Entry and Processing
-    pyjob          # Python job management (dependency for simbad/ample)
-    docx           # Microsoft Word document generation (dependency for reporting)
-)
+# Iris validation (structure validation tools)
+ln -sf "$CCP4_SITE_PACKAGES/iris_validation" .
 
-# Create symlinks for additional modules
-for module in "${ADDITIONAL_MODULES[@]}"; do
-    if [ -e "$CCP4_SITE_PACKAGES/$module" ]; then
-        ln -sf "$CCP4_SITE_PACKAGES/$module" .
-        echo "✓ Symlinked $module"
-    else
-        echo "⚠ Module $module not found (skipping)"
-    fi
-done
+# Chem_data (Top8000 Ramachandran and rotamer database for MolProbity)
+ln -sf "$CCP4_SITE_PACKAGES/chem_data" .
 ```
 
-**Note**: These additional modules enable 3 more plugins (155 → 158 total) but some (AMPLE, SIMBAD) require full CCP4 environment variables to be sourced at runtime.
-
-### 5.4 CCTBX Build Configuration
+### 5.4 Verify All Symlinks
 ```bash
 cd /path/to/cdata-codegen
-
-# Create share directory structure
-mkdir -p .venv/share
-
-# Symlink CCTBX build configuration
-ln -sf "$CCP4_SHARE/cctbx" .venv/share/
+ls -la .venv/lib/python3.11/site-packages/ | grep "^l"
 ```
 
-**Verify symlinks:**
+**Expected output (10 symlinks):**
+```
+lrwxr-xr-x  _clipper.so -> /path/to/ccp4-20251105/.../site-packages/_clipper.so
+lrwxr-xr-x  ccp4mg -> /path/to/ccp4-20251105/.../site-packages/ccp4mg
+lrwxr-xr-x  chem_data -> /path/to/ccp4-20251105/.../site-packages/chem_data
+lrwxr-xr-x  clipper.py -> /path/to/ccp4-20251105/.../site-packages/clipper.py
+lrwxr-xr-x  iris_validation -> /path/to/ccp4-20251105/.../site-packages/iris_validation
+lrwxr-xr-x  mrbump -> /path/to/ccp4-20251105/.../site-packages/mrbump
+lrwxr-xr-x  phaser -> /path/to/ccp4-20251105/.../site-packages/phaser
+lrwxr-xr-x  pyrvapi.so -> /path/to/ccp4-20251105/.../site-packages/pyrvapi.so
+lrwxr-xr-x  pyrvapi_ext -> /path/to/ccp4-20251105/.../site-packages/pyrvapi_ext
+lrwxr-xr-x  rdkit -> /path/to/ccp4-20251105/.../site-packages/rdkit
+```
+
+### Quick Setup Script
 ```bash
-ls -la .venv/share/cctbx
-file .venv/share/cctbx  # Should show it's a valid symlink
+#!/bin/bash
+# Quick symlink setup for cdata-codegen with CCP4-20251105
+
+CCP4_ROOT="/Users/nmemn/Developer/ccp4-20251105"  # Adjust for your installation
+CCP4_SITE_PACKAGES="$CCP4_ROOT/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages"
+
+cd .venv/lib/python3.11/site-packages
+
+# Core modules (5 symlinks)
+ln -sf "$CCP4_SITE_PACKAGES/clipper.py" .
+ln -sf "$CCP4_SITE_PACKAGES/_clipper.so" .
+ln -sf "$CCP4_SITE_PACKAGES/ccp4mg" .
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi.so" .
+ln -sf "$CCP4_SITE_PACKAGES/pyrvapi_ext" .
+
+# Chemistry and MR (3 symlinks)
+ln -sf "$CCP4_SITE_PACKAGES/rdkit" .
+ln -sf "$CCP4_SITE_PACKAGES/phaser" .
+ln -sf "$CCP4_SITE_PACKAGES/mrbump" .
+
+# Validation (2 symlinks)
+ln -sf "$CCP4_SITE_PACKAGES/iris_validation" .
+ln -sf "$CCP4_SITE_PACKAGES/chem_data" .
+
+echo "✅ All 10 CCP4 modules symlinked"
 ```
 
 ---
@@ -505,33 +526,49 @@ For continuous integration:
 
 ## Summary
 
-**Minimum Setup (basic tests):**
-- Python 3.9 venv
-- requirements.txt installed
-- NumPy < 2
-- Symlink: clipper.py, _clipper.so, ccp4mg, pyrvapi.so, pyrvapi_ext
+### Package Inventory
 
-**Full Setup (phaser/molecular replacement):**
-- All of the above, plus:
-- Symlink: 24 CCTBX modules
-- Symlink: 8 additional CCP4 modules (dials, ample, simbad, etc.)
-- Symlink: .venv/share/cctbx
-- Install: svgwrite, chardet, mrcfile via pip
-- Result: 158 plugins, phaser tests functional
+**Pip-Installed Packages (56 total):**
+- Core: Django, djangorestframework, pytest, numpy, scipy, pandas
+- Structural biology: biopython, gemmi, mrcfile, cctbx-base
+- Full list: Run `.venv/bin/pip list --format=freeze`
+
+**Symlinked CCP4 Modules (10 required):**
+1. `clipper.py` + `_clipper.so` - Crystallography
+2. `ccp4mg/` - Molecular graphics (includes mmdb2)
+3. `pyrvapi.so` + `pyrvapi_ext/` - Report viewing
+4. `rdkit/` - Chemistry toolkit (v2023.03.3)
+5. `phaser/` - Molecular replacement
+6. `mrbump/` - MR pipeline
+7. `iris_validation/` - Validation
+8. `chem_data/` - Top8000 database
+
+**Test Results with Full Setup:**
+- **53 passed** out of 69 tests
+- **77% pass rate**
+- Runtime: ~38 minutes
 
 **Verification Commands:**
 ```bash
-# Quick check
+# Quick check - Core modules
 python -c "import clipper; from ccp4mg import mmdb2; print('✓ Core modules OK')"
 
-# Full check
-python -c "import phaser; import cctbx; import iotbx; print('✓ Full stack OK')"
+# Critical check - RDKit version
+python -c "import rdkit; print(f'RDKit: {rdkit.__version__}')"  # Should show 2023.03.3
 
-# Plugin count
-python core/task_manager/plugin_lookup.py | grep "found.*plugins"
+# Full check - All symlinked modules
+python -c "
+import clipper
+from ccp4mg import mmdb2
+import rdkit
+import phaser
+import mrbump
+import iris_validation
+print('✅ ALL CCP4 MODULES OK')
+"
 
-# Run tests
-./run_test.sh i2run
+# Run comprehensive tests
+./run_test.sh tests/i2run
 ```
 
 ---
@@ -539,9 +576,24 @@ python core/task_manager/plugin_lookup.py | grep "found.*plugins"
 ## Next Steps
 
 After setup:
-1. Review [CLAUDE.md](CLAUDE.md) for project architecture
-2. Check [RESMAX_FIX_SUMMARY.md](RESMAX_FIX_SUMMARY.md) for recent fixes
-3. Run full test suite: `./run_test.sh i2run`
-4. Expected baseline: **17 passed, 42 failed** (28.8% pass rate)
+1. Review [CLAUDE.md](CLAUDE.md) for project architecture and development guidelines
+2. Understand the migration: Qt-free CData system replacing Qt's QObject hierarchy
+3. Run comprehensive test suite: `./run_test.sh tests/i2run`
+4. Current baseline (as of commit 9187a41): **53 passed, 14 failed** (77% pass rate)
+
+## Key Architecture Points
+
+**CData System:** Metadata-driven data classes replacing Qt's property system
+- Smart assignment with type coercion
+- Hierarchical object system with weak references
+- Signal/slot system without Qt dependencies
+
+**Plugin System:** 148+ legacy ccp4i2 plugins via lazy-loading registry
+- Locked legacy code in `wrappers/`, `wrappers2/`, `pipelines/`
+- Modern Python wrappers in `core/`
+
+**Test Strategy:** Django-based integration tests with CCP4 environment
+- Use `./run_test.sh` for all i2run tests (sets up CCP4 environment)
+- Clean test projects: `rm -rf tests/i2run/test_projects/*`
 
 Good luck! 🚀
