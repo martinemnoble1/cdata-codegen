@@ -484,6 +484,22 @@ class CFloat(CData):
     def __float__(self):
         return float(self.value)
 
+    def __abs__(self):
+        """Return absolute value of the float."""
+        return abs(self.value)
+
+    def __sub__(self, other):
+        """Support subtraction for cell difference calculations."""
+        if isinstance(other, (CFloat, CInt)):
+            return self.value - other.value
+        return self.value - other
+
+    def __rsub__(self, other):
+        """Support reverse subtraction."""
+        if isinstance(other, (CFloat, CInt)):
+            return other.value - self.value
+        return other - self.value
+
     def __bool__(self):
         """Return True if this value has been explicitly set, False otherwise.
 
@@ -1671,6 +1687,19 @@ class CList(CData):
 
             # Add the item to the list
             self.append(new_item)
+
+    def addItem(self):
+        """
+        Legacy API: Create and add a new item to the list.
+
+        Returns:
+            The newly created item
+
+        Note: This is a legacy ccp4i2 API method. Modern code should use makeItem().
+        """
+        new_item = self.makeItem()
+        self.append(new_item)
+        return new_item
 
 
 # NOTE: Type aliases removed - all custom types now have proper stub classes
