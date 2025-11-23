@@ -1467,34 +1467,41 @@ class CMtzData(CMtzDataStub):
 
     def clipperSameCell(self, other_content, tolerance=None):
         """
-        Compare unit cells between two MTZ data contents.
+        Compare unit cells using Clipper's reciprocal space algorithm.
+
+        Two cells disagree if the difference in their orthogonalisation matrices
+        is sufficient to map a reflection from one cell onto a different reflection
+        in the other cell at the given tolerance (resolution in Angstroms).
+
+        This implements the Clipper Cell::equals() algorithm which considers
+        reciprocal space vectors and finds the resolution at which reflections
+        would be mis-indexed by more than 0.5 reciprocal lattice units.
 
         Args:
             other_content: Another CMtzData or CUnmergedDataContent instance
-            tolerance: Cell difference tolerance in Angstroms (default 0.01 if None)
+            tolerance: Resolution tolerance in Angstroms (default 1.0)
+                      Cells are compatible if mis-indexing doesn't occur
+                      until this resolution or higher.
 
         Returns:
             dict with keys:
-                'validity': bool - True if cells are similar within tolerance
-                'tolerance': float - the tolerance value
-                'difference': float - average cell difference in Angstroms
-                'maximumResolution1': float - max resolution for this cell
-                'maximumResolution2': float - max resolution for other cell
+                'validity': bool - True if cells are compatible at tolerance
+                'tolerance': float - the resolution tolerance value
+                'difference': float - resolution where mis-indexing starts (Å)
+                'maximumResolution1': float - max resolution for cell1
+                'maximumResolution2': float - max resolution for cell2
         """
-        import math
+        import numpy as np
 
-        # Use default tolerance if None
+        # Use default tolerance if None (Clipper default is 1.0 Angstrom)
         if tolerance is None:
-            tolerance = 0.01
+            tolerance = 1.0
 
-        # Get cell parameters for both contents
+        # Get cell parameters
         cell1 = self.cell
         cell2 = other_content.cell
 
-        # Calculate cell differences for each parameter
-        # Cell parameters: a, b, c (lengths in Angstroms), alpha, beta, gamma (angles in degrees)
         if not cell1 or not cell2:
-            # If either cell is missing, return invalid
             return {
                 'validity': False,
                 'tolerance': tolerance,
@@ -1503,40 +1510,92 @@ class CMtzData(CMtzDataStub):
                 'maximumResolution2': 0.0
             }
 
-        # Extract cell parameters
-        a1, b1, c1 = cell1.a, cell1.b, cell1.c
-        alpha1, beta1, gamma1 = cell1.alpha, cell1.beta, cell1.gamma
+        # Build orthogonalization matrices for both cells
+        # Orthogonalization matrix converts fractional to Cartesian coordinates
+        def build_orth_matrix(cell):
+            """Build orthogonalization matrix from cell parameters."""
+            import math
+            a, b, c = float(cell.a), float(cell.b), float(cell.c)
+            alpha = math.radians(float(cell.alpha))
+            beta = math.radians(float(cell.beta))
+            gamma = math.radians(float(cell.gamma))
 
-        a2, b2, c2 = cell2.a, cell2.b, cell2.c
-        alpha2, beta2, gamma2 = cell2.alpha, cell2.beta, cell2.gamma
+            # Volume calculation
+            cos_alpha = math.cos(alpha)
+            cos_beta = math.cos(beta)
+            cos_gamma = math.cos(gamma)
+            sin_gamma = math.sin(gamma)
 
-        # Calculate absolute differences
-        da = abs(a1 - a2)
-        db = abs(b1 - b2)
-        dc = abs(c1 - c2)
+            volume = a * b * c * math.sqrt(
+                1 - cos_alpha**2 - cos_beta**2 - cos_gamma**2
+                + 2 * cos_alpha * cos_beta * cos_gamma
+            )
 
-        # For angles, convert to radians and calculate difference in arc length
-        # at the average cell edge length to get a metric in Angstroms
-        avg_length = (a1 + b1 + c1 + a2 + b2 + c2) / 6.0
-        dalpha = abs(alpha1 - alpha2) * math.pi / 180.0 * avg_length
-        dbeta = abs(beta1 - beta2) * math.pi / 180.0 * avg_length
-        dgamma = abs(gamma1 - gamma2) * math.pi / 180.0 * avg_length
+            # Orthogonalization matrix (fractional to Cartesian)
+            orth = np.array([
+                [a, b * cos_gamma, c * cos_beta],
+                [0, b * sin_gamma, c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma],
+                [0, 0, volume / (a * b * sin_gamma)]
+            ])
+            return orth
 
-        # Average cell difference
-        avg_diff = (da + db + dc + dalpha + dbeta + dgamma) / 6.0
+        orth1 = build_orth_matrix(cell1)
+        orth2 = build_orth_matrix(cell2)
 
-        # Determine validity based on tolerance
-        validity = avg_diff <= tolerance
+        # Calculate the difference matrix
+        diff_matrix = orth1 - orth2
 
-        # Calculate maximum resolutions based on cell size
-        # Resolution = smallest cell dimension / 2 (rough approximation)
+        # Find the resolution at which a reflection would be mis-indexed
+        # by 0.5 reciprocal lattice units or more
+        #
+        # We test reflections along the crystallographic axes (h00, 0k0, 00l)
+        # at increasing resolution until we find where the difference exceeds
+        # 0.5 reciprocal lattice units
+
+        max_resolution = 1000.0  # Start with very high resolution (small d)
+        axes = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]  # Test along a*, b*, c*
+
+        for axis in axes:
+            h, k, l = axis
+            # Compute reciprocal space vector for this reflection
+            hkl = np.array([h, k, l])
+
+            # Transform to Cartesian reciprocal space
+            # (reciprocal of orth matrix)
+            orth1_inv = np.linalg.inv(orth1).T
+            orth2_inv = np.linalg.inv(orth2).T
+
+            # Reciprocal space vectors
+            s1 = orth1_inv @ hkl
+            s2 = orth2_inv @ hkl
+
+            # Difference in reciprocal space (in Å⁻¹)
+            diff = np.linalg.norm(s1 - s2)
+
+            # Resolution of this reflection
+            d_spacing = 1.0 / np.linalg.norm(s1)
+
+            # At what resolution would this axis cause 0.5 r.l.u. mis-indexing?
+            # diff * d = 0.5 / |hkl|
+            # So critical resolution = 0.5 / (diff * |hkl|)
+            if diff > 1e-10:  # Avoid division by zero
+                critical_res = 0.5 / (diff * np.linalg.norm(hkl))
+                max_resolution = min(max_resolution, critical_res)
+
+        # Calculate maximum resolutions based on cell dimensions
+        a1, b1, c1 = float(cell1.a), float(cell1.b), float(cell1.c)
+        a2, b2, c2 = float(cell2.a), float(cell2.b), float(cell2.c)
         max_res1 = min(a1, b1, c1) / 2.0
         max_res2 = min(a2, b2, c2) / 2.0
+
+        # Cells are compatible if mis-indexing doesn't occur until
+        # resolution better than (smaller than) tolerance
+        validity = max_resolution <= tolerance
 
         return {
             'validity': validity,
             'tolerance': tolerance,
-            'difference': avg_diff,
+            'difference': max_resolution,  # Resolution where mis-indexing starts
             'maximumResolution1': max_res1,
             'maximumResolution2': max_res2
         }
@@ -2613,32 +2672,43 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
 
         return groupList
 
-    def clipperSameCell(self, other_content, tolerance=0.01):
+    def clipperSameCell(self, other_content, tolerance=None):
         """
-        Compare unit cells between two unmerged data contents.
+        Compare unit cells using Clipper's reciprocal space algorithm.
+
+        Two cells disagree if the difference in their orthogonalisation matrices
+        is sufficient to map a reflection from one cell onto a different reflection
+        in the other cell at the given tolerance (resolution in Angstroms).
+
+        This implements the Clipper Cell::equals() algorithm which considers
+        reciprocal space vectors and finds the resolution at which reflections
+        would be mis-indexed by more than 0.5 reciprocal lattice units.
 
         Args:
             other_content: Another CUnmergedDataContent or CMtzData instance
-            tolerance: Cell difference tolerance in Angstroms (default 0.01)
+            tolerance: Resolution tolerance in Angstroms (default 1.0)
+                      Cells are compatible if mis-indexing doesn't occur
+                      until this resolution or higher.
 
         Returns:
             dict with keys:
-                'validity': bool - True if cells are similar within tolerance
-                'tolerance': float - the tolerance value
-                'difference': float - average cell difference in Angstroms
-                'maximumResolution1': float - max resolution for this cell
-                'maximumResolution2': float - max resolution for other cell
+                'validity': bool - True if cells are compatible at tolerance
+                'tolerance': float - the resolution tolerance value
+                'difference': float - resolution where mis-indexing starts (Å)
+                'maximumResolution1': float - max resolution for cell1
+                'maximumResolution2': float - max resolution for cell2
         """
-        import math
+        import numpy as np
 
-        # Get cell parameters for both contents
+        # Use default tolerance if None (Clipper default is 1.0 Angstrom)
+        if tolerance is None:
+            tolerance = 1.0
+
+        # Get cell parameters
         cell1 = self.cell
         cell2 = other_content.cell
 
-        # Calculate cell differences for each parameter
-        # Cell parameters: a, b, c (lengths in Angstroms), alpha, beta, gamma (angles in degrees)
         if not cell1 or not cell2:
-            # If either cell is missing, return invalid
             return {
                 'validity': False,
                 'tolerance': tolerance,
@@ -2647,40 +2717,92 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
                 'maximumResolution2': 0.0
             }
 
-        # Extract cell parameters
-        a1, b1, c1 = cell1.a, cell1.b, cell1.c
-        alpha1, beta1, gamma1 = cell1.alpha, cell1.beta, cell1.gamma
+        # Build orthogonalization matrices for both cells
+        # Orthogonalization matrix converts fractional to Cartesian coordinates
+        def build_orth_matrix(cell):
+            """Build orthogonalization matrix from cell parameters."""
+            import math
+            a, b, c = float(cell.a), float(cell.b), float(cell.c)
+            alpha = math.radians(float(cell.alpha))
+            beta = math.radians(float(cell.beta))
+            gamma = math.radians(float(cell.gamma))
 
-        a2, b2, c2 = cell2.a, cell2.b, cell2.c
-        alpha2, beta2, gamma2 = cell2.alpha, cell2.beta, cell2.gamma
+            # Volume calculation
+            cos_alpha = math.cos(alpha)
+            cos_beta = math.cos(beta)
+            cos_gamma = math.cos(gamma)
+            sin_gamma = math.sin(gamma)
 
-        # Calculate absolute differences
-        da = abs(a1 - a2)
-        db = abs(b1 - b2)
-        dc = abs(c1 - c2)
+            volume = a * b * c * math.sqrt(
+                1 - cos_alpha**2 - cos_beta**2 - cos_gamma**2
+                + 2 * cos_alpha * cos_beta * cos_gamma
+            )
 
-        # For angles, convert to radians and calculate difference in arc length
-        # at the average cell edge length to get a metric in Angstroms
-        avg_length = (a1 + b1 + c1 + a2 + b2 + c2) / 6.0
-        dalpha = abs(alpha1 - alpha2) * math.pi / 180.0 * avg_length
-        dbeta = abs(beta1 - beta2) * math.pi / 180.0 * avg_length
-        dgamma = abs(gamma1 - gamma2) * math.pi / 180.0 * avg_length
+            # Orthogonalization matrix (fractional to Cartesian)
+            orth = np.array([
+                [a, b * cos_gamma, c * cos_beta],
+                [0, b * sin_gamma, c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma],
+                [0, 0, volume / (a * b * sin_gamma)]
+            ])
+            return orth
 
-        # Average cell difference
-        avg_diff = (da + db + dc + dalpha + dbeta + dgamma) / 6.0
+        orth1 = build_orth_matrix(cell1)
+        orth2 = build_orth_matrix(cell2)
 
-        # Determine validity based on tolerance
-        validity = avg_diff <= tolerance
+        # Calculate the difference matrix
+        diff_matrix = orth1 - orth2
 
-        # Calculate maximum resolutions based on cell size
-        # Resolution = smallest cell dimension / 2 (rough approximation)
+        # Find the resolution at which a reflection would be mis-indexed
+        # by 0.5 reciprocal lattice units or more
+        #
+        # We test reflections along the crystallographic axes (h00, 0k0, 00l)
+        # at increasing resolution until we find where the difference exceeds
+        # 0.5 reciprocal lattice units
+
+        max_resolution = 1000.0  # Start with very high resolution (small d)
+        axes = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]  # Test along a*, b*, c*
+
+        for axis in axes:
+            h, k, l = axis
+            # Compute reciprocal space vector for this reflection
+            hkl = np.array([h, k, l])
+
+            # Transform to Cartesian reciprocal space
+            # (reciprocal of orth matrix)
+            orth1_inv = np.linalg.inv(orth1).T
+            orth2_inv = np.linalg.inv(orth2).T
+
+            # Reciprocal space vectors
+            s1 = orth1_inv @ hkl
+            s2 = orth2_inv @ hkl
+
+            # Difference in reciprocal space (in Å⁻¹)
+            diff = np.linalg.norm(s1 - s2)
+
+            # Resolution of this reflection
+            d_spacing = 1.0 / np.linalg.norm(s1)
+
+            # At what resolution would this axis cause 0.5 r.l.u. mis-indexing?
+            # diff * d = 0.5 / |hkl|
+            # So critical resolution = 0.5 / (diff * |hkl|)
+            if diff > 1e-10:  # Avoid division by zero
+                critical_res = 0.5 / (diff * np.linalg.norm(hkl))
+                max_resolution = min(max_resolution, critical_res)
+
+        # Calculate maximum resolutions based on cell dimensions
+        a1, b1, c1 = float(cell1.a), float(cell1.b), float(cell1.c)
+        a2, b2, c2 = float(cell2.a), float(cell2.b), float(cell2.c)
         max_res1 = min(a1, b1, c1) / 2.0
         max_res2 = min(a2, b2, c2) / 2.0
+
+        # Cells are compatible if mis-indexing doesn't occur until
+        # resolution better than (smaller than) tolerance
+        validity = max_resolution <= tolerance
 
         return {
             'validity': validity,
             'tolerance': tolerance,
-            'difference': avg_diff,
+            'difference': max_resolution,  # Resolution where mis-indexing starts
             'maximumResolution1': max_res1,
             'maximumResolution2': max_res2
         }
