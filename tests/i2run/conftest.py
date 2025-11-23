@@ -68,25 +68,25 @@ from i2run.utils import download
 
 
 def pytest_collection_modifyitems(items):
-    """Automatically add django_db marker to all test items and reorder phaser tests first."""
+    """Automatically add django_db marker to all test items."""
     for item in items:
         item.add_marker(pytest.mark.django_db(transaction=True))
 
-    # Manually reorder tests to run phaser tests before acedrg tests
-    # This avoids RDKit pickle contamination (acedrg imports RDKit which breaks phaser's pickle.dump())
-    phaser_tests = []
-    other_tests = []
-
-    for item in items:
-        # Check if test is in a phaser-related file or substitute_ligand (uses DIMPLE which depends on phaser)
-        test_file = item.nodeid.lower()
-        if 'phaser' in test_file or 'substitute_ligand' in test_file:
-            phaser_tests.append(item)
-        else:
-            other_tests.append(item)
-
-    # Reorder: phaser tests first, then everything else
-    items[:] = phaser_tests + other_tests
+    # NOTE: Test reordering DISABLED to verify order-independence
+    # Previously, we reordered phaser tests first to avoid RDKit pickle contamination.
+    # We're now testing whether the underlying fixes (job numbering, sub-directory naming)
+    # make tests truly order-independent.
+    #
+    # Original reordering logic (COMMENTED OUT):
+    # phaser_tests = []
+    # other_tests = []
+    # for item in items:
+    #     test_file = item.nodeid.lower()
+    #     if 'phaser' in test_file or 'substitute_ligand' in test_file:
+    #         phaser_tests.append(item)
+    #     else:
+    #         other_tests.append(item)
+    # items[:] = phaser_tests + other_tests
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -133,6 +133,8 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     import shutil
     import gc
     import resource
+    import random
+    import string
     from django.core.management import call_command
     from django.conf import settings
     from django.db import connections
@@ -144,12 +146,15 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
         fd_start = None
 
     # Generate project directory name matching utils.py i2run() naming convention
-    # Format: tmp_{test_file}_{test_function}
+    # Format: tmp_{test_file}_{test_function}_{random_suffix}
     # This matches the project directories created by i2run() for consistency
     #
     # IMPORTANT: Use request.node instead of inspect.stack() to get reliable test file/function info
     # pytest's node object contains the correct fspath and name regardless of how tests are collected
     # (single-file vs multi-file comprehensive runs)
+    #
+    # IMPORTANT: Random suffix prevents collisions when multiple test runs execute concurrently
+    # (e.g., parallel pytest runs, or running tests in different terminals simultaneously)
 
     # Extract test function name from node
     test_function = request.node.name
@@ -161,14 +166,18 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     if test_file_path.stem.startswith('test_'):
         test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
 
-    # Build consistent project name
+    # Generate random suffix for uniqueness (6 alphanumeric chars)
+    # This prevents directory collisions in concurrent test runs
+    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+
+    # Build consistent project name with random suffix
     if test_function and test_file:
-        project_name = f"tmp_{test_file}_{test_function}"
+        project_name = f"tmp_{test_file}_{test_function}_{random_suffix}"
     elif test_function:
-        project_name = f"tmp_{test_function}"
+        project_name = f"tmp_{test_function}_{random_suffix}"
     else:
         # Fallback (should never happen with pytest node)
-        project_name = f"tmp_{request.node.nodeid.replace('/', '_').replace('::', '_')}"
+        project_name = f"tmp_{request.node.nodeid.replace('/', '_').replace('::', '_')}_{random_suffix}"
 
     # Clean up project name (replace special chars)
     project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
