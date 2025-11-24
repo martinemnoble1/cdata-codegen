@@ -46,7 +46,7 @@ def download(url: str):
 
 
 @contextmanager
-def i2run(args: list[str], project_name: str = None):
+def i2run(args: list[str], project_name: str = None, project_path: Path = None):
     """
     Run a task by calling Django management command directly (in-process).
 
@@ -63,54 +63,71 @@ def i2run(args: list[str], project_name: str = None):
         args: List of arguments starting with task name, followed by task parameters
         project_name: Optional project name (defaults to derived from test name).
                      Should reflect the test name for better organization.
+        project_path: Optional explicit project directory path (overrides project_name).
+                     When provided, CCP4_JOBS and other project files will be created here.
+                     This allows conftest.py to pass a random-suffixed directory for test isolation.
     """
-    # Generate project name if not provided
-    if project_name is None:
-        # Try to get the current test name from pytest's request context
-        # Include test file name to avoid collisions between tests with same name in different files
-        try:
-            import inspect
-            # Walk up the stack to find the test function and file
-            test_function = None
-            test_file = None
-            for frame_info in inspect.stack():
-                # Look for a frame with 'test_' in the function name
-                if frame_info.function.startswith('test_'):
-                    test_function = frame_info.function
-                    # Extract just the test file name without path or extension
-                    # e.g., /path/to/test_phaser_simple.py -> phaser_simple
-                    test_file_path = Path(frame_info.filename)
-                    if test_file_path.stem.startswith('test_'):
-                        test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
-                    break
+    # Use explicit project_path if provided, otherwise try to get from environment
+    if project_path is None:
+        # Check if conftest.py set the project directory via environment variable
+        # This allows i2run() to use the same random-suffixed directory created by the fixture
+        pytest_project_dir = environ.get('_PYTEST_PROJECT_DIR')
+        if pytest_project_dir:
+            project_path = Path(pytest_project_dir)
 
-            if test_function and test_file:
-                # Format: tmp_{file}_{function}
-                # e.g., tmp_phaser_simple_test_gamma
-                project_name = f"tmp_{test_file}_{test_function}"
-            elif test_function:
-                # Fallback: just function name
-                project_name = f"tmp_{test_function}"
-        except Exception:
-            pass
-
-        # Final fallback: random name
+    # If still no project_path, derive from project_name
+    if project_path is None:
+        # Generate project name if not provided
         if project_name is None:
-            chars = ascii_letters + digits
-            project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
-            project_name = project_name.lower()
+            # Try to get the current test name from pytest's request context
+            # Include test file name to avoid collisions between tests with same name in different files
+            try:
+                import inspect
+                # Walk up the stack to find the test function and file
+                test_function = None
+                test_file = None
+                for frame_info in inspect.stack():
+                    # Look for a frame with 'test_' in the function name
+                    if frame_info.function.startswith('test_'):
+                        test_function = frame_info.function
+                        # Extract just the test file name without path or extension
+                        # e.g., /path/to/test_phaser_simple.py -> phaser_simple
+                        test_file_path = Path(frame_info.filename)
+                        if test_file_path.stem.startswith('test_'):
+                            test_file = test_file_path.stem[5:]  # Remove 'test_' prefix
+                        break
 
-        # Clean up project name (replace special chars)
-        project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
-        
-    # Check if we're running in test environment with CCP4I2_PROJECTS_DIR set
-    projects_dir = environ.get("CCP4I2_PROJECTS_DIR")
-    if projects_dir:
-        # Test mode: place project in test_projects directory
-        project_path = Path(projects_dir) / project_name
+                if test_function and test_file:
+                    # Format: tmp_{file}_{function}
+                    # e.g., tmp_phaser_simple_test_gamma
+                    project_name = f"tmp_{test_file}_{test_function}"
+                elif test_function:
+                    # Fallback: just function name
+                    project_name = f"tmp_{test_function}"
+            except Exception:
+                pass
+
+            # Final fallback: random name
+            if project_name is None:
+                chars = ascii_letters + digits
+                project_name = "tmp_" + "".join(choice(chars) for _ in range(10))
+                project_name = project_name.lower()
+
+            # Clean up project name (replace special chars)
+            project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
+
+        # Check if we're running in test environment with CCP4I2_PROJECTS_DIR set
+        projects_dir = environ.get("CCP4I2_PROJECTS_DIR")
+        if projects_dir:
+            # Test mode: place project in test_projects directory
+            project_path = Path(projects_dir) / project_name
+        else:
+            # Normal mode: place project in current directory
+            project_path = Path(project_name)
     else:
-        # Normal mode: place project in current directory
-        project_path = Path(project_name)
+        # Explicit project_path provided - derive project_name from it if needed
+        if project_name is None:
+            project_name = project_path.name
 
     # Build command-line arguments for i2run management command
     # Format: manage.py i2run task_name --project_name foo --param1 val1 --param2 val2

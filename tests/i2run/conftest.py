@@ -127,34 +127,15 @@ def django_db_setup():
             print(f"Warning: Failed to clean up old database {old_db}: {e}")
 
 
-@fixture(autouse=True)
-def isolated_test_db(request, django_db_blocker, monkeypatch):
-    """Create isolated database for each test with proper Django connection management."""
-    import shutil
-    import gc
-    import resource
+@fixture
+def test_project_path(request):
+    """
+    Provide the test project directory path to test functions.
+    This allows i2run() to use the same random-suffixed directory
+    that conftest.py creates for the database.
+    """
     import random
     import string
-    from django.core.management import call_command
-    from django.conf import settings
-    from django.db import connections
-
-    # Monitor file descriptors at test start (for debugging resource leaks)
-    try:
-        fd_start = len(os.listdir('/dev/fd'))
-    except Exception:
-        fd_start = None
-
-    # Generate project directory name matching utils.py i2run() naming convention
-    # Format: tmp_{test_file}_{test_function}_{random_suffix}
-    # This matches the project directories created by i2run() for consistency
-    #
-    # IMPORTANT: Use request.node instead of inspect.stack() to get reliable test file/function info
-    # pytest's node object contains the correct fspath and name regardless of how tests are collected
-    # (single-file vs multi-file comprehensive runs)
-    #
-    # IMPORTANT: Random suffix prevents collisions when multiple test runs execute concurrently
-    # (e.g., parallel pytest runs, or running tests in different terminals simultaneously)
 
     # Extract test function name from node
     test_function = request.node.name
@@ -183,6 +164,34 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
     project_name = project_name.replace("[", "_").replace("]", "_").replace("/", "_").replace("::", "_")
 
     test_project_dir = TEST_PROJECTS_DIR / project_name
+
+    # Store on request for use by isolated_test_db
+    request.node._test_project_dir = test_project_dir
+
+    # Also set as environment variable so i2run() can find it
+    os.environ['_PYTEST_PROJECT_DIR'] = str(test_project_dir)
+
+    return test_project_dir
+
+
+@fixture(autouse=True)
+def isolated_test_db(request, django_db_blocker, monkeypatch, test_project_path):
+    """Create isolated database for each test with proper Django connection management."""
+    import shutil
+    import gc
+    from django.core.management import call_command
+    from django.conf import settings
+    from django.db import connections
+
+    # Monitor file descriptors at test start (for debugging resource leaks)
+    try:
+        fd_start = len(os.listdir('/dev/fd'))
+    except Exception:
+        fd_start = None
+
+    # Use the project directory from test_project_path fixture
+    # This ensures i2run() and the database use the same random-suffixed directory
+    test_project_dir = test_project_path
 
     # Create project directory
     test_project_dir.mkdir(exist_ok=True)
@@ -257,7 +266,8 @@ def isolated_test_db(request, django_db_blocker, monkeypatch):
             fd_end = len(os.listdir('/dev/fd'))
             fd_leaked = fd_end - fd_start
             if fd_leaked > 5:  # Allow small variations
-                print(f"⚠️  File descriptor leak detected: {fd_leaked} FDs leaked in {test_name}")
+                test_name = request.node.name
+                print(f"⚠️  File descriptor leak: {fd_leaked} FDs in {test_name}")
                 print(f"   Start: {fd_start} FDs, End: {fd_end} FDs")
         except Exception:
             pass
