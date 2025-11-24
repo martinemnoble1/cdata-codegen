@@ -2211,6 +2211,7 @@ class CRunBatchRangeStub(CData):
         "allowUndefined": True,
         "guiDefinition": {},
         "saveToDb": False,
+        "default": {'low': 9999.0, 'high': 0.1},
     },
     qualifiers_order=[
         'allowUndefined',
