@@ -2024,7 +2024,7 @@ class CReindexOperator(CReindexOperatorStub):
 
 class CResolutionRange(CFloatRange, CResolutionRangeStub):
     """
-    Resolution range with smart defaults for crystallographic data.
+    Resolution range for crystallographic data.
 
     Resolution range convention:
     - low: larger d-spacing number (lower resolution, e.g., 50.0 Å)
@@ -2036,25 +2036,15 @@ class CResolutionRange(CFloatRange, CResolutionRangeStub):
 
     The .low/.high properties return CFloat objects (not primitive values)
     so that code can call .isSet() on them.
+
+    When only .high (or .end) is set, aimless will use data from infinite
+    resolution down to the high resolution cutoff. This is the desired behavior
+    for workflows like SubstituteLigand.
+
+    NOTE: The __init__ and _smart_assign_from_cdata methods are inherited from
+    CFloatRange, which ensures that .start and .end are NOT_SET by default and
+    that smart assignment only copies explicitly set fields.
     """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """Initialize CResolutionRange with sensible defaults for low resolution."""
-        super().__init__(parent=parent, name=name, **kwargs)
-
-        # Set sensible default for low resolution limit (start) = 9999.0
-        # This prevents filtering out low-resolution data when only .end is set
-        # (common in crystallography workflows like SubstituteLigand)
-        from core.base_object.cdata import ValueState
-
-        # Set the default qualifier
-        self.start.set_qualifier('default', 9999.0)
-
-        # Manually set the value and mark as DEFAULT (not EXPLICITLY_SET)
-        # First set the value state to DEFAULT
-        self.start._value_states['value'] = ValueState.DEFAULT
-        # Then use the internal _value attribute directly to bypass __setattr__
-        self.start._value = 9999.0
 
     @property
     def low(self):

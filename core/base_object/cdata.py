@@ -1228,8 +1228,6 @@ class CData(HierarchicalObject):
             and name not in exclusion_list
             and not skip_value_tracking):
             self._value_states[name] = ValueState.EXPLICITLY_SET
-            if name == "name":
-                print(f"[SETATTR DEBUG]   MARKED AS EXPLICITLY_SET!")
 
     def __getattr__(self, name: str):
         """Auto-create metadata-defined attributes when accessed.
