@@ -59,7 +59,7 @@ class CDict(CDictStub, CCollection):
 class CFloatRange(CFloatRangeStub):
     """
     Two floats defining start and end of range
-    
+
     Extends CFloatRangeStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """

@@ -8,6 +8,7 @@ This file is safe to edit - add your implementation code here.
 from __future__ import annotations
 from typing import Optional, Any
 
+from core.CCP4Data import CFloatRange
 from core.base_object.error_reporting import CErrorReport
 from core.cdata_stubs.CCP4XtalData import CAltSpaceGroupStub, CAltSpaceGroupListStub, CAnomalousColumnGroupStub, CAnomalousIntensityColumnGroupStub, CAnomalousScatteringElementStub, CAsuComponentStub, CAsuComponentListStub, CCellStub, CCellAngleStub, CCellLengthStub, CColumnGroupStub, CColumnGroupItemStub, CColumnGroupListStub, CColumnTypeStub, CColumnTypeListStub, CCrystalNameStub, CDatasetStub, CDatasetListStub, CDatasetNameStub, CDialsJsonFileStub, CDialsPickleFileStub, CExperimentalDataTypeStub, CFPairColumnGroupStub, CFSigFColumnGroupStub, CFormFactorStub, CFreeRColumnGroupStub, CFreeRDataFileStub, CGenericReflDataFileStub, CHLColumnGroupStub, CIPairColumnGroupStub, CISigIColumnGroupStub, CImageFileStub, CImageFileListStub, CImosflmXmlDataFileStub, CImportUnmergedStub, CImportUnmergedListStub, CMapCoeffsDataFileStub, CMapColumnGroupStub, CMapDataFileStub, CMergeMiniMtzStub, CMergeMiniMtzListStub, CMiniMtzDataFileStub, CMiniMtzDataFileListStub, CMmcifReflDataStub, CMmcifReflDataFileStub, CMtzColumnStub, CMtzColumnGroupStub, CMtzColumnGroupTypeStub, CMtzDataStub, CMtzDataFileStub, CMtzDatasetStub, CObsDataFileStub, CPhaserRFileDataFileStub, CPhaserSolDataFileStub, CPhiFomColumnGroupStub, CPhsDataFileStub, CProgramColumnGroupStub, CProgramColumnGroup0Stub, CRefmacKeywordFileStub, CReindexOperatorStub, CResolutionRangeStub, CRunBatchRangeStub, CRunBatchRangeListStub, CShelxFADataFileStub, CShelxLabelStub, CSpaceGroupStub, CSpaceGroupCellStub, CUnmergedDataContentStub, CUnmergedDataFileStub, CUnmergedDataFileListStub, CUnmergedMtzDataFileStub, CWavelengthStub, CXia2ImageSelectionStub, CXia2ImageSelectionListStub
 from core.CCP4TaskManager import TASKMANAGER
@@ -2021,16 +2022,85 @@ class CReindexOperator(CReindexOperatorStub):
     pass
 
 
-class CResolutionRange(CResolutionRangeStub):
+class CResolutionRange(CFloatRange, CResolutionRangeStub):
     """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CResolutionRangeStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
+    Resolution range with smart defaults for crystallographic data.
+
+    Resolution range convention:
+    - low: larger d-spacing number (lower resolution, e.g., 50.0 Å)
+    - high: smaller d-spacing number (higher resolution, e.g., 2.0 Å)
+
+    Properties:
+    - .start and .end: Actual CFloat attributes (inherited from CFloatRange)
+    - .low and .high: Properties that map to .start and .end respectively
+
+    The .low/.high properties return CFloat objects (not primitive values)
+    so that code can call .isSet() on them.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize CResolutionRange with sensible defaults for low resolution."""
+        super().__init__(parent=parent, name=name, **kwargs)
+
+        # Set sensible default for low resolution limit (start) = 9999.0
+        # This prevents filtering out low-resolution data when only .end is set
+        # (common in crystallography workflows like SubstituteLigand)
+        from core.base_object.cdata import ValueState
+
+        # Set the default qualifier
+        self.start.set_qualifier('default', 9999.0)
+
+        # Manually set the value and mark as DEFAULT (not EXPLICITLY_SET)
+        # First set the value state to DEFAULT
+        self.start._value_states['value'] = ValueState.DEFAULT
+        # Then use the internal _value attribute directly to bypass __setattr__
+        self.start._value = 9999.0
+
+    @property
+    def low(self):
+        """
+        Low resolution limit (larger d-spacing, e.g., 50.0 Å).
+
+        Returns CFloat object (not primitive value) so .isSet() can be called.
+        Maps to .start attribute.
+        """
+        return self.start
+
+    @low.setter
+    def low(self, value):
+        """Set low resolution limit via .low property."""
+        if isinstance(value, CFloat):
+            self.start = value
+        else:
+            self.start.value = value
+
+    @property
+    def high(self):
+        """
+        High resolution limit (smaller d-spacing, e.g., 2.0 Å).
+
+        Returns CFloat object (not primitive value) so .isSet() can be called.
+        Maps to .end attribute.
+        """
+        return self.end
+
+    @high.setter
+    def high(self, value):
+        """Set high resolution limit via .high property."""
+        if isinstance(value, CFloat):
+            self.end = value
+        else:
+            self.end.value = value
+
+    # Legacy methods for backward compatibility
+    def setHigh(self, value: Optional[float]) -> None:
+        """Set the high resolution limit (smaller d-spacing value)."""
+        self.high = value
+
+    def setLow(self, value: Optional[float]) -> None:
+        """Set the low resolution limit (larger d-spacing value)."""
+        self.low = value
+
 
 
 class CRunBatchRange(CRunBatchRangeStub):
