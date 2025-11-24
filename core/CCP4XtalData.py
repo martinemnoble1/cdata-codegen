@@ -427,40 +427,54 @@ class CMiniMtzDataFile(CMiniMtzDataFileStub):
 
         # Check if file exists
         file_path = self.getFullPath()
+        print(f"[DEBUG _introspect_content_flag] class: {self.__class__.__name__}")
+        print(f"[DEBUG _introspect_content_flag] file_path: {file_path}")
         if not file_path or not Path(file_path).exists():
+            print(f"[DEBUG _introspect_content_flag] File doesn't exist or path not set, returning None")
             return None
 
         # Check if class has CONTENT_SIGNATURE_LIST
         if not hasattr(self.__class__, 'CONTENT_SIGNATURE_LIST'):
+            print(f"[DEBUG _introspect_content_flag] No CONTENT_SIGNATURE_LIST, returning None")
             return None
 
         signature_list = self.__class__.CONTENT_SIGNATURE_LIST
+        print(f"[DEBUG _introspect_content_flag] CONTENT_SIGNATURE_LIST: {signature_list}")
 
         try:
             import gemmi
 
             # Read MTZ file
             mtz = gemmi.read_mtz_file(file_path)
+            print(f"[DEBUG _introspect_content_flag] Successfully read MTZ file")
 
             # Extract column labels (just the names, not types)
             column_labels = [col.label for col in mtz.columns]
             column_set = set(column_labels)
+            print(f"[DEBUG _introspect_content_flag] Column labels: {column_labels}")
 
             # Match against signatures
             for idx, required_columns in enumerate(signature_list):
                 required_set = set(required_columns)
+                print(f"[DEBUG _introspect_content_flag] Checking signature {idx}: {required_columns}")
+                print(f"[DEBUG _introspect_content_flag]   required_set: {required_set}")
+                print(f"[DEBUG _introspect_content_flag]   column_set: {column_set}")
+                print(f"[DEBUG _introspect_content_flag]   issubset: {required_set.issubset(column_set)}")
 
                 # Check if all required columns are present
                 if required_set.issubset(column_set):
                     # Match found: return contentFlag (1-indexed)
+                    print(f"[DEBUG _introspect_content_flag] MATCH FOUND! Returning contentFlag={idx + 1}")
                     return idx + 1
 
             # No match found
+            print(f"[DEBUG _introspect_content_flag] No match found, returning None")
             return None
 
         except Exception as e:
             # File reading error or gemmi not available
             # Could log this in the future
+            print(f"[DEBUG _introspect_content_flag] Exception occurred: {e}")
             return None
 
     def datasetName(self) -> str:
@@ -527,6 +541,10 @@ class CFreeRDataFile(CFreeRDataFileStub, CMiniMtzDataFile):
     Extends CFreeRDataFileStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    # Standard column signature for FreeR files
+    # splitHklout() will automatically relabel non-standard names (e.g., 'FreeR_flag') to 'FREER'
+    CONTENT_SIGNATURE_LIST = [['FREER']]
 
     def __init__(self, file_path: str = None, parent=None, name=None, **kwargs):
         super().__init__(file_path=file_path, parent=parent, name=name, **kwargs)

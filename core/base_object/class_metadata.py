@@ -220,11 +220,13 @@ class MetadataAttributeFactory:
         """Create an integer attribute using CInt."""
         from .fundamental_types import CInt
 
-        # Get default value from qualifiers
-        default_value = qualifiers.get('default', 0)
+        # Create CInt object without a value (so it stays NOT_SET)
+        attr = CInt(parent=parent_obj, name=name)
 
-        # Create CInt object with default value
-        attr = CInt(default_value, parent=parent_obj, name=name)
+        # Set default value from qualifiers if explicitly provided
+        default_value = qualifiers.get('default')
+        if default_value is not None:
+            attr.value = int(default_value)
 
         # CInt already has all necessary methods (_is_value_type, __int__, __str__, etc.)
         # The min/max validation will be handled by qualifiers at the class level
@@ -238,11 +240,13 @@ class MetadataAttributeFactory:
         """Create a float attribute using CFloat."""
         from .fundamental_types import CFloat
 
-        # Get default value from qualifiers
-        default_value = qualifiers.get('default', 0.0)
+        # Create CFloat object without a value (so it stays NOT_SET)
+        attr = CFloat(parent=parent_obj, name=name)
 
-        # Create CFloat object with default value
-        attr = CFloat(default_value, parent=parent_obj, name=name)
+        # Set default value from qualifiers if explicitly provided
+        default_value = qualifiers.get('default')
+        if default_value is not None:
+            attr.value = float(default_value)
 
         # CFloat already has all necessary methods (_is_value_type, __float__, __str__, etc.)
         # The min/max validation will be handled by qualifiers at the class level
@@ -256,11 +260,13 @@ class MetadataAttributeFactory:
         """Create a boolean attribute using CBoolean."""
         from .fundamental_types import CBoolean
 
-        # Get default value from qualifiers
-        default_value = qualifiers.get('default', False)
+        # Create CBoolean object without a value (so it stays NOT_SET)
+        attr = CBoolean(parent=parent_obj, name=name)
 
-        # Create CBoolean object with default value
-        attr = CBoolean(default_value, parent=parent_obj, name=name)
+        # Set default value from qualifiers if explicitly provided
+        default_value = qualifiers.get('default')
+        if default_value is not None:
+            attr.value = bool(default_value)
 
         # CBoolean already has all necessary methods (_is_value_type, __bool__, __str__, etc.)
 

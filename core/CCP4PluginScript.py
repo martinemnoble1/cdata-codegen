@@ -2312,11 +2312,31 @@ class CPluginScript(CData):
             pass  # DEBUG: print(f"[DEBUG makeHklinGemmi]   int(contentFlag): {int(file_obj.contentFlag) if hasattr(file_obj, 'contentFlag') else 'N/A'}")
 
             # Auto-detect contentFlag from file content to ensure accuracy
-            if hasattr(file_obj, 'setContentFlag') and int(file_obj.contentFlag) == 0:
-                pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] Calling setContentFlag() for '{name}'...")
-                logger.debug(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
-                file_obj.setContentFlag()
-                pass  # DEBUG: print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag now: {int(file_obj.contentFlag)}")
+            # Check if contentFlag is NOT_SET (isSet() returns False) or has value 0
+            if hasattr(file_obj, 'setContentFlag'):
+                cf = file_obj.contentFlag if hasattr(file_obj, 'contentFlag') else None
+                needs_detection = False
+                if cf is None:
+                    needs_detection = True
+                    print(f"[DEBUG makeHklinGemmi] '{name}': contentFlag is None, needs detection")
+                elif hasattr(cf, 'isSet') and not cf.isSet():
+                    needs_detection = True
+                    print(f"[DEBUG makeHklinGemmi] '{name}': contentFlag.isSet() = False, needs detection")
+                elif int(file_obj.contentFlag) == 0:
+                    needs_detection = True
+                    print(f"[DEBUG makeHklinGemmi] '{name}': contentFlag value is 0, needs detection")
+
+                if needs_detection:
+                    print(f"[DEBUG makeHklinGemmi] Calling setContentFlag() for '{name}'...")
+                    print(f"[DEBUG makeHklinGemmi]   file_obj class: {file_obj.__class__.__name__}")
+                    print(f"[DEBUG makeHklinGemmi]   file_obj.getFullPath(): {file_obj.getFullPath()}")
+                    print(f"[DEBUG makeHklinGemmi]   has CONTENT_SIGNATURE_LIST: {hasattr(file_obj.__class__, 'CONTENT_SIGNATURE_LIST')}")
+                    if hasattr(file_obj.__class__, 'CONTENT_SIGNATURE_LIST'):
+                        print(f"[DEBUG makeHklinGemmi]   CONTENT_SIGNATURE_LIST: {file_obj.__class__.CONTENT_SIGNATURE_LIST}")
+                    logger.debug(f"[DEBUG makeHklinGemmi] Auto-detecting contentFlag for '{name}'")
+                    file_obj.setContentFlag()
+                    print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag.isSet(): {file_obj.contentFlag.isSet() if hasattr(file_obj.contentFlag, 'isSet') else 'N/A'}")
+                    print(f"[DEBUG makeHklinGemmi] setContentFlag() returned, contentFlag value: {int(file_obj.contentFlag)}")
 
             # Check if conversion is needed
             current_content_flag = int(file_obj.contentFlag)
@@ -2808,6 +2828,7 @@ class CPluginScript(CData):
         self,
         miniMtzsOut: list,
         programColumnNames: list,
+        outputColumnNames: list = None,
         inFile: str = None,
         logFile: str = None,
         **kwargs
@@ -2818,10 +2839,21 @@ class CPluginScript(CData):
         This is the standard CCP4i2 API method that works with object names
         in container.outputData. It wraps the lower-level splitMtz() method.
 
+        **Column Name Standardization (Auto-Inference)**:
+        This method automatically standardizes column names when outputColumnNames is not provided.
+        It inspects each output file object's CONTENT_SIGNATURE_LIST and uses the first signature
+        as the standard column names. This ensures generated files match expected column naming
+        conventions (e.g., 'FreeR_flag' -> 'FREER', allowing contentFlag introspection to work).
+
         Args:
             miniMtzsOut: List of output object names in container.outputData
-            programColumnNames: List of comma-separated column name strings
-                              e.g., ['F,SIGF', 'HLA,HLB,HLC,HLD']
+            programColumnNames: List of comma-separated INPUT column name strings
+                              e.g., ['F,SIGF', 'HLA,HLB,HLC,HLD', 'FreeR_flag']
+            outputColumnNames: Optional list of comma-separated OUTPUT column name strings
+                             for explicit relabeling. If provided, must match length of programColumnNames.
+                             e.g., ['F,SIGF', 'A,B,C,D', 'FREER']
+                             If None (default), column names are AUTO-INFERRED from each output
+                             file object's CONTENT_SIGNATURE_LIST[0], enabling automatic standardization.
             inFile: Input MTZ file path (default: workDirectory/hklout.mtz)
             logFile: Log file path (default: workDirectory/splitmtz.log)
             **kwargs: Legacy compatibility - accepts 'infile' (lowercase) as alias for 'inFile'
@@ -2830,10 +2862,23 @@ class CPluginScript(CData):
             CErrorReport with any errors
 
         Example:
-            >>> # Split hklout.mtz into FPHIOUT and ABCDOUT
+            >>> # Split with AUTOMATIC column standardization (inferred from CONTENT_SIGNATURE_LIST)
             >>> error = self.splitHklout(
-            ...     ['FPHIOUT', 'ABCDOUT'],
-            ...     ['F,phi', 'A,B,C,D']
+            ...     ['FREEROUT'],
+            ...     ['FreeR_flag']  # Will be auto-relabeled to 'FREER' based on CFreeRDataFile.CONTENT_SIGNATURE_LIST
+            ... )
+            >>>
+            >>> # Split with EXPLICIT relabeling
+            >>> error = self.splitHklout(
+            ...     ['ABCDOUT'],
+            ...     ['HLA,HLB,HLC,HLD'],
+            ...     ['A,B,C,D']  # Explicitly rename columns
+            ... )
+            >>>
+            >>> # Split without relabeling (no CONTENT_SIGNATURE_LIST available)
+            >>> error = self.splitHklout(
+            ...     ['FPHIOUT'],
+            ...     ['F,phi']  # No relabeling if CONTENT_SIGNATURE_LIST not found
             ... )
         """
         error = CErrorReport()
@@ -2866,13 +2911,25 @@ class CPluginScript(CData):
             )
             return error
 
+        # Validate outputColumnNames if provided
+        if outputColumnNames is not None and len(outputColumnNames) != len(programColumnNames):
+            error.append(
+                klass=self.__class__.__name__,
+                code=305,
+                details=f"outputColumnNames must have same length as programColumnNames. "
+                        f"Got {len(outputColumnNames)} vs {len(programColumnNames)}"
+            )
+            return error
+
         logger.debug(f'[DEBUG splitHklout] Splitting {inFile}')
         logger.debug(f'[DEBUG splitHklout] Output objects: {miniMtzsOut}')
-        logger.debug(f'[DEBUG splitHklout] Column names: {programColumnNames}')
+        logger.debug(f'[DEBUG splitHklout] Input column names: {programColumnNames}')
+        if outputColumnNames:
+            logger.debug(f'[DEBUG splitHklout] Output column names (relabeling): {outputColumnNames}')
 
         # Build outfiles list for splitMtz
         outfiles = []
-        for obj_name, col_string in zip(miniMtzsOut, programColumnNames):
+        for i, (obj_name, input_col_string) in enumerate(zip(miniMtzsOut, programColumnNames)):
             # Get output file object from container.outputData
             if not hasattr(self.container.outputData, obj_name):
                 error.append(
@@ -2924,12 +2981,37 @@ class CPluginScript(CData):
                 else:
                     file_obj.baseName = output_path
 
-            # col_string is already comma-separated (e.g., 'F,SIGF')
-            # Add to outfiles list: [output_path, input_columns]
-            # (input and output columns are the same)
-            outfiles.append([output_path, col_string])
+            # Build outfile spec for splitMtz
+            # Format: [output_path, input_columns] or [output_path, input_columns, output_columns]
 
-            logger.debug(f'[DEBUG splitHklout]   {obj_name} -> {output_path} (columns: {col_string})')
+            # Determine output column names (with auto-inference from CONTENT_SIGNATURE_LIST)
+            output_col_string = None
+
+            if outputColumnNames is not None:
+                # Explicit relabeling provided
+                output_col_string = outputColumnNames[i]
+                logger.debug(f'[DEBUG splitHklout]   Using explicit output columns: {output_col_string}')
+            else:
+                # Try to infer standard column names from file object's CONTENT_SIGNATURE_LIST
+                if hasattr(file_obj, 'CONTENT_SIGNATURE_LIST'):
+                    sig_list = file_obj.CONTENT_SIGNATURE_LIST
+                    if sig_list and len(sig_list) > 0:
+                        # Use first signature as the standard column names
+                        standard_cols = sig_list[0]
+                        if standard_cols:
+                            output_col_string = ','.join(standard_cols)
+                            logger.debug(f'[DEBUG splitHklout]   Inferred standard column names from {file_obj.__class__.__name__}.CONTENT_SIGNATURE_LIST[0]: {output_col_string}')
+
+            # Add to outfiles list
+            if output_col_string is not None:
+                # Relabeling (explicit or inferred) - use 3-element format
+                outfiles.append([output_path, input_col_string, output_col_string])
+                logger.debug(f'[DEBUG splitHklout]   {obj_name} -> {output_path}')
+                logger.debug(f'[DEBUG splitHklout]      Input columns: {input_col_string} -> Output columns: {output_col_string}')
+            else:
+                # No relabeling - use 2-element format
+                outfiles.append([output_path, input_col_string])
+                logger.debug(f'[DEBUG splitHklout]   {obj_name} -> {output_path} (columns: {input_col_string})')
 
         # Return early if there were errors
         if error.count() > 0:
