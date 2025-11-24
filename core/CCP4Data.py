@@ -70,6 +70,9 @@ class CFloatRange(CFloatRangeStub):
         This ensures that range fields are only marked as EXPLICITLY_SET when
         actually assigned by user code, preventing them from appearing in
         serialized XML when using excludeUnset=True.
+
+        Note: Smart assignment is now handled by the base CData class, which
+        only copies CData fields that are explicitly set (isSet(allowDefault=False)).
         """
         super().__init__(parent=parent, name=name, **kwargs)
 
@@ -79,25 +82,6 @@ class CFloatRange(CFloatRangeStub):
             self.start._value_states['value'] = ValueState.NOT_SET
         if hasattr(self, 'end') and hasattr(self.end, '_value_states'):
             self.end._value_states['value'] = ValueState.NOT_SET
-
-    def _smart_assign_from_cdata(self, other):
-        """Override smart assignment to only copy explicitly set fields.
-
-        When copying CFloatRange from one container to another (e.g., resolution
-        ranges in SubstituteLigand), only copy the fields that were explicitly set,
-        not default values. This prevents .start from being marked as EXPLICITLY_SET
-        when only .end was set in the source object.
-
-        This ensures that serialization with excludeUnset=True only includes the
-        fields that were actually assigned by user code.
-        """
-        # Only copy .start if it's explicitly set in the source
-        if hasattr(other, 'start') and other.start.isSet(allowDefault=False):
-            self.start.value = other.start.value
-
-        # Only copy .end if it's explicitly set in the source
-        if hasattr(other, 'end') and other.end.isSet(allowDefault=False):
-            self.end.value = other.end.value
 
 
 class CFollowFromJob(CFollowFromJobStub):
@@ -127,13 +111,29 @@ class CI2DataType(CI2DataTypeStub):
 class CIntRange(CIntRangeStub):
     """
     Two integers defining start and end of range
-    
+
     Extends CIntRangeStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize CIntRange with .start and .end not set by default.
+
+        This ensures that range fields are only marked as EXPLICITLY_SET when
+        actually assigned by user code, preventing them from appearing in
+        serialized XML when using excludeUnset=True.
+
+        Note: Smart assignment is handled by the base CData class, which
+        only copies CData fields that are explicitly set (isSet(allowDefault=False)).
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+        # Mark .start and .end as NOT_SET so they won't be serialized unless explicitly set
+        from core.base_object.cdata import ValueState
+        if hasattr(self, 'start') and hasattr(self.start, '_value_states'):
+            self.start._value_states['value'] = ValueState.NOT_SET
+        if hasattr(self, 'end') and hasattr(self.end, '_value_states'):
+            self.end._value_states['value'] = ValueState.NOT_SET
 
 
 class CJobStatus(CJobStatusStub):

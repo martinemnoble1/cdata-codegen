@@ -990,7 +990,8 @@ class CData(HierarchicalObject):
                             # Skip attributes that can't be accessed
                             pass
             else:
-                # Non-container complex type: copy all attributes
+                # Non-container complex type: copy attributes, but only if explicitly set
+                # This prevents NOT_SET fields from being marked as EXPLICITLY_SET
                 pass #print(f"[DEBUG _smart_assign_from_cdata] Copying attributes for complex type {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
                 for key, value in source.__dict__.items():
                     # Note: 'name' is NOT in this filter list - it's a regular CData attribute that should be copied
@@ -1000,7 +1001,13 @@ class CData(HierarchicalObject):
                         "children",
                         "signals",
                     ]:
-                        setattr(self, key, value)
+                        # For CData attributes, only copy if explicitly set
+                        if isinstance(value, CData) and hasattr(value, 'isSet'):
+                            if value.isSet(allowDefault=False):
+                                setattr(self, key, value)
+                        else:
+                            # Non-CData attributes: copy unconditionally
+                            setattr(self, key, value)
 
     def _setup_hierarchy_for_value(self, key: str, value: Any):
         """Set up hierarchical relationships for attribute values.
