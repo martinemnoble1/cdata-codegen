@@ -1039,9 +1039,9 @@ class CDataFile(CData):
 
         This is a base class method used by as_CONTENTTYPE() conversion methods
         in subclasses. It generates output paths following the pattern:
-        {inputroot}_as_{CONTENT_TYPE}{extension}
+        {inputroot}_as{CONTENT_TYPE}{extension}
 
-        Naming pattern: {inputroot}_as_{CONTENT_TYPE}{extension}
+        Naming pattern: {inputroot}_as{CONTENT_TYPE}{extension}
         Location: Input file's directory (if writable), else work_directory
 
         Args:
@@ -1056,11 +1056,11 @@ class CDataFile(CData):
         Examples:
             >>> # MTZ conversion (same extension)
             >>> obs_file._get_conversion_output_path('FMEAN')
-            '/data/input_as_FMEAN.mtz'
+            '/data/input_asFMEAN.mtz'
 
             >>> # PDB to mmCIF (different extension)
             >>> pdb_file._get_conversion_output_path('MMCIF', '.cif')
-            '/data/model_as_MMCIF.cif'
+            '/data/model_asMMCIF.cif'
         """
         from pathlib import Path
 
@@ -1071,27 +1071,76 @@ class CDataFile(CData):
         # Use target_extension if provided, otherwise preserve input extension
         extension = target_extension if target_extension else input_path.suffix
 
-        # Calculate output filename
-        output_name = f"{input_stem}_as_{target_content_type}{extension}"
+        # Calculate output filename (one underscore before 'as', none between 'as' and TYPE)
+        output_name = f"{input_stem}_as{target_content_type}{extension}"
 
-        # Try input directory first (if it exists and we can write there)
-        if input_dir.exists() and input_dir.is_dir():
-            output_path = input_dir / output_name
-            # Check if we can write there (basic check)
-            try:
-                # Try to create a test file
-                test_file = input_dir / f".write_test_{id(self)}"
-                test_file.touch()
-                test_file.unlink()
-                return str(output_path)
-            except (PermissionError, OSError):
-                # Not writable, fall through to work_directory
-                pass
+        # Determine if source file is within the project hierarchy
+        # Priority: 1) Check dbFileId + database, 2) Check path patterns
+        is_within_project = False
 
-        # Fall back to work directory
+        # Method 1: Check if file has dbFileId (indicates it's been imported into project)
+        if hasattr(self, 'dbFileId') and self.dbFileId is not None:
+            db_file_id = None
+            if hasattr(self.dbFileId, 'value') and self.dbFileId.value is not None:
+                db_file_id = self.dbFileId.value
+            elif isinstance(self.dbFileId, str) and self.dbFileId:
+                db_file_id = self.dbFileId
+
+            if db_file_id:
+                # File has a dbFileId, so it's been imported into the project
+                # Try to get its path from the database to confirm
+                db_handler = self._get_db_handler()
+                if db_handler:
+                    try:
+                        import uuid
+                        file_uuid = uuid.UUID(str(db_file_id))
+                        db_path = db_handler.get_file_path_sync(file_uuid)
+                        if db_path:
+                            # Successfully retrieved path from DB
+                            # Check if it's within project directories
+                            is_within_project = 'CCP4_JOBS' in str(db_path) or 'CCP4_IMPORTED_FILES' in str(db_path)
+                    except Exception:
+                        pass  # Fall through to path-based check
+
+        # Method 2: Fallback to path-based detection
+        if not is_within_project:
+            # Simple path pattern matching as fallback
+            is_within_project = 'CCP4_JOBS' in str(input_path) or 'CCP4_IMPORTED_FILES' in str(input_path)
+
+        if is_within_project:
+            # Source is within project: try to place derived file adjacent to source
+            if input_dir.exists() and input_dir.is_dir():
+                output_path = input_dir / output_name
+                # Check if we can write there
+                try:
+                    test_file = input_dir / f".write_test_{id(self)}"
+                    test_file.touch()
+                    test_file.unlink()
+                    return str(output_path)
+                except (PermissionError, OSError):
+                    pass  # Fall through to work_directory
+
+        # Source is external to project OR input directory not writable:
+        # Use work_directory (typically points to CCP4_IMPORTED_FILES or can derive it)
         if work_directory:
-            work_dir = Path(work_directory)
-            return str(work_dir / output_name)
+            work_path = Path(work_directory)
+
+            # If work_directory is in CCP4_JOBS, derive CCP4_IMPORTED_FILES path
+            if 'CCP4_JOBS' in str(work_path):
+                # Walk up to find CCP4_JOBS
+                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
+                    work_path = work_path.parent
+
+                if work_path.name == 'CCP4_JOBS':
+                    # Go to project root and use CCP4_IMPORTED_FILES
+                    project_root = work_path.parent
+                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
+                    imported_files_dir.mkdir(parents=True, exist_ok=True)
+                    return str(imported_files_dir / output_name)
+
+            # Direct use of work_directory
+            work_path.mkdir(parents=True, exist_ok=True)
+            return str(work_path / output_name)
 
         # Last resort: same as input (may fail at write time if not writable)
         return str(input_dir / output_name)

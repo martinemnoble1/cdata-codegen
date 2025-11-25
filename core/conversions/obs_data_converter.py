@@ -169,43 +169,9 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output file paths
-        # IMPORTANT: Output files must go in CCP4_IMPORTED_FILES, not ctruncate subdirectory
-        # This ensures makeHklin0 and other code can find the converted files
-        if work_directory:
-            from pathlib import Path
-            input_path = Path(obs_file.getFullPath())
-
-            # Determine CCP4_IMPORTED_FILES directory (same logic as to_imean/to_fmean)
-            if 'CCP4_IMPORTED_FILES' in str(input_path):
-                imported_files_dir = input_path.parent
-            else:
-                # work_directory is typically {project}/CCP4_JOBS/job_N
-                # Or with isolated ctruncate: {project}/CCP4_JOBS/job_N/job_N
-                # We want {project}/CCP4_IMPORTED_FILES
-                work_path = Path(work_directory)
-
-                # Walk up the directory tree to find CCP4_JOBS
-                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
-                    work_path = work_path.parent
-
-                if work_path.name == 'CCP4_JOBS':
-                    # Go up to project root
-                    project_root = work_path.parent
-                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
-                else:
-                    # Fallback: use work_directory/../CCP4_IMPORTED_FILES
-                    imported_files_dir = work_path.parent / 'CCP4_IMPORTED_FILES'
-
-            # Ensure directory exists
-            imported_files_dir.mkdir(parents=True, exist_ok=True)
-
-            hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(imported_files_dir / hklout_name)
-            obsout_name = f"{input_path.stem}_as_FPAIR{input_path.suffix}"
-            obsout_path = str(imported_files_dir / obsout_name)
-        else:
-            hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
-            obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
+        # Use helper method which places files adjacent to source file (or work_directory if not writable)
+        hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
+        obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
 
         wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
         wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
@@ -358,43 +324,9 @@ class ObsDataConverter:
                     group._column_mapping = {}
 
         # Set output file paths
-        # IMPORTANT: Output files must go in CCP4_IMPORTED_FILES, not ctruncate subdirectory
-        # This ensures makeHklin0 and other code can find the converted files
-        if work_directory:
-            from pathlib import Path
-            input_path = Path(obs_file.getFullPath())
-
-            # Determine CCP4_IMPORTED_FILES directory (same logic as to_fmean)
-            if 'CCP4_IMPORTED_FILES' in str(input_path):
-                imported_files_dir = input_path.parent
-            else:
-                # work_directory is typically {project}/CCP4_JOBS/job_N
-                # Or with isolated ctruncate: {project}/CCP4_JOBS/job_N/ctruncate
-                # We want {project}/CCP4_IMPORTED_FILES
-                work_path = Path(work_directory)
-
-                # Walk up the directory tree to find CCP4_JOBS
-                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
-                    work_path = work_path.parent
-
-                if work_path.name == 'CCP4_JOBS':
-                    # Go up to project root
-                    project_root = work_path.parent
-                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
-                else:
-                    # Fallback: use work_directory/../CCP4_IMPORTED_FILES
-                    imported_files_dir = work_path.parent / 'CCP4_IMPORTED_FILES'
-
-            # Ensure directory exists
-            imported_files_dir.mkdir(parents=True, exist_ok=True)
-
-            hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(imported_files_dir / hklout_name)
-            obsout_name = f"{input_path.stem}_as_IMEAN{input_path.suffix}"
-            obsout_path = str(imported_files_dir / obsout_name)
-        else:
-            hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
-            obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
+        # Use helper method which places files adjacent to source file (or work_directory if not writable)
+        hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
+        obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
 
         wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
         wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
@@ -559,49 +491,9 @@ class ObsDataConverter:
                         group._column_mapping = {}
 
         # Set output file paths
-        # IMPORTANT: Output files must go in CCP4_IMPORTED_FILES, not ctruncate subdirectory
-        # This ensures makeHklin0 and other code can find the converted files
-        if work_directory:
-            from pathlib import Path
-            input_path = Path(obs_file.getFullPath())
-
-            # Determine CCP4_IMPORTED_FILES directory
-            # If input file is already in CCP4_IMPORTED_FILES, use that directory
-            # Otherwise, construct path as work_directory/../CCP4_IMPORTED_FILES
-            if 'CCP4_IMPORTED_FILES' in str(input_path):
-                imported_files_dir = input_path.parent
-            else:
-                # work_directory is typically {project}/CCP4_JOBS/job_N
-                # Or for nested jobs: {project}/CCP4_JOBS/job_N/job_N/ctruncate
-                # We want {project}/CCP4_IMPORTED_FILES
-                work_path = Path(work_directory)
-
-                # Walk up the directory tree to find CCP4_JOBS
-                while work_path.name.startswith('job_') or work_path.name in ['ctruncate', 'refmac', 'prosmart', 'aimless']:
-                    work_path = work_path.parent
-
-                if work_path.name == 'CCP4_JOBS':
-                    # Go up to project root
-                    project_root = work_path.parent
-                    imported_files_dir = project_root / 'CCP4_IMPORTED_FILES'
-                else:
-                    # Fallback: use work_directory/../CCP4_IMPORTED_FILES
-                    imported_files_dir = work_path.parent / 'CCP4_IMPORTED_FILES'
-
-            # Ensure directory exists
-            imported_files_dir.mkdir(parents=True, exist_ok=True)
-
-            hklout_name = f"{input_path.stem}_full{input_path.suffix}"
-            hklout_path = str(imported_files_dir / hklout_name)
-            obsout_name = f"{input_path.stem}_as_FMEAN{input_path.suffix}"
-            obsout_path = str(imported_files_dir / obsout_name)
-
-            pass  # DEBUG: print(f"[DEBUG ObsDataConverter] Conversion outputs will be in CCP4_IMPORTED_FILES:")
-            pass  # DEBUG: print(f"[DEBUG ObsDataConverter]   imported_files_dir: {imported_files_dir}")
-            pass  # DEBUG: print(f"[DEBUG ObsDataConverter]   obsout_path: {obsout_path}")
-        else:
-            hklout_path = obs_file._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
-            obsout_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)
+        # Use helper method which places files adjacent to source file (or work_directory if not writable)
+        hklout_path = obs_file._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
+        obsout_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)
 
         wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
         wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
