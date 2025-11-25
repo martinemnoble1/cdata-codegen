@@ -29,6 +29,7 @@ Installed via `pip install -r requirements.txt`:
 - `gemmi==0.7.3`
 - `mrcfile==1.5.4`
 - `cctbx-base==2025.10` (CCTBX utilities, not full stack)
+  - ⚠️ **WARNING**: Installs broken MolProbity executables that must be removed (see below)
 
 ### Testing
 - `pytest==8.4.2`
@@ -50,10 +51,12 @@ Installed via `pip install -r requirements.txt`:
 
 **Full list**: Run `.venv/bin/pip list --format=freeze`
 
-## Symlinked CCP4 Modules (10 required)
+## Symlinked CCP4 Modules (17 required)
 
 Symlinked from CCP4-20251105 distribution at:
 `/Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/`
+
+**IMPORTANT**: For MolProbity validation to work, you must also symlink `share/cctbx` (see section 9 below).
 
 ### 1. Clipper (Crystallography)
 ```bash
@@ -117,6 +120,28 @@ ln -sf $CCP4_SITE_PACKAGES/chem_data .venv/lib/python3.11/site-packages/
 **Purpose**: Ramachandran and rotamer reference database (Top8000)
 **Used by**: MolProbity validation, iris_validation
 
+### 9. CCTBX Suite (Required for MolProbity) ⚠️ CRITICAL
+```bash
+# Symlink CCTBX Python modules
+ln -s $CCP4_SITE_PACKAGES/cctbx .venv/lib/python3.11/site-packages/
+ln -s $CCP4_SITE_PACKAGES/mmtbx .venv/lib/python3.11/site-packages/
+ln -s $CCP4_SITE_PACKAGES/iotbx .venv/lib/python3.11/site-packages/
+ln -s $CCP4_SITE_PACKAGES/scitbx .venv/lib/python3.11/site-packages/
+ln -s $CCP4_SITE_PACKAGES/smtbx .venv/lib/python3.11/site-packages/
+ln -s $CCP4_SITE_PACKAGES/boost_adaptbx .venv/lib/python3.11/site-packages/
+
+# Symlink CCTBX build environment (contains libtbx_env)
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/share/cctbx .venv/share/cctbx
+```
+**Purpose**: Computational Crystallography Toolbox - core libraries for MolProbity
+**Why critical?**:
+- MolProbity validation requires `libtbx.env.has_module("probe")` to return True
+- `libtbx.env` is loaded via `import libtbx.load_env` which requires:
+  - Full CCTBX suite modules (cctbx, mmtbx, iotbx, scitbx, libtbx, smtbx, boost_adaptbx)
+  - Build environment file at `share/cctbx/libtbx_env`
+- Without these, iris_validation falls back to basic validation (no MolProbity data)
+**Used by**: validate_protein tests with MolProbity (3 tests)
+
 ## Verification
 
 ### Check Pip Packages
@@ -127,7 +152,7 @@ pip list | wc -l  # Should show ~56 packages
 
 ### Check Symlinked Modules
 ```bash
-ls -la .venv/lib/python3.11/site-packages/ | grep "^l" | wc -l  # Should show 10 symlinks
+ls -la .venv/lib/python3.11/site-packages/ | grep "^l" | wc -l  # Should show 17 symlinks
 ```
 
 ### Test Imports
@@ -143,11 +168,14 @@ python -c "import phaser; import mrbump; print('✓ phaser, mrbump')"
 
 # Validation
 python -c "import iris_validation; print('✓ iris_validation')"
+
+# CCTBX suite and MolProbity probe detection
+python -c "import libtbx.load_env; print(f'✓ libtbx.env loaded, has probe: {libtbx.env.has_module(\"probe\")}')"  # Must show True
 ```
 
 ## Test Results
 
-With all 56 pip packages + 10 symlinked modules:
+With all 56 pip packages + 17 symlinked modules:
 - **53 passed** out of 69 tests
 - **77% pass rate**
 - Runtime: ~38 minutes
@@ -163,10 +191,14 @@ With all 56 pip packages + 10 symlinked modules:
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Symlink CCP4 modules
+# 3. Run post-install cleanup (removes broken MolProbity executables)
+./setup_venv.sh
+
+# 4. Symlink CCP4 modules
 CCP4_SITE_PACKAGES="/Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages"
 cd .venv/lib/python3.11/site-packages
 
+# Core modules (10 symlinks)
 ln -sf "$CCP4_SITE_PACKAGES/clipper.py" .
 ln -sf "$CCP4_SITE_PACKAGES/_clipper.so" .
 ln -sf "$CCP4_SITE_PACKAGES/ccp4mg" .
@@ -178,9 +210,21 @@ ln -sf "$CCP4_SITE_PACKAGES/mrbump" .
 ln -sf "$CCP4_SITE_PACKAGES/iris_validation" .
 ln -sf "$CCP4_SITE_PACKAGES/chem_data" .
 
-# 4. Verify
+# CCTBX suite (6 symlinks - required for MolProbity validation)
+ln -s "$CCP4_SITE_PACKAGES/cctbx" .
+ln -s "$CCP4_SITE_PACKAGES/mmtbx" .
+ln -s "$CCP4_SITE_PACKAGES/iotbx" .
+ln -s "$CCP4_SITE_PACKAGES/scitbx" .
+ln -s "$CCP4_SITE_PACKAGES/smtbx" .
+ln -s "$CCP4_SITE_PACKAGES/boost_adaptbx" .
+
+# CCTBX build environment (1 symlink - required for libtbx.env)
 cd /Users/nmemn/Developer/cdata-codegen
-python -c "import clipper, rdkit, phaser; print('✅ All modules OK')"
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/share/cctbx .venv/share/cctbx
+
+# 5. Verify
+python -c "import clipper, rdkit, phaser; print('✅ Core modules OK')"
+python -c "import libtbx.load_env; print(f'✅ CCTBX OK, has probe: {libtbx.env.has_module(\"probe\")}')"
 ```
 
 ## Common Issues
@@ -205,3 +249,47 @@ ls -la .venv/lib/python3.11/site-packages/phaser
 ```
 
 If broken, re-create symlink as shown above.
+
+### MolProbity Validation Tests Fail (⚠️ CRITICAL)
+**Symptom**:
+- Validation tests with MolProbity fail
+- Error: `WARNING: Failed to run MolProbity; continuing without MolProbity analyses`
+- Test assertion: `MolProbity tag missing in program.xml`
+
+**Root Cause #1 - Broken MolProbity Executables**:
+The `cctbx-base==2025.10` package from PyPI installs 21 broken MolProbity executables in `.venv/bin/` with hardcoded paths to conda build environments (`/Users/runner/miniforge3/conda-bld/...`). These broken executables shadow the working CCP4 MolProbity tools in `$CCP4/bin/`.
+
+**Root Cause #2 - Missing CCTBX Suite** (ACTUAL BLOCKER):
+MolProbity validation requires `libtbx.env.has_module("probe")` to return True. This requires:
+1. Full CCTBX suite modules symlinked (cctbx, mmtbx, iotbx, scitbx, smtbx, boost_adaptbx)
+2. CCTBX build environment symlinked at `.venv/share/cctbx` (contains `libtbx_env` file)
+
+**Fix**:
+```bash
+# 1. Remove broken MolProbity executables from virtualenv
+rm .venv/bin/molprobity.*
+
+# 2. Symlink CCTBX suite modules (see section 9 under "Symlinked CCP4 Modules")
+CCP4_SITE="/Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages"
+cd .venv/lib/python3.11/site-packages
+ln -s "$CCP4_SITE/cctbx" .
+ln -s "$CCP4_SITE/mmtbx" .
+ln -s "$CCP4_SITE/iotbx" .
+ln -s "$CCP4_SITE/scitbx" .
+ln -s "$CCP4_SITE/smtbx" .
+ln -s "$CCP4_SITE/boost_adaptbx" .
+
+# 3. Symlink CCTBX build environment
+cd /Users/nmemn/Developer/cdata-codegen
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/share/cctbx .venv/share/cctbx
+
+# 4. Verify MolProbity detection works
+source /path/to/ccp4-20251105/bin/ccp4.setup-sh
+source .venv/bin/activate
+python -c "import libtbx.load_env; print(f'has probe: {libtbx.env.has_module(\"probe\")}')"
+# Should output: has probe: True
+```
+
+**Prevention**:
+1. Run the automated cleanup script after pip install: `./setup_venv.sh`
+2. Follow the complete symlink setup in "Quick Setup" section above (includes CCTBX suite)

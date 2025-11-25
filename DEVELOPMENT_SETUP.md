@@ -223,24 +223,63 @@ ln -sf "$CCP4_SITE_PACKAGES/iris_validation" .
 ln -sf "$CCP4_SITE_PACKAGES/chem_data" .
 ```
 
-### 5.4 Verify All Symlinks
+### 5.4 CCTBX Suite (Required for MolProbity Validation) ⚠️ CRITICAL
+```bash
+cd .venv/lib/python3.11/site-packages
+
+# CCTBX Python modules (required for libtbx.env)
+ln -s "$CCP4_SITE_PACKAGES/cctbx" .
+ln -s "$CCP4_SITE_PACKAGES/mmtbx" .
+ln -s "$CCP4_SITE_PACKAGES/iotbx" .
+ln -s "$CCP4_SITE_PACKAGES/scitbx" .
+ln -s "$CCP4_SITE_PACKAGES/smtbx" .
+ln -s "$CCP4_SITE_PACKAGES/boost_adaptbx" .
+
+# CCTBX build environment (contains libtbx_env file)
+cd /path/to/cdata-codegen
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/share/cctbx .venv/share/cctbx
+```
+
+**Why This Is Critical**:
+- MolProbity validation in iris_validation requires probe detection
+- Probe detection uses `libtbx.env.has_module("probe")` which must return True
+- `libtbx.env` is loaded via `import libtbx.load_env`
+- This requires:
+  1. Full CCTBX suite modules (cctbx, mmtbx, iotbx, scitbx, smtbx, boost_adaptbx)
+  2. Build environment file at `share/cctbx/libtbx_env`
+- Without these, validation tests will fail with "MolProbity tag missing in program.xml"
+
+### 5.5 Verify All Symlinks
 ```bash
 cd /path/to/cdata-codegen
 ls -la .venv/lib/python3.11/site-packages/ | grep "^l"
 ```
 
-**Expected output (10 symlinks):**
+**Expected output (17 symlinks):**
 ```
 lrwxr-xr-x  _clipper.so -> /path/to/ccp4-20251105/.../site-packages/_clipper.so
+lrwxr-xr-x  boost_adaptbx -> /path/to/ccp4-20251105/.../site-packages/boost_adaptbx
 lrwxr-xr-x  ccp4mg -> /path/to/ccp4-20251105/.../site-packages/ccp4mg
+lrwxr-xr-x  cctbx -> /path/to/ccp4-20251105/.../site-packages/cctbx
 lrwxr-xr-x  chem_data -> /path/to/ccp4-20251105/.../site-packages/chem_data
 lrwxr-xr-x  clipper.py -> /path/to/ccp4-20251105/.../site-packages/clipper.py
+lrwxr-xr-x  iotbx -> /path/to/ccp4-20251105/.../site-packages/iotbx
 lrwxr-xr-x  iris_validation -> /path/to/ccp4-20251105/.../site-packages/iris_validation
+lrwxr-xr-x  libtbx -> /path/to/ccp4-20251105/.../site-packages/libtbx
+lrwxr-xr-x  mmtbx -> /path/to/ccp4-20251105/.../site-packages/mmtbx
 lrwxr-xr-x  mrbump -> /path/to/ccp4-20251105/.../site-packages/mrbump
 lrwxr-xr-x  phaser -> /path/to/ccp4-20251105/.../site-packages/phaser
 lrwxr-xr-x  pyrvapi.so -> /path/to/ccp4-20251105/.../site-packages/pyrvapi.so
 lrwxr-xr-x  pyrvapi_ext -> /path/to/ccp4-20251105/.../site-packages/pyrvapi_ext
 lrwxr-xr-x  rdkit -> /path/to/ccp4-20251105/.../site-packages/rdkit
+lrwxr-xr-x  scitbx -> /path/to/ccp4-20251105/.../site-packages/scitbx
+lrwxr-xr-x  smtbx -> /path/to/ccp4-20251105/.../site-packages/smtbx
+```
+
+**Also check share/cctbx symlink:**
+```bash
+ls -la .venv/share/ | grep cctbx
+# Should show: lrwxr-xr-x  cctbx -> /path/to/ccp4-20251105/.../share/cctbx
 ```
 
 ### Quick Setup Script
@@ -269,7 +308,19 @@ ln -sf "$CCP4_SITE_PACKAGES/mrbump" .
 ln -sf "$CCP4_SITE_PACKAGES/iris_validation" .
 ln -sf "$CCP4_SITE_PACKAGES/chem_data" .
 
-echo "✅ All 10 CCP4 modules symlinked"
+# CCTBX suite (6 symlinks - CRITICAL for MolProbity)
+ln -s "$CCP4_SITE_PACKAGES/cctbx" .
+ln -s "$CCP4_SITE_PACKAGES/mmtbx" .
+ln -s "$CCP4_SITE_PACKAGES/iotbx" .
+ln -s "$CCP4_SITE_PACKAGES/scitbx" .
+ln -s "$CCP4_SITE_PACKAGES/smtbx" .
+ln -s "$CCP4_SITE_PACKAGES/boost_adaptbx" .
+
+# CCTBX build environment (1 symlink)
+cd ../../../..  # Back to project root
+ln -sf "$CCP4_ROOT/Frameworks/Python.framework/Versions/3.11/share/cctbx" .venv/share/cctbx
+
+echo "✅ All 17 CCP4 modules symlinked"
 ```
 
 ---
@@ -283,13 +334,21 @@ python -c "import clipper; print('✓ clipper')"
 python -c "from ccp4mg import mmdb2; print('✓ mmdb2')"
 ```
 
-### Test CCTBX Stack (if installed)
+### Test CCTBX Stack
 ```bash
 python -c "import cctbx; print('✓ cctbx')"
 python -c "import iotbx; print('✓ iotbx')"
 python -c "import scitbx; print('✓ scitbx')"
 python -c "import phaser; print('✓ phaser')"
 ```
+
+### Test MolProbity Probe Detection (CRITICAL)
+```bash
+python -c "import libtbx.load_env; print(f'✓ libtbx.env loaded, has probe: {libtbx.env.has_module(\"probe\")}')"
+# MUST output: ✓ libtbx.env loaded, has probe: True
+```
+
+**If probe detection fails**: You're missing the CCTBX suite symlinks or share/cctbx. See section 5.4 above.
 
 ### Test Full Stack
 ```bash
@@ -300,7 +359,8 @@ import clipper
 import cctbx
 import iotbx
 import scitbx
-print('✅ FULL CCTBX STACK WORKING!')
+import libtbx.load_env
+print(f'✅ FULL CCTBX STACK WORKING! Probe: {libtbx.env.has_module(\"probe\")}')
 "
 ```
 
@@ -533,7 +593,7 @@ For continuous integration:
 - Structural biology: biopython, gemmi, mrcfile, cctbx-base
 - Full list: Run `.venv/bin/pip list --format=freeze`
 
-**Symlinked CCP4 Modules (10 required):**
+**Symlinked CCP4 Modules (17 required):**
 1. `clipper.py` + `_clipper.so` - Crystallography
 2. `ccp4mg/` - Molecular graphics (includes mmdb2)
 3. `pyrvapi.so` + `pyrvapi_ext/` - Report viewing
@@ -542,6 +602,8 @@ For continuous integration:
 6. `mrbump/` - MR pipeline
 7. `iris_validation/` - Validation
 8. `chem_data/` - Top8000 database
+9. `cctbx`, `mmtbx`, `iotbx`, `scitbx`, `smtbx`, `boost_adaptbx` - CCTBX suite (for MolProbity)
+10. `share/cctbx/` - CCTBX build environment (for libtbx.env)
 
 **Test Results with Full Setup:**
 - **53 passed** out of 69 tests

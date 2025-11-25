@@ -71,6 +71,12 @@ mrcfile>=1.4.0  # MRC/CCP4 electron density map files
 # NOTE: Using CCP4-provided cctbx (symlinked) instead of pip version
 # Symlinked from CCP4-20251105 for better integration and newer dev version (2025.11.dev16)
 # cctbx-base>=2025.10  # DISABLED - using CCP4 version via symlinks
+#
+# WARNING: cctbx-base from PyPI ships with 21 broken MolProbity executables
+# (molprobity.ramalyze, molprobity.rotalyze, etc.) with hardcoded conda build paths.
+# These shadow CCP4's working MolProbity tools and break validation tests.
+# If cctbx-base gets installed, remove with: rm .venv/bin/molprobity.*
+# See DEVELOPMENT_SETUP_SUMMARY.md for details.
 
 # Visualization (required by cctbx and reporting)
 matplotlib>=3.10
