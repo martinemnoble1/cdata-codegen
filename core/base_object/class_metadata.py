@@ -218,15 +218,17 @@ class MetadataAttributeFactory:
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
         """Create an integer attribute using CInt."""
-        from .fundamental_types import CInt
+        from .fundamental_types import CInt, ValueState
 
         # Create CInt object without a value (so it stays NOT_SET)
         attr = CInt(parent=parent_obj, name=name)
 
         # Set default value from qualifiers if explicitly provided
+        # IMPORTANT: Set as DEFAULT state, not EXPLICITLY_SET
         default_value = qualifiers.get('default')
         if default_value is not None:
-            attr.value = int(default_value)
+            attr._value = int(default_value)
+            attr._value_states['value'] = ValueState.DEFAULT
 
         # CInt already has all necessary methods (_is_value_type, __int__, __str__, etc.)
         # The min/max validation will be handled by qualifiers at the class level
@@ -238,15 +240,17 @@ class MetadataAttributeFactory:
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
         """Create a float attribute using CFloat."""
-        from .fundamental_types import CFloat
+        from .fundamental_types import CFloat, ValueState
 
         # Create CFloat object without a value (so it stays NOT_SET)
         attr = CFloat(parent=parent_obj, name=name)
 
         # Set default value from qualifiers if explicitly provided
+        # IMPORTANT: Set as DEFAULT state, not EXPLICITLY_SET
         default_value = qualifiers.get('default')
         if default_value is not None:
-            attr.value = float(default_value)
+            attr._value = float(default_value)
+            attr._value_states['value'] = ValueState.DEFAULT
 
         # CFloat already has all necessary methods (_is_value_type, __float__, __str__, etc.)
         # The min/max validation will be handled by qualifiers at the class level
@@ -258,15 +262,17 @@ class MetadataAttributeFactory:
         cls, name: str, attr_def: AttributeDefinition, parent_obj, qualifiers
     ):
         """Create a boolean attribute using CBoolean."""
-        from .fundamental_types import CBoolean
+        from .fundamental_types import CBoolean, ValueState
 
         # Create CBoolean object without a value (so it stays NOT_SET)
         attr = CBoolean(parent=parent_obj, name=name)
 
         # Set default value from qualifiers if explicitly provided
+        # IMPORTANT: Set as DEFAULT state, not EXPLICITLY_SET
         default_value = qualifiers.get('default')
         if default_value is not None:
-            attr.value = bool(default_value)
+            attr._value = bool(default_value)
+            attr._value_states['value'] = ValueState.DEFAULT
 
         # CBoolean already has all necessary methods (_is_value_type, __bool__, __str__, etc.)
 

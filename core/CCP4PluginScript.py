@@ -2887,6 +2887,26 @@ class CPluginScript(CData):
         if 'infile' in kwargs and inFile is None:
             inFile = kwargs['infile']
 
+        # IMPORTANT: Handle legacy wrapper bug where MTZ path is passed as outputColumnNames
+        # Some locked legacy wrappers (e.g., servalcat) call splitHklout with 3 positional args:
+        #   splitHklout(miniMtzsOut, programColumnNames, mtz_path_string)
+        # This incorrectly passes the MTZ path as outputColumnNames instead of inFile.
+        #
+        # Detection logic:
+        # - If outputColumnNames is a string (not a list)
+        # - AND it looks like a file path (contains '/' or ends with .mtz)
+        # - AND inFile is still None
+        # Then treat outputColumnNames as inFile and set outputColumnNames to None for auto-inference
+        if (outputColumnNames is not None and
+            isinstance(outputColumnNames, str) and
+            ('/' in outputColumnNames or outputColumnNames.endswith('.mtz')) and
+            inFile is None):
+            logger.debug(f'[DEBUG splitHklout] Legacy wrapper bug detected: '
+                        f'MTZ path passed as outputColumnNames: {outputColumnNames}')
+            inFile = outputColumnNames
+            outputColumnNames = None
+            logger.debug(f'[DEBUG splitHklout] Corrected: inFile={inFile}, outputColumnNames=None (auto-inference)')
+
         # Default input file
         if inFile is None:
             inFile = str(self.workDirectory / 'hklout.mtz')
