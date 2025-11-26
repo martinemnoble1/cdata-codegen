@@ -182,6 +182,56 @@ class AsyncDatabaseHandler:
 
         return await _create_job()
 
+    def createSubJob(
+        self,
+        taskName: str,
+        parentJobId: str,
+        jobNumber: str,
+        jobTitle: Optional[str] = None,
+    ) -> str:
+        """
+        Create a sub-job in the database (synchronous wrapper for makePluginObject).
+
+        This method provides a synchronous interface for CPluginScript.makePluginObject()
+        to create child job records in the database. It wraps the async create_job method.
+
+        Args:
+            taskName: Name of the plugin/task for the sub-job (e.g., "refmac")
+            parentJobId: UUID of the parent job (as string, with or without hyphens)
+            jobNumber: Sub-job number relative to parent (e.g., "1", "2")
+            jobTitle: Optional human-readable title for the sub-job
+
+        Returns:
+            str: UUID of the created job (without hyphens)
+
+        Example:
+            sub_job_id = handler.createSubJob(
+                taskName="refmac",
+                parentJobId="abc123...",
+                jobNumber="1"
+            )
+        """
+        from asgiref.sync import async_to_sync
+
+        # Normalize parent job UUID
+        if '-' not in parentJobId and len(parentJobId) == 32:
+            # Add hyphens to UUID if missing
+            parent_uuid = uuid.UUID(parentJobId)
+        else:
+            parent_uuid = uuid.UUID(parentJobId)
+
+        # Create job using async method (sync wrapper)
+        job = async_to_sync(self.create_job)(
+            task_name=taskName,
+            title=jobTitle or f"{taskName} sub-job {jobNumber}",
+            parent_job_uuid=parent_uuid,
+            # Let create_job auto-generate the compound job number (e.g., "1.1")
+            job_number=None,
+        )
+
+        logger.debug(f"[createSubJob] Created sub-job {job.number} for task {taskName}")
+        return str(job.uuid).replace("-", "")
+
     async def update_job_status(
         self,
         job_uuid: uuid.UUID,

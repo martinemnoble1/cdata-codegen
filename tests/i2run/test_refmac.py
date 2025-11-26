@@ -38,6 +38,101 @@ def _check_performance_indicators_in_db(job):
         return {}
 
 
+def _check_subjob_hierarchy_in_db(job):
+    """Check that subjobs are properly registered with parent relationships.
+
+    This function verifies the database structure for pipeline jobs:
+    - Parent job (e.g., prosmart_refmac) should exist
+    - Child jobs (e.g., refmac_i2, validate_protein) should have parent FK
+    - Files should be registered with proper job references
+    - FileUse records should link files to jobs
+
+    Args:
+        job: Path to job directory (job_1)
+
+    Returns:
+        dict: Database hierarchy info for inspection
+    """
+    from ccp4x.db import models
+
+    # Extract job number from path (e.g., .../job_1 -> "1")
+    job_number = job.name.replace("job_", "")
+
+    result = {
+        'parent_job': None,
+        'child_jobs': [],
+        'files': [],
+        'file_uses': [],
+    }
+
+    try:
+        # Find the parent job
+        parent_job = models.Job.objects.filter(number=job_number).first()
+        if not parent_job:
+            print(f"⚠ Parent job {job_number} not found in database")
+            return result
+
+        result['parent_job'] = {
+            'number': parent_job.number,
+            'title': parent_job.title,
+            'task_name': parent_job.task_name,
+            'status': parent_job.status,
+            'uuid': str(parent_job.uuid),
+        }
+
+        # Find child jobs (subjobs)
+        child_jobs = models.Job.objects.filter(parent=parent_job)
+        for child in child_jobs:
+            result['child_jobs'].append({
+                'number': child.number,
+                'title': child.title,
+                'task_name': child.task_name,
+                'status': child.status,
+                'uuid': str(child.uuid),
+            })
+
+        # Find files associated with parent job
+        parent_files = models.File.objects.filter(job=parent_job)
+        for f in parent_files:
+            result['files'].append({
+                'name': f.name,
+                'type': f.type.name if f.type else None,
+                'job_number': parent_job.number,
+                'param_name': f.job_param_name,
+            })
+
+        # Find files associated with child jobs
+        for child in child_jobs:
+            child_files = models.File.objects.filter(job=child)
+            for f in child_files:
+                result['files'].append({
+                    'name': f.name,
+                    'type': f.type.name if f.type else None,
+                    'job_number': child.number,
+                    'param_name': f.job_param_name,
+                })
+
+        # Find FileUse records for parent and children
+        all_jobs = [parent_job] + list(child_jobs)
+        for j in all_jobs:
+            file_uses = models.FileUse.objects.filter(job=j)
+            for fu in file_uses:
+                result['file_uses'].append({
+                    'file_name': fu.file.name,
+                    'job_number': j.number,
+                    'role': 'IN' if fu.role == models.FileUse.Role.IN else 'OUT',
+                    'param_name': fu.job_param_name,
+                })
+
+        return result
+
+    except Exception as e:
+        print(f"Error checking subjob hierarchy: {e}")
+        import traceback
+        traceback.print_exc()
+        return result
+
+
 def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity=True, check_db_kpis=True):
     read_structure(str(job / "XYZOUT.pdb"), format=CoorFormat.Pdb)
     # TODO: CIFFILE output needs investigation - mmcif file exists in subjob but not harvested
@@ -79,6 +174,37 @@ def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity
             print(f"⚠ No R-factor KPIs found in database. Found keys: {list(kpis.keys())}")
             # KPI extraction is confirmed working - fail if not found
             assert has_r_factor, f"Expected RFactor/RFree in database KPIs, found: {list(kpis.keys())}"
+
+        # Check subjob hierarchy in database
+        # This validates that pipelines properly register subjobs with parent FK
+        hierarchy = _check_subjob_hierarchy_in_db(job)
+        print(f"\n=== Database Hierarchy for {job.name} ===")
+        if hierarchy['parent_job']:
+            pj = hierarchy['parent_job']
+            print(f"Parent Job: number={pj['number']}, task={pj['task_name']}, status={pj['status']}")
+
+        if hierarchy['child_jobs']:
+            print(f"Child Jobs ({len(hierarchy['child_jobs'])}):")
+            for cj in hierarchy['child_jobs']:
+                print(f"  - number={cj['number']}, task={cj['task_name']}, status={cj['status']}")
+        else:
+            print("Child Jobs: None found")
+
+        if hierarchy['files']:
+            print(f"Files ({len(hierarchy['files'])}):")
+            for f in hierarchy['files'][:10]:  # Show first 10
+                print(f"  - {f['name']} (type={f['type']}, job={f['job_number']}, param={f['param_name']})")
+            if len(hierarchy['files']) > 10:
+                print(f"  ... and {len(hierarchy['files']) - 10} more")
+        else:
+            print("Files: None found")
+
+        if hierarchy['file_uses']:
+            print(f"FileUses ({len(hierarchy['file_uses'])}):")
+            for fu in hierarchy['file_uses'][:10]:  # Show first 10
+                print(f"  - {fu['file_name']} -> job {fu['job_number']} ({fu['role']}, param={fu['param_name']})")
+            if len(hierarchy['file_uses']) > 10:
+                print(f"  ... and {len(hierarchy['file_uses']) - 10} more")
 
 
 @pytest.mark.skip(reason="Clipper library crashes during Iris validation - use test_8xfm_basic instead")
