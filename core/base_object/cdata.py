@@ -496,7 +496,7 @@ class CData(HierarchicalObject):
             # For container objects without a 'value' attribute, check if ANY child is set
             if not hasattr(self, 'value'):
                 # Check if any child attribute is set
-                for attr_name, state in self._value_states.items():
+                for _, state in self._value_states.items():
                     if state == ValueState.EXPLICITLY_SET:
                         return True
                     if state == ValueState.DEFAULT and allowDefault:
@@ -505,17 +505,13 @@ class CData(HierarchicalObject):
                 # Also check CData children recursively (e.g., CList, nested CContainer)
                 # This handles cases like container.UNMERGEDFILES.append(item)
                 # where UNMERGEDFILES itself is set but not explicitly assigned
-                for attr_name in dir(self):
-                    if attr_name.startswith('_'):
-                        continue
-                    try:
-                        attr = getattr(self, attr_name)
-                        if isinstance(attr, CData) and hasattr(attr, 'isSet'):
-                            if attr.isSet(field_name=None, allowUndefined=allowUndefined,
-                                        allowDefault=allowDefault, allSet=allSet):
-                                return True
-                    except Exception:
-                        continue
+                # Use children() to only check actual hierarchical children,
+                # not all attributes from dir(self)
+                for child in self.children():
+                    if isinstance(child, CData) and hasattr(child, 'isSet'):
+                        if child.isSet(field_name=None, allowUndefined=allowUndefined,
+                                      allowDefault=allowDefault, allSet=allSet):
+                            return True
 
                 return False
             field_name = "value"
@@ -561,6 +557,24 @@ class CData(HierarchicalObject):
                     return False
 
         return True
+
+    def _has_any_set_children(self) -> bool:
+        """Check if any child CData attributes have been explicitly set.
+
+        This is used by __setattr__ to determine if a container object
+        (like CRefinementPerformance) has any meaningful data to copy,
+        even if the parent's isSet() returns False because no 'value' is set.
+
+        Returns:
+            True if any child CData attribute is set, False otherwise.
+        """
+        # Use children() to only check actual hierarchical children,
+        # not all attributes from dir(self)
+        for child in self.children():
+            if isinstance(child, CData) and hasattr(child, 'isSet'):
+                if child.isSet():
+                    return True
+        return False
 
     def unSet(self, field_name: str = 'value'):
         """Return a field to its not-set state.
@@ -1087,11 +1101,17 @@ class CData(HierarchicalObject):
             # CData to CData assignment: use smart assignment logic
             # Only perform assignment if the source value is actually set
             # This prevents copying unset/default values which would mark them as explicitly set
+            #
+            # For container objects (like CRefinementPerformance), we need to check if ANY
+            # child attribute is set, not just the parent's isSet() which checks the 'value'
+            # attribute. The _has_any_set_children() helper handles this case.
             if hasattr(value, 'isSet') and not value.isSet():
-                # Source value is not set - skip the assignment
-                # This prevents legacy code like: obj.FRAC = source.FREER_FRACTION
-                # from marking FRAC as set when FREER_FRACTION is just a default
-                return
+                # Parent's isSet() returns False - but check if any children are set
+                if not value._has_any_set_children():
+                    # Source value is not set AND no children are set - skip the assignment
+                    # This prevents legacy code like: obj.FRAC = source.FREER_FRACTION
+                    # from marking FRAC as set when FREER_FRACTION is just a default
+                    return
 
             # IMPORTANT: Detect plugin reassignment (different instances)
             # When SubstituteLigand does: self.aimlessPlugin = self.makePluginObject('aimless_pipe')

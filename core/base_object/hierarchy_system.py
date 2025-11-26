@@ -217,9 +217,10 @@ class HierarchicalObject(ABC):
         """Internal method to remove a child (called by set_parent)."""
         with self._lock:
             # Find and remove the child reference
+            # Use 'is' for identity comparison to avoid calling __eq__ during GC
             to_remove = None
             for child_ref in self._children:
-                if child_ref() == child:
+                if child_ref() is child:
                     to_remove = child_ref
                     break
 
@@ -784,8 +785,15 @@ class HierarchicalObject(ABC):
 
     def __del__(self):
         """Ensure cleanup on garbage collection."""
-        if self._state != ObjectState.DESTROYED:
-            self.destroy()
+        # Use getattr with default to avoid AttributeError during GC
+        # when object was only partially initialized
+        try:
+            state = getattr(self, '_state', ObjectState.DESTROYED)
+            if state != ObjectState.DESTROYED:
+                self.destroy()
+        except Exception:
+            # Suppress all exceptions during GC - object state may be inconsistent
+            pass
 
     def __repr__(self) -> str:
         # Defensive: parent might not be a HierarchicalObject (e.g., QEventLoop)
