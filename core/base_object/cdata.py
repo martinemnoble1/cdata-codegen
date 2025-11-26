@@ -432,18 +432,15 @@ class CData(HierarchicalObject):
         except Exception:
             pass
 
-        # Fallback: inspect actual attributes
-        for attr_name in dir(self):
-            if attr_name.startswith('_'):
-                continue
-            if attr_name in ['parent', 'name', 'children', 'signals', 'content', 'CONTENTS']:
-                continue
-            try:
-                value = getattr(self, attr_name)
-                if isinstance(value, CData):
-                    cdata_attributes.append(attr_name)
-            except Exception:
-                continue
+        # Fallback: use hierarchical children
+        # This ensures we only return actual CData children that are part of
+        # the object hierarchy, not arbitrary attributes from __dict__
+        for child in self.children():
+            if isinstance(child, CData):
+                # Get the child's name within this parent
+                child_name = child.objectName() if hasattr(child, 'objectName') else None
+                if child_name:
+                    cdata_attributes.append(child_name)
 
         return cdata_attributes
 
@@ -783,34 +780,35 @@ class CData(HierarchicalObject):
                         return elem  # Return empty element for unset values
                 elem.text = str(value)
 
-        # For containers and complex types, serialize children
-        from core.base_object.signal_system import Signal
-        for attr_name, attr_value in self.__dict__.items():
-            if attr_name.startswith('_') or attr_name in ['parent', 'children', 'signals']:
+        # For containers and complex types, serialize hierarchical children
+        # Use children() to get only actual hierarchical children, not all __dict__ entries
+        for child in self.children():
+            # ONLY serialize CData objects
+            if not isinstance(child, CData):
                 continue
-            # Skip Signal objects (child_added, child_removed, etc.)
-            if isinstance(attr_value, Signal):
+
+            # Get the child's name within this parent
+            attr_name = child.objectName() if hasattr(child, 'objectName') else None
+            if not attr_name:
                 continue
-            # No special handling needed for 'name' anymore - HierarchicalObject uses '_name' internally
-            # ONLY serialize CData objects - plain Python values should not be serialized unless wrapped
-            if isinstance(attr_value, CData):
-                # Check if child should be excluded
-                if excludeUnset and hasattr(attr_value, 'isSet'):
-                    # For CData objects, check if they have any set values
-                    # Use allSet=False to check if ANY child is set, not requiring ALL children
-                    if not attr_value.isSet(allowDefault=False, allSet=False):
-                        continue  # Skip unset children
 
-                # Pass allSet and excludeUnset to children
-                child_elem = attr_value.getEtree(attr_name, excludeUnset=excludeUnset, allSet=allSet)
+            # Check if child should be excluded
+            if excludeUnset and hasattr(child, 'isSet'):
+                # For CData objects, check if they have any set values
+                # Use allSet=False to check if ANY child is set, not requiring ALL children
+                if not child.isSet(allowDefault=False, allSet=False):
+                    continue  # Skip unset children
 
-                # Only append if the child element has content
-                if excludeUnset or allSet:
-                    # Check if element has text or children
-                    if child_elem.text or len(child_elem) > 0:
-                        elem.append(child_elem)
-                else:
+            # Pass allSet and excludeUnset to children
+            child_elem = child.getEtree(attr_name, excludeUnset=excludeUnset, allSet=allSet)
+
+            # Only append if the child element has content
+            if excludeUnset or allSet:
+                # Check if element has text or children
+                if child_elem.text or len(child_elem) > 0:
                     elem.append(child_elem)
+            else:
+                elem.append(child_elem)
 
         # NOTE: Special handling for _container_items removed - now handled by CContainer.getEtree() override
 
@@ -977,51 +975,48 @@ class CData(HierarchicalObject):
             # For containers, merge attributes from source instead of replacing
             from .ccontainer import CContainer
             if isinstance(self, CContainer) and isinstance(source, CContainer):
-                # Container merging: iterate over source's public attributes (those added via setattr)
-                # These may not be in children() yet if they're being parsed
+                # Container merging: iterate over source's hierarchical children
+                # Use children() to get only actual CData children, not all dir() entries
                 pass #print(f"[DEBUG _smart_assign_from_cdata] Merging CContainer {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
-                for key in dir(source):
-                    if not key.startswith("_") and key[0].isupper():  # Skip private and methods
-                        try:
-                            child = getattr(source, key)
-                            # Only copy CData objects (skip methods)
-                            if isinstance(child, CData):
-                                # Check if we already have an attribute with this name
-                                if hasattr(self, key):
-                                    # Attribute already exists - recursively merge if both are containers
-                                    existing_child = getattr(self, key)
-                                    if isinstance(existing_child, CContainer) and isinstance(child, CContainer):
-                                        existing_child._smart_assign_from_cdata(child)
-                                    else:
-                                        # Not containers - replace with new one
-                                        setattr(self, key, child)
-                                else:
-                                    # New attribute - add it
-                                    # Need to reparent the child from source to self
-                                    child.set_parent(self)
-                                    setattr(self, key, child)
-                        except:
-                            # Skip attributes that can't be accessed
-                            pass
-            else:
-                # Non-container complex type: copy attributes, but only if explicitly set
-                # This prevents NOT_SET fields from being marked as EXPLICITLY_SET
-                pass #print(f"[DEBUG _smart_assign_from_cdata] Copying attributes for complex type {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
-                for key, value in source.__dict__.items():
-                    # Note: 'name' is NOT in this filter list - it's a regular CData attribute that should be copied
-                    # HierarchicalObject's hierarchical name is stored separately in '_name'
-                    if not key.startswith("_") and key not in [
-                        "parent",
-                        "children",
-                        "signals",
-                    ]:
-                        # For CData attributes, only copy if explicitly set
-                        if isinstance(value, CData) and hasattr(value, 'isSet'):
-                            if value.isSet(allowDefault=False):
-                                setattr(self, key, value)
+                for child in source.children():
+                    # Only copy CData objects
+                    if not isinstance(child, CData):
+                        continue
+
+                    # Get the child's name within the source
+                    key = child.objectName() if hasattr(child, 'objectName') else None
+                    if not key:
+                        continue
+
+                    # Check if we already have an attribute with this name
+                    if hasattr(self, key):
+                        # Attribute already exists - recursively merge if both are containers
+                        existing_child = getattr(self, key)
+                        if isinstance(existing_child, CContainer) and isinstance(child, CContainer):
+                            existing_child._smart_assign_from_cdata(child)
                         else:
-                            # Non-CData attributes: copy unconditionally
-                            setattr(self, key, value)
+                            # Not containers - replace with new one
+                            setattr(self, key, child)
+                    else:
+                        # New attribute - add it
+                        # Need to reparent the child from source to self
+                        child.set_parent(self)
+                        setattr(self, key, child)
+            else:
+                # Non-container complex type: copy hierarchical children, but only if explicitly set
+                # This prevents NOT_SET fields from being marked as EXPLICITLY_SET
+                # Use children() to get only actual hierarchical children, not all __dict__ entries
+                pass #print(f"[DEBUG _smart_assign_from_cdata] Copying attributes for complex type {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
+                for child in source.children():
+                    # Get the child's name within the source
+                    key = child.objectName() if hasattr(child, 'objectName') else None
+                    if not key:
+                        continue
+
+                    # For CData attributes, only copy if explicitly set
+                    if isinstance(child, CData) and hasattr(child, 'isSet'):
+                        if child.isSet(allowDefault=False):
+                            setattr(self, key, child)
 
     def _setup_hierarchy_for_value(self, key: str, value: Any):
         """Set up hierarchical relationships for attribute values.
