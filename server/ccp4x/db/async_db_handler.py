@@ -796,6 +796,12 @@ class AsyncDatabaseHandler:
             job_dir_sync = await sync_to_async(lambda: job.directory)()
             plugin.workDirectory = Path(job_dir_sync)
 
+        # Mark plugin as being tracked by track_job context manager
+        # This prevents double-gleaning since track_job handles gleaning for top-level jobs
+        # IMPORTANT: This must be set OUTSIDE the if block, because the plugin may already
+        # have a job ID set via setDbData() before entering track_job
+        plugin._tracked_by_track_job = True
+
         job_uuid = plugin.get_db_job_id()
 
         try:
@@ -851,6 +857,96 @@ class AsyncDatabaseHandler:
             # Cleanup if needed
             pass
 
+    def run_subjob(self, plugin: CPluginScript, parent_job_uuid: uuid.UUID) -> int:
+        """
+        Run a subjob plugin with full database tracking (synchronous wrapper).
+
+        This method is intended for pipeline code that creates subjobs via
+        makePluginObject(). It handles:
+        - Creating the subjob record in database with proper parent FK
+        - Setting up database context on the plugin
+        - Running process()
+        - Gleaning output files and KPIs
+        - Updating job status
+
+        Unlike track_job (which is async), this method can be called from
+        synchronous pipeline code.
+
+        Args:
+            plugin: The subjob plugin instance (already initialized with container)
+            parent_job_uuid: UUID of the parent job
+
+        Returns:
+            Plugin status code (CPluginScript.SUCCEEDED, FAILED, etc.)
+        """
+        from asgiref.sync import async_to_sync
+
+        async def _run_subjob_async():
+            # Get parent job to determine job number
+            parent_job = await sync_to_async(models.Job.objects.get)(uuid=parent_job_uuid)
+
+            # Count existing subjobs to determine the next job number
+            existing_subjobs = await sync_to_async(
+                lambda: models.Job.objects.filter(parent=parent_job).count()
+            )()
+            subjob_index = existing_subjobs + 1
+            job_number = f"{parent_job.number}.{subjob_index}"
+
+            # Create subjob record in database
+            task_name = plugin.TASKNAME or type(plugin).__name__
+            job = await self.create_job(
+                task_name=task_name,
+                title=plugin.name if hasattr(plugin, 'name') else task_name,
+                parent_job_uuid=parent_job_uuid,
+            )
+
+            # Set database context on plugin
+            plugin.set_db_job_id(job.uuid)
+            plugin.set_db_job_number(job.number)
+            plugin._dbProjectId = self.project_uuid
+            plugin._db_handler = self
+            plugin._tracked_by_track_job = True  # Mark so process() doesn't double-glean
+
+            logger.info(f"Created subjob {job.number} ({task_name}) under parent {parent_job.number}")
+
+            try:
+                # Mark as running
+                await self.update_job_status(job.uuid, models.Job.Status.RUNNING)
+
+                # Execute the plugin synchronously (this is what pipelines expect)
+                status = plugin.process()
+
+                # Update job status based on result
+                status_map = {
+                    CPluginScript.SUCCEEDED: models.Job.Status.FINISHED,
+                    CPluginScript.FAILED: models.Job.Status.FAILED,
+                }
+                if status in status_map:
+                    await self.update_job_status(job.uuid, status_map[status])
+
+                # Glean output files and KPIs if succeeded
+                if status == CPluginScript.SUCCEEDED:
+                    output_container = plugin.container.outputData if hasattr(plugin.container, 'outputData') else None
+                    if output_container is not None:
+                        files_gleaned = await self.glean_job_files(job.uuid, output_container, plugin=plugin)
+                        logger.info(f"Subjob {job.number}: Gleaned {len(files_gleaned)} output files")
+
+                        kpis_gleaned = await self.glean_performance_indicators(job.uuid, output_container)
+                        logger.info(f"Subjob {job.number}: Gleaned {kpis_gleaned} performance indicators")
+
+                        # Save params.xml with updated dbFileId values
+                        if len(files_gleaned) > 0:
+                            from ..lib.utils.parameters.save_params import save_params_for_job
+                            await sync_to_async(save_params_for_job)(plugin, job, mode="PARAMS")
+
+                return status
+
+            except Exception as e:
+                logger.error(f"Subjob {job.number} failed with exception: {e}")
+                await self.update_job_status(job.uuid, models.Job.Status.FAILED)
+                raise
+
+        return async_to_sync(_run_subjob_async)()
 
     async def find_file_by_path(
         self,

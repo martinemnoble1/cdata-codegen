@@ -166,9 +166,14 @@ def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity
         if has_r_factor:
             print(f"✓ Database KPIs found: {kpis}")
             # Verify the R-factor is reasonable (between 0 and 1)
+            # Note: RFree may be -999 if no FreeR flag was available in input data
             for key, value in kpis.items():
-                if 'rfactor' in key.lower() or 'rwork' in key.lower() or 'rfree' in key.lower():
+                if 'rfactor' in key.lower() or 'rwork' in key.lower():
                     assert 0.0 < value < 1.0, f"Invalid {key} value: {value}"
+                elif 'rfree' in key.lower():
+                    # RFree can be -999 if no FreeR flag was available
+                    if value > 0:
+                        assert value < 1.0, f"Invalid {key} value: {value}"
         else:
             # Log what we found for debugging
             print(f"⚠ No R-factor KPIs found in database. Found keys: {list(kpis.keys())}")
@@ -191,11 +196,20 @@ def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity
             print("Child Jobs: None found")
 
         if hierarchy['files']:
-            print(f"Files ({len(hierarchy['files'])}):")
-            for f in hierarchy['files'][:10]:  # Show first 10
-                print(f"  - {f['name']} (type={f['type']}, job={f['job_number']}, param={f['param_name']})")
-            if len(hierarchy['files']) > 10:
-                print(f"  ... and {len(hierarchy['files']) - 10} more")
+            # Group files by job number for better visibility
+            from collections import defaultdict
+            files_by_job = defaultdict(list)
+            for f in hierarchy['files']:
+                files_by_job[f['job_number']].append(f)
+
+            print(f"Files ({len(hierarchy['files'])} total):")
+            for job_num in sorted(files_by_job.keys()):
+                job_files = files_by_job[job_num]
+                print(f"  Job {job_num}: {len(job_files)} files")
+                for f in job_files[:3]:  # Show first 3 per job
+                    print(f"    - {f['name']} (type={f['type']}, param={f['param_name']})")
+                if len(job_files) > 3:
+                    print(f"    ... and {len(job_files) - 3} more")
         else:
             print("Files: None found")
 

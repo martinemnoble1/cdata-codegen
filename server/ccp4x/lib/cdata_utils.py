@@ -10,7 +10,6 @@ from pathlib import Path
 
 from core import CCP4Data
 from core.base_object.cdata_file import CDataFile
-from core.CCP4Container import CContainer
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ def find_all_files(container) -> List[CDataFile]:
         container: Root CData object to search (e.g., plugin.outputData)
 
     Returns:
-        List of all CDataFile objects found in the hierarchy
+        List of all CDataFile objects found in the hierarchy (deduplicated by object id)
 
     Example:
         >>> output_files = find_all_files(plugin.outputData)
@@ -84,11 +83,18 @@ def find_all_files(container) -> List[CDataFile]:
         ...     print(f"Found {file_obj.objectName()}: {file_obj.object_path()}")
     """
     files = []
+    visited = set()  # Track visited object IDs to prevent duplicates
     logger.debug(f"[DEBUG find_all_files] Starting search from {container}")
     logger.debug(f"[DEBUG find_all_files] Container type: {type(container)}")
 
     def traverse(obj, depth=0):
-        """Recursively traverse the CData hierarchy"""
+        """Recursively traverse the CData hierarchy using children()"""
+        # Skip if already visited (prevents cycles)
+        obj_id = id(obj)
+        if obj_id in visited:
+            return
+        visited.add(obj_id)
+
         indent = "  " * depth
         logger.debug(f"{indent}[DEBUG traverse] obj={obj.objectName() if hasattr(obj, 'objectName') else 'unnamed'}, type={type(obj).__name__}")
 
@@ -97,61 +103,17 @@ def find_all_files(container) -> List[CDataFile]:
             files.append(obj)
             logger.debug(f"{indent}  -> IS A FILE! Added to list")
 
-        # Traverse children - CContainer needs special handling
-        if isinstance(obj, CContainer):
-            # CContainer can store items in THREE ways:
-            # 1. Via add_item() -> _container_items list
-            # 2. Via addContent()/addObject() -> setattr() + _data_order
-            # 3. Via HierarchicalObject parent class -> children() method
-            try:
-                # First try get_items() for direct items
-                items = obj.get_items() if hasattr(obj, 'get_items') else []
-                logger.debug(f"{indent}  CContainer get_items() returned {len(items)} items")
-
-                # Then check dataOrder() for items added via addContent/addObject
-                if hasattr(obj, 'dataOrder'):
-                    data_order = obj.dataOrder()
-                    logger.debug(f"{indent}  CContainer dataOrder() returned {len(data_order)} names: {data_order}")
-                    for item_name in data_order:
-                        item = getattr(obj, item_name, None)
-                        if item is not None:
-                            logger.debug(f"{indent}    Found item by name: {item_name}")
-                            traverse(item, depth + 1)
-
-                # Also check HierarchicalObject children
-                if hasattr(obj, 'children'):
-                    children = obj.children()
-                    logger.debug(f"{indent}  CContainer children() returned {len(children)} children")
-                    for child in children:
-                        if child is not None:
-                            child_name = child.objectName() if hasattr(child, 'objectName') else 'unnamed'
-                            logger.debug(f"{indent}    Child from hierarchy: {child_name}")
-                            traverse(child, depth + 1)
-
-                # Also iterate direct items from get_items (if any)
-                for item in items:
-                    if item is not None:
-                        traverse(item, depth + 1)
-            except Exception as e:
-                logger.debug(f"{indent}  EXCEPTION: {e}")
-                import traceback
-                logger.debug(traceback.format_exc())
-                logger.debug(f"Error traversing container {obj}: {e}")
-        elif hasattr(obj, 'children'):
-            # Regular CData object - use children() method
+        # Use standardized children() method for all CData objects
+        # This is the canonical way to access children after the refactoring
+        if hasattr(obj, 'children'):
             try:
                 children = obj.children()
-                logger.debug(f"{indent}  CData object has {len(children)} children")
+                logger.debug(f"{indent}  children() returned {len(children)} children")
                 for child in children:
                     if child is not None:
-                        child_name = child.objectName() if hasattr(child, 'objectName') else 'unnamed'
-                        logger.debug(f"{indent}    Child: {child_name}")
                         traverse(child, depth + 1)
             except Exception as e:
-                logger.debug(f"{indent}  EXCEPTION: {e}")
-                import traceback
-                logger.debug(traceback.format_exc())
-                logger.debug(f"Error traversing {obj.object_path() if hasattr(obj, 'object_path') else obj}: {e}")
+                logger.debug(f"{indent}  EXCEPTION traversing children: {e}")
 
     traverse(container)
     return files

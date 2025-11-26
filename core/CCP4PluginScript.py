@@ -734,6 +734,13 @@ class CPluginScript(CData):
             traceback.print_exc()
             # Don't change status - process succeeded even if postprocessing failed
 
+        # Glean output files to database if in database-connected mode
+        # This is essential for subjobs created via makePluginObject() which don't go
+        # through the async track_job context manager
+        if status == self.SUCCEEDED:
+            print(f"[DEBUG process()] About to call _glean_output_files_sync for {self.__class__.__name__}")
+            self._glean_output_files_sync()
+
         # Emit finished signal so pipelines can continue
         # This is essential for sub-plugins in pipelines (e.g., mtzdump in demo_copycell)
         self.reportStatus(status)
@@ -778,6 +785,70 @@ class CPluginScript(CData):
                 results.extend(self._find_datafile_descendants(child))
 
         return results
+
+    def _glean_output_files_sync(self):
+        """
+        Glean output files to database (synchronous wrapper).
+
+        This method is called at the end of process() to register output files
+        in the database. It's essential for subjobs created via makePluginObject()
+        which don't go through the async track_job context manager.
+
+        Only acts if:
+        - Plugin is NOT tracked by track_job (which handles its own gleaning)
+        - _dbHandler is set
+        - _dbJobId is set
+        - container.outputData exists
+        """
+        # Skip if being tracked by track_job context manager
+        # track_job handles gleaning for top-level jobs to avoid double-gleaning
+        if getattr(self, '_tracked_by_track_job', False):
+            logger.debug(f"[_glean_output_files_sync] Skipping - tracked by track_job context manager")
+            return
+
+        # Check if we're in database mode
+        if not hasattr(self, '_dbHandler') or self._dbHandler is None:
+            return
+        if not hasattr(self, '_dbJobId') or self._dbJobId is None:
+            return
+        if not hasattr(self.container, 'outputData') or self.container.outputData is None:
+            return
+
+        logger.debug(f"[_glean_output_files_sync] Gleaning output files for subjob {self._dbJobId}")
+
+        try:
+            # Use async_to_sync to call the async glean method
+            from asgiref.sync import async_to_sync
+            import uuid as uuid_module
+
+            # Normalize job UUID
+            job_uuid = self._dbJobId
+            if isinstance(job_uuid, str):
+                if '-' not in job_uuid and len(job_uuid) == 32:
+                    job_uuid = uuid_module.UUID(job_uuid)
+                else:
+                    job_uuid = uuid_module.UUID(job_uuid)
+
+            # Call glean_job_files
+            files_gleaned = async_to_sync(self._dbHandler.glean_job_files)(
+                job_uuid,
+                self.container.outputData,
+                plugin=self
+            )
+            logger.debug(f"[_glean_output_files_sync] Gleaned {len(files_gleaned)} output files for {self.__class__.__name__}")
+
+            # Also glean KPIs if available
+            kpis_gleaned = async_to_sync(self._dbHandler.glean_performance_indicators)(
+                job_uuid,
+                self.container.outputData
+            )
+            logger.debug(f"[_glean_output_files_sync] Gleaned {kpis_gleaned} performance indicators")
+
+        except Exception as e:
+            # Don't fail the job if gleaning fails
+            logger.warning(f"[_glean_output_files_sync] Failed to glean output files: {e}")
+            import traceback
+            traceback.print_exc()
 
     def checkInputData(self) -> CErrorReport:
         """
