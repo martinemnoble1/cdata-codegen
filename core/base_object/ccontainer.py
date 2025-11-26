@@ -268,25 +268,6 @@ class CContainer(CData):
                 # Now populate it with the source data
                 new_item.setEtree(source_etree, ignore_missing=True)
 
-    def getEtree(self, name: str = None, excludeUnset: bool = False, allSet: bool = False):
-        """Override getEtree to serialize CContainer with proper item structure.
-
-        The parent class CData.getEtree() already handles serializing all CData
-        children (via dir(self) and checking isinstance(attr, CData)). This method
-        just calls the parent implementation.
-
-        Args:
-            name: Optional element name
-            excludeUnset: If True, only serialize explicitly set fields
-            allSet: If True, only serialize if ALL registered attributes are set
-
-        Returns:
-            ET.Element with container structure
-        """
-        # Parent class handles all CData children (both named attributes and
-        # children from HierarchicalObject.children())
-        return super().getEtree(name=name, excludeUnset=excludeUnset, allSet=allSet)
-
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""
         # Get list of all content items

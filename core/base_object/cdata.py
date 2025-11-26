@@ -250,11 +250,14 @@ class CData(HierarchicalObject):
         if metadata:
             all_fields = list(metadata.fields.keys())
         else:
-            all_fields = [
-                k for k in self.__dict__
-                if not k.startswith('_')
-                and k not in ['parent', 'name', 'children', 'signals']
-            ]
+            # Fallback: use hierarchical children to get field names
+            # This ensures we only process actual CData children, not arbitrary __dict__ entries
+            all_fields = []
+            for child in self.children():
+                if isinstance(child, CData):
+                    child_name = child.objectName() if hasattr(child, 'objectName') else None
+                    if child_name:
+                        all_fields.append(child_name)
 
         # Smart assignment for fields
         for k in all_fields:
@@ -319,11 +322,14 @@ class CData(HierarchicalObject):
         if metadata:
             all_fields = list(metadata.fields.keys())
         else:
-            all_fields = [
-                k for k in self.__dict__
-                if not k.startswith('_')
-                and k not in ['parent', 'name', 'children', 'signals', 'content']
-            ]
+            # Fallback: use hierarchical children to get field names
+            # This ensures we only process actual CData children, not arbitrary __dict__ entries
+            all_fields = []
+            for child in self.children():
+                if isinstance(child, CData):
+                    child_name = child.objectName() if hasattr(child, 'objectName') else None
+                    if child_name:
+                        all_fields.append(child_name)
 
         for field_name in all_fields:
             if not hasattr(self, field_name):
@@ -950,15 +956,13 @@ class CData(HierarchicalObject):
                             self._value_states[attr] = source._value_states[attr]
                     return
 
-            # If no primary attribute found, copy all non-internal attributes
-            for key, value in source.__dict__.items():
-                if not key.startswith("_") and key not in [
-                    "parent",
-                    "name",
-                    "children",
-                    "signals",
-                ]:
-                    setattr(self, key, value)
+            # If no primary attribute found, copy hierarchical children from source
+            # Use children() to get only actual CData children, not arbitrary __dict__ entries
+            for child in source.children():
+                if isinstance(child, CData):
+                    key = child.objectName() if hasattr(child, 'objectName') else None
+                    if key:
+                        setattr(self, key, child)
         else:
             pass #print(f"[DEBUG _smart_assign_from_cdata] Handling complex type assignment for {self.objectName() if hasattr(self, 'objectName') else 'unknown'} from source {source.objectName() if hasattr(source, 'objectName') else 'unknown'}")
             # Complex type assignment (like containers and lists)
