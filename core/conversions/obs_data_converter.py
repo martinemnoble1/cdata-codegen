@@ -16,8 +16,8 @@ FROM IPAIR   ✓    ✓     ✓     ✓
      FMEAN   ✗    ✗     ✗     ✓
 
 Implementation Details:
-- IPAIR → FPAIR/IMEAN/FMEAN: Uses ctruncate (French-Wilson)
-- IMEAN → FMEAN: Uses ctruncate (French-Wilson)
+- IPAIR → FPAIR/IMEAN/FMEAN: Uses servalcat fw (French-Wilson)
+- IMEAN → FMEAN: Uses servalcat fw (French-Wilson)
 - FPAIR → FMEAN: Uses gemmi + numpy (inverse-variance weighted mean)
 """
 
@@ -63,35 +63,37 @@ class ObsDataConverter:
 
         # Check file exists
         if not Path(input_path).exists():
-            raise CException(ObsDataConverter, 1, details=f"File: {input_path}")
+            raise CException(ObsDataConverter, 1,
+                             details=f"File: {input_path}")
 
         # Check contentFlag is set
-        content_flag = int(obs_file.contentFlag) if obs_file.contentFlag.isSet() else 0
+        content_flag = int(
+            obs_file.contentFlag) if obs_file.contentFlag.isSet() else 0
         if content_flag == 0:
-            raise CException(ObsDataConverter, 2, details=f"File: {input_path}")
+            raise CException(ObsDataConverter, 2,
+                             details=f"File: {input_path}")
 
     @staticmethod
     def to_fpair(obs_file, work_directory: Optional[Any] = None) -> str:
         """
-        Convert IPAIR (I+/I-) to FPAIR (F+/F-) using ctruncate.
+        Convert IPAIR (I+/I-) to FPAIR (F+/F-) using servalcat fw.
 
         Uses French-Wilson conversion to transform anomalous intensities
         to anomalous structure factor amplitudes.
 
         Args:
             obs_file: CObsDataFile instance to convert
-            work_directory: Optional directory for ctruncate working files
+            work_directory: Optional directory for servalcat working files
 
         Returns:
             Full path to converted FPAIR file
 
         Raises:
-            CException: If validation fails, unsupported conversion, or ctruncate fails
+            CException: If validation fails, unsupported conversion, or servalcat fails
         """
-        import os
-        from core.CCP4PluginScript import CPluginScript
-        from core.CCP4TaskManager import TASKMANAGER
-        from core.base_object.fundamental_types import CInt, CBoolean
+        from pathlib import Path
+        import shutil
+        from core.conversions.servalcat_converter import ServalcatConverter
 
         # Auto-detect content flag and validate
         obs_file.setContentFlag()
@@ -101,9 +103,8 @@ class ObsDataConverter:
 
         # If already FPAIR, just copy
         if current_flag == obs_file.CONTENT_FLAG_FPAIR:
-            import shutil
-            from pathlib import Path
-            output_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
+            output_path = obs_file._get_conversion_output_path(
+                'FPAIR', work_directory=work_directory)
             input_path = Path(obs_file.getFullPath())
             shutil.copy2(input_path, output_path)
             return str(output_path)
@@ -115,125 +116,29 @@ class ObsDataConverter:
                 details=f"Source: contentFlag {current_flag}, Target: FPAIR (2). Only IPAIR (1) → FPAIR supported."
             )
 
-        # Get ctruncate plugin
-        wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
-        if wrapper_class is None:
-            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
-
-        # Create instance with working directory (use parent's work directory directly)
-        # Don't create subdirectory - output paths expect files in parent work directory
-        wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
-
-        # Configure container
-        inp = wrapper.container.inputData
-        obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-
-        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
-        # This preserves database context for sub-jobs
-        if hasattr(obs_file, 'project') and obs_file.project.isSet():
-            inp.HKLIN.project.set(obs_file.project.value)
-        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
-            inp.HKLIN.relPath.set(obs_file.relPath.value)
-        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
-            inp.HKLIN.baseName.set(obs_file.baseName.value)
-        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
-            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
-        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
-            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
-
-        # Configure output format
-        par = wrapper.container.controlParameters
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZ', CBoolean)
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZCONTENTFLAG', CInt)
-        par.OUTPUTMINIMTZ.set(True)
-        par.OUTPUTMINIMTZCONTENTFLAG.set(obs_file.CONTENT_FLAG_FPAIR)
-
-        # Set input columns
-        column_names = obs_file.CONTENT_SIGNATURE_LIST[current_flag - 1]
-        from core.CCP4XtalData import CProgramColumnGroup
-        obs_file._ensure_container_child(inp, 'ISIGIanom', CProgramColumnGroup)
-        inp.ISIGIanom.set({
-            'Ip': column_names[0],
-            'SIGIp': column_names[1],
-            'Im': column_names[2],
-            'SIGIm': column_names[3]
-        })
-
-        # Clear unused column groups
-        for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
-            if hasattr(inp, unused_group):
-                group = getattr(inp, unused_group)
-                if hasattr(group, '_is_set'):
-                    group._is_set = False
-                if hasattr(group, '_column_mapping'):
-                    group._column_mapping = {}
-
-        # Set output file paths
-        # Use helper method which places files adjacent to source file (or work_directory if not writable)
-        hklout_path = obs_file._get_conversion_output_path('FPAIR_full', work_directory=work_directory)
-        obsout_path = obs_file._get_conversion_output_path('FPAIR', work_directory=work_directory)
-
-        wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
-        wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
-
-        # For FPAIR output, ctruncate also creates OBSOUT1 (FMEAN output)
-        from core.CCP4XtalData import CObsDataFile
-        obs_file._ensure_container_child(wrapper.container.outputData, 'OBSOUT1', CObsDataFile)
-
-        # Run ctruncate
-        status = wrapper.process()
-
-        if status != CPluginScript.SUCCEEDED:
-            error_msg = f"ctruncate conversion failed with status {status}."
-            if wrapper.errorReport.count() > 0:
-                error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            if work_directory:
-                error_msg += f"\nCheck logs in {work_directory}"
-            raise CException(ObsDataConverter, 5, details=error_msg)
-
-        # Manually call processOutputFiles to create the mini-MTZ
-        if hasattr(wrapper, 'processOutputFiles'):
-            try:
-                wrapper.processOutputFiles()
-            except AttributeError:
-                # processOutputFiles may fail due to missing methods like datasetName()
-                # This is non-critical as the main conversion has already succeeded
-                pass
-            except Exception as e:
-                # Log unexpected errors but don't fail the conversion
-                print(f"[WARNING] processOutputFiles encountered error: {e}")
-
-        # Return path to mini-MTZ output
-        obsout_path = wrapper.container.outputData.OBSOUT.getFullPath()
-
-        # Verify output file exists
-        from pathlib import Path
-        if not Path(obsout_path).exists():
-            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
-
-        print(f"✅ Conversion output created: {obsout_path}")
-        return obsout_path
+        # Use servalcat for conversion
+        return ServalcatConverter.ipair_to_fpair(obs_file, work_directory=work_directory)
 
     @staticmethod
     def to_imean(obs_file, work_directory: Optional[Any] = None) -> str:
         """
-        Convert IPAIR (I+/I-) to IMEAN (I,SIGI) using ctruncate.
+        Convert IPAIR (I+/I-) to IMEAN (I,SIGI) using servalcat fw.
 
         Averages anomalous intensities I+ and I- to produce mean intensities.
 
         Args:
             obs_file: CObsDataFile instance to convert
-            work_directory: Optional directory for ctruncate working files
+            work_directory: Optional directory for servalcat working files
 
         Returns:
             Full path to converted IMEAN file
 
         Raises:
-            CException: If validation fails, unsupported conversion, or ctruncate fails
+            CException: If validation fails, unsupported conversion, or servalcat fails
         """
-        from core.CCP4PluginScript import CPluginScript
-        from core.CCP4TaskManager import TASKMANAGER
-        from core.base_object.fundamental_types import CInt, CBoolean
+        from pathlib import Path
+        import shutil
+        from core.conversions.servalcat_converter import ServalcatConverter
 
         # Auto-detect content flag from file
         obs_file.setContentFlag()
@@ -241,13 +146,13 @@ class ObsDataConverter:
 
         # Validation handles this now, but kept for clarity
         if current_flag == 0:
-            raise CException(ObsDataConverter, 2, details=f"File: {obs_file.getFullPath()}")
+            raise CException(ObsDataConverter, 2,
+                             details=f"File: {obs_file.getFullPath()}")
 
         # If already IMEAN, just copy the file
         if current_flag == obs_file.CONTENT_FLAG_IMEAN:
-            import shutil
-            from pathlib import Path
-            output_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
+            output_path = obs_file._get_conversion_output_path(
+                'IMEAN', work_directory=work_directory)
             input_path = Path(obs_file.getFullPath())
             shutil.copy2(input_path, output_path)
             return str(output_path)
@@ -259,112 +164,8 @@ class ObsDataConverter:
                 details=f"Source: contentFlag {current_flag}, Target: IMEAN (3). Only IPAIR (1) → IMEAN supported."
             )
 
-        # Get ctruncate plugin
-        wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
-        if wrapper_class is None:
-            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
-
-        # Create ctruncate instance with isolated subdirectory to prevent program.xml pollution
-        # This prevents ctruncate's program.xml from being picked up by the parent pipeline
-        # Output files still go to CCP4_IMPORTED_FILES or parent work directory (configured below)
-        if work_directory:
-            from pathlib import Path
-            ctruncate_work_dir = Path(work_directory) / 'ctruncate'
-            ctruncate_work_dir.mkdir(parents=True, exist_ok=True)
-            wrapper = wrapper_class(parent=obs_file, workDirectory=str(ctruncate_work_dir))
-        else:
-            wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
-
-        # Populate container manually
-        inp = wrapper.container.inputData
-        obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-
-        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
-        # This preserves database context for sub-jobs
-        if hasattr(obs_file, 'project') and obs_file.project.isSet():
-            inp.HKLIN.project.set(obs_file.project.value)
-        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
-            inp.HKLIN.relPath.set(obs_file.relPath.value)
-        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
-            inp.HKLIN.baseName.set(obs_file.baseName.value)
-        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
-            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
-        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
-            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
-
-        # Configure to output mini-MTZ with IMEAN format
-        par = wrapper.container.controlParameters
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZ', CBoolean)
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZCONTENTFLAG', CInt)
-        obs_file._ensure_container_child(par, 'OUTPUT_INTENSITIES', CBoolean)
-        par.OUTPUTMINIMTZ.set(True)
-        par.OUTPUTMINIMTZCONTENTFLAG.set(obs_file.CONTENT_FLAG_IMEAN)
-        par.OUTPUT_INTENSITIES.set(True)  # Tell ctruncate to output intensities
-
-        # Get expected column names from CONTENT_SIGNATURE_LIST
-        column_names = obs_file.CONTENT_SIGNATURE_LIST[current_flag - 1]
-
-        # Set input column names for IPAIR
-        from core.CCP4XtalData import CProgramColumnGroup
-        obs_file._ensure_container_child(inp, 'ISIGIanom', CProgramColumnGroup)
-        inp.ISIGIanom.set({
-            'Ip': column_names[0],
-            'SIGIp': column_names[1],
-            'Im': column_names[2],
-            'SIGIm': column_names[3]
-        })
-
-        # Ensure unused column groups are NOT marked as set
-        for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
-            if hasattr(inp, unused_group):
-                group = getattr(inp, unused_group)
-                if hasattr(group, '_is_set'):
-                    group._is_set = False
-                if hasattr(group, '_column_mapping'):
-                    group._column_mapping = {}
-
-        # Set output file paths
-        # Use helper method which places files adjacent to source file (or work_directory if not writable)
-        hklout_path = obs_file._get_conversion_output_path('IMEAN_full', work_directory=work_directory)
-        obsout_path = obs_file._get_conversion_output_path('IMEAN', work_directory=work_directory)
-
-        wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
-        wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
-
-        # For IMEAN output with IPAIR input, ctruncate also creates OBSOUT1 (FMEAN output)
-        from core.CCP4XtalData import CObsDataFile
-        obs_file._ensure_container_child(wrapper.container.outputData, 'OBSOUT1', CObsDataFile)
-
-        # Run ctruncate
-        status = wrapper.process()
-
-        if status != CPluginScript.SUCCEEDED:
-            error_msg = f"ctruncate conversion failed with status {status}."
-            if wrapper.errorReport.count() > 0:
-                error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            if work_directory:
-                error_msg += f"\nCheck logs in {work_directory}"
-            raise CException(ObsDataConverter, 5, details=error_msg)
-
-        # Manually call processOutputFiles to create the mini-MTZ
-        if hasattr(wrapper, 'processOutputFiles'):
-            try:
-                wrapper.processOutputFiles()
-            except AttributeError:
-                pass
-            except Exception as e:
-                print(f"[WARNING] processOutputFiles encountered error: {e}")
-
-        # Return path to mini-MTZ output (OBSOUT)
-        obsout_path = wrapper.container.outputData.OBSOUT.getFullPath()
-
-        # Verify output file exists
-        from pathlib import Path
-        if not Path(obsout_path).exists():
-            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
-
-        print(f"✅ Conversion output created: {obsout_path}")
-        return obsout_path
+        # Use servalcat for conversion
+        return ServalcatConverter.ipair_to_imean(obs_file, work_directory=work_directory)
 
     @staticmethod
     def to_fmean(obs_file, work_directory: Optional[Any] = None) -> str:
@@ -372,8 +173,8 @@ class ObsDataConverter:
         Convert to FMEAN format (Mean Structure Factors: F, SIGF).
 
         Handles multiple input formats:
-        - IPAIR → FMEAN: French-Wilson via ctruncate
-        - IMEAN → FMEAN: French-Wilson via ctruncate
+        - IPAIR → FMEAN: French-Wilson via servalcat fw
+        - IMEAN → FMEAN: French-Wilson via servalcat fw
         - FPAIR → FMEAN: Inverse-variance weighted mean via gemmi
 
         Args:
@@ -384,11 +185,11 @@ class ObsDataConverter:
             Full path to converted FMEAN file
 
         Raises:
-            CException: If validation fails, unsupported conversion, or conversion fails
+            CException: If validation fails, unsupported conversion, or fails
         """
-        from core.CCP4PluginScript import CPluginScript
-        from core.CCP4TaskManager import TASKMANAGER
-        from core.base_object.fundamental_types import CInt, CBoolean
+        from pathlib import Path
+        import shutil
+        from core.conversions.servalcat_converter import ServalcatConverter
 
         # Auto-detect content flag from file
         obs_file.setContentFlag()
@@ -396,138 +197,25 @@ class ObsDataConverter:
 
         # Validation handles this now, but kept for clarity
         if current_flag == 0:
-            raise CException(ObsDataConverter, 2, details=f"File: {obs_file.getFullPath()}")
+            raise CException(ObsDataConverter, 2,
+                             details=f"File: {obs_file.getFullPath()}")
 
         # If already FMEAN, just copy the file
         if current_flag == obs_file.CONTENT_FLAG_FMEAN:
-            import shutil
-            from pathlib import Path
-            output_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)
+            output_path = obs_file._get_conversion_output_path(
+                'FMEAN', work_directory=work_directory)
             input_path = Path(obs_file.getFullPath())
             shutil.copy2(input_path, output_path)
             return str(output_path)
 
         # FPAIR → FMEAN: Use gemmi-based weighted mean
         if current_flag == obs_file.CONTENT_FLAG_FPAIR:
-            return ObsDataConverter._fpair_to_fmean_gemmi(obs_file, work_directory=work_directory)
+            return ObsDataConverter._fpair_to_fmean_gemmi(
+                obs_file, work_directory=work_directory)
 
-        # IPAIR/IMEAN → FMEAN: Use ctruncate
-        wrapper_class = TASKMANAGER().get_plugin_class('ctruncate')
-        if wrapper_class is None:
-            raise CException(ObsDataConverter, 4, details="Could not load ctruncate from TASKMANAGER")
-
-        # Create ctruncate instance with isolated subdirectory to prevent program.xml pollution
-        # This prevents ctruncate's program.xml from being picked up by the parent pipeline
-        # Output files still go to CCP4_IMPORTED_FILES (configured below)
-        if work_directory:
-            from pathlib import Path
-            ctruncate_work_dir = Path(work_directory) / 'ctruncate'
-            ctruncate_work_dir.mkdir(parents=True, exist_ok=True)
-            wrapper = wrapper_class(parent=obs_file, workDirectory=str(ctruncate_work_dir))
-        else:
-            wrapper = wrapper_class(parent=obs_file, workDirectory=work_directory)
-
-        # Populate container
-        inp = wrapper.container.inputData
-        obs_file._ensure_container_child(inp, 'HKLIN', obs_file.__class__.__bases__[1])  # CMtzDataFile
-
-        # Copy file metadata (project, relPath, baseName) instead of just calling setFullPath
-        # This preserves database context for sub-jobs
-        if hasattr(obs_file, 'project') and obs_file.project.isSet():
-            inp.HKLIN.project.set(obs_file.project.value)
-        if hasattr(obs_file, 'relPath') and obs_file.relPath.isSet():
-            inp.HKLIN.relPath.set(obs_file.relPath.value)
-        if hasattr(obs_file, 'baseName') and obs_file.baseName.isSet():
-            inp.HKLIN.baseName.set(obs_file.baseName.value)
-        if hasattr(obs_file, 'dbFileId') and obs_file.dbFileId.isSet():
-            inp.HKLIN.dbFileId.set(obs_file.dbFileId.value)
-        if hasattr(obs_file, 'contentFlag') and obs_file.contentFlag.isSet():
-            inp.HKLIN.contentFlag.set(obs_file.contentFlag.value)
-
-        # Configure to output mini-MTZ with FMEAN format
-        par = wrapper.container.controlParameters
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZ', CBoolean)
-        obs_file._ensure_container_child(par, 'OUTPUTMINIMTZCONTENTFLAG', CInt)
-        par.OUTPUTMINIMTZ.set(True)
-        par.OUTPUTMINIMTZCONTENTFLAG.set(obs_file.CONTENT_FLAG_FMEAN)
-
-        # Get expected column names from CONTENT_SIGNATURE_LIST
-        column_names = obs_file.CONTENT_SIGNATURE_LIST[current_flag - 1]
-
-        # Set column names based on current content flag
-        from core.CCP4XtalData import CProgramColumnGroup
-        if current_flag == obs_file.CONTENT_FLAG_IPAIR:
-            # Anomalous intensities: ['Iplus', 'SIGIplus', 'Iminus', 'SIGIminus']
-            obs_file._ensure_container_child(inp, 'ISIGIanom', CProgramColumnGroup)
-            inp.ISIGIanom.set({
-                'Ip': column_names[0],
-                'SIGIp': column_names[1],
-                'Im': column_names[2],
-                'SIGIm': column_names[3]
-            })
-            # Ensure unused column groups are NOT marked as set
-            for unused_group in ['ISIGI', 'FSIGF', 'FSIGFanom']:
-                if hasattr(inp, unused_group):
-                    group = getattr(inp, unused_group)
-                    if hasattr(group, '_is_set'):
-                        group._is_set = False
-                    if hasattr(group, '_column_mapping'):
-                        group._column_mapping = {}
-
-        elif current_flag == obs_file.CONTENT_FLAG_IMEAN:
-            # Mean intensities: ['I', 'SIGI']
-            obs_file._ensure_container_child(inp, 'ISIGI', CProgramColumnGroup)
-            inp.ISIGI.set({
-                'I': column_names[0],
-                'SIGI': column_names[1]
-            })
-            # Ensure unused column groups are NOT marked as set
-            for unused_group in ['ISIGIanom', 'FSIGF', 'FSIGFanom']:
-                if hasattr(inp, unused_group):
-                    group = getattr(inp, unused_group)
-                    if hasattr(group, '_is_set'):
-                        group._is_set = False
-                    if hasattr(group, '_column_mapping'):
-                        group._column_mapping = {}
-
-        # Set output file paths
-        # Use helper method which places files adjacent to source file (or work_directory if not writable)
-        hklout_path = obs_file._get_conversion_output_path('FMEAN_full', work_directory=work_directory)
-        obsout_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)
-
-        wrapper.container.outputData.HKLOUT.setFullPath(hklout_path)
-        wrapper.container.outputData.OBSOUT.setFullPath(obsout_path)
-
-        # Run ctruncate
-        status = wrapper.process()
-
-        if status != CPluginScript.SUCCEEDED:
-            error_msg = f"ctruncate conversion failed with status {status}."
-            if wrapper.errorReport.count() > 0:
-                error_msg += f"\nErrors:\n{wrapper.errorReport.report()}"
-            if work_directory:
-                error_msg += f"\nCheck logs in {work_directory}"
-            raise CException(ObsDataConverter, 5, details=error_msg)
-
-        # Manually call processOutputFiles to create the mini-MTZ
-        if hasattr(wrapper, 'processOutputFiles'):
-            try:
-                wrapper.processOutputFiles()
-            except AttributeError:
-                pass
-            except Exception as e:
-                print(f"[WARNING] processOutputFiles encountered error: {e}")
-
-        # Return path to mini-MTZ output
-        obsout_path = wrapper.container.outputData.OBSOUT.getFullPath()
-
-        # Verify output file exists
-        from pathlib import Path
-        if not Path(obsout_path).exists():
-            raise CException(ObsDataConverter, 6, details=f"Output file: {obsout_path}")
-
-        print(f"✅ Conversion output created: {obsout_path}")
-        return obsout_path
+        # IPAIR/IMEAN → FMEAN: Use servalcat fw
+        return ServalcatConverter.to_fmean(obs_file,
+                                           work_directory=work_directory)
 
     @staticmethod
     def _fpair_to_fmean_gemmi(obs_file, work_directory: Optional[Any] = None) -> str:
@@ -588,10 +276,11 @@ class ObsDataConverter:
 
             # Weighted mean: F = (F+ * SIG-^2 + F- * SIG+^2) / (SIG+^2 + SIG-^2)
             f_mean[both_present] = (fplus[both_present] * sigfsq_minus +
-                                     fminus[both_present] * sigfsq_plus) / sigfsq_sum
+                                    fminus[both_present] * sigfsq_plus) / sigfsq_sum
 
             # Combined sigma: SIGF = sqrt((SIG+^2 * SIG-^2) / (SIG+^2 + SIG-^2))
-            sigf_mean[both_present] = np.sqrt((sigfsq_plus * sigfsq_minus) / sigfsq_sum)
+            sigf_mean[both_present] = np.sqrt(
+                (sigfsq_plus * sigfsq_minus) / sigfsq_sum)
 
         # Case 2: Only F+ present
         only_fplus = fplus_valid & ~fminus_valid
@@ -633,7 +322,8 @@ class ObsDataConverter:
         mtz_out.set_data(data)
 
         # Determine output path
-        output_path = obs_file._get_conversion_output_path('FMEAN', work_directory=work_directory)
+        output_path = obs_file._get_conversion_output_path(
+            'FMEAN', work_directory=work_directory)
 
         # Write output file
         mtz_out.write_to_file(str(output_path))

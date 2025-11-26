@@ -1800,6 +1800,31 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         from core.conversions import ObsDataConverter
         return ObsDataConverter.to_imean(self, work_directory=work_directory)
 
+    def as_FPAIR(self, work_directory: Optional[Any] = None) -> str:
+        """
+        Convert this file to FPAIR format (Anomalous Structure Factors).
+
+        FPAIR format: F+, SIGF+, F-, SIGF-
+
+        Conversion path:
+        - IPAIR → FPAIR: French-Wilson via servalcat fw
+
+        This is a thin wrapper around ObsDataConverter.to_fpair().
+        See core.conversions.obs_data_converter for implementation details.
+
+        Args:
+            work_directory: Directory for working files
+
+        Returns:
+            Full path to converted file
+
+        Raises:
+            ValueError: If contentFlag cannot be determined
+            RuntimeError: If conversion fails
+        """
+        from core.conversions import ObsDataConverter
+        return ObsDataConverter.to_fpair(self, work_directory=work_directory)
+
     def as_FMEAN(self, work_directory: Optional[Any] = None) -> str:
         """
         Convert this file to FMEAN format (Mean Structure Factors).
@@ -1807,8 +1832,8 @@ class CObsDataFile(CObsDataFileStub, CMiniMtzDataFile):
         FMEAN format: F, SIGF
 
         Handles multiple input formats:
-        - IPAIR → FMEAN: French-Wilson via ctruncate
-        - IMEAN → FMEAN: French-Wilson via ctruncate
+        - IPAIR → FMEAN: French-Wilson via servalcat fw
+        - IMEAN → FMEAN: French-Wilson via servalcat fw
         - FPAIR → FMEAN: Inverse-variance weighted mean via gemmi
 
         This is a thin wrapper around ObsDataConverter.to_fmean().
