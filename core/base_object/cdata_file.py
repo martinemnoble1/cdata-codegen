@@ -192,8 +192,6 @@ class CDataFile(CData):
         """
         from pathlib import Path
 
-        logger.debug(f"[DEBUG setFullPath] Called for {self.objectName() if hasattr(self, 'objectName') else 'unnamed'}, input path: {path}")
-
         logger.debug(
             "[setFullPath] Called for %s, input path: %s, hasattr baseName: %s",
             self.name if hasattr(self, 'name') else 'unnamed',
@@ -205,12 +203,9 @@ class CDataFile(CData):
 
         # Check if we're in database-aware mode FIRST, before setting baseName
         plugin = self._find_plugin_parent()
-        print(f"[DEBUG setFullPath] Found plugin parent: {plugin.__class__.__name__ if plugin else 'None'}")
         is_db_mode = False
         dbHandler = self._get_db_handler()
         if plugin and dbHandler and hasattr(plugin, '_dbProjectId') and plugin._dbProjectId:
-            parsed_values = dbHandler.parse_file_path(path)
-            print(f"[DEBUG setFullPath] Plugin has _dbProjectId: {plugin._dbProjectId}")
             is_db_mode = True
             logger.debug("  DB-aware mode: will parse path into project/relPath/baseName")
             try:
@@ -372,22 +367,18 @@ class CDataFile(CData):
             return
 
         # Set project UUID
-        print(f"[DEBUG setFullPath] Setting project ID: {project_id}")
         if hasattr(self, 'project') and hasattr(self.project, 'set'):
             self.project.set(str(project_id))
             logger.debug("  Set project = %s", project_id)
 
         # Extract baseName (just the filename)
-        print(f"[DEBUG setFullPath] Setting baseName: {abs_path.name}")
         if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
             self.baseName.set(abs_path.name)
             logger.debug("  Set baseName = %s", abs_path.name)
 
-
         # Determine relPath by looking for known directory patterns
         # Pattern 1: CCP4_JOBS/job_17 or CCP4_JOBS/job_17/job_1 (nested jobs)
         jobs_match = re.search(r'(CCP4_JOBS/job_\d+(?:/job_\d+)*)', path_str)
-        print(f"[DEBUG setFullPath] Checking for CCP4_JOBS pattern: {jobs_match.group(1) if jobs_match else 'None'}")
         if jobs_match:
             rel_path = jobs_match.group(1)
             if hasattr(self, 'relPath') and hasattr(self.relPath, 'set'):
