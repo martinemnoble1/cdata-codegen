@@ -4,7 +4,41 @@ from gemmi import CoorFormat, read_mtz_file, read_structure
 from .utils import demoData, hasLongLigandName, i2run
 
 
-def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity=True):
+def _check_performance_indicators_in_db(job):
+    """Check that performance indicators were saved to database.
+
+    This function queries the Django database for JobFloatValue records
+    associated with the job. Refmac pipelines should produce RFactor/RFree
+    performance indicators.
+
+    Args:
+        job: Path to job directory (job_1, job_1.1, etc.)
+
+    Returns:
+        dict: Performance indicators found (key -> value)
+    """
+    from ccp4x.db import models
+
+    # Extract job number from path (e.g., .../job_1 -> "1")
+    job_number = job.name.replace("job_", "")
+
+    # Find the job in the database
+    try:
+        job_record = models.Job.objects.filter(number=job_number).first()
+        if not job_record:
+            return {}
+
+        # Get all float values for this job
+        float_values = models.JobFloatValue.objects.filter(job=job_record)
+        result = {fv.key.name: fv.value for fv in float_values}
+
+        return result
+    except Exception as e:
+        print(f"Error checking performance indicators: {e}")
+        return {}
+
+
+def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity=True, check_db_kpis=True):
     read_structure(str(job / "XYZOUT.pdb"), format=CoorFormat.Pdb)
     # TODO: CIFFILE output needs investigation - mmcif file exists in subjob but not harvested
     # read_structure(str(job / "CIFFILE.cif"), format=CoorFormat.Mmcif)
@@ -23,6 +57,28 @@ def _check_output(job, anom, expected_cycles, expected_rwork, require_molprobity
         assert xml.find(".//Molprobity_score") is not None
     assert xml.find(".//B_factors/all[@chain='All']") is not None
     assert xml.find(".//Ramachandran/Totals") is not None
+
+    # Check performance indicators were saved to database
+    # This validates the full KPI extraction and storage pipeline
+    if check_db_kpis:
+        kpis = _check_performance_indicators_in_db(job)
+        # Refmac should produce RFactor or Rwork performance indicators
+        # The exact key names depend on what prosmart_refmac reports
+        has_r_factor = any(
+            'rfactor' in k.lower() or 'rwork' in k.lower() or 'rfree' in k.lower()
+            for k in kpis.keys()
+        )
+        if has_r_factor:
+            print(f"✓ Database KPIs found: {kpis}")
+            # Verify the R-factor is reasonable (between 0 and 1)
+            for key, value in kpis.items():
+                if 'rfactor' in key.lower() or 'rwork' in key.lower() or 'rfree' in key.lower():
+                    assert 0.0 < value < 1.0, f"Invalid {key} value: {value}"
+        else:
+            # Log what we found for debugging
+            print(f"⚠ No R-factor KPIs found in database. Found keys: {list(kpis.keys())}")
+            # KPI extraction is confirmed working - fail if not found
+            assert has_r_factor, f"Expected RFactor/RFree in database KPIs, found: {list(kpis.keys())}"
 
 
 @pytest.mark.skip(reason="Clipper library crashes during Iris validation - use test_8xfm_basic instead")

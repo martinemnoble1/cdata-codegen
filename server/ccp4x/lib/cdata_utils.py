@@ -180,13 +180,11 @@ def find_objects_by_type(container, target_type: Type) -> List[Any]:
         if isinstance(obj, target_type):
             objects.append(obj)
 
-        if hasattr(obj, 'childNames'):
+        # Use children() method from HierarchicalObject for proper traversal
+        if hasattr(obj, 'children'):
             try:
-                child_names = obj.childNames()
-                for child_name in child_names:
-                    child = getattr(obj, child_name, None)
-                    if child is not None:
-                        traverse(child)
+                for child in obj.children():
+                    traverse(child)
             except Exception as e:
                 logger.debug(f"Error traversing object: {e}")
 
@@ -343,33 +341,33 @@ def extract_kpi_values(kpi_container) -> Dict[str, Any]:
     """
     values = {}
 
-    if not hasattr(kpi_container, 'childNames'):
+    # Use children() method from HierarchicalObject for proper traversal
+    if not hasattr(kpi_container, 'children'):
         return values
 
     try:
-        child_names = kpi_container.childNames()
-
-        for param_name in child_names:
-            value_obj = getattr(kpi_container, param_name, None)
-            if value_obj is None:
+        for child in kpi_container.children():
+            # Get the child's name using objectName()
+            param_name = child.objectName() if hasattr(child, 'objectName') else None
+            if not param_name:
                 continue
 
             # Extract value based on CData type
-            if isinstance(value_obj, CCP4Data.CFloat):
-                if value_obj.isSet():
-                    values[param_name] = float(value_obj)
+            if isinstance(child, CCP4Data.CFloat):
+                if child.isSet():
+                    values[param_name] = float(child)
 
-            elif isinstance(value_obj, CCP4Data.CInt):
-                if value_obj.isSet():
-                    values[param_name] = int(value_obj)
+            elif isinstance(child, CCP4Data.CInt):
+                if child.isSet():
+                    values[param_name] = int(child)
 
-            elif isinstance(value_obj, CCP4Data.CString):
-                if value_obj.isSet() and len(str(value_obj)) > 0:
-                    values[param_name] = str(value_obj)
+            elif isinstance(child, CCP4Data.CString):
+                if child.isSet() and len(str(child)) > 0:
+                    values[param_name] = str(child)
 
-            elif isinstance(value_obj, CCP4Data.CBoolean):
-                if value_obj.isSet():
-                    values[param_name] = bool(value_obj)
+            elif isinstance(child, CCP4Data.CBoolean):
+                if child.isSet():
+                    values[param_name] = bool(child)
 
     except Exception as e:
         logger.exception(f"Error extracting KPI values from {kpi_container.object_path()}: {e}")
