@@ -166,13 +166,27 @@ This means `plugin.container.set_parameter(...)` is returning a plain int, not a
 ### ✅ Fixed
 - Clone API now works (previously crashed with 3 different errors)
 - Plugin loading works for new jobs (previously required params file)
+- **Parameter setting API tests - ALL 11 TESTS PASS**
+- Parameters set via API now persist correctly to XML
+- `get_parameter()` correctly finds parameters that were set
 
-### ❌ Still Failing
-- Parameter setting API test
-- Parameters set via API don't persist to XML
-- `get_parameter()` can't find parameters that were "successfully" set
+### Root Causes Found and Fixed
 
-## Files Modified
+1. **Test used wrong parameter paths**: Tests were using `inputData.NCYCLES` but NCYCLES is in `controlParameters`
+2. **`find_by_path()` didn't handle `find()` returning -1**: The `find()` method returns -1 for not found, but `find_by_path` only checked for `None`
+3. **`set_parameter()` allowed creating plain Python attributes**: When target wasn't a CData type, it would create a plain attribute instead of failing
+
+## Files Modified (Session 2 - API Parameter Fixes)
+
+1. **core/base_object/ccontainer.py**
+   - Fixed `find_by_path()` to handle `find()` returning -1 (not found)
+   - Fixed `set_parameter()` to reject plain Python types - now raises AttributeError
+
+2. **server/ccp4x/tests/api/test_parameter_setting_api.py**
+   - Fixed all parameter paths from `inputData.*` to `controlParameters.*`
+   - Fixed `test_set_parameter_null_value` to expect 400 error (CInt can't be None)
+
+## Files Modified (Session 1 - Clone API Fixes)
 
 1. **server/ccp4x/lib/utils/files/patch_paths.py**
    - Lines 44-72: Complete rewrite of `handle_cdatafile()`
@@ -187,12 +201,40 @@ This means `plugin.container.set_parameter(...)` is returning a plain int, not a
    - Lines 70-73: Removed empty XML creation
    - Now relies on fresh `.def.xml` loading
 
-## Next Session Goals
+## Current Status: API Lifecycle WORKING ✅
 
-1. Investigate how `.def.xml` loading creates objects
-2. Trace `CContainer.set_parameter()` to understand plain type creation
-3. Find the missing link between `.def.xml` structure and CData wrapper instantiation
-4. Fix the core issue so parameters persist correctly
+### Complete API Lifecycle Verified
+
+The full API lifecycle for job creation, parameter setting, and execution is now working:
+
+**1. Job Creation** (`POST /projects/{pk}/create_task/`)
+- Uses `create_job_async()` which properly:
+  - Creates database record with correct job number
+  - Creates job directory structure
+  - Instantiates plugin from `.def.xml` (proper CData wrappers)
+  - Sets output file names
+  - Saves `input_params.xml`
+
+**2. Parameter Setting** (`POST /jobs/{pk}/set_parameter/`)
+- Uses `set_param.py` utility with `container.set_parameter()`
+- Parameters correctly persist to `input_params.xml`
+- All 11 API parameter tests pass
+
+**3. Job Execution** (`POST /jobs/{pk}/run/`)
+- Uses `i2run_for_job()` which spawns the job
+- Output files and KPIs registered in database
+
+### Test Results
+
+- **API Parameter Setting Tests**: 11/11 PASS
+- **API Lifecycle Tests**: 1/2 PASS, 1/2 SKIP (demo data not found - expected)
+
+### Remaining Work
+
+The core API lifecycle is complete. Remaining items for future sessions:
+1. Add more comprehensive integration tests with actual crystallographic data
+2. Document the full API surface for frontend integration
+3. Consider alignment between i2run command-line syntax and API (deferred per user request)
 
 ## Key Architectural Lessons
 

@@ -574,8 +574,12 @@ class CContainer(CData):
             next_obj = getattr(current, segment, None)
 
             # Fall back to .find() if available - does depth-first recursive search
+            # Note: find() returns -1 for not found (like Python's str.find())
             if next_obj is None and hasattr(current, 'find'):
-                next_obj = current.find(segment)
+                found = current.find(segment)
+                # Only use the result if it's not -1 (not found indicator)
+                if found != -1:
+                    next_obj = found
 
             if next_obj is None:
                 raise AttributeError(
@@ -697,37 +701,18 @@ class CContainer(CData):
             logger.debug("Setting via .update() method")
             target_obj.update(value)
         else:
-            # Plain Python type (int, float, str, bool) - likely from XML import
-            # Need to set the attribute directly on the parent container
-            logger.debug(
-                "Target object is plain type %s, setting via parent attribute assignment",
-                type(target_obj).__name__
+            # Target object is NOT a CData type - this is a problem
+            # We should only allow setting values on existing CData wrappers,
+            # not creating new plain Python attributes on the container.
+            #
+            # If the target is a plain type (int, str, etc.), the .def.xml
+            # structure was not properly loaded, or the path is wrong.
+            raise AttributeError(
+                f"Cannot set parameter '{object_path}': target is plain type "
+                f"'{type(target_obj).__name__}', not a CData wrapper. "
+                f"This usually means the parameter path is incorrect or the "
+                f"plugin was not properly loaded from .def.xml."
             )
-
-            # Split path to get parent path and attribute name
-            path_parts = object_path.split('.')
-            if skip_first and len(path_parts) > 1:
-                path_parts = path_parts[1:]  # Skip first element (task name)
-
-            if len(path_parts) == 0:
-                raise ValueError(f"Cannot determine parent for path: {object_path}")
-
-            attr_name = path_parts[-1]
-
-            if len(path_parts) == 1:
-                # Direct child of this container
-                parent = self
-            else:
-                # Navigate to parent
-                parent_path = '.'.join(path_parts[:-1])
-                parent = self.find_by_path(parent_path, skip_first=False)
-
-            # Set attribute on parent
-            setattr(parent, attr_name, value)
-            logger.debug("Set %s.%s = %s", parent.object_path(), attr_name, value)
-
-            # Return the newly set value
-            return getattr(parent, attr_name)
 
         logger.debug("Successfully set parameter %s to %s", object_path, value)
 

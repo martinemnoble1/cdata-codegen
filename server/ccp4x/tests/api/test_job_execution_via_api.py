@@ -75,31 +75,29 @@ class JobExecutionViaAPITests(TestCase):
         5. Performance indicator extraction and storage
         """
         # Step 1: Create a new prosmart_refmac job via API
+        # Job creation is on ProjectViewSet, not JobViewSet
+        # POST /projects/{project_pk}/create_task/
         logger.info("Step 1: Creating prosmart_refmac job via API")
 
         create_job_response = self.client.post(
-            "/jobs/",
+            f"/projects/{self.project.id}/create_task/",
             data=json.dumps({
-                "project": str(self.project.uuid),
                 "task_name": "prosmart_refmac",
                 "title": "API Integration Test Job"
             }),
             content_type="application/json"
         )
 
-        # If job creation endpoint doesn't exist yet, create job directly for now
-        if create_job_response.status_code == 404:
-            logger.info("Job creation endpoint not available, creating job directly")
-            job = models.Job.objects.create(
-                project=self.project,
-                task_name="prosmart_refmac",
-                title="API Integration Test Job",
-                status=models.Job.Status.STARTING
-            )
-        else:
-            self.assertEqual(create_job_response.status_code, 201, "Job creation should succeed")
-            job_data = create_job_response.json()
-            job = models.Job.objects.get(uuid=job_data["uuid"])
+        self.assertEqual(
+            create_job_response.status_code, 200,
+            f"Job creation should succeed: {create_job_response.content.decode()}"
+        )
+        response_data = create_job_response.json()
+        self.assertEqual(response_data["status"], "Success")
+        self.assertIn("new_job", response_data)
+
+        job_data = response_data["new_job"]
+        job = models.Job.objects.get(uuid=job_data["uuid"])
 
         logger.info(f"Created job {job.uuid} (number={job.number})")
 
@@ -111,14 +109,15 @@ class JobExecutionViaAPITests(TestCase):
         # In a real scenario, you'd upload files or reference existing ones
 
         # Get input files from imported project (gamma test data)
+        # Note: File relates to Project through Job (job__project)
         input_mtz = models.File.objects.filter(
-            project=self.project,
+            job__project=self.project,
             name__icontains="gamma",
             type__name="application/mtz"
         ).first()
 
         input_pdb = models.File.objects.filter(
-            project=self.project,
+            job__project=self.project,
             name__icontains="gamma",
             type__name="application/pdb"
         ).first()
@@ -127,21 +126,22 @@ class JobExecutionViaAPITests(TestCase):
             pytest.skip("Demo data files not found in imported project")
 
         # Set parameters via API
+        # Note: XYZIN is in inputData, but control parameters like NCYCLES are in controlParameters
         parameters_to_set = [
-            # Input structure
+            # Input structure (in inputData)
             ("prosmart_refmac.inputData.XYZIN", str(input_pdb.path)),
 
-            # Number of refinement cycles
-            ("prosmart_refmac.inputData.NCYCLES", 2),
+            # Number of refinement cycles (in controlParameters)
+            ("prosmart_refmac.controlParameters.NCYCLES", 2),
 
-            # Disable water addition for faster test
-            ("prosmart_refmac.inputData.ADD_WATERS", False),
+            # Disable water addition for faster test (in controlParameters)
+            ("prosmart_refmac.controlParameters.ADD_WATERS", False),
 
-            # Disable MolProbity (requires chem_data)
-            ("prosmart_refmac.inputData.VALIDATE_MOLPROBITY", False),
+            # Disable MolProbity (requires chem_data) (in controlParameters)
+            ("prosmart_refmac.controlParameters.VALIDATE_MOLPROBITY", False),
 
-            # Use anomalous data (gamma test has Xe anomalous signal)
-            ("prosmart_refmac.inputData.USEANOMALOUS", True),
+            # Use anomalous data (gamma test has Xe anomalous signal) (in controlParameters)
+            ("prosmart_refmac.controlParameters.USEANOMALOUS", True),
         ]
 
         for param_path, param_value in parameters_to_set:
@@ -324,19 +324,28 @@ class JobExecutionViaAPITests(TestCase):
         This validates that the context-aware parameter setting properly
         saves to input_params.xml so parameters survive plugin reconstruction.
         """
-        # Create a job
-        job = models.Job.objects.create(
-            project=self.project,
-            task_name="prosmart_refmac",
-            title="Reload Test Job",
-            status=models.Job.Status.STARTING
+        # Create a job via the proper API endpoint
+        create_job_response = self.client.post(
+            f"/projects/{self.project.id}/create_task/",
+            data=json.dumps({
+                "task_name": "prosmart_refmac",
+                "title": "Reload Test Job"
+            }),
+            content_type="application/json"
         )
 
-        # Set a parameter via API
+        self.assertEqual(
+            create_job_response.status_code, 200,
+            f"Job creation should succeed: {create_job_response.content.decode()}"
+        )
+        response_data = create_job_response.json()
+        job = models.Job.objects.get(uuid=response_data["new_job"]["uuid"])
+
+        # Set a parameter via API (NCYCLES is in controlParameters, not inputData)
         response = self.client.post(
             f"/jobs/{job.id}/set_parameter/",
             data=json.dumps({
-                "object_path": "prosmart_refmac.inputData.NCYCLES",
+                "object_path": "prosmart_refmac.controlParameters.NCYCLES",
                 "value": 7
             }),
             content_type="application/json"
@@ -345,13 +354,13 @@ class JobExecutionViaAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Verify parameter is set
-        result1 = get_parameter(job, "prosmart_refmac.inputData.NCYCLES")
+        result1 = get_parameter(job, "prosmart_refmac.controlParameters.NCYCLES")
         self.assertTrue(result1.success)
         self.assertEqual(result1.data["value"], 7)
 
         # Now simulate a plugin reload by getting the parameter again
         # This will load the plugin fresh from input_params.xml
-        result2 = get_parameter(job, "prosmart_refmac.inputData.NCYCLES")
+        result2 = get_parameter(job, "prosmart_refmac.controlParameters.NCYCLES")
         self.assertTrue(result2.success)
         self.assertEqual(
             result2.data["value"], 7,
