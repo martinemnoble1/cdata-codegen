@@ -1,2 +1,0 @@
-CCP4MTZfile: import_hkl_data - Missing column, crystal or dataset: /*/*/HLA
-libc++abi: terminating due to uncaught exception of type clipper::Message_fatal
