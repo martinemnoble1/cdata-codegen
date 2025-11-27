@@ -1285,6 +1285,94 @@ class JobViewSet(ModelViewSet):
 
     @action(
         detail=True,
+        methods=["get"],
+        permission_classes=[],
+        serializer_class=serializers.JobSerializer,
+    )
+    def get_parameter(self, request, pk=None):
+        """
+        Get a parameter value from the job's configuration.
+
+        Retrieves a specific parameter from the job's current configuration,
+        allowing inspection of job setup before or after execution.
+
+        Uses the unified CPluginScript architecture for consistent behavior
+        with set_parameter and CLI commands.
+
+        Args:
+            request (Request): HTTP request with query parameter:
+                - object_path (str): Path to the parameter to retrieve
+            pk (int): Primary key of the job
+
+        Returns:
+            JsonResponse: Status and parameter information
+
+        Query Parameters:
+            ?object_path=inputData.XYZIN
+
+        Response Format:
+            {
+                "status": "Success",
+                "data": {
+                    "path": "inputData.XYZIN",
+                    "value": "/path/to/file.pdb",
+                    "object_type": "CDataFile",
+                    "file_path": "/path/to/file.pdb",
+                    "db_file_id": "uuid-string",
+                    "base_name": "file.pdb"
+                }
+            }
+
+        Example:
+            GET /api/jobs/123/get_parameter/?object_path=inputData.NCYCLES
+
+        Architecture:
+            - Uses CPluginScript for proper object hierarchy
+            - Shared with get_job_parameter management command
+            - Consistent Result[T] pattern for error handling
+        """
+        try:
+            job = models.Job.objects.get(id=pk)
+            object_path = request.GET.get("object_path")
+
+            if not object_path:
+                return JsonResponse({
+                    "status": "Failed",
+                    "reason": "Missing required parameter: object_path"
+                }, status=400)
+
+            # Use unified utility (CPluginScript architecture)
+            from ..lib.utils.parameters.get_param import get_parameter as get_job_param
+
+            result = get_job_param(job, object_path)
+
+            if result.success:
+                return JsonResponse({
+                    "status": "Success",
+                    "data": result.data
+                })
+            else:
+                return JsonResponse({
+                    "status": "Failed",
+                    "reason": result.error,
+                    "details": result.error_details
+                }, status=400)
+
+        except models.Job.DoesNotExist as err:
+            logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
+            return JsonResponse(
+                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
+                status=404
+            )
+        except Exception as err:
+            logger.exception("Unexpected error getting parameter for job %s", pk, exc_info=err)
+            return JsonResponse(
+                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
+                status=500
+            )
+
+    @action(
+        detail=True,
         methods=["post"],
         permission_classes=[],
         serializer_class=serializers.JobSerializer,

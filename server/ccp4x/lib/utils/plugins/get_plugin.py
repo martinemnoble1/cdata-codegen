@@ -49,14 +49,19 @@ def get_job_plugin(the_job: Job, parent=None, dbHandler=None):
     params_file = params_path
     if not params_file.exists():
         params_file = fallback_params_path
-        if not params_file.exists():
-            raise Exception("No params file found")
 
-    # Use CPluginScript.loadDataFromXml() which handles ParamsXmlHandler format
-    # (with <ccp4i2> wrapper and header) as well as legacy CContainer format
-    error = pluginInstance.loadDataFromXml(str(params_file))
-    if error and hasattr(error, 'hasError') and error.hasError():
-        logger.error("Failed to load params from %s: %s", params_file, error)
-        raise Exception(f"Failed to load params from {params_file}: {error}")
+    # Load params if file exists, otherwise return fresh plugin from .def.xml
+    # This is critical for new jobs - loading from fresh .def.xml gives proper
+    # CData wrappers. If we tried to load from an empty XML, we'd get plain types.
+    if params_file.exists():
+        # Use CPluginScript.loadDataFromXml() which handles ParamsXmlHandler format
+        # (with <ccp4i2> wrapper and header) as well as legacy CContainer format
+        error = pluginInstance.loadDataFromXml(str(params_file))
+        if error and hasattr(error, 'hasError') and error.hasError():
+            logger.error("Failed to load params from %s: %s", params_file, error)
+            raise Exception(f"Failed to load params from {params_file}: {error}")
+        logger.info(f"Loaded parameters from {params_file}")
+    else:
+        logger.info(f"No params file found - using fresh plugin from .def.xml")
 
     return pluginInstance

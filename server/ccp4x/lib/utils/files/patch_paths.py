@@ -40,25 +40,33 @@ def handle_cdatafile(job: models.Job, dobj, instance_string=""):
         f"{job.number}_{job.project.name}_{dobj.objectName()}_{job.task_name}"
     )
     partPath = str(slugify(str(partPath)))
+
+    # Get file extensions list - check if method exists
+    if hasattr(dobj, 'fileExtensions') and callable(getattr(dobj, 'fileExtensions')):
+        extensions = dobj.fileExtensions()
+    else:
+        # Fallback: try to get from qualifiers if method doesn't exist
+        extensions = dobj.get_qualifier('fileExtensions', [])
+
+    # For PDB files with contentFlag=2 (mmCIF format), use second extension if available
     if (
         isinstance(dobj, (CPdbDataFile, CCP4ModelData.CPdbDataFile))
+        and hasattr(dobj, 'contentFlag')
         and dobj.contentFlag.isSet()
         and int(dobj.contentFlag) == 2
+        and len(extensions) > 1
     ):
-        fullPath = os.path.join(
-            str(job.directory),
-            partPath + instance_string + "." + dobj.fileExtensions()[1],
-        )
+        extension = extensions[1]
     else:
-        fullPath = os.path.join(
-            str(job.directory),
-            partPath + instance_string + "." + dobj.fileExtensions()[0],
-        )
+        # Use first extension (or empty string if no extensions defined)
+        extension = extensions[0] if extensions else ""
+
+    fullPath = os.path.join(
+        str(job.directory),
+        partPath + instance_string + "." + extension,
+    )
     # MN 2020-07-09
-    # The digestion of a fullpath into a relpath in setFullPath is done only if checkDb is True
-    # I don't know why that was not the case, so I am switching the default behaviour to be
-    # manually setting elements of the files location, failing over to checkDb False
-    try:
-        dobj.setFullPath(fullPath, checkDb=True)
-    except Exception as e:
-        dobj.setFullPath(fullPath, checkDb=False)
+    # Set the full path for the output file
+    # NOTE: setFullPath() signature changed - checkDb parameter removed
+    # The method now handles path setting directly without needing checkDb flag
+    dobj.setFullPath(fullPath)

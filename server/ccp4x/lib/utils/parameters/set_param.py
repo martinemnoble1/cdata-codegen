@@ -14,7 +14,6 @@ from pathlib import Path
 from ccp4x.db import models
 from ccp4x.lib.response import Result
 from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
-from ..parameters.set_parameter import set_parameter_container
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,9 @@ def set_parameter(
     """
     Set a parameter value using CPluginScript + dbHandler architecture.
 
+    **IMPORTANT**: This function only works on jobs in PENDING/UNKNOWN status.
+    For finished jobs, use the clone API first to create an editable copy.
+
     This function uses CPluginScript to ensure:
     - Proper file handling (CDataFile.setFullPath() with DB awareness)
     - Database synchronization (dbHandler.updateJobStatus())
@@ -34,7 +36,7 @@ def set_parameter(
     - Validation support
 
     Args:
-        job: Job model instance
+        job: Job model instance (must be PENDING or UNKNOWN status)
         object_path: Path to the parameter
                     Examples:
                     - "inputData.XYZIN" - Sets entire file object
@@ -46,18 +48,28 @@ def set_parameter(
         Result[Dict] with parameter info or error
 
     Example:
-        >>> # Set file parameter (creates/updates Django File record)
+        >>> # Set parameter on pending job
         >>> result = set_parameter(job, "inputData.XYZIN", "/path/to/file.pdb")
         >>> if result.success:
         ...     print(f"File path: {result.data['file_path']}")
-        ...     print(f"DB File ID: {result.data.get('db_file_id')}")
         >>>
-        >>> # Set annotation
-        >>> result = set_parameter(job, "inputData.XYZIN.annotation", "My structure")
-        >>>
-        >>> # Set control parameter
-        >>> result = set_parameter(job, "container.NCYCLES", 10)
+        >>> # For finished jobs, clone first
+        >>> clone_result = clone_job(finished_job)
+        >>> new_job = clone_result.data
+        >>> result = set_parameter(new_job, "container.NCYCLES", 10)
     """
+    # Validate job status - only allow parameter setting on pending jobs
+    if job.status not in [models.Job.Status.UNKNOWN, models.Job.Status.PENDING]:
+        return Result.fail(
+            f"Cannot modify parameters on job with status '{job.status}'. "
+            f"Use clone API to create an editable copy first.",
+            details={
+                "job_id": str(job.uuid),
+                "job_status": job.status,
+                "allowed_statuses": [models.Job.Status.UNKNOWN, models.Job.Status.PENDING]
+            }
+        )
+
     # Get plugin with database context
     plugin_result = get_plugin_with_context(job)
     if not plugin_result.success:
@@ -69,19 +81,16 @@ def set_parameter(
     plugin = plugin_result.data
 
     try:
-        # Set parameter through plugin's container
-        # This ensures proper file handling, validation, and hierarchy
+        # Set parameter through plugin's container using modern context-aware method
+        # This ensures proper file handling, validation, hierarchy, and database sync
         logger.debug(
             "Setting parameter %s = %s on job %s (task: %s)",
             object_path, value, job.uuid, job.task_name
         )
 
-        try:
-            set_parameter_container(plugin.container, object_path, value)
-        except Exception as e:
-            import traceback
-            logger.error("Exception from set_parameter_container:\n%s", traceback.format_exc())
-            raise
+        # Use modern CContainer.set_parameter() which auto-detects CPluginScript parent
+        # and enables database synchronization when appropriate
+        obj = plugin.container.set_parameter(object_path, value, skip_first=True)
 
         # Save parameters to input_params.xml (user control stage)
         # Use CPluginScript.saveDataToXml which uses ParamsXmlHandler for proper filtering
@@ -97,23 +106,10 @@ def set_parameter(
         else:
             logger.debug("Successfully saved parameters to %s", input_params_file)
 
-        # Update database via dbHandler (if available)
-        if plugin._dbHandler:
-            logger.debug("Updating database via dbHandler for job %s", job.uuid)
-            plugin._dbHandler.updateJobStatus(
-                jobId=str(job.uuid),
-                container=plugin.container
-            )
+        # Note: Database sync already handled by container.set_parameter() if in CPluginScript context
+        # No need to manually call dbHandler.updateJobStatus() here
 
-        # Get the actual object for return info
-        obj = plugin.container
-        parts = object_path.split('.')
-        for part in parts:
-            if hasattr(obj, part):
-                obj = getattr(obj, part)
-            else:
-                obj = None
-                break
+        # obj now contains the CData object that was set
 
         # Build result data
         result_data = {

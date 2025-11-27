@@ -628,3 +628,161 @@ class CContainer(CData):
         traverse(self)
         return files
 
+    def set_parameter(self, object_path: str, value, skip_first: bool = True):
+        """
+        Set a parameter with automatic database awareness.
+
+        This method combines the functionality of set_parameter_container() with
+        automatic database synchronization when running in a CPluginScript context.
+
+        If this container's parent chain includes a CPluginScript with _dbHandler,
+        the parameter update will be automatically synchronized to the database.
+
+        Args:
+            object_path: Dot-separated path to parameter (e.g., "inputData.XYZIN")
+            value: New value (str, int, dict, etc.)
+            skip_first: If True (default), skip first path element for legacy compatibility
+
+        Returns:
+            The updated object
+
+        Raises:
+            AttributeError: If the path is not found
+            Exception: If parameter setting fails
+
+        Example:
+            >>> # Database-independent usage
+            >>> container.set_parameter("controlParameters.NCYCLES", 10)
+
+            >>> # Database-aware usage (when container is part of CPluginScript)
+            >>> plugin.container.set_parameter("inputData.XYZIN", "/path/to/file.pdb")
+            >>> # Automatically registers file in database via plugin._dbHandler
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Navigate to the target object using find_by_path
+        logger.debug(
+            "Setting parameter %s = %s on container %s",
+            object_path, value, self.object_path()
+        )
+
+        try:
+            # Use modern find_by_path to navigate
+            target_obj = self.find_by_path(object_path, skip_first=skip_first)
+        except AttributeError as e:
+            logger.error(
+                "Failed to find parameter %s on container %s: %s",
+                object_path, self.object_path(), str(e)
+            )
+            raise
+
+        logger.debug(
+            "Found target object for %s: type=%s, has_value=%s, has_set=%s, has_update=%s",
+            object_path, type(target_obj).__name__,
+            hasattr(target_obj, 'value'), hasattr(target_obj, 'set'), hasattr(target_obj, 'update')
+        )
+
+        # Set the value based on object type
+        if hasattr(target_obj, 'value'):
+            # It's a fundamental type (CInt, CFloat, CString, CBoolean)
+            logger.debug("Setting via .value attribute")
+            target_obj.value = value
+        elif hasattr(target_obj, 'set'):
+            # It's an object with a set() method (like CDataFile)
+            logger.debug("Setting via .set() method")
+            target_obj.set(value)
+        elif hasattr(target_obj, 'update') and isinstance(value, dict):
+            # It's a container-like object that can be updated from a dict
+            logger.debug("Setting via .update() method")
+            target_obj.update(value)
+        else:
+            # Plain Python type (int, float, str, bool) - likely from XML import
+            # Need to set the attribute directly on the parent container
+            logger.debug(
+                "Target object is plain type %s, setting via parent attribute assignment",
+                type(target_obj).__name__
+            )
+
+            # Split path to get parent path and attribute name
+            path_parts = object_path.split('.')
+            if skip_first and len(path_parts) > 1:
+                path_parts = path_parts[1:]  # Skip first element (task name)
+
+            if len(path_parts) == 0:
+                raise ValueError(f"Cannot determine parent for path: {object_path}")
+
+            attr_name = path_parts[-1]
+
+            if len(path_parts) == 1:
+                # Direct child of this container
+                parent = self
+            else:
+                # Navigate to parent
+                parent_path = '.'.join(path_parts[:-1])
+                parent = self.find_by_path(parent_path, skip_first=False)
+
+            # Set attribute on parent
+            setattr(parent, attr_name, value)
+            logger.debug("Set %s.%s = %s", parent.object_path(), attr_name, value)
+
+            # Return the newly set value
+            return getattr(parent, attr_name)
+
+        logger.debug("Successfully set parameter %s to %s", object_path, value)
+
+        # Check if we're in a database-aware context
+        plugin_parent = self._find_plugin_parent()
+
+        if plugin_parent and hasattr(plugin_parent, '_dbHandler') and plugin_parent._dbHandler:
+            logger.debug(
+                "Found CPluginScript parent with dbHandler, updating database for %s",
+                object_path
+            )
+
+            # Update database via dbHandler
+            try:
+                plugin_parent._dbHandler.updateJobStatus(
+                    jobId=str(plugin_parent._dbJobId),
+                    container=plugin_parent.container
+                )
+                logger.debug("Successfully updated database for parameter %s", object_path)
+            except Exception as e:
+                logger.error(
+                    "Failed to update database for parameter %s: %s",
+                    object_path, str(e)
+                )
+                # Don't raise - parameter was set successfully even if DB update failed
+
+        return target_obj
+
+    def _find_plugin_parent(self):
+        """
+        Walk up the parent chain to find a CPluginScript instance.
+
+        This enables automatic database awareness by detecting when a container
+        is part of a CPluginScript hierarchy.
+
+        Returns:
+            CPluginScript instance if found, None otherwise
+
+        Example:
+            >>> plugin = CPluginScript()
+            >>> plugin.container._find_plugin_parent()  # Returns plugin
+            >>> standalone_container._find_plugin_parent()  # Returns None
+        """
+        # Import here to avoid circular dependency at module load time
+        try:
+            from core.CCP4PluginScript import CPluginScript
+        except ImportError:
+            # If CPluginScript isn't available, we can't be in that context
+            return None
+
+        current = self.get_parent()
+        while current:
+            if isinstance(current, CPluginScript):
+                return current
+            current = current.get_parent()
+
+        return None
+

@@ -151,8 +151,12 @@ def set_parameter_container(
 
     # e = object_element.getEtree()
     # print(ET.tostring(e).decode("utf-8"))
-    object_element.unSet()
-    if value is None:
+
+    # Only call unSet() if object_element has that method (CData objects)
+    if hasattr(object_element, 'unSet'):
+        object_element.unSet()
+
+    if value is None and hasattr(object_element, 'unSet'):
         object_element.unSet()
     elif isinstance(
         object_element,
@@ -186,7 +190,7 @@ def set_parameter_container(
             value = corrected_spacegroup[0]
         else:
             value = corrected_spacegroup
-    elif isinstance(object_element.parent, CCP4ModelData.CPdbEnsembleItem):
+    elif hasattr(object_element, 'parent') and isinstance(object_element.parent, CCP4ModelData.CPdbEnsembleItem):
         if (
             not object_element.parent.identity_to_target.isSet()
             and not object_element.parent.rms_to_target.isSet()
