@@ -19,6 +19,14 @@ rstdocs
 /input_params.xml
 /program.xml
 /*.params.xml
+/*.asu.xml
+/stderr.txt
+/refined.*
+/refined_stats.*
+/servalcat.log
+/*.pdb
+/*.mtz
+/*.mmcif
 
 # Environment configuration (use .env.example as template)
 .env
