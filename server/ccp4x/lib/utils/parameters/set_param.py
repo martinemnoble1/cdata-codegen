@@ -18,6 +18,34 @@ from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
 logger = logging.getLogger(__name__)
 
 
+def normalize_object_path(object_path: str) -> str:
+    """
+    Normalize object paths from frontend to match backend container structure.
+
+    The frontend JSON encoder includes the full hierarchy path which includes
+    `.container.` (e.g., `prosmart_refmac.container.inputData.XYZIN`), but the
+    backend container structure doesn't have that extra level.
+
+    This function strips the `.container.` segment if present after the task name.
+
+    Args:
+        object_path: Path like "prosmart_refmac.container.inputData.XYZIN"
+
+    Returns:
+        Normalized path like "prosmart_refmac.inputData.XYZIN"
+    """
+    # Split into parts
+    parts = object_path.split('.')
+
+    # If second element is 'container', remove it
+    # e.g., ['prosmart_refmac', 'container', 'inputData', 'XYZIN']
+    #    -> ['prosmart_refmac', 'inputData', 'XYZIN']
+    if len(parts) >= 2 and parts[1] == 'container':
+        parts = [parts[0]] + parts[2:]
+
+    return '.'.join(parts)
+
+
 def set_parameter(
     job: models.Job,
     object_path: str,
@@ -81,16 +109,19 @@ def set_parameter(
     plugin = plugin_result.data
 
     try:
+        # Normalize path to strip .container. segment if present from frontend
+        normalized_path = normalize_object_path(object_path)
+
         # Set parameter through plugin's container using modern context-aware method
         # This ensures proper file handling, validation, hierarchy, and database sync
         logger.debug(
-            "Setting parameter %s = %s on job %s (task: %s)",
-            object_path, value, job.uuid, job.task_name
+            "Setting parameter %s (normalized: %s) = %s on job %s (task: %s)",
+            object_path, normalized_path, value, job.uuid, job.task_name
         )
 
         # Use modern CContainer.set_parameter() which auto-detects CPluginScript parent
         # and enables database synchronization when appropriate
-        obj = plugin.container.set_parameter(object_path, value, skip_first=True)
+        obj = plugin.container.set_parameter(normalized_path, value, skip_first=True)
 
         # Save parameters to input_params.xml (user control stage)
         # Use CPluginScript.saveDataToXml which uses ParamsXmlHandler for proper filtering
@@ -139,30 +170,31 @@ def set_parameter(
                     result_data["base_name"] = str(base_name_attr)
 
         logger.info(
-            "Successfully set parameter %s on job %s: %s",
-            object_path, job.uuid, result_data.get('file_path', value)
+            "Successfully set parameter %s (normalized: %s) on job %s: %s",
+            object_path, normalized_path, job.uuid, result_data.get('file_path', value)
         )
         return Result.ok(result_data)
 
     except AttributeError as e:
         logger.error(
-            "Parameter path '%s' not found on job %s: %s",
-            object_path, job.uuid, str(e)
+            "Parameter path '%s' (normalized: '%s') not found on job %s: %s",
+            object_path, normalized_path, job.uuid, str(e)
         )
         return Result.fail(
-            f"Parameter path '{object_path}' not found",
+            f"Parameter path '{normalized_path}' not found",
             details={
                 "job_id": str(job.uuid),
                 "task_name": job.task_name,
                 "object_path": object_path,
+                "normalized_path": normalized_path,
                 "error": str(e)
             }
         )
 
     except Exception as e:
         logger.exception(
-            "Failed to set parameter %s on job %s",
-            object_path, job.uuid
+            "Failed to set parameter %s (normalized: %s) on job %s",
+            object_path, normalized_path, job.uuid
         )
         return Result.fail(
             f"Error setting parameter: {str(e)}",
@@ -170,6 +202,7 @@ def set_parameter(
                 "job_id": str(job.uuid),
                 "task_name": job.task_name,
                 "object_path": object_path,
+                "normalized_path": normalized_path,
                 "value": value,
                 "error_type": type(e).__name__
             }

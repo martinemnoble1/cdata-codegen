@@ -3,10 +3,27 @@ Result type for standardized operation returns.
 
 Provides a consistent way to return success/failure from library functions
 that can be easily consumed by both API endpoints and management commands.
+
+API Response Format Convention:
+    Success: {"success": true, "data": {...}}
+    Failure: {"success": false, "error": "message", "details": {...}}
+
+Usage in ViewSets:
+    from ccp4x.lib.response import api_success, api_error, Result
+
+    # Quick responses
+    return api_success({"job_id": 123})
+    return api_error("Job not found", status=404)
+
+    # From Result objects
+    result = some_operation()
+    return result.to_response()
 """
 
 from typing import TypeVar, Generic, Optional, Dict, Any
 from dataclasses import dataclass, field
+from rest_framework.response import Response
+from rest_framework import status as http_status
 
 T = TypeVar('T')
 
@@ -73,24 +90,24 @@ class Result(Generic[T]):
 
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convert to dictionary for API/CLI responses.
+        Convert to dictionary for API responses.
 
         Returns:
-            Dictionary with status, data/reason, and optional details
+            Dictionary with success flag and data or error
 
         Example:
-            Success: {"status": "Success", "data": {...}}
-            Failure: {"status": "Failed", "reason": "...", "details": {...}}
+            Success: {"success": true, "data": {...}}
+            Failure: {"success": false, "error": "...", "details": {...}}
         """
         if self.success:
             return {
-                "status": "Success",
+                "success": True,
                 "data": self.data
             }
         else:
             result = {
-                "status": "Failed",
-                "reason": self.error
+                "success": False,
+                "error": self.error
             }
             if self.error_details:
                 result["details"] = self.error_details
@@ -149,5 +166,77 @@ class Result(Generic[T]):
             return self
 
 
+    def to_response(self, success_status: int = 200, error_status: int = 400) -> Response:
+        """
+        Convert to a DRF Response object.
+
+        Args:
+            success_status: HTTP status code for successful responses (default 200)
+            error_status: HTTP status code for error responses (default 400)
+
+        Returns:
+            DRF Response with appropriate status code
+
+        Example:
+            >>> result = Result.ok({"id": 123})
+            >>> return result.to_response()  # Response with status 200
+
+            >>> result = Result.fail("Not found")
+            >>> return result.to_response(error_status=404)  # Response with status 404
+        """
+        if self.success:
+            return Response(self.to_dict(), status=success_status)
+        else:
+            return Response(self.to_dict(), status=error_status)
+
+
 # Convenience alias for clarity in some contexts
 OperationResult = Result
+
+
+# =============================================================================
+# Standalone helper functions for quick API responses
+# =============================================================================
+
+def api_success(data: Any, status: int = 200) -> Response:
+    """
+    Create a successful API response.
+
+    Args:
+        data: Response data (will be wrapped in {"success": true, "data": ...})
+        status: HTTP status code (default 200)
+
+    Returns:
+        DRF Response
+
+    Example:
+        return api_success({"job_id": 123})
+        return api_success(serializer.data, status=201)
+    """
+    return Response({"success": True, "data": data}, status=status)
+
+
+def api_error(
+    error: str,
+    status: int = 400,
+    details: Optional[Dict[str, Any]] = None
+) -> Response:
+    """
+    Create an error API response.
+
+    Args:
+        error: Error message
+        status: HTTP status code (default 400)
+        details: Optional additional error context
+
+    Returns:
+        DRF Response
+
+    Example:
+        return api_error("Job not found", status=404)
+        return api_error("Validation failed", details={"field": "name"})
+    """
+    response_data = {"success": False, "error": error}
+    if details:
+        response_data["details"] = details
+    return Response(response_data, status=status)

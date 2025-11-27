@@ -75,7 +75,7 @@ def active_jobs(request):
             active_jobs_list.append(
                 {"pid": pid, "error": "Process not found or access denied"}
             )
-    return JsonResponse({"status": "Success", "active_jobs": active_jobs_list})
+    return JsonResponse({"success": True, "data": {"active_jobs": active_jobs_list}})
 
 
 def health_check(request):

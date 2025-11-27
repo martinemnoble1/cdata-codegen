@@ -157,11 +157,11 @@ export const CSimpleAutocompleteElement: React.FC<
           setParameterArg
         );
 
-        if (result?.status === "Failed") {
+        if (result && !result.success) {
           setMessage(`Unacceptable value provided: "${newValue}"`);
           setLocalValue(item._value); // Revert to original value
-        } else if (result?.status === "Success" && onChange) {
-          await onChange(result.updated_item);
+        } else if (result?.success && result.data?.updated_item && onChange) {
+          await onChange(result.data.updated_item);
         }
       } catch (error) {
         const errorMessage =

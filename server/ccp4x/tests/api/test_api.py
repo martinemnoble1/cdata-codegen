@@ -96,8 +96,8 @@ class CCP4i2TestCase(TestCase):
         self.assertDictEqual(
             result,
             {
-                "status": "Success",
-                "updated_item": "<NCYCLES>20</NCYCLES>",
+                "success": True,
+                "data": {"updated_item": "<NCYCLES>20</NCYCLES>"},
             },
         )
 
@@ -116,8 +116,8 @@ class CCP4i2TestCase(TestCase):
         self.assertDictEqual(
             result,
             {
-                "status": "Success",
-                "updated_item": "<XYZIN><dbFileId>AFILEID</dbFileId><subType>1</subType></XYZIN>",
+                "success": True,
+                "data": {"updated_item": "<XYZIN><dbFileId>AFILEID</dbFileId><subType>1</subType></XYZIN>"},
             },
         )
 
@@ -150,7 +150,8 @@ class CCP4i2TestCase(TestCase):
         self.assertDictEqual(
             result,
             {
-                "status": "Success",
+                "success": True,
+                "data": {},
             },
         )
 
@@ -173,7 +174,7 @@ class CCP4i2TestCase(TestCase):
             f"/jobs/{clone['id']}/upload_file_param/", data, format="multipart"
         )
         self.assertEqual(
-            response.json()["updated_item"]["_value"]["baseName"]["_value"],
+            response.json()["data"]["updated_item"]["_value"]["baseName"]["_value"],
             "testfile.pdb",
         )
 
@@ -195,12 +196,12 @@ class CCP4i2TestCase(TestCase):
             "objectPath": "phaser_simple.inputData.ENSEMBLES[0].pdbItemList[0].structure",
         }
         response = self.client.post(
-            f"/jobs/{create_response.json()['new_job']['id']}/upload_file_param/",
+            f"/jobs/{create_response.json()['data']['new_job']['id']}/upload_file_param/",
             data,
             format="multipart",
         )
         self.assertEqual(
-            response.json()["updated_item"]["_value"]["baseName"]["_value"],
+            response.json()["data"]["updated_item"]["_value"]["baseName"]["_value"],
             "testfile.pdb",
         )
 
@@ -234,7 +235,7 @@ class CCP4i2TestCase(TestCase):
             {"task_name": "import_merged"},
             content_type="application/json; charset=utf-8",
         )
-        import_merged_task = create_response.json()
+        import_merged_task = create_response.json()["data"]
         mmcif_path = (
             Path(CCP4Container.__file__).parent.parent
             / "demo_data"
@@ -257,7 +258,7 @@ class CCP4i2TestCase(TestCase):
             digest_response = self.client.get(
                 digest_url, content_type="application/json; charset=utf-8"
             )
-            digest = digest_response.json()
+            digest = digest_response.json()["data"]
             self.assertDictEqual(
                 digest["digest"]["cell"],
                 {
@@ -277,7 +278,7 @@ class CCP4i2TestCase(TestCase):
             digest_url, content_type="application/json; charset=utf-8"
         )
         self.assertDictEqual(
-            digest_response.json(),
+            digest_response.json()["data"],
             {
                 "sequences": {
                     "A": "MIPSITAYSKNGLKIEFTFERSNTNPSVTVITIQASNSTELDMTDFVFQAAVPKTFQLQLLSPSSSVVPAFNTGTITQVIKVLNPQKQQLRMRIKLTYNHKGSAMQDLAEVNNFPPQSWQ"
@@ -302,7 +303,7 @@ class CCP4i2TestCase(TestCase):
             {"task_name": "ProvideAsuContents"},
             content_type="application/json; charset=utf-8",
         )
-        ProvideAsuContentsTask = create_response.json()
+        ProvideAsuContentsTask = create_response.json()["data"]
         mmcif_path = (
             Path(CCP4Container.__file__).parent.parent
             / "demo_data"
@@ -321,7 +322,7 @@ class CCP4i2TestCase(TestCase):
                 data,
                 format="multipart",
             )
-            uploaded_file_uuid = response.json()["updated_item"]["_value"]["dbFileId"][
+            uploaded_file_uuid = response.json()["data"]["updated_item"]["_value"]["dbFileId"][
                 "_value"
             ]
             uploaded_file = models.File.objects.get(uuid=uploaded_file_uuid)

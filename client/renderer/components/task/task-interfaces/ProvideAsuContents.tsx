@@ -179,7 +179,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               />
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 4 }}>
-              {matthewsAnalysis?.status === "Success" ? (
+              {matthewsAnalysis?.success && matthewsAnalysis?.data?.result ? (
                 <Table>
                   <TableHead>
                     <TableRow>
@@ -189,7 +189,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {matthewsAnalysis?.result?.results.map((result) => (
+                    {matthewsAnalysis?.data?.result?.results.map((result) => (
                       <TableRow key={result.nmol_in_asu}>
                         <TableCell>{result.nmol_in_asu}</TableCell>
                         <TableCell>

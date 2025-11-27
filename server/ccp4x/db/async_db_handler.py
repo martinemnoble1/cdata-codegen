@@ -161,10 +161,27 @@ class AsyncDatabaseHandler:
                             child_num = 1
                         computed_number = f"{parent_job.number}.{child_num}"
                     else:
-                        # Top-level job
-                        project.last_job_number += 1
+                        # Top-level job - compute next job number from existing jobs
+                        # Don't rely on project.last_job_number which can get out of sync
+                        existing_jobs = models.Job.objects.filter(
+                            project=project,
+                            parent__isnull=True  # Only top-level jobs
+                        )
+                        if existing_jobs.exists():
+                            # Find the maximum job number among top-level jobs
+                            max_num = max(
+                                int(j.number.split('.')[0])  # Handle "1", "2", etc.
+                                for j in existing_jobs
+                            )
+                            next_num = max_num + 1
+                        else:
+                            next_num = 1
+
+                        computed_number = str(next_num)
+
+                        # Update last_job_number to keep it in sync (for legacy compat)
+                        project.last_job_number = next_num
                         project.save()
-                        computed_number = str(project.last_job_number)
                 else:
                     computed_number = job_number
 

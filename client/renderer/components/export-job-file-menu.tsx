@@ -190,19 +190,21 @@ export const ExportJobMenu: React.FC<ExportJobMenuProps> = ({
         `/api/proxy/jobs/${currentJobId}/export_job_file_menu/`
       );
 
-      if (data.status === "Success" && data.result) {
+      // Handle new API format: {success: true, data: {result: ...}}
+      if (data.success && data.data?.result) {
         let menuItems: FileMenuItem[] = [];
+        const resultData = data.data.result;
 
         // Handle case where result is directly an array of FileMenuItem
-        if (Array.isArray(data.result)) {
-          menuItems = data.result.filter(isValidFileMenuItem);
-        } else if (typeof data.result === "object") {
+        if (Array.isArray(resultData)) {
+          menuItems = resultData.filter(isValidFileMenuItem);
+        } else if (typeof resultData === "object") {
           // Handle case where result is an object containing arrays
-          const resultKeys = Object.keys(data.result);
+          const resultKeys = Object.keys(resultData);
 
           // Look for arrays in the result object
           for (const key of resultKeys) {
-            const value = data.result[key];
+            const value = resultData[key];
             if (Array.isArray(value)) {
               const validItems = value.filter(isValidFileMenuItem);
               menuItems.push(...validItems);
@@ -214,7 +216,7 @@ export const ExportJobMenu: React.FC<ExportJobMenuProps> = ({
         const parsedItems = menuItems.map(parseFileMenuItem);
         setFileMenuItems(parsedItems);
       } else {
-        throw new Error(data.reason || "Failed to fetch file menu items");
+        throw new Error(data.error || "Failed to fetch file menu items");
       }
     } catch (err) {
       console.error("Error fetching file menu items:", err);

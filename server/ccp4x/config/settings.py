@@ -202,10 +202,13 @@ STATICFILES_STORAGE = (
 )
 
 # Keep your existing STATICFILES_DIRS - WhiteNoise will serve directly from these
+# PROJECT_ROOT is the cdata-codegen root (parent of server/)
+PROJECT_ROOT = BASE_DIR.parent.parent
+
 STATICFILES_DIRS = [
-    # DISABLED: Old ccp4i2 icon paths
-    # ("qticons", str(Path(diff_match_patch_py3.__file__).parent.parent / "qticons")),
-    # ("svgicons", str(Path(diff_match_patch_py3.__file__).parent.parent / "svgicons")),
+    # Icon directories from project root - served at /djangostatic/qticons/ and /djangostatic/svgicons/
+    ("qticons", str(PROJECT_ROOT / "qticons")),
+    ("svgicons", str(PROJECT_ROOT / "svgicons")),
 ]
 
 # Disable manifest storage features that require collectstatic

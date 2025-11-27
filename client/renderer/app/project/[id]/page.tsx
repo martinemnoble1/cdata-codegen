@@ -24,8 +24,8 @@ export default function DashboardPage({
           task_name,
         }
       );
-      if (created_job_result?.status === "Success") {
-        const created_job: Job = created_job_result.new_job;
+      if (created_job_result?.success && created_job_result.data?.new_job) {
+        const created_job: Job = created_job_result.data.new_job;
         mutateJobs();
         router.push(`/project/${id}/job/${created_job.id}`);
       }

@@ -32,8 +32,11 @@ interface SetParameterArg {
 }
 
 interface SetParameterResponse {
-  status: "Success" | "Failed";
-  updated_item?: any;
+  success: boolean;
+  data?: {
+    updated_item: any;
+  };
+  error?: string;
 }
 
 // Constants
@@ -258,10 +261,10 @@ export const CListElement: React.FC<CListElementProps> = ({
         setParameterArg
       )) as SetParameterResponse;
 
-      if (result?.status === "Success" && onChange) {
-        await onChange(result.updated_item);
-      } else if (result?.status === "Failed") {
-        console.error("Failed to add list item");
+      if (result?.success && result.data?.updated_item && onChange) {
+        await onChange(result.data.updated_item);
+      } else if (result && !result.success) {
+        console.error("Failed to add list item:", result.error);
       }
     } catch (error) {
       console.error("Error adding list item:", error);
@@ -302,10 +305,10 @@ export const CListElement: React.FC<CListElementProps> = ({
           setParameterArg
         )) as SetParameterResponse;
 
-        if (result?.status === "Success" && onChange) {
-          await onChange(result.updated_item);
-        } else if (result?.status === "Failed") {
-          console.error("Failed to delete list item");
+        if (result?.success && result.data?.updated_item && onChange) {
+          await onChange(result.data.updated_item);
+        } else if (result && !result.success) {
+          console.error("Failed to delete list item:", result.error);
         }
       } catch (error) {
         console.error("Error deleting list item:", error);

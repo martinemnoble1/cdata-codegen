@@ -101,7 +101,7 @@ class ParameterSettingAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
         print(f"\n📤 API Response: {response_data}")
-        self.assertEqual(response_data["status"], "Success")
+        self.assertTrue(response_data.get("success"))
         self.assertIn("data", response_data)
 
         # DEBUG: Check if input_params.xml contains NCYCLES
@@ -147,7 +147,7 @@ class ParameterSettingAPITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Success")
+        self.assertTrue(response_data.get("success"))
 
         # Verify parameter was set
         result = get_parameter(self.job, "prosmart_refmac.controlParameters.ADD_WATERS")
@@ -170,7 +170,7 @@ class ParameterSettingAPITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Success")
+        self.assertTrue(response_data.get("success"))
 
         # Verify parameter was set
         result = get_parameter(self.job, "prosmart_refmac.controlParameters.TITLE")
@@ -193,8 +193,8 @@ class ParameterSettingAPITests(TestCase):
         # Should return error status
         self.assertEqual(response.status_code, 400)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Failed")
-        self.assertIn("reason", response_data)
+        self.assertFalse(response_data.get("success"))
+        self.assertIn("error", response_data)
 
     def test_set_parameter_invalid_job_id(self):
         """Test error handling for non-existent job"""
@@ -213,8 +213,8 @@ class ParameterSettingAPITests(TestCase):
         # Should return 404
         self.assertEqual(response.status_code, 404)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Failed")
-        self.assertIn("Job not found", response_data["reason"])
+        self.assertFalse(response_data.get("success"))
+        self.assertIn("Job not found", response_data.get("error", ""))
 
     def test_set_parameter_missing_required_fields(self):
         """Test error handling for missing required fields"""
@@ -232,7 +232,7 @@ class ParameterSettingAPITests(TestCase):
         # Should return error (400 or 500 depending on validation)
         self.assertIn(response.status_code, [400, 500])
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Failed")
+        self.assertFalse(response_data.get("success"))
 
     def test_set_parameter_database_sync(self):
         """Test that parameter setting triggers database synchronization"""
@@ -327,7 +327,7 @@ class ParameterSettingAPITests(TestCase):
         # CInt cannot be set to None - should return error
         self.assertEqual(response.status_code, 400)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Failed")
+        self.assertFalse(response_data.get("success"))
 
     def test_set_parameter_type_coercion(self):
         """Test that string values are coerced to correct types"""
@@ -369,7 +369,7 @@ class ParameterSettingAPITests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
-        self.assertEqual(response_data["status"], "Success")
+        self.assertTrue(response_data.get("success"))
 
 
 if __name__ == "__main__":

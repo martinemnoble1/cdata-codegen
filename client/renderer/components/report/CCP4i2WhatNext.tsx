@@ -30,8 +30,8 @@ export const CCP4i2WhatNext = () => {
           context_job_uuid: job.uuid,
         }
       );
-      if (created_job_result?.status === "Success") {
-        const created_job: Job = created_job_result.new_job;
+      if (created_job_result?.success && created_job_result.data?.new_job) {
+        const created_job: Job = created_job_result.data.new_job;
         mutateJobs();
         router.push(`/project/${job.project}/job/${created_job.id}`);
       }
@@ -39,9 +39,12 @@ export const CCP4i2WhatNext = () => {
     [job, mutateJobs]
   );
 
+  // Extract result from new API format: {success: true, data: {result: [...]}}
+  const whatNextResult = what_next?.success ? what_next.data?.result : null;
+
   return (
-    what_next?.Status === "Success" &&
-    what_next?.result.length > 0 &&
+    whatNextResult &&
+    whatNextResult.length > 0 &&
     job?.status == 6 && (
       <Toolbar
         variant="dense"
@@ -56,7 +59,7 @@ export const CCP4i2WhatNext = () => {
         <Typography variant="h6" sx={{ fontWeight: "bold", mr: 3 }}>
           What next:
         </Typography>
-        {what_next.result.map((task: any, iTask: number) => (
+        {whatNextResult.map((task: any, iTask: number) => (
           <Button
             key={iTask}
             variant="outlined"

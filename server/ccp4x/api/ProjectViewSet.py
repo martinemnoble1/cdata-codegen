@@ -31,6 +31,7 @@ from ..lib.utils.navigation.dependencies import delete_job_and_dependents
 from django.http import JsonResponse
 from django.conf import settings
 from django.utils.text import slugify
+from ..lib.response import api_success, api_error
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -144,7 +145,7 @@ class ProjectViewSet(ModelViewSet):
 
             # Note I am adding a bit of body to the response because of an odd
             # javascript feature which presents as network error if no body in response.
-            return Response({"status": "Success"})
+            return api_success({"deleted": True})
         except Http404:
             return Http404("Job not found")
 
@@ -161,10 +162,7 @@ class ProjectViewSet(ModelViewSet):
     def import_project(self, request):
         uploaded_files = request.FILES.getlist("files")
         if not uploaded_files:
-            return Response(
-                {"status": "Failed", "reason": "No file provided"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return api_error("No file provided", status=400)
         # Define a secure, platform-independent storage path
         secure_storage_dir = pathlib.Path(settings.MEDIA_ROOT) / "uploaded_files"
         secure_storage_dir.mkdir(parents=True, exist_ok=True)
@@ -172,10 +170,7 @@ class ProjectViewSet(ModelViewSet):
         # Save the file to the secure storage directory
         for uploaded_file in uploaded_files:
             if not uploaded_file.name.endswith(".zip"):
-                return Response(
-                    {"status": "Failed", "reason": "Invalid file type"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return api_error("Invalid file type", status=400)
             # Ensure the filename is safe
             # if not uploaded_file.name.isalnum():
             #    return Response(
@@ -192,13 +187,10 @@ class ProjectViewSet(ModelViewSet):
                 logger.exception(
                     "Failed to import project from %s", file_path, exc_info=e
                 )
-                return Response(
-                    {"status": "Failed", "reason": str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+                return api_error(str(e), status=500)
             logger.warning("File uploaded and saved to %s", file_path)
 
-        return Response({"status": "Success"})
+        return api_success({"imported": True})
 
     @action(
         detail=True,
@@ -497,7 +489,7 @@ class ProjectViewSet(ModelViewSet):
         try:
             # call_command("preview_file", "-d", "-e", viewer, "-p", str(composite_path))
             preview_file(viewer, str(composite_path))
-            return JsonResponse({"status": "Success"})
+            return api_success({"previewed": True})
         except Exception as err:
             logger.exception(
                 "Failed to preview file %s with viewer %s",
@@ -505,7 +497,7 @@ class ProjectViewSet(ModelViewSet):
                 viewer,
                 exc_info=err,
             )
-            return JsonResponse({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -536,10 +528,7 @@ class ProjectViewSet(ModelViewSet):
             task_name = body.get("task_name")
 
             if not task_name:
-                return Response(
-                    {"status": "Failed", "reason": "task_name is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return api_error("task_name is required", status=400)
 
             # Extract optional parameters
             title = body.get("title")
@@ -561,29 +550,17 @@ class ProjectViewSet(ModelViewSet):
             new_job = models.Job.objects.get(uuid=result['job_uuid'])
             serializer = serializers.JobSerializer(new_job)
 
-            return Response({
-                "status": "Success",
-                "new_job": serializer.data
-            })
+            return api_success({"new_job": serializer.data})
 
         except models.Project.DoesNotExist:
             logger.exception("Project %s not found", pk)
-            return Response(
-                {"status": "Failed", "reason": "Project not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return api_error("Project not found", status=404)
         except KeyError as e:
             logger.exception("Missing required field: %s", e)
-            return Response(
-                {"status": "Failed", "reason": f"Missing required field: {e}"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return api_error(f"Missing required field: {e}", status=400)
         except Exception as e:
             logger.exception("Failed to create task", exc_info=e)
-            return Response(
-                {"status": "Failed", "reason": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return api_error(str(e), status=500)
 
     @action(
         detail=True,
@@ -655,7 +632,7 @@ class ProjectViewSet(ModelViewSet):
                 the_project.id,
                 exc_info=e,
             )
-            return JsonResponse({"status": "Failed", "reason": str(e)})
+            return api_error(str(e), status=500)
 
     @action(
         detail=True,
@@ -699,18 +676,12 @@ class ProjectViewSet(ModelViewSet):
             )
 
         except models.Project.DoesNotExist:
-            return Response(
-                {"status": "Failed", "reason": "Project not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return api_error("Project not found", status=404)
         except Exception as e:
             logger.exception(
                 "Failed to retrieve exports for project %s", pk, exc_info=e
             )
-            return Response(
-                {"status": "Failed", "reason": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return api_error(str(e), status=500)
 
     @action(
         detail=True,

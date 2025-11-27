@@ -282,7 +282,7 @@ class CPluginScript(CData):
         as children of self.container only if they don't already exist.
         This ensures backward compatibility for plugins without .def.xml files.
         """
-        from core.base_object.fundamental_types import CString
+        from core.base_object.fundamental_types import CString, CInt
 
         standard_containers = ['inputData', 'outputData', 'controlParameters', 'guiAdmin']
 
@@ -321,6 +321,16 @@ class CPluginScript(CData):
                             # If we can't get job name from DB, leave it unset
                             pass
                     container.__dict__['jobTitle'] = job_title
+
+                # Ensure jobStatus exists (stores job completion status)
+                # Values: 0=Pending, 1=Running, 2=Finished, 3=Failed, etc.
+                if not hasattr(container, 'jobStatus'):
+                    job_status = CInt(
+                        parent=container,
+                        name='jobStatus'
+                    )
+                    job_status.value = 0  # Default: Pending
+                    container.__dict__['jobStatus'] = job_status
 
     def _loadDefFile(self):
         """

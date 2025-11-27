@@ -16,12 +16,41 @@ from pipelines.import_merged.script import mmcifutils
 from ..containers.find_objects import find_objects
 from ..containers.get_container import get_job_container
 from ..containers.json_encoder import CCP4i2JsonEncoder
+from ..plugins.plugin_context import get_plugin_with_context
 from ..formats.cif_ligand import parse_cif_ligand_summary
 from ..parameters.value_dict import value_dict_for_object
 from ....db import models
 from ...parse import identify_data_type
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
+
+
+def normalize_object_path(object_path: str) -> str:
+    """
+    Normalize object paths from frontend to match backend container structure.
+
+    The frontend JSON encoder includes the full hierarchy path which includes
+    `.container.` (e.g., `prosmart_refmac.container.inputData.XYZIN`), but the
+    backend container structure doesn't have that extra level.
+
+    This function strips the `.container.` segment if present after the task name.
+
+    Args:
+        object_path: Path like "prosmart_refmac.container.inputData.XYZIN"
+
+    Returns:
+        Normalized path like "prosmart_refmac.inputData.XYZIN"
+    """
+    # Split into parts
+    parts = object_path.split('.')
+
+    # If second element is 'container', remove it
+    # e.g., ['prosmart_refmac', 'container', 'inputData', 'XYZIN']
+    #    -> ['prosmart_refmac', 'inputData', 'XYZIN']
+    if len(parts) >= 2 and parts[1] == 'container':
+        parts = [parts[0]] + parts[2:]
+
+    return '.'.join(parts)
 
 
 def _build_class_registry() -> Dict[str, Type[CData]]:
@@ -208,15 +237,24 @@ def digest_file(the_file: models.File):
 
 
 def digest_param_file(the_job, object_path):
-    the_container: CContainer = get_job_container(the_job)
+    # Use plugin context for consistent container access (same as set_param/get_param)
+    plugin_result = get_plugin_with_context(the_job)
+    if not plugin_result.success:
+        return {"status": "Failed", "reason": plugin_result.error, "digest": {}}
+
+    plugin = plugin_result.data
+
+    # Normalize path to strip .container. segment if present from frontend
+    normalized_path = normalize_object_path(object_path)
+
     try:
-        file_object: CDataFile = the_container.find_by_path(object_path, skip_first=True)
+        file_object: CDataFile = plugin.container.find_by_path(normalized_path, skip_first=True)
         return digest_file_object(file_object)
     except IndexError as err:
-        logger.exception("Error finding object with path %s", object_path, exc_info=err)
+        logger.exception("Error finding object with path %s (normalized: %s)", object_path, normalized_path, exc_info=err)
         return {"status": "Failed", "reason": str(err), "digest": {}}
     except Exception as err:
-        logger.exception("Other exception %s", object_path, exc_info=err)
+        logger.exception("Other exception %s (normalized: %s)", object_path, normalized_path, exc_info=err)
         return {"status": "Failed", "reason": str(err), "digest": {}}
 
 

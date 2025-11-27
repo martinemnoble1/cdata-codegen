@@ -17,6 +17,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from . import serializers
 from ..db import models
+from ..lib.response import api_success, api_error
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -39,7 +40,7 @@ class FileViewSet(ModelViewSet):
             return Response(serializer.data)
         except models.File.DoesNotExist as err:
             logging.exception("Failed to retrieve file with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -53,7 +54,7 @@ class FileViewSet(ModelViewSet):
             return FileResponse(open(the_file.path, "rb"), filename=the_file.name)
         except models.File.DoesNotExist as err:
             logging.exception("Failed to retrieve file with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -67,7 +68,7 @@ class FileViewSet(ModelViewSet):
             return FileResponse(open(the_file.path, "rb"), filename=the_file.name)
         except models.File.DoesNotExist as err:
             logging.exception("Failed to retrieve file with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -92,22 +93,16 @@ class FileViewSet(ModelViewSet):
 
             # Check if digest returned an error
             if isinstance(result, dict) and result.get("status") == "Failed":
-                return JsonResponse(result, status=400, encoder=CCP4i2JsonEncoder)
+                return api_error(result.get("reason", "Digest failed"), status=400)
 
-            return JsonResponse(result, encoder=CCP4i2JsonEncoder, safe=False)
+            return api_success(result)
 
         except models.File.DoesNotExist:
             logger.exception("File %s not found", pk)
-            return JsonResponse(
-                {"status": "Failed", "reason": "File not found"},
-                status=404
-            )
+            return api_error("File not found", status=404)
         except Exception as err:
             logger.exception("Failed to digest file %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": str(err)},
-                status=500
-            )
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -132,22 +127,16 @@ class FileViewSet(ModelViewSet):
 
             # Check if digest returned an error
             if isinstance(result, dict) and result.get("status") == "Failed":
-                return JsonResponse(result, status=400, encoder=CCP4i2JsonEncoder)
+                return api_error(result.get("reason", "Digest failed"), status=400)
 
-            return JsonResponse(result, encoder=CCP4i2JsonEncoder, safe=False)
+            return api_success(result)
 
         except models.File.DoesNotExist:
             logger.exception("File with UUID %s not found", pk)
-            return JsonResponse(
-                {"status": "Failed", "reason": "File not found"},
-                status=404
-            )
+            return api_error("File not found", status=404)
         except Exception as err:
             logger.exception("Failed to digest file with UUID %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": str(err)},
-                status=500
-            )
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -160,7 +149,7 @@ class FileViewSet(ModelViewSet):
             the_file = models.File.objects.get(id=pk)
             the_viewer = request.data.get("viewer")
             preview_file(the_viewer, str(the_file.path))
-            return Response({"status": "Success"})
+            return api_success({"previewed": True})
         except models.File.DoesNotExist as err:
             logging.exception("Failed to retrieve file with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)

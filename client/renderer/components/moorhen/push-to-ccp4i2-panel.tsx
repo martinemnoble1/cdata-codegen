@@ -111,19 +111,24 @@ export const PushToCCP4i2Panel: React.FC<PushToCCP4i2Props> = ({
         }),
         moleculeName
       );
+      const newJobId = result.data?.new_job?.id;
+      if (!newJobId) {
+        setMessage(`Failed to create job: ${result.error || 'Unknown error'}`);
+        return;
+      }
       const uploadResult = await api.post<any>(
-        `jobs/${result.new_job?.id}/upload_file_param`,
+        `jobs/${newJobId}/upload_file_param`,
         formData
       );
-      setMessage(`Upload result status: ${uploadResult.status}`);
+      setMessage(`Upload result: ${uploadResult.success ? 'Success' : uploadResult.error}`);
       const run_result = await api.post<CreateTaskResponse>(
         //Call run_local for more responsive task execution of this (which should be faster )
-        `jobs/${result.new_job?.id}/run_local/`,
+        `jobs/${newJobId}/run_local/`,
         {
           task_name: "coordinate_selector",
         }
       );
-      setMessage(`Run result status: ${run_result.status}`);
+      setMessage(`Run result: ${run_result.success ? 'Success' : run_result.error}`);
       if (onClose) onClose();
     }
   }, [selectedProject, molNo, item]);

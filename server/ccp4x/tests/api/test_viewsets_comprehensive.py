@@ -97,7 +97,9 @@ class FileViewSetTests(TestCase):
         """Test GET /files/{id}/digest/ - Get file digest by ID"""
         response = self.client.get(f"/files/{self.file.id}/digest/")
         self.assertEqual(response.status_code, 200)
-        digest = response.json()
+        result = response.json()
+        self.assertTrue(result.get("success"))
+        digest = result.get("data", {})
         # Digest structure varies by file type, just check we got a dict
         self.assertIsInstance(digest, dict)
         # For PDB files, expect sequences and composition
@@ -109,7 +111,9 @@ class FileViewSetTests(TestCase):
         """Test GET /files/{uuid}/digest_by_uuid/ - Get file digest by UUID"""
         response = self.client.get(f"/files/{self.file.uuid}/digest_by_uuid/")
         self.assertEqual(response.status_code, 200)
-        digest = response.json()
+        result = response.json()
+        self.assertTrue(result.get("success"))
+        digest = result.get("data", {})
         self.assertIsInstance(digest, dict)
         if self.file.type.name in ['xyzin', 'xyzout']:
             self.assertIn("sequences", digest)
@@ -184,8 +188,8 @@ class JobViewSetTests(TestCase):
         response = self.client.get(f"/jobs/{self.job.id}/params_xml/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("xml", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("xml", result.get("data", {}))
 
     def test_job_report_xml(self):
         """Test GET /jobs/{id}/report_xml/ - Get job report as XML"""
@@ -194,8 +198,8 @@ class JobViewSetTests(TestCase):
         self.assertIn(response.status_code, [200, 404])
         result = response.json()
         if response.status_code == 200:
-            self.assertEqual(result["status"], "Success")
-            self.assertIn("xml", result)
+            self.assertTrue(result.get("success"))
+            self.assertIn("xml", result.get("data", {}))
 
     def test_job_diagnostic_xml(self):
         """Test GET /jobs/{id}/diagnostic_xml/ - Get diagnostic XML"""
@@ -207,32 +211,32 @@ class JobViewSetTests(TestCase):
         """Test GET /jobs/{id}/container/ - Get job container JSON"""
         response = self.client.get(f"/jobs/{self.job.id}/container/")
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("result", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("result", result.get("data", {}))
 
     def test_job_def_xml(self):
         """Test GET /jobs/{id}/def_xml/ - Get task definition XML"""
         response = self.client.get(f"/jobs/{self.job.id}/def_xml/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("xml", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("xml", result.get("data", {}))
 
     def test_job_validation(self):
         """Test GET /jobs/{id}/validation/ - Validate job parameters"""
         response = self.client.get(f"/jobs/{self.job.id}/validation/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("xml", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("xml", result.get("data", {}))
 
     def test_job_i2run_command(self):
         """Test GET /jobs/{id}/i2run_command/ - Get i2run command"""
         response = self.client.get(f"/jobs/{self.job.id}/i2run_command/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("command", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("command", result.get("data", {}))
 
     def test_job_dependent_jobs(self):
         """Test GET /jobs/{id}/dependent_jobs/ - Get jobs that depend on this job"""
@@ -270,7 +274,7 @@ class JobViewSetTests(TestCase):
             }),
         )
         result = response.json()
-        self.assertEqual(result["status"], "Success")
+        self.assertTrue(result.get("success"))
 
     def test_job_set_parameter_file(self):
         """Test POST /jobs/{id}/set_parameter/ - Set file parameter"""
@@ -287,7 +291,7 @@ class JobViewSetTests(TestCase):
             }),
         )
         result = response.json()
-        self.assertEqual(result["status"], "Success")
+        self.assertTrue(result.get("success"))
 
     def test_job_upload_file_param(self):
         """Test POST /jobs/{id}/upload_file_param/ - Upload file parameter"""
@@ -308,8 +312,8 @@ class JobViewSetTests(TestCase):
             format="multipart",
         )
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("updated_item", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("updated_item", result.get("data", {}))
 
     def test_job_digest(self):
         """Test GET /jobs/{id}/digest/?object_path=... - Digest object"""
@@ -335,8 +339,8 @@ class JobViewSetTests(TestCase):
         response = self.client.get(f"/jobs/{self.job.id}/export_job_file_menu/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("result", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("result", result.get("data", {}))
 
     @skip("Requires CCP4 installation and takes time")
     def test_job_run(self):
@@ -365,7 +369,7 @@ class JobViewSetTests(TestCase):
         response = self.client.delete(f"/jobs/{cloned_job['id']}/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
+        self.assertTrue(result.get("success"))
 
         # Verify job was deleted
         self.assertFalse(models.Job.objects.filter(id=cloned_job['id']).exists())
@@ -487,8 +491,8 @@ class ProjectViewSetTests(TestCase):
         response = self.client.get(f"/projects/{self.project.id}/directory/")
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("container", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("container", result.get("data", {}))
 
     def test_project_file(self):
         """Test GET /projects/{id}/project_file/?path=... - Get project file"""
@@ -517,8 +521,8 @@ class ProjectViewSetTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["status"], "Success")
-        self.assertIn("new_job", result)
+        self.assertTrue(result.get("success"))
+        self.assertIn("new_job", result.get("data", {}))
 
     def test_project_exports(self):
         """Test GET /projects/{id}/exports/ - Get project export history"""

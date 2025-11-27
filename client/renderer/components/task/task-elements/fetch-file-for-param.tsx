@@ -94,9 +94,9 @@ export const FetchFileForParam: React.FC<FetchFileForParamProps> = ({
           formData
         );
         setMessage(`File ${fileName} uploaded for ${item._objectPath}`);
-        if (uploadResult.status === "Success") {
+        if (uploadResult.success && uploadResult.data?.updated_item) {
           if (onChange) {
-            onChange(uploadResult.updated_item);
+            onChange(uploadResult.data.updated_item);
           }
           mutateJobs();
           mutateFiles();

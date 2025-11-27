@@ -205,7 +205,7 @@ export const CDataFileElement: React.FC<CCP4i2DataFileElementProps> = ({
 
       try {
         const result = await setParameter(parameterArg);
-        if (result?.status === "Success") onChange?.(result.updated_item);
+        if (result?.success && result.data?.updated_item) onChange?.(result.data.updated_item);
       } catch (error) {
         console.error("Error setting parameter:", error);
         alert(`Error: ${error}`);

@@ -77,6 +77,9 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.utils.text import slugify
 
+# Uniform API response helpers
+from ..lib.response import api_success, api_error
+
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
 
@@ -190,9 +193,9 @@ class JobViewSet(ModelViewSet):
             delete_job_and_dependents(instance)
             # Note: Adding response body to prevent JavaScript network error
             # when response has no body content
-            return Response({"status": "Success"})
+            return api_success({"deleted": True})
         except Http404:
-            return Http404("Job not found")
+            return api_error("Job not found", status=404)
 
     @action(
         detail=True,
@@ -231,16 +234,17 @@ class JobViewSet(ModelViewSet):
         """
         try:
             job = models.Job.objects.get(id=pk)
+            what_next_data = get_what_next(job)
+            return api_success(what_next_data)
         except ValueError as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=400)
         except models.Job.DoesNotExist as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
         except Exception as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse({"status": "Failed", "reason": str(err)})
-        return JsonResponse(get_what_next(job))
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -286,18 +290,16 @@ class JobViewSet(ModelViewSet):
             context_job_uuid = form_data["context_job_uuid"]
             set_input_by_context_job(str(job.uuid), context_job_uuid)
             serializer = serializers.JobSerializer(job)
-            return JsonResponse({"status": "Success", "new_job": serializer.data})
+            return api_success({"new_job": serializer.data})
         except CCP4ErrorHandling.CException as err:
             error_tree = getEtree(err)
             ET.indent(error_tree, " ")
-            return JsonResponse(
-                {"status": "Failed", "reason": ET.tostring(error_tree).decode("utf-8")}
-            )
+            return api_error(ET.tostring(error_tree).decode("utf-8"), status=400)
         except models.Job.DoesNotExist as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
         except Exception as err:
-            return JsonResponse({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -353,14 +355,12 @@ class JobViewSet(ModelViewSet):
         try:
             result = object_method(job, object_path, method_name, args, kwargs)
             logger.debug("result %s", result)
-            return JsonResponse({"status": "Success", "result": result})
+            return api_success({"result": result})
         except CCP4ErrorHandling.CException as err:
             error_tree = getEtree(err)
             logger.debug("error_tree %s", error_tree)
             ET.indent(error_tree, " ")
-            return JsonResponse(
-                {"status": "Failed", "reason": ET.tostring(error_tree).decode("utf-8")}
-            )
+            return api_error(ET.tostring(error_tree).decode("utf-8"), status=400)
 
     @action(
         detail=True,
@@ -412,25 +412,16 @@ class JobViewSet(ModelViewSet):
             result = get_job_params_xml(the_job)
 
             if result.success:
-                return Response({"status": "Success", "xml": result.data})
+                return api_success({"xml": result.data})
             else:
-                return Response({
-                    "status": "Failed",
-                    "reason": result.error
-                }, status=404)
+                return api_error(result.error, status=404)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception("Unexpected error getting params XML for job %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -494,30 +485,22 @@ class JobViewSet(ModelViewSet):
             result = get_job_report_xml(the_job, regenerate=regenerate)
 
             if result.success:
-                response = Response({"status": "Success", "xml": result.data})
+                response = api_success({"xml": result.data})
                 # Add no-cache headers for real-time updates
                 response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
                 response["Pragma"] = "no-cache"
                 response["Expires"] = "0"
                 return response
             else:
-                return Response({
-                    "status": "Failed",
-                    "reason": result.error
-                }, status=404 if "not found" in result.error.lower() else 500)
+                error_status = 404 if "not found" in result.error.lower() else 500
+                return api_error(result.error, status=error_status)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception("Unexpected error getting report XML for job %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -562,10 +545,11 @@ class JobViewSet(ModelViewSet):
             the_job = models.Job.objects.get(id=pk)
             dependent_jobs = find_dependent_jobs(the_job)
             serializer = serializers.JobSerializer(dependent_jobs, many=True)
+            # DRF standard for list endpoints - return array directly
             return Response(serializer.data)
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -615,13 +599,14 @@ class JobViewSet(ModelViewSet):
 
             if result.success:
                 serializer = serializers.JobSerializer(result.data)
-                return Response(serializer.data)
+                # DRF standard for create - return serializer data directly
+                return Response(serializer.data, status=201)
             else:
-                return Response(result.to_dict(), status=400)
+                return result.to_response(error_status=400)
 
         except models.Job.DoesNotExist as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)}, status=404)
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -665,22 +650,17 @@ class JobViewSet(ModelViewSet):
 
             if result["success"]:
                 serializer = serializers.JobSerializer(result["data"])
+                # DRF standard - return serializer data directly
                 return Response(serializer.data)
             else:
-                return Response(
-                    {"status": "Failed", "reason": result["error"]},
-                    status=result["status"],
-                )
+                return api_error(result["error"], status=result["status"])
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)}, status=404)
+            return api_error(str(err), status=404)
         except Exception as err:
             logger.exception("Unexpected error running job %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500,
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -733,24 +713,19 @@ class JobViewSet(ModelViewSet):
 
             if result["success"]:
                 serializer = serializers.JobSerializer(result["data"])
+                # DRF standard - return serializer data directly
                 return Response(serializer.data)
             else:
-                return Response(
-                    {"status": "Failed", "reason": result["error"]},
-                    status=result["status"],
-                )
+                return api_error(result["error"], status=result["status"])
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)}, status=404)
+            return api_error(str(err), status=404)
         except Exception as err:
             logger.exception(
                 "Unexpected error running job locally %s", pk, exc_info=err
             )
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500,
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -803,37 +778,25 @@ class JobViewSet(ModelViewSet):
                 cls=CCP4i2JsonEncoder
             )
 
-            return Response({
-                "status": "Success",
-                "result": json.loads(container_json)
-            })
+            return api_success({"result": json.loads(container_json)})
 
         except models.Job.DoesNotExist as err:
             logger.exception("Job %s not found", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": "Job not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return api_error("Job not found", status=404)
         except FileNotFoundError as err:
             logger.exception(
                 "Failed to find parameters for job %s",
                 pk,
                 exc_info=err,
             )
-            return Response(
-                {"status": "Failed", "reason": "Job parameters not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return api_error("Job parameters not found", status=404)
         except Exception as err:
             logger.exception(
                 "Failed to get container for job %s",
                 pk,
                 exc_info=err,
             )
-            return Response(
-                {"status": "Failed", "reason": str(err)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -891,25 +854,16 @@ class JobViewSet(ModelViewSet):
             result = get_job_diagnostic_xml(the_job)
 
             if result.success:
-                return Response({"status": "Success", "xml": result.data})
+                return api_success({"xml": result.data})
             else:
-                return Response({
-                    "status": "Failed",
-                    "reason": result.error
-                }, status=404)
+                return api_error(result.error, status=404)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception("Unexpected error getting diagnostic XML for job %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -944,10 +898,10 @@ class JobViewSet(ModelViewSet):
             response_dict = digest_param_file(
                 the_job, request.GET.get("object_path")[:-1]
             )
-            return Response(response_dict)
+            return api_success(response_dict)
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=400)
 
     @action(
         detail=True,
@@ -981,10 +935,10 @@ class JobViewSet(ModelViewSet):
         try:
             the_job = models.Job.objects.get(id=pk)
             response_string = i2run_for_job(the_job)
-            return Response({"status": "Success", "command": response_string})
+            return api_success({"command": response_string})
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=400)
 
     @action(
         detail=True,
@@ -1034,15 +988,15 @@ class JobViewSet(ModelViewSet):
             else:
                 object_path = f"{the_job.task_name}.outputData.{job_param_name[:-1]}"
             response_dict = digest_param_file(the_job, object_path)
-            return Response({"status": "Success", "digest": response_dict})
+            return api_success({"digest": response_dict})
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=400)
         except Exception as err:
             logging.exception(
                 "Failed to digest file %s %s", pk, object_path, exc_info=err
             )
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=500)
 
     @action(
         detail=True,
@@ -1089,17 +1043,17 @@ class JobViewSet(ModelViewSet):
                 packedXML = ET.fromstring(def_xml)
                 unpackedXML = load_nested_xml(packedXML)
                 ET.indent(unpackedXML, " ")
-                return Response({"status": "Success", "xml": ET.tostring(unpackedXML)})
+                return api_success({"xml": ET.tostring(unpackedXML)})
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=400)
         except FileNotFoundError as err:
             logger.exception(
                 "Failed to find file %s",
                 def_xml_path,
                 exc_info=err,
             )
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -1170,28 +1124,18 @@ class JobViewSet(ModelViewSet):
                         parent.remove(stack_element)
 
                 ET.indent(error_etree, " ")
-                return Response({"status": "Success", "xml": ET.tostring(error_etree)})
+                return api_success({"xml": ET.tostring(error_etree)})
             else:
-                return Response({
-                    "status": "Failed",
-                    "reason": result.error,
-                    "details": result.error_details
-                }, status=400)
+                return api_error(result.error, status=400, details=result.error_details)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception(
                 "Unexpected error validating job %s", pk, exc_info=err
             )
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -1259,29 +1203,16 @@ class JobViewSet(ModelViewSet):
             result = set_job_param(job, object_path, value)
 
             if result.success:
-                return JsonResponse({
-                    "status": "Success",
-                    "data": result.data
-                })
+                return api_success(result.data)
             else:
-                return JsonResponse({
-                    "status": "Failed",
-                    "reason": result.error,
-                    "details": result.error_details
-                }, status=400)
+                return api_error(result.error, status=400, details=result.error_details)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception("Unexpected error setting parameter for job %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -1336,10 +1267,7 @@ class JobViewSet(ModelViewSet):
             object_path = request.GET.get("object_path")
 
             if not object_path:
-                return JsonResponse({
-                    "status": "Failed",
-                    "reason": "Missing required parameter: object_path"
-                }, status=400)
+                return api_error("Missing required parameter: object_path", status=400)
 
             # Use unified utility (CPluginScript architecture)
             from ..lib.utils.parameters.get_param import get_parameter as get_job_param
@@ -1347,29 +1275,16 @@ class JobViewSet(ModelViewSet):
             result = get_job_param(job, object_path)
 
             if result.success:
-                return JsonResponse({
-                    "status": "Success",
-                    "data": result.data
-                })
+                return api_success(result.data)
             else:
-                return JsonResponse({
-                    "status": "Failed",
-                    "reason": result.error,
-                    "details": result.error_details
-                }, status=400)
+                return api_error(result.error, status=400, details=result.error_details)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"},
-                status=404
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
         except Exception as err:
             logger.exception("Unexpected error getting parameter for job %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -1415,13 +1330,11 @@ class JobViewSet(ModelViewSet):
         job = models.Job.objects.get(id=pk)
         try:
             result = upload_file_param(job, request)
-            return JsonResponse({"status": "Success", "updated_item": result})
+            return api_success({"updated_item": result})
         except CCP4ErrorHandling.CException as err:
             error_tree = getEtree(err)
             ET.indent(error_tree, " ")
-            return JsonResponse(
-                {"status": "Failed", "reason": ET.tostring(error_tree).decode("utf-8")}
-            )
+            return api_error(ET.tostring(error_tree).decode("utf-8"), status=400)
 
     @action(
         detail=True,
@@ -1465,10 +1378,10 @@ class JobViewSet(ModelViewSet):
             the_job = models.Job.objects.get(id=pk)
             the_viewer = request.data.get("viewer")
             preview_job(the_viewer, str(the_job.directory))
-            return Response({"status": "Success"})
+            return api_success({"previewed": True})
         except models.File.DoesNotExist as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)})
+            return api_error(str(err), status=404)
 
     @action(
         detail=True,
@@ -1652,22 +1565,16 @@ class JobViewSet(ModelViewSet):
                     pass
 
                 logger.exception("Export failed for job %s", pk, exc_info=e)
-                return Response(
-                    {"status": "Failed", "reason": f"Export failed: {str(e)}"},
-                    status=500,
-                )
+                return api_error(f"Export failed: {str(e)}", status=500)
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return Response({"status": "Failed", "reason": str(err)}, status=404)
+            return api_error(str(err), status=404)
         except Exception as err:
             logger.exception(
                 "Unexpected error during export for job %s", pk, exc_info=err
             )
-            return Response(
-                {"status": "Failed", "reason": f"Unexpected error: {str(err)}"},
-                status=500,
-            )
+            return api_error(f"Unexpected error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -1749,13 +1656,11 @@ class JobViewSet(ModelViewSet):
                 "Successfully retrieved file menu for job %s, task %s", pk, task_name
             )
 
-            return JsonResponse({"status": "Success", "result": menu_result})
+            return api_success({"result": menu_result})
 
         except models.Job.DoesNotExist as err:
             logger.exception("Failed to retrieve job with id %s", pk, exc_info=err)
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Job not found: {str(err)}"}
-            )
+            return api_error(f"Job not found: {str(err)}", status=404)
 
         except Exception as err:
             logger.exception(
@@ -1768,9 +1673,7 @@ class JobViewSet(ModelViewSet):
                 ),
                 exc_info=err,
             )
-            return JsonResponse(
-                {"status": "Failed", "reason": f"Task manager error: {str(err)}"}
-            )
+            return api_error(f"Task manager error: {str(err)}", status=500)
 
     @action(
         detail=True,
@@ -1810,10 +1713,7 @@ class JobViewSet(ModelViewSet):
         export_mode = request.GET.get("mode")
         if not export_mode:
             print("Missing export mode parameter")
-            return JsonResponse(
-                {"status": "Failed", "reason": "Missing required 'mode' parameter"},
-                status=400,
-            )
+            return api_error("Missing required 'mode' parameter", status=400)
 
         print(f"About to call utility function with pk={pk}, export_mode={export_mode}")
         # Import the utility function locally to avoid unused import lint error

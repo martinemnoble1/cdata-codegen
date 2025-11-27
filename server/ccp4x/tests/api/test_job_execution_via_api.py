@@ -95,10 +95,10 @@ class JobExecutionViaAPITests(TestCase):
             f"Job creation should succeed: {create_job_response.content.decode()}"
         )
         response_data = create_job_response.json()
-        self.assertEqual(response_data["status"], "Success")
-        self.assertIn("new_job", response_data)
+        self.assertTrue(response_data.get("success"), f"API should return success: {response_data}")
+        self.assertIn("new_job", response_data.get("data", {}))
 
-        job_data = response_data["new_job"]
+        job_data = response_data["data"]["new_job"]
         job = models.Job.objects.get(uuid=job_data["uuid"])
 
         logger.info(f"Created job {job.uuid} (number={job.number})")
@@ -189,7 +189,7 @@ class JobExecutionViaAPITests(TestCase):
             )
 
             response_data = response.json()
-            self.assertEqual(response_data["status"], "Success")
+            self.assertTrue(response_data.get("success"), f"API should return success: {response_data}")
 
             # Verify parameter was actually set
             get_result = get_parameter(job, param_path)
@@ -296,7 +296,7 @@ class JobExecutionViaAPITests(TestCase):
             f"Job creation should succeed: {create_job_response.content.decode()}"
         )
         response_data = create_job_response.json()
-        job = models.Job.objects.get(uuid=response_data["new_job"]["uuid"])
+        job = models.Job.objects.get(uuid=response_data["data"]["new_job"]["uuid"])
 
         # Set a parameter via API (NCYCLES is in controlParameters, not inputData)
         response = self.client.post(

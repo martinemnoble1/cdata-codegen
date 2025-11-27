@@ -109,11 +109,23 @@ const endpoint_wrapped_json_fetcher = (endpointFetch: EndpointFetch) => {
   const url = makeApiUrl(
     `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
   );
-  return apiJson<ApiResponse<{ result: string }>>(url).then((r) => {
-    if (!r?.success || !r.data?.result) {
-      throw new Error(r?.error || "Failed to fetch endpoint data");
+  return apiJson<any>(url).then((r) => {
+    // Handle both old format {"status": "Success", "result": ...}
+    // and new format {"success": true, "data": {"result": ...}}
+    let result: any;
+
+    if (r?.success && r.data?.result) {
+      // New format - result might be string or object
+      result = typeof r.data.result === "string"
+        ? JSON.parse(r.data.result)
+        : r.data.result;
+    } else if (r?.status === "Success" && r.result) {
+      // Old format - result is already an object
+      result = r.result;
+    } else {
+      throw new Error(r?.error || r?.reason || "Failed to fetch endpoint data");
     }
-    const result = JSON.parse(r.data.result);
+
     if (endpointFetch.endpoint === "container") {
       const lookup = buildLookup(result);
       return Promise.resolve({ container: result, lookup });

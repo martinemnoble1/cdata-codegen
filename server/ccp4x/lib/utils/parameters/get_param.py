@@ -15,6 +15,34 @@ from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
 logger = logging.getLogger(__name__)
 
 
+def normalize_object_path(object_path: str) -> str:
+    """
+    Normalize object paths from frontend to match backend container structure.
+
+    The frontend JSON encoder includes the full hierarchy path which includes
+    `.container.` (e.g., `prosmart_refmac.container.inputData.XYZIN`), but the
+    backend container structure doesn't have that extra level.
+
+    This function strips the `.container.` segment if present after the task name.
+
+    Args:
+        object_path: Path like "prosmart_refmac.container.inputData.XYZIN"
+
+    Returns:
+        Normalized path like "prosmart_refmac.inputData.XYZIN"
+    """
+    # Split into parts
+    parts = object_path.split('.')
+
+    # If second element is 'container', remove it
+    # e.g., ['prosmart_refmac', 'container', 'inputData', 'XYZIN']
+    #    -> ['prosmart_refmac', 'inputData', 'XYZIN']
+    if len(parts) >= 2 and parts[1] == 'container':
+        parts = [parts[0]] + parts[2:]
+
+    return '.'.join(parts)
+
+
 def get_parameter(
     job: models.Job,
     object_path: str
@@ -64,13 +92,16 @@ def get_parameter(
 
     try:
         # Navigate to the object
+        # Normalize path to strip .container. segment if present from frontend
+        normalized_path = normalize_object_path(object_path)
+
         logger.debug(
-            "Getting parameter %s from job %s (task: %s)",
-            object_path, job.uuid, job.task_name
+            "Getting parameter %s (normalized: %s) from job %s (task: %s)",
+            object_path, normalized_path, job.uuid, job.task_name
         )
 
         obj = plugin.container
-        parts = object_path.split('.')
+        parts = normalized_path.split('.')
 
         # Skip first part if it matches task name (legacy path format)
         if parts and parts[0] == job.task_name:
