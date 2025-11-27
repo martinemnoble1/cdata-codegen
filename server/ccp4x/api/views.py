@@ -9,9 +9,23 @@ import psutil
 
 @api_view(["GET"])
 def task_tree(request):
-    # Not clear to me this should be a view exposed through the project api
-    task_tree = get_task_tree()
-    return JsonResponse({"status": "Success", "task_tree": task_tree})
+    """
+    Returns the task tree structure for displaying available plugins.
+
+    Response format:
+    {
+        "success": true,
+        "data": {
+            "task_tree": {
+                "tree": [[module_name, title, [task_names...]], ...],
+                "lookup": {taskName: {version: {metadata...}}, ...},
+                "iconLookup": {module_name: icon_path, ...}
+            }
+        }
+    }
+    """
+    task_tree_data = get_task_tree()
+    return JsonResponse({"success": True, "data": {"task_tree": task_tree_data}})
 
 
 @api_view(["GET"])

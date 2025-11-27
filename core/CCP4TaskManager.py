@@ -1,11 +1,93 @@
 import os
 import json
-from typing import List, Dict, Any, Optional, Type
+from typing import List, Dict, Any, Optional, Type, Tuple
 from pathlib import Path
 
 import sys
 import subprocess
 import argparse
+
+
+# Module ordering and titles matching legacy CCP4TaskManager
+MODULE_ORDER = [
+    'data_entry', 'data_processing', 'data_reduction', 'bigpipes', 'alpha_fold',
+    'expt_phasing', 'bioinformatics', 'molecular_replacement', 'density_modification',
+    'model_building', 'refinement', 'ligands', 'validation', 'export',
+    'expt_data_utility', 'model_data_utility', 'developer_tools', 'preferences',
+    'wrappers', 'test'
+]
+
+MODULE_TITLES = {
+    'data_entry': 'Import merged data, AU contents, alignments or coordinates',
+    'bigpipes': 'Data to complete structure solution including ligand fitting',
+    'data_processing': 'Integrate X-ray images',
+    'data_reduction': 'X-ray data reduction and analysis',
+    'alpha_fold': 'AlphaFold and RoseTTAFold Utilities',
+    'expt_phasing': 'Experimental phasing',
+    'bioinformatics': 'Bioinformatics including model preparation for Molecular Replacement',
+    'molecular_replacement': 'Molecular Replacement',
+    'density_modification': 'Density modification',
+    'model_building': 'Model building and Graphics',
+    'refinement': 'Refinement',
+    'ligands': 'Ligands',
+    'validation': 'Validation and analysis',
+    'export': 'Export and Deposition',
+    'expt_data_utility': 'Reflection data tools',
+    'model_data_utility': 'Coordinate data tools',
+    'developer_tools': 'Developer tools',
+    'preferences': 'Preferences',
+    'wrappers': 'Wrappers',
+    'demo': 'Demo code for developers only',
+    'test': 'Test code for developers only',
+    'deprecated': 'Deprecated tasks',
+}
+
+# Default tasks to show in each module (these will be shown first if available)
+MODULE_DEFAULTS = {
+    'molecular_replacement': ['mrbump_basic', 'phaser_simple', 'phaser_pipeline', 'molrep_pipe', 'molrep_den', 'csymmatch', 'parrot', 'phaser_rnp_pipeline'],
+    'data_reduction': ['aimless_pipe', 'freerflag', 'matthews', 'molrep_selfrot'],
+    'data_entry': ['import_merged', 'ProvideAsuContents', 'ProvideSequence', 'ProvideAlignment'],
+    'data_processing': ['xia2_dials', 'xia2_xds', 'imosflm'],
+    'expt_phasing': ['crank2', 'shelx', 'phaser_EP_AUTO'],
+    'alpha_fold': ['ccp4mg_edit_model', 'mrparse', 'editbfac'],
+    'refinement': ['servalcat_pipe', 'prosmart_refmac'],
+    'bioinformatics': ['ccp4mg_edit_model', 'ccp4mg_edit_nomrbump', 'chainsaw', 'sculptor', 'phaser_ensembler', 'clustalw'],
+    'bigpipes': ['SubstituteLigand', 'dr_mr_modelbuild_pipeline'],
+    'model_building': ['modelcraft', 'coot_rebuild', 'coot_script_lines', 'coot_find_waters', 'arp_warp_classic', 'shelxeMR', 'dr_mr_modelbuild_pipeline'],
+    'validation': ['validate_protein', 'edstats', 'privateer', 'qtpisa'],
+    'export': ['PrepareDeposit'],
+    'expt_data_utility': ['pointless_reindexToMatch', 'phaser_EP_LLG', 'cmapcoeff', 'chltofom', 'cphasematch', 'ctruncate', 'splitMtz', 'scaleit'],
+    'model_data_utility': ['csymmatch', 'gesamt', 'coordinate_selector', 'qtpisa'],
+    'developer_tools': [],
+    'test': ['demo_copycell']
+}
+
+
+# Icon lookup for module folders
+MODULE_ICONS = {
+    'data_entry': 'qticons/import_merged.png',
+    'data_processing': 'qticons/xia2_dials.png',
+    'data_reduction': 'qticons/aimless_pipe.png',
+    'bigpipes': 'qticons/ccp4i2.png',
+    'alpha_fold': 'qticons/mrparse.png',
+    'expt_phasing': 'qticons/crank2.png',
+    'bioinformatics': 'qticons/chainsaw.png',
+    'molecular_replacement': 'qticons/phaser_simple.png',
+    'density_modification': 'qticons/parrot.png',
+    'model_building': 'qticons/coot_rebuild.png',
+    'refinement': 'qticons/refmac.png',
+    'ligands': 'qticons/acedrg.png',
+    'validation': 'qticons/validate_protein.png',
+    'export': 'qticons/export.png',
+    'expt_data_utility': 'qticons/pointless.png',
+    'model_data_utility': 'qticons/gesamt.png',
+    'developer_tools': 'qticons/ccp4i2.png',
+    'preferences': 'qticons/ccp4i2.png',
+    'wrappers': 'qticons/ccp4i2.png',
+    'test': 'qticons/ccp4i2.png',
+    'demo': 'qticons/ccp4i2.png',
+    'deprecated': 'qticons/ccp4i2.png',
+}
 
 
 class CTaskManager:
@@ -16,9 +98,13 @@ class CTaskManager:
         self.task_manager_dir = os.path.join(dir_path, "task_manager")
         defxml_path = os.path.join(self.task_manager_dir, "defxml_lookup.json")
         plugin_path = os.path.join(self.task_manager_dir, "plugin_lookup.json")
+        task_module_path = os.path.join(self.task_manager_dir, "task_module_map.json")
+        task_metadata_path = os.path.join(self.task_manager_dir, "task_metadata.json")
 
         self.defxml_lookup: List[Dict[str, str]] = []
         self.plugin_lookup: Dict[str, Dict[str, Any]] = {}
+        self.task_module_map: Dict[str, str] = {}
+        self.task_metadata: Dict[str, Dict[str, Any]] = {}
 
         # Load defxml_lookup.json
         try:
@@ -33,6 +119,24 @@ class CTaskManager:
                 self.plugin_lookup = json.load(f)
         except Exception as e:
             print(f"Error loading plugin_lookup.json: {e}")
+
+        # Load task_module_map.json (task-to-folder mapping for UI)
+        try:
+            with open(task_module_path, "r") as f:
+                data = json.load(f)
+                # Remove _comment key if present
+                self.task_module_map = {k: v for k, v in data.items() if not k.startswith('_')}
+        except Exception as e:
+            print(f"Error loading task_module_map.json: {e}")
+
+        # Load task_metadata.json (UI display metadata: titles, descriptions, etc.)
+        try:
+            with open(task_metadata_path, "r") as f:
+                data = json.load(f)
+                # Remove _comment/_todo keys if present
+                self.task_metadata = {k: v for k, v in data.items() if not k.startswith('_')}
+        except Exception as e:
+            print(f"Error loading task_metadata.json: {e}")
 
         # Set up CCP4I2_ROOT for plugin imports
         ccp4i2_root = os.environ.get("CCP4I2_ROOT")
@@ -200,6 +304,162 @@ class CTaskManager:
             # Try SHORTTITLE first, fall back to TASKNAME
             return metadata.get("SHORTTITLE", metadata.get("TASKNAME"))
         return None
+
+    def _normalize_module_name(self, module: Any) -> str:
+        """
+        Normalize module name to match MODULE_ORDER keys.
+
+        Handles:
+        - Lists (take first element)
+        - Spaces vs underscores
+        - None values
+        """
+        if module is None:
+            return 'wrappers'
+
+        # Handle lists (some tasks have multiple modules)
+        if isinstance(module, list):
+            module = module[0] if module else 'wrappers'
+
+        # Normalize spaces to underscores
+        module = str(module).replace(' ', '_').lower()
+
+        # Map some legacy names
+        if module == 'expt_data_util':
+            module = 'expt_data_utility'
+
+        return module
+
+    def _get_task_module(self, task_name: str, metadata: Dict[str, Any]) -> str:
+        """
+        Get the module for a task, using task_module_map.json as the primary source.
+
+        Priority:
+        1. task_module_map.json (canonical mapping from CCP4 GUI widgets)
+        2. TASKMODULE from plugin metadata
+        3. Default to 'wrappers'
+        """
+        # First check our canonical mapping (derived from GUI widget classes)
+        if task_name in self.task_module_map:
+            return self.task_module_map[task_name]
+
+        # Fall back to metadata TASKMODULE (rarely set in plugin scripts)
+        module = metadata.get('TASKMODULE')
+        return self._normalize_module_name(module)
+
+    def _build_module_lookup(self) -> Dict[str, List[str]]:
+        """
+        Build a mapping of module names to task lists.
+
+        Returns:
+            Dict mapping module name to list of task names
+        """
+        module_lookup: Dict[str, List[str]] = {}
+
+        for task_name, metadata in self.plugin_lookup.items():
+            module = self._get_task_module(task_name, metadata)
+
+            if module not in module_lookup:
+                module_lookup[module] = []
+
+            module_lookup[module].append(task_name)
+
+        # Sort tasks within each module, putting defaults first
+        for module_name, task_list in module_lookup.items():
+            defaults = MODULE_DEFAULTS.get(module_name, [])
+            # Put default tasks first (in order), then remaining tasks alphabetically
+            default_tasks = [t for t in defaults if t in task_list]
+            other_tasks = sorted([t for t in task_list if t not in defaults])
+            module_lookup[module_name] = default_tasks + other_tasks
+
+        return module_lookup
+
+    def task_tree(self, show_wrappers: bool = False) -> List[Tuple[str, str, List[str]]]:
+        """
+        Generate the task tree structure for the frontend.
+
+        Returns a list of tuples: (module_name, module_title, task_names_list)
+
+        Args:
+            show_wrappers: If True, include wrappers/test/demo modules
+
+        Returns:
+            List of [module_name, module_title, [task_names...]] tuples
+        """
+        module_lookup = self._build_module_lookup()
+        tree = []
+
+        # Main modules (always shown)
+        hidden_modules = {'preferences', 'test', 'demo', 'wrappers', 'deprecated'}
+
+        for module in MODULE_ORDER:
+            if module in hidden_modules and not show_wrappers:
+                continue
+
+            if module in module_lookup and module_lookup[module]:
+                title = MODULE_TITLES.get(module, module)
+                task_list = module_lookup[module]
+                tree.append((module, title, task_list))
+
+        # Include any modules not in MODULE_ORDER
+        for module_name in sorted(module_lookup.keys()):
+            if module_name not in MODULE_ORDER:
+                if module_name in hidden_modules and not show_wrappers:
+                    continue
+                title = MODULE_TITLES.get(module_name, module_name)
+                tree.append((module_name, title, module_lookup[module_name]))
+
+        return tree
+
+    @property
+    def task_lookup(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        """
+        Generate the task lookup structure for the frontend.
+
+        Returns a nested dict: {taskName: {version: {metadata...}}}
+
+        The frontend expects this structure for displaying task cards:
+        - TASKTITLE: Full title
+        - taskName: Internal task name
+        - DESCRIPTION: Task description
+        - MAINTAINER: Maintainer name
+        - shortTitle: Short title for display
+
+        Metadata is merged from multiple sources with priority:
+        1. task_metadata.json (extracted from GUI widgets - has descriptions)
+        2. plugin_lookup.json (extracted from plugin scripts)
+        3. Defaults
+        """
+        lookup: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+        for task_name, plugin_meta in self.plugin_lookup.items():
+            version = str(plugin_meta.get('TASKVERSION', '0.0'))
+
+            # Get rich metadata from task_metadata.json (extracted from GUI widgets)
+            ui_meta = self.task_metadata.get(task_name, {})
+
+            # Merge metadata with priority: ui_meta > plugin_meta > defaults
+            task_info = {
+                'TASKTITLE': ui_meta.get('TASKTITLE') or plugin_meta.get('TASKTITLE') or task_name,
+                'taskName': task_name,
+                'DESCRIPTION': ui_meta.get('DESCRIPTION') or plugin_meta.get('DESCRIPTION') or '',
+                'MAINTAINER': ui_meta.get('MAINTAINER') or plugin_meta.get('MAINTAINER') or 'Nobody',
+                'shortTitle': ui_meta.get('shortTitle') or plugin_meta.get('SHORTTASKTITLE') or plugin_meta.get('TASKTITLE') or task_name,
+            }
+
+            lookup[task_name] = {version: task_info}
+
+        return lookup
+
+    @property
+    def task_icon_lookup(self) -> Dict[str, str]:
+        """
+        Return icon paths for module folders.
+
+        Returns:
+            Dict mapping module name to icon path (relative to static dir)
+        """
+        return MODULE_ICONS.copy()
 
 
 def TASKMANAGER():

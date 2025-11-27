@@ -47,8 +47,11 @@ export const CCP4i2TaskTree: React.FC<CCP4i2TaskTreeProps> = ({
   const [searchText, setSearchText] = useState<string | null>(null);
   const { data: taskTreeResult } = api.get<any>(`task_tree/`);
 
-  const taskTree = taskTreeResult?.task_tree;
-  const iconLookup = taskTreeResult?.task_tree?.iconLookup;
+  // Handle new API response format: {success: true, data: {task_tree: {...}}}
+  const taskTree = taskTreeResult?.success
+    ? taskTreeResult?.data?.task_tree
+    : taskTreeResult?.task_tree; // Fallback for legacy format
+  const iconLookup = taskTree?.iconLookup;
 
   useEffect(() => {
     console.log("taskTreeResult", taskTreeResult);
