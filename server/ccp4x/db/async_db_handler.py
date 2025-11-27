@@ -568,13 +568,10 @@ class AsyncDatabaseHandler:
         Returns:
             List of created File instances
         """
-        # Import here to avoid circular dependency
-        from ..lib.cdata_utils import find_all_files, extract_file_metadata
-
         files_created = []
 
         # Use modern hierarchical traversal to find all files
-        output_files = find_all_files(container)
+        output_files = container.find_all_files()
         logger.info(f"Found {len(output_files)} files in output container")
         logger.debug(f"[DEBUG glean_job_files] Found {len(output_files)} files in output container")
 
@@ -610,7 +607,19 @@ class AsyncDatabaseHandler:
 
             # Extract metadata using modern CData system
             try:
-                metadata = extract_file_metadata(file_obj)
+                # Use core method to extract metadata
+                core_metadata = file_obj.to_metadata_dict()
+
+                # Map to legacy field names for database registration
+                from ..lib.cdata_utils import get_file_type_from_class
+                metadata = {
+                    'name': file_obj.objectName(),
+                    'file_type': get_file_type_from_class(file_obj),
+                    'content_flag': core_metadata.get('contentFlag'),
+                    'sub_type': core_metadata.get('subType'),
+                    'annotation': core_metadata.get('annotation'),
+                    'gui_label': file_obj.get_qualifier('guiLabel', ''),
+                }
 
                 logger.debug(f"[DEBUG glean_job_files] Extracted metadata for {file_obj.objectName()}:")
                 pass  # DEBUG: print(f"  file_type (mimeTypeName): {metadata['file_type']}")
@@ -721,8 +730,7 @@ class AsyncDatabaseHandler:
         count = 0
 
         # Find all performance indicator objects
-        from ..lib.cdata_utils import find_objects_by_type
-        kpis = find_objects_by_type(container, CPerformanceIndicator)
+        kpis = container.find_children_by_type(CPerformanceIndicator)
 
         for kpi in kpis:
             try:

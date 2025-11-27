@@ -11,7 +11,7 @@ from core import CCP4File
 from core import CCP4XtalData
 from core.CCP4XtalData import CMtzDataFile
 
-from ..containers.find_objects import find_object_by_path
+# Use core method for find_by_path - no import needed
 from .available_name import available_file_name_based_on
 from ..plugins.get_plugin import get_job_plugin
 from ..formats.gemmi_split_mtz import gemmi_split_mtz
@@ -39,7 +39,7 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
     container = plugin.container
     object_path = request.POST.get("objectPath")
     files = request.FILES.getlist("file")
-    param_object = find_object_by_path(container, object_path)
+    param_object = container.find_by_path(object_path, skip_first=True)
     # Look for existing file import for this job/job_param_name and delete
     # the associated file if exists
 

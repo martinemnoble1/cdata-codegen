@@ -14,8 +14,8 @@ from typing import Optional
 
 from asgiref.sync import sync_to_async
 
-# Import CData utilities for modern introspection
-from .cdata_utils import find_all_files, extract_file_metadata
+# Import CData utilities for legacy field name mapping
+from .cdata_utils import get_file_type_from_class
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
 
@@ -47,7 +47,7 @@ async def import_input_files_async(job, plugin, db_handler):
     # Find all input files using modern hierarchical traversal
     # plugin.container.inputData contains the input file objects
     input_data = plugin.container.inputData if hasattr(plugin.container, 'inputData') else plugin.container
-    input_files = find_all_files(input_data)
+    input_files = input_data.find_all_files()
     logger.info(f"Found {len(input_files)} input file objects")
 
     for file_obj in input_files:
@@ -120,7 +120,17 @@ async def import_external_file_async(job, file_obj, db_handler):
         db_handler: AsyncDatabaseHandler instance
     """
     # Extract metadata using modern CData system
-    metadata = extract_file_metadata(file_obj)
+    core_metadata = file_obj.to_metadata_dict()
+
+    # Map to legacy field names for database operations
+    metadata = {
+        'name': file_obj.objectName(),
+        'file_type': get_file_type_from_class(file_obj),
+        'content_flag': core_metadata.get('contentFlag'),
+        'sub_type': core_metadata.get('subType'),
+        'annotation': core_metadata.get('annotation'),
+        'gui_label': file_obj.get_qualifier('guiLabel', ''),
+    }
 
     # Get source file path
     source_path = await get_source_file_path(job, file_obj)

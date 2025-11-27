@@ -1,7 +1,6 @@
 from typing import List
 from ccp4x.db import models
 from ..plugins.get_plugin import get_job_plugin
-from ..containers.find_objects import find_object_by_path
 
 
 def object_method(
@@ -18,7 +17,7 @@ def object_method(
         kwargs = {}
 
     the_job_plugin = get_job_plugin(the_job)
-    base_element = find_object_by_path(the_job_plugin.container, object_path)
+    base_element = the_job_plugin.container.find_by_path(object_path, skip_first=True)
     if method_name == "validity":
         result = base_element.validity(base_element.get())
     else:

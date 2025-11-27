@@ -13,7 +13,7 @@ from core.base_object.cdata import CData
 from core.CCP4XtalData import CGenericReflDataFile, CMapDataFile
 from core.CCP4ModelData import CPdbDataFile, CDictDataFile
 from pipelines.import_merged.script import mmcifutils
-from ..containers.find_objects import find_objects, find_object_by_path
+from ..containers.find_objects import find_objects
 from ..containers.get_container import get_job_container
 from ..containers.json_encoder import CCP4i2JsonEncoder
 from ..formats.cif_ligand import parse_cif_ligand_summary
@@ -210,7 +210,7 @@ def digest_file(the_file: models.File):
 def digest_param_file(the_job, object_path):
     the_container: CContainer = get_job_container(the_job)
     try:
-        file_object: CDataFile = find_object_by_path(the_container, object_path)
+        file_object: CDataFile = the_container.find_by_path(object_path, skip_first=True)
         return digest_file_object(file_object)
     except IndexError as err:
         logger.exception("Error finding object with path %s", object_path, exc_info=err)
