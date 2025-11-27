@@ -5,6 +5,7 @@ These utilities replace legacy container introspection with type-safe CData meta
 """
 
 import logging
+import warnings
 from typing import List, Dict, Any, Optional, Type, Callable
 from pathlib import Path
 
@@ -68,8 +69,8 @@ def find_all_files(container) -> List[CDataFile]:
     """
     Find all CDataFile objects in a container hierarchy using CData introspection.
 
-    This replaces the legacy find_objects() with lambda predicates by using
-    CData's hierarchical object system and childNames() method.
+    DEPRECATED: Use container.find_all_files() instead.
+    This function is now a thin wrapper around CContainer.find_all_files().
 
     Args:
         container: Root CData object to search (e.g., plugin.outputData)
@@ -78,18 +79,29 @@ def find_all_files(container) -> List[CDataFile]:
         List of all CDataFile objects found in the hierarchy (deduplicated by object id)
 
     Example:
+        >>> # Old way (deprecated):
         >>> output_files = find_all_files(plugin.outputData)
-        >>> for file_obj in output_files:
-        ...     print(f"Found {file_obj.objectName()}: {file_obj.object_path()}")
+        >>> # New way (preferred):
+        >>> output_files = plugin.outputData.find_all_files()
     """
+    warnings.warn(
+        "find_all_files() is deprecated. Use container.find_all_files() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # Delegate to the new core method if available
+    if hasattr(container, 'find_all_files'):
+        return container.find_all_files()
+
+    # Fallback implementation for objects without the new method
     files = []
-    visited = set()  # Track visited object IDs to prevent duplicates
+    visited = set()
     logger.debug(f"[DEBUG find_all_files] Starting search from {container}")
     logger.debug(f"[DEBUG find_all_files] Container type: {type(container)}")
 
     def traverse(obj, depth=0):
         """Recursively traverse the CData hierarchy using children()"""
-        # Skip if already visited (prevents cycles)
         obj_id = id(obj)
         if obj_id in visited:
             return
@@ -98,13 +110,10 @@ def find_all_files(container) -> List[CDataFile]:
         indent = "  " * depth
         logger.debug(f"{indent}[DEBUG traverse] obj={obj.objectName() if hasattr(obj, 'objectName') else 'unnamed'}, type={type(obj).__name__}")
 
-        # Check if this object itself is a file
         if isinstance(obj, CDataFile):
             files.append(obj)
             logger.debug(f"{indent}  -> IS A FILE! Added to list")
 
-        # Use standardized children() method for all CData objects
-        # This is the canonical way to access children after the refactoring
         if hasattr(obj, 'children'):
             try:
                 children = obj.children()
@@ -123,6 +132,9 @@ def find_objects_by_type(container, target_type: Type) -> List[Any]:
     """
     Find all objects of a specific type in a container hierarchy.
 
+    DEPRECATED: Use container.find_children_by_type(target_type) instead.
+    This function is now a thin wrapper around CData.find_children_by_type().
+
     Args:
         container: Root CData object to search
         target_type: Type to search for (e.g., CPerformanceIndicator)
@@ -131,10 +143,22 @@ def find_objects_by_type(container, target_type: Type) -> List[Any]:
         List of objects matching the target type
 
     Example:
+        >>> # Old way (deprecated):
         >>> kpis = find_objects_by_type(plugin.outputData, CPerformanceIndicator)
-        >>> for kpi in kpis:
-        ...     print(f"KPI: {kpi.object_path()}")
+        >>> # New way (preferred):
+        >>> kpis = plugin.outputData.find_children_by_type(CPerformanceIndicator)
     """
+    warnings.warn(
+        "find_objects_by_type() is deprecated. Use container.find_children_by_type() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # Delegate to the new core method if available
+    if hasattr(container, 'find_children_by_type'):
+        return container.find_children_by_type(target_type)
+
+    # Fallback implementation for objects without the new method
     objects = []
 
     def traverse(obj):
@@ -142,7 +166,6 @@ def find_objects_by_type(container, target_type: Type) -> List[Any]:
         if isinstance(obj, target_type):
             objects.append(obj)
 
-        # Use children() method from HierarchicalObject for proper traversal
         if hasattr(obj, 'children'):
             try:
                 for child in obj.children():
@@ -158,8 +181,8 @@ def find_objects_matching(container, predicate: Callable[[Any], bool]) -> List[A
     """
     Find all objects matching a predicate function.
 
-    This is a modern replacement for legacy find_objects() that uses CData's
-    hierarchical traversal instead of string-based searches.
+    DEPRECATED: Use container.find_children_matching(predicate) instead.
+    This function is now a thin wrapper around CData.find_children_matching().
 
     Args:
         container: Root CData object to search
@@ -169,17 +192,35 @@ def find_objects_matching(container, predicate: Callable[[Any], bool]) -> List[A
         List of objects matching the predicate
 
     Example:
-        >>> # Find all set data files
+        >>> # Old way (deprecated):
         >>> set_files = find_objects_matching(
         ...     plugin.outputData,
         ...     lambda obj: isinstance(obj, CDataFile) and obj.isSet()
         ... )
+        >>> # New way (preferred):
+        >>> set_files = plugin.outputData.find_children_matching(
+        ...     lambda obj: isinstance(obj, CDataFile) and obj.isSet()
+        ... )
     """
+    warnings.warn(
+        "find_objects_matching() is deprecated. Use container.find_children_matching() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # Delegate to the new core method if available
+    if hasattr(container, 'find_children_matching'):
+        return container.find_children_matching(predicate)
+
+    # Fallback implementation for objects without the new method
     matches = []
 
     def traverse(obj):
-        if predicate(obj):
-            matches.append(obj)
+        try:
+            if predicate(obj):
+                matches.append(obj)
+        except Exception:
+            pass
 
         if hasattr(obj, 'childNames'):
             try:
@@ -199,7 +240,8 @@ def extract_file_metadata(file_obj: CDataFile) -> Dict[str, Any]:
     """
     Extract complete metadata from a CDataFile object using CData's metadata system.
 
-    This replaces legacy string-based qualifier access with type-safe metadata retrieval.
+    DEPRECATED: Use file_obj.to_metadata_dict() instead.
+    This function is now a thin wrapper around CDataFile.to_metadata_dict().
 
     Args:
         file_obj: CDataFile object to extract metadata from
@@ -208,11 +250,49 @@ def extract_file_metadata(file_obj: CDataFile) -> Dict[str, Any]:
         Dictionary containing all relevant file metadata
 
     Example:
+        >>> # Old way (deprecated):
         >>> file_info = extract_file_metadata(plugin.outputData.HKLOUT)
-        >>> print(f"File type: {file_info['file_type']}")
-        >>> print(f"Content flag: {file_info['content_flag']}")
+        >>> # New way (preferred):
+        >>> file_info = plugin.outputData.HKLOUT.to_metadata_dict()
     """
-    # Get qualifiers using get_qualifier() method
+    warnings.warn(
+        "extract_file_metadata() is deprecated. Use file_obj.to_metadata_dict() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    # Delegate to the new core method if available
+    if hasattr(file_obj, 'to_metadata_dict'):
+        core_metadata = file_obj.to_metadata_dict()
+
+        # Add legacy fields for backward compatibility
+        legacy_metadata = {
+            'name': file_obj.objectName(),
+            'object_path': file_obj.object_path(),
+            'file_type': get_file_type_from_class(file_obj),
+            'gui_label': file_obj.get_qualifier('guiLabel', ''),
+            'tooltip': file_obj.get_qualifier('toolTip', ''),
+            'is_set': file_obj.isSet(),
+            'exists': core_metadata.get('exists', False),
+        }
+
+        # Map core metadata fields to legacy names
+        if 'baseName' in core_metadata:
+            legacy_metadata['base_name'] = core_metadata['baseName']
+        if 'relPath' in core_metadata:
+            legacy_metadata['rel_path'] = core_metadata['relPath']
+        if 'dbFileId' in core_metadata:
+            legacy_metadata['db_file_id'] = core_metadata['dbFileId']
+        if 'subType' in core_metadata:
+            legacy_metadata['sub_type'] = core_metadata['subType']
+        if 'contentFlag' in core_metadata:
+            legacy_metadata['content_flag'] = core_metadata['contentFlag']
+        if 'annotation' in core_metadata:
+            legacy_metadata['annotation'] = core_metadata['annotation']
+
+        return legacy_metadata
+
+    # Fallback implementation for objects without the new method
     metadata = {
         'name': file_obj.objectName(),
         'object_path': file_obj.object_path(),

@@ -1252,3 +1252,76 @@ class CDataFile(CData):
         from pathlib import Path
         # Get filename without directory path and extension
         return Path(file_path).stem
+
+    def to_metadata_dict(self) -> dict:
+        """
+        Extract complete metadata as dict for DB storage/serialization.
+
+        Replaces server/ccp4x/lib/cdata_utils.extract_file_metadata() as a core method.
+
+        This method collects all file metadata including:
+        - File paths (fullPath, baseName, relPath)
+        - Database identifiers (dbFileId, project)
+        - Content information (contentFlag, subType, annotation)
+        - File type metadata (mimeTypeName, fileExtensions)
+
+        Returns:
+            Dict with all file metadata suitable for database storage or JSON serialization
+
+        Example:
+            >>> pdb_file = CPdbDataFile()
+            >>> pdb_file.setFullPath('/path/to/structure.pdb')
+            >>> metadata = pdb_file.to_metadata_dict()
+            >>> metadata['fullPath']
+            '/path/to/structure.pdb'
+            >>> metadata['mimeTypeName']
+            'application/pdb'
+        """
+        from typing import Any, Dict
+        from pathlib import Path
+
+        metadata: Dict[str, Any] = {}
+
+        # Basic file paths
+        full_path = self.getFullPath()
+        if full_path:
+            metadata['fullPath'] = full_path
+            metadata['exists'] = Path(full_path).exists()
+
+        # Extract attribute values (baseName, relPath, etc.)
+        for attr_name in ['baseName', 'relPath', 'annotation', 'subType', 'contentFlag', 'dbFileId', 'project']:
+            if hasattr(self, attr_name):
+                attr_obj = getattr(self, attr_name)
+                if attr_obj is not None:
+                    # Handle CData wrapped values
+                    if hasattr(attr_obj, 'value'):
+                        value = attr_obj.value
+                    else:
+                        value = attr_obj
+
+                    # Only include if value is set and not None
+                    if value is not None:
+                        # Convert UUIDs to strings for JSON serialization
+                        if attr_name in ['dbFileId', 'project']:
+                            metadata[attr_name] = str(value)
+                        else:
+                            metadata[attr_name] = value
+
+        # Class metadata from qualifiers
+        qualifier_keys = ['mimeTypeName', 'mimeTypeDescription', 'fileLabel',
+                         'fileExtensions', 'fileContentClassName', 'isDirectory']
+        for key in qualifier_keys:
+            value = self.get_qualifier(key)
+            if value is not None:
+                metadata[key] = value
+
+        # Object metadata
+        if hasattr(self, 'object_name') and callable(self.object_name):
+            metadata['objectName'] = self.object_name()
+        elif hasattr(self, 'name'):
+            metadata['objectName'] = self.name
+
+        # Class name
+        metadata['className'] = self.__class__.__name__
+
+        return metadata

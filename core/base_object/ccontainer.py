@@ -534,3 +534,97 @@ class CContainer(CData):
             debug_info = ""
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'.{debug_info}")
 
+    def find_by_path(self, path: str, skip_first: bool = True):
+        """Find a descendant object by dot-separated path.
+
+        Replaces server/ccp4x/lib/utils/containers/find_objects.find_object_by_path()
+        as a core CContainer method.
+
+        Args:
+            path: Dot-separated path (e.g., "controlParameters.NCYCLES")
+            skip_first: If True (default), skip first path element for legacy compatibility.
+                       Legacy paths often include task name as first element
+                       (e.g., "prosmart_refmac.controlParameters.NCYCLES"), but since
+                       we're called on the container, we skip it.
+
+        Returns:
+            The found CData object
+
+        Raises:
+            AttributeError: If the path is not found
+
+        Example:
+            >>> container = plugin.container
+            >>> ncycles = container.find_by_path("prosmart_refmac.controlParameters.NCYCLES")
+            >>> # Or with modern path (skip_first=False):
+            >>> ncycles = container.find_by_path("controlParameters.NCYCLES", skip_first=False)
+        """
+        path_elements = path.split(".")
+
+        # Skip first element if requested (legacy task/plugin name)
+        if skip_first and len(path_elements) > 1:
+            path_to_search = path_elements[1:]
+        else:
+            path_to_search = path_elements
+
+        # Navigate the path using built-in hierarchy traversal
+        current = self
+        for segment in path_to_search:
+            # Try getattr() first - triggers __getattr__ which searches children
+            next_obj = getattr(current, segment, None)
+
+            # Fall back to .find() if available - does depth-first recursive search
+            if next_obj is None and hasattr(current, 'find'):
+                next_obj = current.find(segment)
+
+            if next_obj is None:
+                raise AttributeError(
+                    f"Element '{segment}' not found in path '{path}' "
+                    f"(searching from {current.object_path()})"
+                )
+
+            current = next_obj
+
+        return current
+
+    def find_all_files(self):
+        """Find all CDataFile objects in container hierarchy.
+
+        Replaces server/ccp4x/lib/cdata_utils.find_all_files() as a core method.
+
+        Returns:
+            List of all CDataFile objects found in hierarchy (deduplicated by id)
+
+        Example:
+            >>> output_files = plugin.outputData.find_all_files()
+            >>> for file_obj in output_files:
+            ...     print(f"Found {file_obj.objectName()}: {file_obj.object_path()}")
+        """
+        from .cdata_file import CDataFile
+
+        files = []
+        visited = set()  # Track visited object IDs to prevent duplicates/cycles
+
+        def traverse(obj):
+            """Recursively traverse hierarchy using children()"""
+            obj_id = id(obj)
+            if obj_id in visited:
+                return
+            visited.add(obj_id)
+
+            # Check if this object is a file
+            if isinstance(obj, CDataFile):
+                files.append(obj)
+
+            # Traverse children using standardized children() method
+            if hasattr(obj, 'children'):
+                try:
+                    for child in obj.children():
+                        if child is not None:
+                            traverse(child)
+                except Exception:
+                    pass
+
+        traverse(self)
+        return files
+

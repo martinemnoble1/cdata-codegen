@@ -1,4 +1,5 @@
 import logging
+import warnings
 import re
 from xml.etree import ElementTree as ET
 from core import CCP4Container
@@ -68,8 +69,8 @@ def find_object_by_path(base_element: CData, object_path: str):
     """
     Find a descendent CData item from a root element given a dot-separated path.
 
-    This is a thin wrapper around built-in CData hierarchy traversal that handles
-    the legacy path format where the first element is the task/plugin name.
+    DEPRECATED: Use base_element.find_by_path(object_path) instead.
+    This function is now a thin wrapper around CContainer.find_by_path().
 
     Args:
         base_element: The container to search in (usually plugin.container)
@@ -84,39 +85,36 @@ def find_object_by_path(base_element: CData, object_path: str):
         AttributeError: If the path is not found
 
     Example:
-        >>> container = plugin.container  # name="container"
+        >>> container = plugin.container
+        >>> # Old way (deprecated):
         >>> obj = find_object_by_path(container, "prosmart_refmac.controlParameters.NCYCLES")
-        # Skips "prosmart_refmac", then uses getattr() and .find() to navigate:
-        # container.controlParameters.NCYCLES
-
-    Implementation:
-        Uses getattr() first (which triggers CContainer.__getattr__ to search children),
-        then falls back to .find() (which does depth-first recursive search).
+        >>> # New way (preferred):
+        >>> obj = container.find_by_path("prosmart_refmac.controlParameters.NCYCLES")
     """
-    path_elements = object_path.split(".")
+    warnings.warn(
+        "find_object_by_path() is deprecated. Use container.find_by_path() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
 
-    # Skip the first element (task/plugin name) since base_element is the container
-    # Legacy paths are like: "prosmart_refmac.controlParameters.NCYCLES"
-    # But base_element is already plugin.container, so we search for "controlParameters.NCYCLES"
+    # Delegate to the new core method
+    if hasattr(base_element, 'find_by_path'):
+        return base_element.find_by_path(object_path, skip_first=True)
+
+    # Fallback for non-container objects (shouldn't happen, but be safe)
+    path_elements = object_path.split(".")
     if len(path_elements) > 1:
         path_to_search = path_elements[1:]
     else:
-        # Single element path - use as-is
         path_to_search = [object_path]
 
-    # Navigate the path using built-in hierarchy traversal methods
     current = base_element
     for segment in path_to_search:
-        # Try getattr() first - triggers CContainer.__getattr__ which searches children
         next_obj = getattr(current, segment, None)
-
-        # Fall back to .find() - does depth-first recursive search through hierarchy
         if next_obj is None and hasattr(current, 'find'):
             next_obj = current.find(segment)
-
         if next_obj is None:
             raise AttributeError(f"Element '{segment}' not found in '{current}'")
-
         current = next_obj
 
     return current

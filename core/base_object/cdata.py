@@ -1285,3 +1285,89 @@ class CData(HierarchicalObject):
         # Not a metadata attribute - raise AttributeError
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
+    def find_children_by_type(self, target_type):
+        """Find all descendant objects of a specific type.
+
+        Replaces server/ccp4x/lib/cdata_utils.find_objects_by_type() as a core method.
+
+        Args:
+            target_type: Type to search for (e.g., CPerformanceIndicator, CInt)
+
+        Returns:
+            List of objects matching the target type
+
+        Example:
+            >>> from core.CCP4XtalData import CPerformanceIndicator
+            >>> kpis = plugin.outputData.find_children_by_type(CPerformanceIndicator)
+            >>> for kpi in kpis:
+            ...     print(f"KPI: {kpi.object_path()}")
+        """
+        objects = []
+        visited = set()  # Prevent cycles
+
+        def traverse(obj):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return
+            visited.add(obj_id)
+
+            if isinstance(obj, target_type):
+                objects.append(obj)
+
+            # Use children() method from HierarchicalObject for traversal
+            if hasattr(obj, 'children'):
+                try:
+                    for child in obj.children():
+                        if child is not None:
+                            traverse(child)
+                except Exception:
+                    pass
+
+        traverse(self)
+        return objects
+
+    def find_children_matching(self, predicate):
+        """Find all descendant objects matching a predicate function.
+
+        Replaces server/ccp4x/lib/cdata_utils.find_objects_matching() as a core method.
+
+        Args:
+            predicate: Function that takes an object and returns True for matches
+
+        Returns:
+            List of objects matching the predicate
+
+        Example:
+            >>> # Find all set data files
+            >>> from .cdata_file import CDataFile
+            >>> set_files = plugin.outputData.find_children_matching(
+            ...     lambda obj: isinstance(obj, CDataFile) and obj.isSet()
+            ... )
+        """
+        matches = []
+        visited = set()
+
+        def traverse(obj):
+            obj_id = id(obj)
+            if obj_id in visited:
+                return
+            visited.add(obj_id)
+
+            try:
+                if predicate(obj):
+                    matches.append(obj)
+            except Exception:
+                pass
+
+            # Use children() method for traversal
+            if hasattr(obj, 'children'):
+                try:
+                    for child in obj.children():
+                        if child is not None:
+                            traverse(child)
+                except Exception:
+                    pass
+
+        traverse(self)
+        return matches
+

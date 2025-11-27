@@ -1,4 +1,5 @@
 import logging
+import warnings
 import uuid
 from typing import Union
 from core.CCP4Container import CContainer
@@ -24,6 +25,41 @@ logger = logging.getLogger(f"ccp4x:{__name__}")
 def set_parameter(
     job: models.Job, object_path: str, value: Union[str, int, dict, None]
 ):
+    """
+    Set a parameter value using direct container manipulation.
+
+    DEPRECATED: Use set_param.set_parameter() instead for proper database synchronization.
+
+    This function provides direct container manipulation without the full CPluginScript
+    lifecycle. For new code, prefer set_param.set_parameter() which uses CPluginScript
+    + dbHandler architecture.
+
+    Args:
+        job: Job model instance
+        object_path: Path to the parameter (e.g., "inputData.XYZIN")
+        value: New value for the parameter
+
+    Returns:
+        JSON-encoded object representation
+
+    Example:
+        >>> # Old way (deprecated):
+        >>> from ccp4x.lib.utils.parameters.set_parameter import set_parameter
+        >>> result = set_parameter(job, "inputData.XYZIN", "/path/to/file.pdb")
+        >>>
+        >>> # New way (preferred):
+        >>> from ccp4x.lib.utils.parameters.set_param import set_parameter
+        >>> result = set_parameter(job, "inputData.XYZIN", "/path/to/file.pdb")
+        >>> if result.success:
+        ...     print(result.data)
+    """
+    warnings.warn(
+        "set_parameter() from set_parameter.py is deprecated. "
+        "Use set_parameter() from set_param.py instead for proper database synchronization.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     the_job_plugin = get_job_plugin(job)
     the_container: CContainer = the_job_plugin.container
 
