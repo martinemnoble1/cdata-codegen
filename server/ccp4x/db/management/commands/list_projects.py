@@ -175,34 +175,35 @@ class Command(BaseCommand):
 
             else:
                 # Verbose table output
-                self.stdout.write(self.style.SUCCESS(f"\n{'='*120}"))
+                self.stdout.write(self.style.SUCCESS(f"\n{'='*130}"))
                 self.stdout.write(self.style.SUCCESS(f"CCP4i2 Projects ({len(projects)} found)"))
-                self.stdout.write(self.style.SUCCESS(f"{'='*120}\n"))
+                self.stdout.write(self.style.SUCCESS(f"{'='*130}\n"))
 
                 # Table header
                 self.stdout.write(
-                    f"{'UUID':<10} {'Name':<20} {'Jobs':<6} {'Created':<20} {'Description':<40}"
+                    f"{'ID':<6} {'UUID':<38} {'Name':<20} {'Jobs':<6} {'Created':<20} {'Description':<36}"
                 )
-                self.stdout.write("-" * 120)
+                self.stdout.write("-" * 130)
 
                 # Table rows
                 for project in projects:
                     # Truncate/format fields
-                    uuid_short = str(project.uuid)[:8]
+                    project_id = str(project.id)
+                    uuid_full = str(project.uuid)
                     name = project.name[:19] if len(project.name) > 19 else project.name
-                    description = project.description[:39] if len(project.description) > 39 else project.description
+                    description = project.description[:35] if len(project.description) > 35 else project.description
                     created = project.creation_time.strftime("%Y-%m-%d %H:%M:%S") if project.creation_time else "Unknown"
                     job_count = str(project.job_count)
 
                     self.stdout.write(
-                        f"{uuid_short:<10} {name:<20} {job_count:<6} {created:<20} {description:<40}"
+                        f"{project_id:<6} {uuid_full:<38} {name:<20} {job_count:<6} {created:<20} {description:<36}"
                     )
 
                 # Summary footer
-                self.stdout.write(f"\n{'='*120}")
+                self.stdout.write(f"\n{'='*130}")
                 total_jobs = sum(p.job_count for p in projects)
                 self.stdout.write(f"Total: {len(projects)} projects, {total_jobs} jobs")
-                self.stdout.write(f"{'='*120}\n")
+                self.stdout.write(f"{'='*130}\n")
 
                 # Show sort/filter info if applied
                 if name_filter:

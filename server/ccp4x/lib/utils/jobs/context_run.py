@@ -200,8 +200,8 @@ def run_job_local(job):
     """
     Execute job via local subprocess.
 
-    Starts the job in a detached subprocess using the CCP4 Python executable.
-    This is the original implementation for local laptop/development environments.
+    Starts the job in a detached subprocess using the project's virtual environment
+    Python interpreter. This ensures all Django dependencies are available.
 
     Args:
         job: Job model instance with attributes:
@@ -216,7 +216,8 @@ def run_job_local(job):
             - status (int): HTTP status code
 
     Environment Requirements:
-        CCP4: Path to CCP4 installation directory
+        - Project virtual environment with Django dependencies
+        - CCP4 environment variables (sourced by run_job command)
 
     Raises:
         No exceptions - all errors returned in result dict
@@ -224,39 +225,44 @@ def run_job_local(job):
     logger.info("Running job %s in LOCAL mode via subprocess", job.id)
 
     try:
-        # Get CCP4 Python executable
-        ccp4_python_program = "ccp4-python"
-        if platform.system() == "Windows":
-            ccp4_python_program += ".bat"
+        # Path: context_run.py -> jobs -> utils -> lib -> ccp4x -> server -> manage.py
+        server_dir = pathlib.Path(__file__).parent.parent.parent.parent.parent
+        manage_py = str(server_dir / "manage.py")
+        project_root = server_dir.parent
 
-        ccp4_path = os.environ.get("CCP4")
-        if not ccp4_path:
-            error_msg = "CCP4 environment variable not set"
+        # Use the project's virtual environment Python
+        # This ensures all Django dependencies (corsheaders, etc.) are available
+        venv_python = project_root / ".venv" / "bin" / "python"
+        if not venv_python.exists():
+            # Fallback to .venv.py311 naming convention
+            venv_python = project_root / ".venv.py311" / "bin" / "python"
+
+        if not venv_python.exists():
+            error_msg = f"Virtual environment Python not found at {venv_python}"
             logger.error(error_msg)
             return {
                 "success": False,
-                "error": "CCP4 installation path not configured",
+                "error": "Virtual environment not configured",
                 "status": 500,
             }
 
-        ccp4_python = str(pathlib.Path(ccp4_path) / "bin" / ccp4_python_program)
-        manage_py = str(
-            pathlib.Path(__file__).parent.parent.parent.parent / "manage.py"
-        )
+        # Inherit current environment (includes CCP4 vars, PYTHONPATH, etc.)
+        env = os.environ.copy()
 
         # Start job in detached process
         subprocess.Popen(
             [
-                ccp4_python,
+                str(venv_python),
                 manage_py,
                 "run_job",
                 "-ju",
                 str(job.uuid),
             ],
             start_new_session=True,
+            env=env,
         )
 
-        logger.info("Started job %s (%s) via subprocess", job.id, job.uuid)
+        logger.info("Started job %s (%s) via subprocess using %s", job.id, job.uuid, venv_python)
 
         return {
             "success": True,
