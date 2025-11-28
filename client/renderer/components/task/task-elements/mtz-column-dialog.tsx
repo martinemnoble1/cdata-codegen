@@ -4,6 +4,7 @@ import React, {
   SyntheticEvent,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useState,
 } from "react";
@@ -21,10 +22,8 @@ import {
   TextField,
 } from "@mui/material";
 import SimpleDialog from "@mui/material/Dialog";
+import { createRoot } from "react-dom/client";
 import { v4 as uuid4 } from "uuid";
-
-import { useCCP4i2Window } from "../../../app-context";
-import { readFilePromise } from "../../../utils";
 
 // Constants
 const SIGNATURE_MAP: Record<string, string> = {
@@ -63,18 +62,17 @@ interface ItemQualifiers {
   correctColumns?: string[];
 }
 
-interface ParseMtzItem {
+interface MtzItem {
   _class?: string;
   _objectPath?: string;
   _qualifiers?: ItemQualifiers;
 }
 
-interface ParseMtzProps {
-  file: File;
-  item: ParseMtzItem;
-  setFiles: (files: FileList | null) => void;
-  handleAccept?: (signature: string) => void;
-  handleCancel?: () => void;
+interface MtzColumnDialogProps {
+  columnNames: ColumnNames;
+  item: MtzItem;
+  onAccept: (columnSelector: string) => void;
+  onCancel: () => void;
 }
 
 // Reducer
@@ -140,7 +138,7 @@ const createSignatureOptions = (
 
 const buildColumnOptions = (
   allColumnNames: ColumnNames,
-  item: ParseMtzItem
+  item: MtzItem
 ): ColumnOptions => {
   const sortedColumnNames: Record<string, string[]> = {};
 
@@ -177,26 +175,41 @@ const getSignatureLabel = (signature: string): string => {
   return SIGNATURE_MAP[signature] || signature;
 };
 
-// Component
-export const ParseMtz: React.FC<ParseMtzProps> = ({
-  file,
-  setFiles,
+// Dialog Component (internal)
+const MtzColumnDialogComponent: React.FC<MtzColumnDialogProps> = ({
+  columnNames,
   item,
-  handleAccept,
-  handleCancel,
+  onAccept,
+  onCancel,
 }) => {
-  // State
-  const [columnOptions, setColumnOptions] = useState<ColumnOptions>({});
-  const [allColumnNames, setAllColumnNames] = useState<ColumnNames>({});
+  const [open, setOpen] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [values, dispatch] = useReducer(valuesReducer, {});
 
-  // Context
-  const { cootModule } = useCCP4i2Window();
+  // Build column options on mount
+  const columnOptions = useMemo(
+    () => buildColumnOptions(columnNames, item),
+    [columnNames, item]
+  );
 
-  // Handlers
+  // Initialize values and selected group
+  useEffect(() => {
+    if (Object.keys(columnOptions).length > 0) {
+      const initialValues: ValuesState = {};
+      Object.entries(columnOptions).forEach(([signature, signatureOptions]) => {
+        initialValues[signature] = signatureOptions[0];
+      });
+
+      Object.entries(initialValues).forEach(([signature, value]) => {
+        dispatch({ type: "SET_VALUE", signature, value });
+      });
+
+      setSelectedGroup(Object.keys(columnOptions)[0]);
+    }
+  }, [columnOptions]);
+
   const handleGroupChange = useCallback(
-    (event: SyntheticEvent<Element, Event>, newValue: string | null) => {
+    (_event: SyntheticEvent<Element, Event>, newValue: string | null) => {
       setSelectedGroup(newValue);
     },
     []
@@ -205,9 +218,9 @@ export const ParseMtz: React.FC<ParseMtzProps> = ({
   const handleColumnChange = useCallback(
     (signature: string) =>
       (
-        event: SyntheticEvent<Element, Event>,
+        _event: SyntheticEvent<Element, Event>,
         value: string | null,
-        reason: AutocompleteChangeReason
+        _reason: AutocompleteChangeReason
       ) => {
         dispatch({
           type: "SET_VALUE",
@@ -218,94 +231,31 @@ export const ParseMtz: React.FC<ParseMtzProps> = ({
     []
   );
 
-  const handleAcceptClick = useCallback(() => {
-    if (selectedGroup && handleAccept) {
-      handleAccept(values[selectedGroup]);
+  const handleAccept = useCallback(() => {
+    if (selectedGroup && values[selectedGroup]) {
+      setOpen(false);
+      onAccept(values[selectedGroup]);
     }
-  }, [values, handleAccept, selectedGroup]);
+  }, [selectedGroup, values, onAccept]);
 
-  const handleDialogClose = useCallback(() => {
-    setFiles(null);
-  }, [setFiles]);
+  const handleCancel = useCallback(() => {
+    setOpen(false);
+    onCancel();
+  }, [onCancel]);
 
-  const handleCancelClick = useCallback(() => {
-    if (handleCancel) {
+  const isAcceptDisabled = !selectedGroup || !values[selectedGroup];
+
+  // If no options available, auto-cancel
+  useEffect(() => {
+    if (Object.keys(columnOptions).length === 0) {
       handleCancel();
     }
-  }, [handleCancel]);
-
-  // Effects
-  useEffect(() => {
-    const parseMtzFile = async (): Promise<void> => {
-      if (!file || !cootModule) return;
-      if (file.name.endsWith(".mtz")) {
-        try {
-          const fileContent = await readFilePromise(file, "ArrayBuffer");
-          if (!fileContent) return;
-
-          const fileName = `File_${uuid4()}`;
-          const byteArray = new Uint8Array(fileContent as ArrayBuffer);
-
-          cootModule.FS_createDataFile(".", fileName, byteArray, true, true);
-          const headerInfo = cootModule.get_mtz_columns(fileName);
-          cootModule.FS_unlink(`./${fileName}`);
-
-          const newColumns: ColumnNames = {};
-          for (let i = 0; i < headerInfo.size(); i += 2) {
-            newColumns[headerInfo.get(i + 1)] = headerInfo.get(i);
-          }
-
-          if (Object.keys(newColumns).length === 0) {
-            console.error("Error parsing MTZ file");
-            handleCancel?.();
-            return;
-          }
-
-          setAllColumnNames(newColumns);
-        } catch (error) {
-          console.error("Failed to parse MTZ file:", error);
-          handleCancel?.();
-        }
-      } else {
-        handleAccept?.("/*/*/[FP,SIGFP]"); // Default to FP,SIGFP if not an MTZ file
-      }
-    };
-
-    parseMtzFile();
-  }, [file, cootModule, handleCancel]);
-
-  useEffect(() => {
-    if (!item || Object.keys(allColumnNames).length === 0) return;
-
-    const options = buildColumnOptions(allColumnNames, item);
-    setColumnOptions(options);
-
-    if (Object.keys(options).length > 0) {
-      // Set initial values
-      const initialValues: ValuesState = {};
-      Object.entries(options).forEach(([signature, signatureOptions]) => {
-        initialValues[signature] = signatureOptions[0];
-      });
-
-      Object.entries(initialValues).forEach(([signature, value]) => {
-        dispatch({ type: "SET_VALUE", signature, value });
-      });
-
-      setSelectedGroup(Object.keys(options)[0]);
-    }
-  }, [allColumnNames, item]);
-
-  // Computed values
-  const isDialogOpen = Boolean(
-    file && allColumnNames && Object.keys(allColumnNames).length > 0
-  );
-
-  const isAcceptDisabled = !selectedGroup;
+  }, [columnOptions, handleCancel]);
 
   return (
     <SimpleDialog
-      open={isDialogOpen}
-      onClose={handleDialogClose}
+      open={open}
+      onClose={handleCancel}
       slotProps={{
         paper: {
           sx: { width: "80%", maxWidth: "none" },
@@ -346,11 +296,149 @@ export const ParseMtz: React.FC<ParseMtzProps> = ({
       </DialogContent>
 
       <DialogActions>
-        <Button disabled={isAcceptDisabled} onClick={handleAcceptClick}>
+        <Button disabled={isAcceptDisabled} onClick={handleAccept}>
           OK
         </Button>
-        <Button onClick={handleCancelClick}>Cancel</Button>
+        <Button onClick={handleCancel}>Cancel</Button>
       </DialogActions>
     </SimpleDialog>
   );
 };
+
+// Types for the public API
+export interface MtzColumnResult {
+  columnSelector: string;
+}
+
+export interface ParseMtzOptions {
+  file: File;
+  item: MtzItem;
+  cootModule: any; // The coot WASM module
+}
+
+/**
+ * Parse an MTZ file and get column names using coot's WASM module.
+ * Returns the parsed column names or null if parsing fails.
+ */
+export async function parseMtzColumns(
+  file: File,
+  cootModule: any
+): Promise<ColumnNames | null> {
+  try {
+    // Read file as ArrayBuffer
+    const fileContent = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
+
+    if (!fileContent) {
+      return null;
+    }
+
+    const fileName = `File_${uuid4()}`;
+    const byteArray = new Uint8Array(fileContent);
+
+    // Write to coot's virtual filesystem
+    cootModule.FS_createDataFile(".", fileName, byteArray, true, true);
+
+    // Get column info
+    const headerInfo = cootModule.get_mtz_columns(fileName);
+
+    // Clean up
+    cootModule.FS_unlink(`./${fileName}`);
+
+    // Parse columns
+    const columns: ColumnNames = {};
+    for (let i = 0; i < headerInfo.size(); i += 2) {
+      columns[headerInfo.get(i + 1)] = headerInfo.get(i);
+    }
+
+    if (Object.keys(columns).length === 0) {
+      return null;
+    }
+
+    return columns;
+  } catch (error) {
+    console.error("Failed to parse MTZ file:", error);
+    return null;
+  }
+}
+
+/**
+ * Show the MTZ column selection dialog.
+ * Returns a Promise that resolves with the selected column selector string,
+ * or null if the user cancels.
+ */
+export function showMtzColumnDialog(
+  columnNames: ColumnNames,
+  item: MtzItem
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    // Create a container for the dialog
+    const container = document.createElement("div");
+    container.id = `mtz-dialog-${Date.now()}`;
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      // Small delay to allow dialog close animation
+      setTimeout(() => {
+        root.unmount();
+        container.remove();
+      }, 300);
+    };
+
+    const handleAccept = (columnSelector: string) => {
+      cleanup();
+      resolve(columnSelector);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    root.render(
+      <MtzColumnDialogComponent
+        columnNames={columnNames}
+        item={item}
+        onAccept={handleAccept}
+        onCancel={handleCancel}
+      />
+    );
+  });
+}
+
+/**
+ * Complete flow: parse MTZ file and show column selection dialog if needed.
+ * Returns the column selector string, or null if cancelled/failed.
+ *
+ * For non-MTZ files, returns a default column selector.
+ */
+export async function selectMtzColumns(
+  options: ParseMtzOptions
+): Promise<string | null> {
+  const { file, item, cootModule } = options;
+
+  // Check if it's an MTZ file
+  const isMtzFile = file.name.toLowerCase().endsWith(".mtz");
+
+  if (!isMtzFile) {
+    // For non-MTZ files, return a default
+    return "/*/*/[FP,SIGFP]";
+  }
+
+  // Parse the MTZ file
+  const columnNames = await parseMtzColumns(file, cootModule);
+
+  if (!columnNames) {
+    // Parsing failed
+    return null;
+  }
+
+  // Show the dialog and get user selection
+  return showMtzColumnDialog(columnNames, item);
+}
