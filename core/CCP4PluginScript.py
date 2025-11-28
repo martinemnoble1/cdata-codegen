@@ -210,6 +210,10 @@ class CPluginScript(CData):
         # Also used for dummy plugins which skip def.xml loading entirely
         self._ensure_standard_containers()
 
+        # Set standard container ordering for serialization
+        # Standard containers come first, then any custom containers from .def.xml
+        self._set_container_order()
+
         # Load PARAMS file if provided (actual parameter values)
         if xmlFile:
             self.loadDataFromXml(xmlFile)
@@ -331,6 +335,39 @@ class CPluginScript(CData):
                     )
                     job_status.value = 0  # Default: Pending
                     container.__dict__['jobStatus'] = job_status
+
+    def _set_container_order(self):
+        """
+        Set the standard ordering for container children.
+
+        Ensures that standard containers (inputData, outputData, controlParameters,
+        guiAdmin) appear first in serialization order, followed by any custom
+        containers from .def.xml (e.g., prosmartProtein, prosmartNucleicAcid).
+
+        This order is used by dataOrder() which is called by CCP4i2JsonEncoder
+        for JSON serialization.
+        """
+        # Standard container order (these should appear first)
+        standard_order = ['inputData', 'outputData', 'controlParameters', 'guiAdmin']
+
+        # Get all current child names
+        all_children = [child.objectName() for child in self.container.children()
+                       if hasattr(child, 'objectName') and child.objectName()]
+
+        # Build ordered list: standard containers first, then others
+        ordered = []
+        for name in standard_order:
+            if name in all_children:
+                ordered.append(name)
+
+        # Add any remaining children (custom containers from .def.xml)
+        for name in all_children:
+            if name not in ordered:
+                ordered.append(name)
+
+        # Set CONTENT_ORDER on the container
+        self.container.CONTENT_ORDER = ordered
+        logger.debug(f"[DEBUG _set_container_order] Set CONTENT_ORDER: {ordered}")
 
     def _loadDefFile(self):
         """

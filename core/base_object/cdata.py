@@ -692,21 +692,83 @@ class CData(HierarchicalObject):
         return report
 
     def dataOrder(self) -> list:
-        """Return the order of child data items.
+        """Return the order of child data items for serialization.
 
-        This method provides compatibility with the legacy CCP4i2 API where
-        dataOrder() was expected to exist on all CData objects.
+        This method provides the canonical ordering for child items, used by
+        JSON serialization (CCP4i2JsonEncoder) and other operations that need
+        consistent ordering.
+
+        The ordering priority is:
+        1. Explicit CONTENTS_ORDER or CONTENT_ORDER attribute (if defined)
+        2. Auto-generated order from @cdata_class attributes metadata (MRO walk)
+        3. Fallback to children() order (preserves addition order)
 
         For fundamental types (CInt, CFloat, CString, CBoolean), this returns
         an empty list since they have no child data items.
 
-        Container types (CContainer, CList) override this method to return
-        their child item names or indices.
+        Container types (CContainer, CList) may override this method for
+        specialized ordering behavior.
 
         Returns:
-            Empty list for base CData and fundamental types
+            List of child names in serialization order
         """
-        return []
+        # Get all actual child names
+        all_children = set()
+        for child in self.children():
+            if hasattr(child, 'objectName'):
+                name = child.objectName()
+                if name:
+                    all_children.add(name)
+
+        # Get preferred ordering from various sources
+        preferred_order = []
+
+        # 1. Check for explicit CONTENTS_ORDER property
+        if hasattr(self, 'CONTENTS_ORDER'):
+            try:
+                val = self.CONTENTS_ORDER
+                if isinstance(val, (list, tuple)) and val:
+                    preferred_order = list(val)
+            except Exception:
+                pass
+
+        # 2. Check for explicit CONTENT_ORDER attribute (if no CONTENTS_ORDER)
+        if not preferred_order and hasattr(self, 'CONTENT_ORDER'):
+            val = getattr(self, 'CONTENT_ORDER', None)
+            if isinstance(val, (list, tuple)) and val:
+                preferred_order = list(val)
+
+        # 3. Auto-generate from @cdata_class attributes metadata (if no explicit order)
+        if not preferred_order:
+            for cls in reversed(type(self).__mro__):
+                if cls is object:
+                    continue
+                metadata = getattr(cls, "_metadata", None)
+                if metadata and hasattr(metadata, 'attributes'):
+                    for attr_name in metadata.attributes.keys():
+                        if attr_name not in preferred_order:
+                            preferred_order.append(attr_name)
+
+        # Build complete ordering: preferred order first (filtering to actual children),
+        # then remaining children not in preferred order
+        result = []
+        seen = set()
+
+        # Add items from preferred_order that exist as children
+        for name in preferred_order:
+            if name in all_children and name not in seen:
+                result.append(name)
+                seen.add(name)
+
+        # Add remaining children not in preferred_order
+        for child in self.children():
+            if hasattr(child, 'objectName'):
+                name = child.objectName()
+                if name and name not in seen:
+                    result.append(name)
+                    seen.add(name)
+
+        return result
 
     def _check_all_registered_attributes_set(self) -> bool:
         """Check if all registered attributes (from @cdata_class) are set.
@@ -787,21 +849,26 @@ class CData(HierarchicalObject):
                 elem.text = str(value)
 
         # For containers and complex types, serialize hierarchical children
-        # Use children() to get only actual hierarchical children, not all __dict__ entries
+        # Use dataOrder() for canonical ordering - it returns a complete list
+        # of all children in the correct serialization order
+        children_by_name = {}
         for child in self.children():
-            # ONLY serialize CData objects
-            if not isinstance(child, CData):
-                continue
+            if isinstance(child, CData):
+                child_name = child.objectName() if hasattr(child, 'objectName') else None
+                if child_name:
+                    children_by_name[child_name] = child
 
-            # Get the child's name within this parent
-            attr_name = child.objectName() if hasattr(child, 'objectName') else None
-            if not attr_name:
+        # dataOrder() returns complete ordering of all children
+        ordered_names = self.dataOrder() if hasattr(self, 'dataOrder') else []
+
+        for attr_name in ordered_names:
+            if attr_name not in children_by_name:
                 continue
+            child = children_by_name[attr_name]
 
             # Check if child should be excluded
             if excludeUnset and hasattr(child, 'isSet'):
                 # For CData objects, check if they have any set values
-                # Use allSet=False to check if ANY child is set, not requiring ALL children
                 if not child.isSet(allowDefault=False, allSet=False):
                     continue  # Skip unset children
 
@@ -810,13 +877,10 @@ class CData(HierarchicalObject):
 
             # Only append if the child element has content
             if excludeUnset or allSet:
-                # Check if element has text or children
                 if child_elem.text or len(child_elem) > 0:
                     elem.append(child_elem)
             else:
                 elem.append(child_elem)
-
-        # NOTE: Special handling for _container_items removed - now handled by CContainer.getEtree() override
 
         return elem
 

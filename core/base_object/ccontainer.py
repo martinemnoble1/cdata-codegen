@@ -149,23 +149,53 @@ class CContainer(CData):
             self._data_order.remove(name)
 
     def dataOrder(self) -> list:
-        """Return the order of data items in this container (old API compatibility).
+        """Return complete ordering of all children for serialization.
+
+        Returns a list containing ALL child names, ordered as:
+        1. Items from CONTENT_ORDER (if defined), filtered to actual children
+        2. Items from _data_order not already included
+        3. Any remaining children not in either list
+
+        This ensures dataOrder() always returns a complete list of all children,
+        with preferred ordering applied to the subset specified.
 
         Returns:
-            List of names in the order they were added
+            List of all child names in serialization order
         """
-        # First check if there's a CONTENT_ORDER defined
+        # Get all actual child names
+        all_children = set()
+        for child in self.children():
+            if hasattr(child, 'objectName'):
+                name = child.objectName()
+                if name:
+                    all_children.add(name)
+
+        result = []
+        seen = set()
+
+        # 1. First, add items from CONTENT_ORDER (if defined)
         if hasattr(self, 'CONTENT_ORDER') and self.CONTENT_ORDER:
-            return list(self.CONTENT_ORDER)
+            for name in self.CONTENT_ORDER:
+                if name in all_children and name not in seen:
+                    result.append(name)
+                    seen.add(name)
 
-        # If _data_order is populated, use it
+        # 2. Then add items from _data_order not already included
         if self._data_order:
-            return list(self._data_order)
+            for name in self._data_order:
+                if name in all_children and name not in seen:
+                    result.append(name)
+                    seen.add(name)
 
-        # Backward compatibility: if _data_order is empty but we have children,
-        # return names from children. This handles the case where parameters
-        # were loaded from def.xml rather than added via addContent().
-        return [child.objectName() for child in self.children()]
+        # 3. Finally, add any remaining children not in either list
+        for child in self.children():
+            if hasattr(child, 'objectName'):
+                name = child.objectName()
+                if name and name not in seen:
+                    result.append(name)
+                    seen.add(name)
+
+        return result
 
     @property
     def _dataOrder(self) -> list:

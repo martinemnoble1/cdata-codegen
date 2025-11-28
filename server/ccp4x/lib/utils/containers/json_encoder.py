@@ -57,46 +57,49 @@ class CCP4i2JsonEncoder(json.JSONEncoder):
                 if v is not NotImplemented
             }
 
-            # Get CONTENTS_ORDER from multiple sources
-            # 1. Instance property (modern CData has CONTENTS_ORDER property)
-            # 2. Instance attribute CONTENT_ORDER (@cdata_class decorator)
-            contents_order = []
-            if hasattr(o, 'CONTENTS_ORDER'):
-                try:
-                    val = o.CONTENTS_ORDER
-                    # Ensure we got an actual list, not a property descriptor
-                    if isinstance(val, (list, tuple)):
-                        contents_order = list(val)
-                except Exception:
-                    pass
-            if not contents_order and hasattr(o, 'CONTENT_ORDER'):
-                val = getattr(o, 'CONTENT_ORDER', None)
-                if isinstance(val, (list, tuple)):
-                    contents_order = list(val)
+            # Get CONTENTS_ORDER using dataOrder() - the single source of truth
+            # for child ordering. This handles:
+            # - Explicit CONTENTS_ORDER/CONTENT_ORDER attributes
+            # - Auto-generated order from @cdata_class metadata
+            # - Fallback to children() order
+            contents_order = o.dataOrder() if hasattr(o, 'dataOrder') else []
 
             obj_path = ""
             if hasattr(o, 'objectPath'):
                 obj_path = o.objectPath()
 
             # Determine _value based on object type
-            # For CContainer: build dict of named children
-            # For CList: use the list items
-            # For primitives: use _value attribute
-            if isinstance(o, CCP4Container.CContainer):
+            # - Primitives (CInt, CFloat, CString, CBoolean): use _value attribute
+            # - CList: use ordered array of children
+            # - All other CData (CContainer, CDataFile, etc.): serialize children as dict
+            #
+            # Note: All CData objects can have children (via HierarchicalObject).
+            # CDataFile and other @cdata_class decorated classes have pre-defined
+            # children from their metadata. CContainer adds children programmatically.
+            if isinstance(o, (CInt, CFloat, CString, CBoolean)):
+                # Fundamental types - use _value
+                value = getattr(o, '_value', None)
+            elif isinstance(o, CList):
+                # CList stores items in ordered array - they'll be serialized recursively
+                value = list(o) if hasattr(o, '__iter__') else []
+            else:
+                # All other CData (CContainer, CDataFile, and any @cdata_class objects)
                 # Build dict of children by name
-                value_dict = {}
+                children_by_name = {}
                 for child in o.children():
                     if isinstance(child, CData):
                         child_name = child.objectName()
                         if child_name:
-                            value_dict[child_name] = child
+                            children_by_name[child_name] = child
+
+                # Use dataOrder() for complete ordering - it already handles
+                # preferred order + remaining children
+                value_dict = {}
+                for name in contents_order:
+                    if name in children_by_name:
+                        value_dict[name] = children_by_name[name]
+
                 value = value_dict
-            elif isinstance(o, CList):
-                # CList stores items - they'll be serialized recursively
-                value = list(o) if hasattr(o, '__iter__') else []
-            else:
-                # Primitives (CInt, CFloat, CString, CBoolean)
-                value = getattr(o, '_value', None)
 
             result = {
                 "_class": type(o).__name__,
@@ -117,7 +120,9 @@ class CCP4i2JsonEncoder(json.JSONEncoder):
         # Handle class/type objects (e.g., ABCMeta in columnGroupClassList)
         if isinstance(o, type):
             # Return class name as string for class references
-            return f"{o.__module__}.{o.__name__}" if o.__module__ else o.__name__
+            if o.__module__:
+                return f"{o.__module__}.{o.__name__}"
+            return o.__name__
         try:
             result = json.dumps(o)
         except TypeError:

@@ -55,11 +55,20 @@ interface ParsedFileMenuItem {
 
 /**
  * API response structure for export job file menu
+ * Supports both legacy format (status/result/reason) and new format (success/data/error)
  */
 interface ExportJobFileMenuResponse {
-  status: "Success" | "Failed";
+  // Legacy format
+  status?: "Success" | "Failed";
   result?: FileMenuItem[] | any; // Could be array of FileMenuItem or other structure
   reason?: string;
+  // New standardized format
+  success?: boolean;
+  data?: {
+    result?: FileMenuItem[] | any;
+    [key: string]: any;
+  };
+  error?: string;
 }
 
 /**
