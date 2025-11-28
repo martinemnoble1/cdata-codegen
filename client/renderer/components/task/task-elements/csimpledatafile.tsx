@@ -44,7 +44,9 @@ export const CSimpleDataFileElement: React.FC<CSimpleDataFileElementProps> = (
       formData
     );
 
-    onChange?.(uploadResult.updated_item);
+    // Handle new standardized API response format: {success: true, data: {...}}
+    const resultData = uploadResult.data || uploadResult;
+    onChange?.(resultData.updated_item);
     setSelectedFiles(null);
 
     // Execute all mutations in parallel

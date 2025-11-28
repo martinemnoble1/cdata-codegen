@@ -63,6 +63,9 @@ def extract_from_first_bracketed(path: str) -> str:
 
 def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
 
+    logger.info("=== upload_file_param START ===")
+    logger.info("job: %s (task: %s)", job.uuid, job.task_name)
+
     # Use plugin context for consistent container access (same as set_param/get_param/digest)
     plugin_result = get_plugin_with_context(job)
     if not plugin_result.success:
@@ -73,14 +76,15 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
     object_path = request.POST.get("objectPath")
     files = request.FILES.getlist("file")
 
+    logger.info("object_path from request: %s", object_path)
+    logger.info("files: %s", [f.name for f in files])
+
     # Normalize path to strip .container. segment if present from frontend
     normalized_path = normalize_object_path(object_path)
-    logger.debug(
-        "upload_file_param: object_path=%s, normalized=%s",
-        object_path, normalized_path
-    )
+    logger.info("normalized_path: %s", normalized_path)
 
     param_object = container.find_by_path(normalized_path, skip_first=True)
+    logger.info("param_object: %s (type: %s)", param_object, type(param_object).__name__)
     # Look for existing file import for this job/job_param_name and delete
     # the associated file if exists
 
@@ -132,8 +136,13 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
             CCP4XtalData.CMtzDataFile,
             CMtzDataFile,
         ),
-    )
-    assert len(files) == 1
+    ), f"param_object must be CDataFile, got {type(param_object)}"
+    assert len(files) == 1, f"Expected 1 file, got {len(files)}"
+
+    # Check MRO for debugging
+    logger.info("param_object MRO: %s", [c.__name__ for c in type(param_object).__mro__])
+    logger.info("isinstance CMtzDataFile check: %s", isinstance(param_object, (CCP4XtalData.CMtzDataFile, CMtzDataFile)))
+
     # Reached here and confirmed that the param to which we are associatnig the file is
     # based on CDataFile
     initial_download_project_folder = (
@@ -147,12 +156,14 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         )
         else "CCP4_IMPORTED_FILES"
     )
+    logger.info("initial_download_project_folder: %s", initial_download_project_folder)
+
     downloaded_file_path = download_file(job, files[0], initial_download_project_folder)
-    assert downloaded_file_path.exists()
+    assert downloaded_file_path.exists(), f"Downloaded file not found: {downloaded_file_path}"
     file_type = detect_file_type(downloaded_file_path)
 
-    logger.error(
-        "param_object is %s cls__name__ %s file_type %s",
+    logger.info(
+        "param_object: %s, class: %s, file_type: %s",
         param_object,
         param_object.__class__.__name__,
         file_type,
@@ -166,10 +177,13 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         ),
     ):
         column_selector = request.POST.get("column_selector", None)
+        logger.info("MTZ path - column_selector: %s", column_selector)
         imported_file_path = handle_reflections(
             job, param_object, files[0].name, column_selector, downloaded_file_path
         )
+        logger.info("handle_reflections returned: %s", imported_file_path)
     else:
+        logger.info("Non-MTZ path - using downloaded file directly")
         imported_file_path = downloaded_file_path
 
     logger.error(
@@ -178,9 +192,12 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         imported_file_path.name,
     )
 
+    logger.info("Setting full path on param_object: %s", imported_file_path)
     param_object.setFullPath(str(imported_file_path))
+    logger.info("Loading file...")
     param_object.loadFile()
     # Modern CDataFile.setContentFlag() auto-detects content, no reset parameter needed
+    logger.info("Setting content flag...")
     param_object.setContentFlag()
 
     # Note deliberate explicit for != None instead of is not None
@@ -193,12 +210,16 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
     except Exception:
         contentFlag = 0
 
+    logger.info("subType: %s, contentFlag: %s", subType, contentFlag)
+
     try:
         # Use modern CData API: get_qualifier() instead of QUALIFIERS dict
         mime_type_name = param_object.get_qualifier("mimeTypeName")
         type = models.FileType.objects.get(name=mime_type_name)
+        logger.info("FileType from mimeTypeName '%s': %s", mime_type_name, type)
     except models.FileType.DoesNotExist:
         type = models.FileType.objects.get(name="Unknown")
+        logger.info("FileType not found, using Unknown")
 
     # Okay, so here is a thing. I do not think that the apropriate value for "job_param_name" is param_object.object_name()
     # Consider the "source" file in a CAsuContentSeq object. The object name is "source" but the relevant parameter name is
@@ -237,15 +258,19 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         "subType": new_file.sub_type,
         "contentFlag": new_file.content,
     }
+    logger.info("Calling set_parameter_container with path: %s", normalized_path)
+    logger.info("updated_object_dict: %s", updated_object_dict)
     updated_object = set_parameter_container(
         container,
         normalized_path,
         updated_object_dict,
     )
-    logger.error("Updated object %s", updated_object)
+    logger.info("set_parameter_container returned: %s", updated_object)
     save_params_for_job(the_job_plugin=plugin, the_job=job)
 
-    return json.loads(json.dumps(updated_object, cls=CCP4i2JsonEncoder))
+    result = json.loads(json.dumps(updated_object, cls=CCP4i2JsonEncoder))
+    logger.info("=== upload_file_param END - returning: %s ===", result)
+    return result
 
 
 def download_file(job: models.Job, the_file, initial_download_project_folder: str):

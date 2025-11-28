@@ -66,7 +66,9 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
         formData
       );
 
-      onChange?.(uploadResult.updated_item);
+      // Handle new standardized API response format: {success: true, data: {...}}
+      const resultData = uploadResult.data || uploadResult;
+      onChange?.(resultData.updated_item);
       setSelectedFiles(null);
 
       // Trigger all mutations
