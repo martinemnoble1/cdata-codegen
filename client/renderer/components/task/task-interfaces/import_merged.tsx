@@ -8,8 +8,9 @@ import { doRetrieve, useApi, makeApiUrl } from "../../../api";
 import { useJob, usePrevious } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
 import { useCallback, useEffect, useMemo } from "react";
-import { ParseMtz } from "../task-elements/parse-mtz";
+import { showMtzColumnDialog, parseMtzColumns } from "../task-elements/mtz-column-dialog";
 import { Job } from "../../../types/models";
+import { useCCP4i2Window } from "../../../app-context";
 import {
   Card,
   CardContent,
@@ -19,14 +20,13 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const api = useApi();
   const { job } = props;
   const { useFileDigest, useTaskItem, mutateContainer, mutateValidation } =
     useJob(job.id);
-  const [HKLINFile, setHKLINFile] = useState<File | null>(null);
+  const { cootModule } = useCCP4i2Window();
 
   const { item: HKLINItem, value: HKLINValue } = useTaskItem("HKLIN");
 
@@ -111,54 +111,12 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     asyncFunc();
   }, [HKLINDigest]);
 
-  //Here handle a case where a new MTZ or mmcif file is uploaded as HKLIN. As before, first calculate the callback using useCallback
-  const handleHKLINFileChange = useCallback(
-    async (hklinValue) => {
-      if (
-        !hklinValue?.dbFileId ||
-        !hklinValue?.baseName ||
-        !oldHKLINValue ||
-        job?.status != 1
-      )
-        return;
-      if (JSON.stringify(hklinValue) === JSON.stringify(oldHKLINValue)) return;
-      const asyncFunc = async () => {
-        const downloadURL = makeApiUrl(
-          `files/${hklinValue.dbFileId}/download_by_uuid/`
-        );
-        const arrayBuffer = await doRetrieve(downloadURL, hklinValue.baseName);
-        const blob = new Blob([arrayBuffer], {
-          type: "application/CCP4-mtz-file",
-        });
-        const file = new File([blob], hklinValue.baseName, {
-          type: "application/CCP4-mtz-file",
-        });
-        setHKLINFile(file);
-      };
-      return asyncFunc();
-    },
-    [setHKLINFile, oldHKLINValue]
-  );
-
-  //And then a simple useEffect
-  useEffect(() => {
-    const asyncFunc = async () => {
-      if (HKLINValue) {
-        await handleHKLINFileChange(HKLINValue);
-      }
-    };
-    asyncFunc();
-  }, [HKLINValue]);
-
-  //Here a useeffect that will fetch the HKLIN file from the server and attempt to select columns frr it
-  //succeeding (of course) only if the file is a MTZ file. If succesful, the accepted column labels are parsed form the
-  //returned signature
-  const handleAccept = useCallback(
-    async (columnPath: string) => {
+  // Process the selected columns after user picks from dialog
+  const processColumnSelection = useCallback(
+    async (columnPath: string, file: File) => {
       if (!setHKLIN_OBS_CONTENT_FLAG) return;
       if (!setHKLIN_OBS_COLUMNS) return;
-      if (!setHKLINFile) return;
-      if (!HKLINFile) return;
+
       const match = columnPath.match(/\[([^\]]+)\]/);
       console.log({ match });
       if (match) {
@@ -247,30 +205,95 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           await setHKLIN_OBS_CONTENT_FLAG(contentFlag + 1);
         }
       }
-      const formData = new FormData();
+
+      // Upload the file with selected columns
       if (columnPath && columnPath.trim().length > 0) {
+        const formData = new FormData();
         formData.append("column_selector", columnPath);
         formData.append("objectPath", HKLIN_OBSItem._objectPath);
-        formData.append("file", HKLINFile, HKLINFile.name);
-        const uploadResult = await api.post<Job>(
+        formData.append("file", file, file.name);
+        await api.post<Job>(
           `jobs/${job.id}/upload_file_param`,
           formData
         );
-        setHKLINFile(null);
         mutateContainer();
         mutateValidation();
       }
     },
     [
       job,
-      HKLINFile,
       HKLIN_OBSItem,
       setHKLIN_OBS_COLUMNS,
       setHKLIN_OBS_CONTENT_FLAG,
-      setHKLINFile,
       HKLINDigest,
+      updateDATASETNAME,
+      updateCRYSTALNAME,
+      updateWAVELENGTH,
+      api,
+      mutateContainer,
+      mutateValidation,
     ]
   );
+
+  //Here handle a case where a new MTZ or mmcif file is uploaded as HKLIN.
+  //Uses Promise-based dialog instead of component state
+  const handleHKLINFileChange = useCallback(
+    async (hklinValue: any) => {
+      if (
+        !hklinValue?.dbFileId ||
+        !hklinValue?.baseName ||
+        !oldHKLINValue ||
+        !cootModule ||
+        job?.status != 1
+      )
+        return;
+      if (JSON.stringify(hklinValue) === JSON.stringify(oldHKLINValue)) return;
+
+      // Download the file
+      const downloadURL = makeApiUrl(
+        `files/${hklinValue.dbFileId}/download_by_uuid/`
+      );
+      const arrayBuffer = await doRetrieve(downloadURL, hklinValue.baseName);
+      const blob = new Blob([arrayBuffer], {
+        type: "application/CCP4-mtz-file",
+      });
+      const file = new File([blob], hklinValue.baseName, {
+        type: "application/CCP4-mtz-file",
+      });
+
+      // Check if it's an MTZ file that needs column selection
+      const isMtzFile = file.name.toLowerCase().endsWith(".mtz");
+      if (!isMtzFile) {
+        return;
+      }
+
+      // Parse the MTZ file columns
+      const columnNames = await parseMtzColumns(file, cootModule);
+      if (!columnNames) {
+        return;
+      }
+
+      // Show the column selection dialog
+      const columnPath = await showMtzColumnDialog(columnNames, HKLIN_OBSItem);
+      if (!columnPath) {
+        return; // User cancelled
+      }
+
+      // Process the selected columns
+      await processColumnSelection(columnPath, file);
+    },
+    [oldHKLINValue, cootModule, job?.status, HKLIN_OBSItem, processColumnSelection]
+  );
+
+  //And then a simple useEffect
+  useEffect(() => {
+    const asyncFunc = async () => {
+      if (HKLINValue) {
+        await handleHKLINFileChange(HKLINValue);
+      }
+    };
+    asyncFunc();
+  }, [HKLINValue]);
 
   return (
     <>
@@ -352,17 +375,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           </CCP4i2ContainerElement>
         </CCP4i2Tab>
       </CCP4i2Tabs>
-      {HKLINFile && (
-        <ParseMtz
-          file={HKLINFile}
-          setFiles={() => {}}
-          handleAccept={handleAccept}
-          handleCancel={() => {
-            setHKLINFile(null);
-          }}
-          item={HKLIN_OBSItem}
-        />
-      )}
     </>
   );
 };

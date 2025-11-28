@@ -215,10 +215,10 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
     try:
         # Use modern CData API: get_qualifier() instead of QUALIFIERS dict
         mime_type_name = param_object.get_qualifier("mimeTypeName")
-        type = models.FileType.objects.get(name=mime_type_name)
-        logger.info("FileType from mimeTypeName '%s': %s", mime_type_name, type)
+        file_type_obj = models.FileType.objects.get(name=mime_type_name)
+        logger.info("FileType from mimeTypeName '%s': %s", mime_type_name, file_type_obj)
     except models.FileType.DoesNotExist:
-        type = models.FileType.objects.get(name="Unknown")
+        file_type_obj = models.FileType.objects.get(name="Unknown")
         logger.info("FileType not found, using Unknown")
 
     # Okay, so here is a thing. I do not think that the apropriate value for "job_param_name" is param_object.object_name()
@@ -233,7 +233,7 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         job=job,
         name=str(imported_file_path.name),
         directory=models.File.Directory.IMPORT_DIR,
-        type=type,
+        type=file_type_obj,
         annotation=f"Imported from {files[0].name}",
         job_param_name=job_param_name,
         sub_type=subType,
