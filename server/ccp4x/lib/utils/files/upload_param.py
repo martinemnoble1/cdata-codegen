@@ -239,7 +239,7 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
     }
     updated_object = set_parameter_container(
         container,
-        object_path,
+        normalized_path,
         updated_object_dict,
     )
     logger.error("Updated object %s", updated_object)
