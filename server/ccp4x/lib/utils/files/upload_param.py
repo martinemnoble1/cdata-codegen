@@ -13,7 +13,7 @@ from core.CCP4XtalData import CMtzDataFile
 
 # Use core method for find_by_path - no import needed
 from .available_name import available_file_name_based_on
-from ..plugins.get_plugin import get_job_plugin
+from ..plugins.plugin_context import get_plugin_with_context
 from ..formats.gemmi_split_mtz import gemmi_split_mtz
 from ..parameters.save_params import save_params_for_job
 from ..containers.json_encoder import CCP4i2JsonEncoder
@@ -23,6 +23,34 @@ from ..parameters.set_parameter import set_parameter, set_parameter_container
 from ccp4x.db import models
 
 logger = logging.getLogger(f"ccp4x:{__name__}")
+
+
+def normalize_object_path(object_path: str) -> str:
+    """
+    Normalize object paths from frontend to match backend container structure.
+
+    The frontend JSON encoder includes the full hierarchy path which includes
+    `.container.` (e.g., `prosmart_refmac.container.inputData.XYZIN`), but the
+    backend container structure doesn't have that extra level.
+
+    This function strips the `.container.` segment if present after the task name.
+
+    Args:
+        object_path: Path like "prosmart_refmac.container.inputData.XYZIN"
+
+    Returns:
+        Normalized path like "prosmart_refmac.inputData.XYZIN"
+    """
+    # Split into parts
+    parts = object_path.split('.')
+
+    # If second element is 'container', remove it
+    # e.g., ['prosmart_refmac', 'container', 'inputData', 'XYZIN']
+    #    -> ['prosmart_refmac', 'inputData', 'XYZIN']
+    if len(parts) >= 2 and parts[1] == 'container':
+        parts = [parts[0]] + parts[2:]
+
+    return '.'.join(parts)
 
 
 def extract_from_first_bracketed(path: str) -> str:
@@ -35,11 +63,24 @@ def extract_from_first_bracketed(path: str) -> str:
 
 def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
 
-    plugin = get_job_plugin(the_job=job)
+    # Use plugin context for consistent container access (same as set_param/get_param/digest)
+    plugin_result = get_plugin_with_context(job)
+    if not plugin_result.success:
+        raise ValueError(f"Failed to load plugin: {plugin_result.error}")
+
+    plugin = plugin_result.data
     container = plugin.container
     object_path = request.POST.get("objectPath")
     files = request.FILES.getlist("file")
-    param_object = container.find_by_path(object_path, skip_first=True)
+
+    # Normalize path to strip .container. segment if present from frontend
+    normalized_path = normalize_object_path(object_path)
+    logger.debug(
+        "upload_file_param: object_path=%s, normalized=%s",
+        object_path, normalized_path
+    )
+
+    param_object = container.find_by_path(normalized_path, skip_first=True)
     # Look for existing file import for this job/job_param_name and delete
     # the associated file if exists
 
