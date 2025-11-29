@@ -1,5 +1,7 @@
 from datetime import datetime
 import logging
+import pathlib
+import sys
 import traceback
 import uuid
 
@@ -72,21 +74,43 @@ job_field_old_to_new = {
     "finishtime": "finish_time",
     "projectname": "project__name",
     "projectdirectory": "project__directory",
+    "jobtitle": "title",  # Alias for title
 }
 job_field_new_to_old = {item[1]: item[0] for item in job_field_old_to_new.items()}
+
+# Fields that need special handling (not directly in the Django model)
+# These are computed/derived fields that getJobInfo handles specially
+JOB_SPECIAL_FIELDS = {
+    "runtime",        # Compute from creation_time and finish_time
+    "descendentjobs", # Compute from child jobs
+    "taskversion",    # Not stored, return placeholder
+}
 
 file_field_old_to_new = {
     "filecontent": "content",
     "subtype": "sub_type",
     "fileid": "uuid",
-    "jobid": "job",
+    "jobid": "job__uuid",
     "jobparamname": "job_param_name",
     "pathflag": "directory",
     "filename": "name",
     "annotation": "annotation",
     "filetypeid": "type",
+    "filetype": "type__name",  # Get the type name via FK relation
+    "jobnumber": "job__number",  # Job number via FK
+    "projectname": "job__project__name",  # Project name via FK chain
+    "projectid": "job__project__uuid",  # Project UUID via FK chain
 }
 file_field_new_to_old = {item[1]: item[0] for item in file_field_old_to_new.items()}
+
+# File fields that need special handling (computed from other fields)
+FILE_SPECIAL_FIELDS = {
+    "relpath",  # Computed from directory flag and job number
+}
+
+# Directory flag constants (matching legacy CCP4DbApi)
+PATH_FLAG_JOB_DIR = 0
+PATH_FLAG_IMPORT_DIR = 1
 
 
 class CCP4i2DjangoDbApi(object):
@@ -231,13 +255,18 @@ class CCP4i2DjangoDbApi(object):
     def getFileInfo(self, fileId=None, mode="all", returnType=None):
         assert fileId is not None
         the_file_qs = models.File.objects.filter(uuid=uuid.UUID(fileId))
+        the_file = list(the_file_qs)[0]
 
         if isinstance(mode, list):
-            arg = [item.lower() for item in mode]
+            requested_fields = [item.lower() for item in mode]
         elif mode.lower() == "all":
-            arg = [key for key in job_field_old_to_new.keys()]
+            requested_fields = [key for key in file_field_old_to_new.keys()]
         else:
-            arg = [mode.lower()]
+            requested_fields = [mode.lower()]
+
+        # Separate regular fields from special computed fields
+        special_fields_requested = [f for f in requested_fields if f in FILE_SPECIAL_FIELDS]
+        regular_fields = [f for f in requested_fields if f not in FILE_SPECIAL_FIELDS]
 
         # Will need corrected for some cases
         replacements = file_field_old_to_new
@@ -245,23 +274,41 @@ class CCP4i2DjangoDbApi(object):
         def patch(label):
             return replacements.get(label, label)
 
-        arg = list(map(patch, arg))
+        arg = list(map(patch, regular_fields))
 
-        unpatched_values = the_file_qs.values(*arg)
-        listOfDicts = []
-        for unPatchedValue in unpatched_values:
-            # outer loop over jobs matching jobId
-            value = {}
-            for key in unPatchedValue:
-                # inner loop over parameters
-                if key.endswith("_id"):
-                    value[key[:-3]] = unPatchedValue[key]
+        if arg:
+            unpatched_values = the_file_qs.values(*arg)
+            listOfDicts = []
+            for unPatchedValue in unpatched_values:
+                # outer loop over jobs matching jobId
+                value = {}
+                for key in unPatchedValue:
+                    # inner loop over parameters
+                    if key.endswith("_id"):
+                        value[key[:-3]] = unPatchedValue[key]
+                    else:
+                        value[key] = unPatchedValue[key]
+                listOfDicts.append(value)
+            result = listOfDicts[0]
+        else:
+            result = {}
+
+        # Add computed/special fields
+        for field in special_fields_requested:
+            if field == "relpath":
+                # Compute relative path from directory flag and job number
+                path_flag = the_file.directory
+                if path_flag == PATH_FLAG_JOB_DIR:
+                    # Build path like CCP4_JOBS/job_1/job_2 from job number "1.2"
+                    job_number = the_file.job.number
+                    job_path_parts = [f"job_{n}" for n in job_number.split(".")]
+                    result["relpath"] = str(pathlib.Path("CCP4_JOBS") / pathlib.Path(*job_path_parts))
+                elif path_flag == PATH_FLAG_IMPORT_DIR:
+                    result["relpath"] = "CCP4_IMPORTED_FILES"
                 else:
-                    value[key] = unPatchedValue[key]
-            listOfDicts.append(value)
-        result = listOfDicts[0]
+                    result["relpath"] = ""
 
-        if len(arg) == 1 and returnType != dict:
+        if len(requested_fields) == 1 and not special_fields_requested and returnType != dict:
             return result[arg[0]]
         elif returnType == list:
             return [item[1] for item in result.items()]
@@ -284,30 +331,56 @@ class CCP4i2DjangoDbApi(object):
                 len(list(the_job_qs)) == 1
             ), f"Expected 1 job, got {len(list(the_job_qs))} for jobId {jobId}"
 
+            the_job = list(the_job_qs)[0]
+
             if isinstance(mode, list):
-                arg = [item for item in mode]
+                requested_fields = [item.lower() for item in mode]
             elif mode.lower() == "all":
-                arg = [item.lower() for item in job_field_old_to_new.keys()]
+                requested_fields = [item.lower() for item in job_field_old_to_new.keys()]
             else:
-                arg = [mode.lower()]
+                requested_fields = [mode.lower()]
+
+            # Separate regular fields from special computed fields
+            special_fields_requested = [f for f in requested_fields if f in JOB_SPECIAL_FIELDS]
+            regular_fields = [f for f in requested_fields if f not in JOB_SPECIAL_FIELDS]
 
             def patch(label):
                 return job_field_old_to_new.get(label, label)
 
-            arg = list(map(patch, arg))
-            # print(arg)
+            arg = list(map(patch, regular_fields))
 
-            unpatched_values = the_job_qs.values(*arg)
-            unpatched_values = the_job_qs.values(*arg)
-            values = self._get_values_from_queryset(
-                unpatched_values, job_field_new_to_old
-            )
-            result = list(values)[0]
-            if len(arg) == 1:
-                return result[job_field_new_to_old[arg[0]]]
-            result["fileroot"] = str(list(the_job_qs)[0].directory)
+            # Query the database for regular fields
+            if arg:
+                unpatched_values = the_job_qs.values(*arg)
+                values = self._get_values_from_queryset(
+                    unpatched_values, job_field_new_to_old
+                )
+                result = list(values)[0]
+            else:
+                result = {}
 
-            jobFiles = models.File.objects.filter(job=list(the_job_qs)[0])
+            # Handle single field request
+            if len(requested_fields) == 1 and not special_fields_requested:
+                return result[job_field_new_to_old.get(arg[0], requested_fields[0])]
+
+            # Add computed/special fields
+            for field in special_fields_requested:
+                if field == "runtime":
+                    # Compute runtime from creation_time and finish_time
+                    if the_job.finish_time and the_job.creation_time:
+                        result["runtime"] = (the_job.finish_time - the_job.creation_time).total_seconds()
+                    else:
+                        result["runtime"] = None
+                elif field == "descendentjobs":
+                    # Get descendant jobs as list of (job_id, [child_ids]) tuples
+                    result["descendentjobs"] = self._get_descendent_jobs(the_job)
+                elif field == "taskversion":
+                    # Task version not stored in Django model, return placeholder
+                    result["taskversion"] = "1.0"
+
+            result["fileroot"] = str(the_job.directory)
+
+            jobFiles = models.File.objects.filter(job=the_job)
             result["filenames"] = {}
             for jobFile in jobFiles:
                 result["filenames"][jobFile.job_param_name] = str(jobFile.path)
@@ -317,6 +390,27 @@ class CCP4i2DjangoDbApi(object):
         except Exception as err:
             logger.exception("Err in getJobInfo", exc_info=err)
         return None
+
+    def _get_descendent_jobs(self, job):
+        """
+        Get descendent jobs for pipeline report generation.
+
+        Returns a list of tuples where each tuple represents a child job.
+        Format: [(child_job_id, [grandchild_ids]), ...]
+
+        This format allows iteration like:
+            for descendentJob in jobInfo["descendentjobs"]:
+                child_job_id = descendentJob[0]
+        """
+        result = []
+        children = list(job.children.all())
+        for child in children:
+            grandchildren = list(child.children.all())
+            grandchild_ids = [str(gc.uuid) for gc in grandchildren]
+            result.append((str(child.uuid), grandchild_ids))
+            # Recursively add grandchildren
+            result.extend(self._get_descendent_jobs(child))
+        return result
 
     def jobDirectory(self, jobId=None, projectName=None, jobNumber=None, create=False, projectId=None, projectDirectory=None):
         logger.debug("in CCP4i2DjangoDbApi %s, %s, %s", jobId, projectName, jobNumber)

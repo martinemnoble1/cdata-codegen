@@ -117,9 +117,18 @@ def get_job_report_xml(job: models.Job, regenerate: bool = False) -> Result[byte
             ET.indent(report_xml, space="\t", level=0)
             xml_bytes = ET.tostring(report_xml)
 
-            # Cache it
-            with open(report_xml_path, "wb") as f:
-                f.write(xml_bytes)
+            # Only cache successful reports (not error/placeholder reports)
+            # Check if this is a failed report by looking for error indicators
+            xml_str = xml_bytes.decode('utf-8', errors='ignore')
+            is_error_report = 'No report because' in xml_str or 'Report generation failed' in xml_str
+
+            if not is_error_report:
+                with open(report_xml_path, "wb") as f:
+                    f.write(xml_bytes)
+            else:
+                # Delete any stale cached report so we regenerate next time
+                if report_xml_path.exists():
+                    report_xml_path.unlink()
 
             return Result.ok(xml_bytes)
 

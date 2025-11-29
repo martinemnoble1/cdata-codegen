@@ -1,65 +1,110 @@
 from __future__ import print_function
 
 
-#==============================================================================================
+# ==============================================================================================
 
 import os
 import sys
 import functools
+import logging
 
-#from lxml import etree
+# from lxml import etree
 import xml.etree.ElementTree as etree
 
-from PySide2 import QtCore
 from core.CCP4ErrorHandling import *
-from dbapi import CCP4DbApi
 from core.CCP4Modules import PREFERENCES
 from core import CCP4Utils
+from core.base_object.hierarchy_system import HierarchicalObject
 
-class CReportGenerator(QtCore.QObject):
+# Import Django dbapi adapter constants for file type lookups
+from ccp4x.db.ccp4i2_static_data import FILETYPES_CLASS, FINISHED_JOB_STATUS
 
-  FinishedPictures = QtCore.Signal(str)
+logger = logging.getLogger(f"ccp4x:{__name__}")
 
-  ERROR_CODES = { 1 : { 'description' : 'Report definition file not found',
-                        'severity' : SEVERITY_WARNING },
-                  2 : { 'description' : 'Task data file not found',
-                        'severity' : SEVERITY_WARNING },
-                  3 : { 'description' : 'Error loading report definition file' },
-                  4 : { 'description' : 'Error loading task data file' },
-                  5 : { 'description' : 'Failed to find insert point for sub-job report in parent jobs report file' },
-                  6 : { 'description' : 'Error inserting report on sub-job into report file' },
-                  7 : { 'description' : 'Error saving report file with inserted report on sub-job' },
-                  8 : { 'description' : 'Error reading program data file' },
-                  9 : { 'description' : 'Error no program or task data file' },
-                 10 : { 'description' : 'No report definition file available' }
+
+class Signal:
+    """
+    Minimal signal replacement for Qt-free operation.
+
+    This provides a simple callback-based signal system to replace QtCore.Signal.
+    """
+
+    def __init__(self):
+        self._callbacks = []
+
+    def connect(self, callback):
+        """Connect a callback to this signal."""
+        self._callbacks.append(callback)
+
+    def disconnect(self, callback):
+        """Disconnect a callback from this signal."""
+        if callback in self._callbacks:
+            self._callbacks.remove(callback)
+
+    def emit(self, *args, **kwargs):
+        """Emit the signal, calling all connected callbacks."""
+        for callback in self._callbacks:
+            try:
+                callback(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"Error in signal callback: {e}")
+
+
+class CReportGenerator(HierarchicalObject):
+  """
+  Report generator for CCP4 jobs.
+
+  This class generates HTML reports from job output data. It has been modernized
+  to work without Qt dependencies, using Django for database access.
+
+  Inherits from HierarchicalObject (replacing legacy QtCore.QObject) to support
+  parent-child relationships with Report objects and other hierarchical components.
+  """
+
+  FinishedPictures = None  # Will be Signal instance per-object
+
+  ERROR_CODES = {1: {'description': 'Report definition file not found',
+                      'severity': SEVERITY_WARNING},
+                2: {'description': 'Task data file not found',
+                      'severity': SEVERITY_WARNING},
+                3: {'description': 'Error loading report definition file'},
+                4: {'description': 'Error loading task data file'},
+                5: {'description': 'Failed to find insert point for sub-job report in parent jobs report file'},
+                6: {'description': 'Error inserting report on sub-job into report file'},
+                7: {'description': 'Error saving report file with inserted report on sub-job'},
+                8: {'description': 'Error reading program data file'},
+                9: {'description': 'Error no program or task data file'},
+               10: {'description': 'No report definition file available'}
                }
   insts = []
-  def __init__(self,jobId,jobStatus='Finished',**kw):
-    QtCore.QObject.__init__(self)
-    from dbapi import CCP4DbApi
-    self.jobId = CCP4DbApi.UUIDTYPE(jobId)
-    if jobStatus=='To delete':
+
+  def __init__(self, jobId, jobStatus='Finished', **kw):
+    # Initialize HierarchicalObject with optional name and parent
+    super().__init__(
+        name=kw.get('name', f"ReportGenerator_{jobId}"),
+        parent=kw.get('parent', None)
+    )
+
+    # Initialize signal instance per-object (for backward compatibility)
+    self.FinishedPictures = Signal()
+
+    # Store job ID as string (Django models use UUID strings)
+    self.jobId = str(jobId) if jobId else None
+    if jobStatus == 'To delete':
       self.jobStatus = 'Finished'
     else:
       self.jobStatus = jobStatus
-    self.jobNumber = kw.get('jobNumber',None)
+    self.jobNumber = kw.get('jobNumber', None)
     self.reportFile = None
-
-    # Defaults for mg picture generation
-    self.centre_xyz = [ 0.0,0.0,0.0]
-    self.scale = 100.0
-    self.orientation = [ 1.0,0.0,0.0,0.0]
-    self.imageWidth = 400
-    self.imageHeight = 400
     self.jobInfo = None
 
-  def setJobStatus(self,status):
+  def setJobStatus(self, status):
     # Force resetting data from db
     self.jobStatus = status
-    if self.jobStatus in CCP4DbApi.FINISHED_JOB_STATUS:
+    if self.jobStatus in FINISHED_JOB_STATUS:
       self.jobInfo = None
-      
-  def getReportClass(self,doReload=False):
+
+  def getReportClass(self, doReload=False):
     from core import CCP4TaskManager,CCP4Modules
     #print 'getReportClass',self.jobId
     taskName = CCP4Modules.PROJECTSMANAGER().db().getJobInfo(jobId=self.jobId,mode='taskname')
@@ -485,8 +530,7 @@ class CReportGenerator(QtCore.QObject):
     return process
               
 
-  @QtCore.Slot(str,list,int,int)
-  def handleMgFinished(self,jobId,pictureQueue,exitCode,exitStatus):
+  def handleMgFinished(self, jobId, pictureQueue, exitCode, exitStatus):
     #print 'handleMgFinished',jobId,pictureQueue
     if len(pictureQueue)>0:
       self.mgProcess = self.runMg(pictureQueue,callBack=lambda exitCode2,exitStatus2: self.handleMgFinished(jobId,pictureQueue[1:],exitCode2,exitStatus2))
@@ -495,86 +539,128 @@ class CReportGenerator(QtCore.QObject):
           
     self.FinishedPictures.emit(jobId)
 
-#======================================================================================================
+# ==============================================================================
 # NB is function so can work stand-alone
-def getReportJobInfo(jobId=None,projectName=None,jobNumber=None):
+def getReportJobInfo(jobId=None, projectName=None, jobNumber=None):
+    """
+    Get job information for report generation.
 
+    This function retrieves comprehensive job information needed for generating
+    reports. It uses the database abstraction layer (PROJECTSMANAGER().db())
+    which supports both database-attached and database-free operation.
+
+    Args:
+        jobId: Job UUID string
+        projectName: Optional project name
+        jobNumber: Optional job number
+
+    Returns:
+        dict: Job information dictionary with keys like 'taskname', 'status',
+              'inputfiles', 'outputfiles', 'filenames', etc.
     """
-    print("getReportJobInfo")
-    print(jobId,projectName,jobNumber)
-    import traceback
-    traceback.print_stack()
-    """
-  
-    from core import CCP4Modules,CCP4TaskManager,CCP4Data
-    from dbapi import CCP4DbApi
+    from core import CCP4Modules, CCP4TaskManager, CCP4Data
+
+    # File role constants (matching legacy CCP4DbApi constants)
+    FILE_ROLE_OUT = 0
+    FILE_ROLE_IN = 1
+
     db = CCP4Modules.PROJECTSMANAGER().db()
-
 
     if projectName is None:
         projectNameInfo = db.getJobInfo(jobId=jobId)
         projectId = projectNameInfo['projectid']
-        projectName = db.getProjectInfo(projectId,mode='projectname')
+        projectName = db.getProjectInfo(projectId, mode='projectname')
 
-    if jobId is None: jobId = db.getJobId(projectName=projectName,jobNumber=jobNumber)
+    if jobId is None:
+        jobId = db.getJobId(projectName=projectName, jobNumber=jobNumber)
 
-    jobInfo = db.getJobInfo(jobId=jobId,mode=['runtime','status','taskname','taskversion','jobnumber','descendentjobs','projectid','projectname',
-                                              'jobtitle','creationtime'])
-    # print 'CReportGenerator getJobInfo',jobInfo
+    jobInfo = db.getJobInfo(
+        jobId=jobId,
+        mode=['runtime', 'status', 'taskname', 'taskversion', 'jobnumber',
+              'descendentjobs', 'projectid', 'projectname', 'jobtitle',
+              'creationtime']
+    )
+
     jobInfo['jobid'] = jobId
-    jobInfo['tasktitle'] = CCP4TaskManager.TASKMANAGER().getTitle(jobInfo['taskname'])
-    jobInfo['fileroot'] = CCP4Modules.PROJECTSMANAGER().makeFileName(jobId=jobId,mode='ROOT')
-    importedfiles = db.getJobImportFiles(jobId=jobId)
-    # Returned list JobId,FileID,ImportId,FileTypeId,Filename,Annotation
+    jobInfo['tasktitle'] = CCP4TaskManager.TASKMANAGER().getTitle(
+        jobInfo['taskname']
+    )
+    jobInfo['fileroot'] = CCP4Modules.PROJECTSMANAGER().makeFileName(
+        jobId=jobId, mode='ROOT'
+    )
+
+    # Get imported files (if supported by database handler)
     jobInfo['importedfiles'] = []
-    for imp in importedfiles:
-      jobInfo['importedfiles'].append( { 'fileId': imp[1], 'filetypeid':imp[3]  ,'filetype': '', 'filetypeclass' : CCP4DbApi.FILETYPES_CLASS[imp[3]], 'filename': imp[4],'relpath':'' ,'projectname': projectName,'projectid': projectId ,'annotation' : imp[5]} )
-    
-    #print 'getReportJobInfo importedfiles', jobInfo['importedfiles']
-
-    #jobInfo['childjobinfo'] = {}
-    #for jid,childList in jobInfo['descendentjobs']:
-      
-
-    for key,role in [['inputfiles',CCP4DbApi.FILE_ROLE_IN],['outputfiles',CCP4DbApi.FILE_ROLE_OUT]]:
-      jobInfo[key] = []
-      fileIdList = db.getJobFiles(jobId=jobId,role=role)
-      for fileId in fileIdList:
-        fileInfo = db.getFileInfo(fileId = fileId,mode=['filetypeid','filetype','filename','relpath','projectname','projectid','annotation','jobparamname'])
-        fileInfo['filetypeclass'] = CCP4DbApi.FILETYPES_CLASS[fileInfo['filetypeid']]
-        fileInfo['fileId'] = fileId
-        jobInfo[key].append(fileInfo)
-    jobInfo['filenames'] = {}
-    """
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    print('CReportGenerator.getJobInfo',jobInfo['importedfiles'])
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    """
     try:
-      container = db.getParamsContainer(jobId=jobId)
-    except:
-      pass
+        importedfiles = db.getJobImportFiles(jobId=jobId)
+        # Returned list JobId, FileID, ImportId, FileTypeId, Filename, Annotation
+        for imp in importedfiles:
+            jobInfo['importedfiles'].append({
+                'fileId': imp[1],
+                'filetypeid': imp[3],
+                'filetype': '',
+                'filetypeclass': FILETYPES_CLASS[imp[3]] if imp[3] < len(FILETYPES_CLASS) else '',
+                'filename': imp[4],
+                'relpath': '',
+                'projectname': projectName,
+                'projectid': projectId,
+                'annotation': imp[5]
+            })
+    except (AttributeError, NotImplementedError):
+        # Database handler doesn't support getJobImportFiles
+        pass
+
+    # Get input and output files
+    for key, role in [['inputfiles', FILE_ROLE_IN], ['outputfiles', FILE_ROLE_OUT]]:
+        jobInfo[key] = []
+        try:
+            fileIdList = db.getJobFiles(jobId=jobId, role=role)
+            for fileId in fileIdList:
+                fileInfo = db.getFileInfo(
+                    fileId=fileId,
+                    mode=['filetypeid', 'filetype', 'filename', 'relpath',
+                          'projectname', 'projectid', 'annotation', 'jobparamname']
+                )
+                filetypeid = fileInfo.get('filetypeid', 0)
+                fileInfo['filetypeclass'] = FILETYPES_CLASS[filetypeid] if filetypeid < len(FILETYPES_CLASS) else ''
+                fileInfo['fileId'] = fileId
+                jobInfo[key].append(fileInfo)
+        except (AttributeError, NotImplementedError):
+            # Database handler doesn't support this operation
+            pass
+    jobInfo['filenames'] = {}
+
+    # Try to get params container if database handler supports it
+    try:
+        container = db.getParamsContainer(jobId=jobId)
+    except (AttributeError, NotImplementedError, Exception):
+        # Database handler doesn't support getParamsContainer or job not found
+        pass
     else:
-      # Get the data keyed by task parameter name- not necessarilly all files but should all have __str__ methods
-      for key in container.inputData.dataOrder():
-        if isinstance(container.inputData.find(key),CCP4Data.CList):
-          jobInfo['filenames'][key] = []
-          for item in container.inputData.find(key):
-            jobInfo['filenames'][key].append(item.__str__())
-        else:
-          jobInfo['filenames'][key] = container.inputData.find(key).__str__()
-      for key in container.outputData.dataOrder():
-        if isinstance(container.outputData.find(key),CCP4Data.CList):
-          jobInfo['filenames'][key] = []
-          for item in container.outputData.find(key):
-            jobInfo['filenames'][key].append(item.__str__())
-        else:
-          try:
-              jobInfo['filenames'][key] = container.outputData.find(key).__str__()
-          except:
-              jobInfo['filenames'][key] = ""
-    #print 'CReportGenerator filenames',jobInfo['filenames']
-    
+        # Get the data keyed by task parameter name
+        # Not necessarily all files but should all have __str__ methods
+        try:
+            for key in container.inputData.dataOrder():
+                if isinstance(container.inputData.find(key), CCP4Data.CList):
+                    jobInfo['filenames'][key] = []
+                    for item in container.inputData.find(key):
+                        jobInfo['filenames'][key].append(str(item))
+                else:
+                    jobInfo['filenames'][key] = str(container.inputData.find(key))
+
+            for key in container.outputData.dataOrder():
+                if isinstance(container.outputData.find(key), CCP4Data.CList):
+                    jobInfo['filenames'][key] = []
+                    for item in container.outputData.find(key):
+                        jobInfo['filenames'][key].append(str(item))
+                else:
+                    try:
+                        jobInfo['filenames'][key] = str(container.outputData.find(key))
+                    except Exception:
+                        jobInfo['filenames'][key] = ""
+        except Exception as e:
+            logger.debug(f"Error extracting filenames from container: {e}")
+
     return jobInfo
 
 

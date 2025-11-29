@@ -143,8 +143,9 @@ class CTaskManager:
         if ccp4i2_root and ccp4i2_root not in sys.path:
             sys.path.insert(0, ccp4i2_root)
 
-        # Initialize plugin registry (lazy loading)
+        # Initialize plugin and report registries (lazy loading)
         self._plugin_registry = None
+        self._report_registry = None
 
     @property
     def plugin_registry(self):
@@ -153,6 +154,14 @@ class CTaskManager:
             from .task_manager.plugin_registry import get_registry
             self._plugin_registry = get_registry()
         return self._plugin_registry
+
+    @property
+    def report_registry(self):
+        """Get the report registry (lazy load on first access)."""
+        if self._report_registry is None:
+            from .task_manager.report_registry import get_report_registry
+            self._report_registry = get_report_registry()
+        return self._report_registry
 
     def get_plugin_class(self, task_name: str, version: Optional[str] = None) -> Optional[Type]:
         """
@@ -238,6 +247,9 @@ class CTaskManager:
         """
         Get the report class for a plugin/task.
 
+        Uses the report registry which discovers *_report.py files in wrappers/,
+        wrappers2/, and pipelines/ directories.
+
         Args:
             name: Name of the task/plugin (e.g., "refmac", "pointless")
             version: Optional version string (currently ignored)
@@ -245,20 +257,100 @@ class CTaskManager:
         Returns:
             Report class if found, None otherwise
         """
-        # Get the plugin class first
-        plugin_class = self.get_plugin_class(name, version)
-        if plugin_class is None:
-            return None
+        return self.report_registry.get_report_class(name, version)
 
-        # Check if the plugin class has a REPORT attribute
-        if hasattr(plugin_class, "REPORT"):
-            return plugin_class.REPORT
+    def get_report_metadata(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get report metadata without importing the report class.
 
-        return None
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "pointless")
+
+        Returns:
+            Dictionary of report metadata (RUNNING, WATCHED_FILE, etc.), or None if not found
+        """
+        return self.report_registry.get_report_metadata(name)
+
+    def has_report(self, name: str) -> bool:
+        """
+        Check if a report class exists for a task name.
+
+        Args:
+            name: Name of the task/plugin
+
+        Returns:
+            True if a report class exists, False otherwise
+        """
+        return self.report_registry.has_report(name)
+
+    def list_reports(self) -> List[str]:
+        """Get list of all available report task names."""
+        return self.report_registry.list_reports()
+
+    def searchPath(self) -> List[str]:
+        """
+        Get the search path for plugins (wrappers, pipelines, etc.).
+
+        Returns:
+            List of directory paths containing plugin scripts
+        """
+        ccp4i2_root = os.environ.get("CCP4I2_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        return [
+            os.path.join(ccp4i2_root, "wrappers", "*", "script"),
+            os.path.join(ccp4i2_root, "wrappers2", "*", "script"),
+            os.path.join(ccp4i2_root, "pipelines", "*", "script"),
+            os.path.join(ccp4i2_root, "pipelines", "*", "wrappers", "*", "script"),
+        ]
+
+    def searchReferenceFile(self, name: Optional[str] = None, version: Optional[str] = None,
+                           cformat: str = 'medline', drillDown: bool = False) -> List[str]:
+        """
+        Search for reference/bibliography files for a task.
+
+        Reference files are typically .medline.txt files containing citation information.
+
+        Args:
+            name: Name of the task/plugin (e.g., "refmac", "servalcat_pipe")
+            version: Optional version (currently ignored)
+            cformat: Format of reference file (default "medline")
+            drillDown: If True, also search for reference files in subtasks
+
+        Returns:
+            List of file paths to reference files found
+        """
+        import glob
+
+        if name is None:
+            return []
+
+        file_list = []
+        search_pattern = f"{name}.{cformat}.txt"
+
+        # Search all paths in the search path
+        for path_pattern in self.searchPath():
+            # Expand the glob pattern in the path (e.g., wrappers/*/script)
+            matching_dirs = glob.glob(path_pattern)
+            for directory in matching_dirs:
+                full_path = os.path.join(directory, search_pattern)
+                if os.path.exists(full_path):
+                    file_list.append(full_path)
+
+        if drillDown:
+            # Get subtasks from plugin metadata
+            metadata = self.get_plugin_metadata(name)
+            if metadata:
+                sub_tasks = metadata.get('subTasks', [])
+                for sub_task in sub_tasks:
+                    file_list.extend(self.searchReferenceFile(name=sub_task, cformat=cformat, drillDown=True))
+
+        return file_list
 
     def getReportAttribute(self, name: str, attribute: str, version: Optional[str] = None) -> Any:
         """
-        Get an attribute from a plugin's report class.
+        Get an attribute from a plugin's report class or metadata.
+
+        Tries to get the attribute from cached metadata first (fast, no import).
+        Falls back to importing the report class if the attribute is not in metadata.
 
         Args:
             name: Name of the task/plugin (e.g., "refmac", "pointless")
@@ -268,6 +360,12 @@ class CTaskManager:
         Returns:
             Attribute value if found, None otherwise
         """
+        # First try to get from metadata (fast, no import required)
+        metadata = self.get_report_metadata(name)
+        if metadata and attribute in metadata:
+            return metadata[attribute]
+
+        # Fall back to importing the class for non-metadata attributes
         report_class = self.getReportClass(name, version)
         if report_class is None:
             return None
@@ -480,12 +578,15 @@ def main():
     if args.rebuild:
         dir_path = os.path.dirname(os.path.abspath(__file__))
         defxml_script = os.path.join(dir_path, "task_manager", "defxml_lookup.py")
-        plugin_script = os.path.join(dir_path, "plugin_lookup.py")
+        plugin_script = os.path.join(dir_path, "task_manager", "plugin_lookup.py")
+        report_script = os.path.join(dir_path, "task_manager", "report_lookup.py")
 
         print("Regenerating defxml_lookup.json...")
         subprocess.run([sys.executable, defxml_script], check=True)
-        print("Regenerating plugin_lookup.json...")
+        print("Regenerating plugin_lookup.json and plugin_registry.py...")
         subprocess.run([sys.executable, plugin_script], check=True)
+        print("Regenerating report_lookup.json and report_registry.py...")
+        subprocess.run([sys.executable, report_script], check=True)
         print("Lookup files regenerated.")
     else:
         parser.print_help()

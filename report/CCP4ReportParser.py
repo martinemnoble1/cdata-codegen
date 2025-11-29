@@ -27,6 +27,7 @@ try:
 except ImportError:
     from io import StringIO
 import os
+import sys
 #from lxml import etree
 import xml.etree.ElementTree as etree
 
@@ -34,6 +35,7 @@ from lxml import html as lxml_html
 
 from core.CCP4ErrorHandling import *
 from core.CCP4Modules import PROJECTSMANAGER
+from core.base_object.hierarchy_system import HierarchicalObject
 
 XRTNS = "{http://www.ccp4.ac.uk/xrt}"
 CCP4NS = "http://www.ccp4.ac.uk/ccp4ns"
@@ -1063,20 +1065,17 @@ class Container(ReportClass):
     return root
 
   def graph_data_as_rtf(self,fileName=None):
-    try:
-      from PySide2 import QtGui, QtWidgets,QtCore
-    except:
-      raise CException(self.__class__,4,fileName)
+    """
+    RTF/ODF export functionality - DEPRECATED.
 
-    document = QtGui.QTextDocument()
-    graphList = findChildren(self,Graph)
-    for graph in graphList:
-      table = graph.data_as_rtf(document=document)
-
-    writer = QtGui.QTextDocumentWriter()
-    writer.setFormat(QtCore.QByteArray('ODF'))
-    writer.setFileName(fileName)
-    writer.write(document)
+    This method previously used Qt (PySide2) for RTF document generation.
+    RTF export is no longer supported in the Qt-free version.
+    Use data_as_csv() for data export instead.
+    """
+    import logging
+    logger = logging.getLogger(f"ccp4x:{__name__}")
+    logger.warning("graph_data_as_rtf() is deprecated - RTF export requires Qt which is no longer available")
+    return None
 
   def errorReport(self):
     err = CException()
@@ -3168,29 +3167,17 @@ class Graph(ReportClass):
       
 
   def data_as_rtf(self,document=None):
-    try:
-      from PySide2 import QtGui, QtWidgets
-    except:
-      raise CException(self.__class__,3)
+    """
+    RTF table export functionality - DEPRECATED.
 
-    # Is there some table data to output
-    #print 'data_as_rtf coldata',len(self.coldata),'tableText',self.tableText    
-    if document is None:
-      document = QtGui.QTextDocument()
-    cursor = QtGui.QTextCursor(document)
-    table = cursor.insertTable(len(coldata),len(coldata[0]))
-    #print 'data_as_rtf columns,rows',table.rows(),table.columns(),'should be',len(coldata),len(coldata[0])
-    coldata = self.getListOfRows()
-    ir = -1
-    for col in coldata:
-      ir += 1
-      ic = -1
-      for item in col:
-        ic += 1
-        #print 'data_as_rtf ir,ic,item',ir,ic,item
-        cell = table.cellAt(ir,ic)
-        cell.firstCursorPosition().insertText(str(item))
-    return table
+    This method previously used Qt (PySide2) for RTF table generation.
+    RTF export is no longer supported in the Qt-free version.
+    Use data_as_csv() for data export instead.
+    """
+    import logging
+    logger = logging.getLogger(f"ccp4x:{__name__}")
+    logger.warning("data_as_rtf() is deprecated - RTF export requires Qt which is no longer available")
+    return None
 
   def data_as_csv(self,fileName=None):
     rowList = self.getListOfRows()
@@ -3585,7 +3572,6 @@ SceneDataFile
 class InputData(IODataList):
 
   def as_etree(self):
-    from dbapi import CCP4DbApi
     root = etree.Element('root')
     anchor = etree.Element('a')
     anchor.set('name','inputData')
@@ -3606,7 +3592,6 @@ class InputData(IODataList):
 class OutputData(IODataList):
 
   def as_etree(self):
-    from dbapi import CCP4DbApi
     root = etree.Element('root')
     anchor = etree.Element('a')
     anchor.set('name','outputData')
@@ -3626,7 +3611,6 @@ class OutputData(IODataList):
 class ImportedFiles(IODataList):
 
   def as_etree(self):
-    from dbapi import CCP4DbApi
     root = etree.Element('root')
     anchor = etree.Element('a')
     anchor.set('name','importedFiles')
