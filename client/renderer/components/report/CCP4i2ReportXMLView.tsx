@@ -31,15 +31,33 @@ export const CCP4i2ReportXMLView = () => {
     endpoint: "jobs",
   });
 
-  const { data: report_xml_json, mutate: mutateReportXml } = useSWR<any>(
+  const { data: report_xml_json, error: fetchError, mutate: mutateReportXml } = useSWR<any>(
     job ? `/api/proxy/jobs/${job.id}/report_xml/` : null,
     swrFetcher,
     { refreshInterval: job?.status == 3 || job?.status == 2 ? 5000 : 0 }
   );
 
+  // Debug logging
+  useEffect(() => {
+    if (job) {
+      console.log(`[Report] Fetching report for job ${job.id}, status=${job.status}`);
+    }
+    if (fetchError) {
+      console.error(`[Report] Fetch error for job ${job?.id}:`, fetchError);
+    }
+    if (report_xml_json) {
+      console.log(`[Report] Received response for job ${job?.id}:`,
+        report_xml_json.xml ? `${report_xml_json.xml.length} chars` : 'no xml field',
+        report_xml_json);
+    }
+  }, [job, fetchError, report_xml_json]);
+
   const report_xml: XMLDocument | null = useMemo(() => {
-    if (!report_xml_json || !report_xml_json.xml) return null;
-    return $.parseXML(report_xml_json.xml);
+    if (!report_xml_json) return null;
+    // Handle both wrapped response {success: true, data: {xml: ...}} and direct {xml: ...}
+    const xmlString = report_xml_json.data?.xml || report_xml_json.xml;
+    if (!xmlString) return null;
+    return $.parseXML(xmlString);
   }, [report_xml_json]);
 
   const oldJob = usePrevious(job);
@@ -75,6 +93,20 @@ export const CCP4i2ReportXMLView = () => {
       })
       .toArray();
   }, [report_xml, job]);
+
+  // Show error state
+  if (fetchError) {
+    return (
+      <Paper sx={{ p: 2, m: 2 }}>
+        <Typography color="error" variant="h6">
+          Failed to load report
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {fetchError.message || String(fetchError)}
+        </Typography>
+      </Paper>
+    );
+  }
 
   return !reportContent ? (
     <Skeleton />
