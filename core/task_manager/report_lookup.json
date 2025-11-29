@@ -1,46 +1,4 @@
 {
-  "GenericReport": {
-    "module": "pipelines.phaser_simple.script.phaser_simple_report",
-    "class": "GenericReport",
-    "module_file": "../../report/CCP4ReportParser.py",
-    "TASKNAME": "",
-    "TASKVERSION": "0.0.0",
-    "RUNNING": false,
-    "WATCHED_FILE": null,
-    "FAILED": false,
-    "USEPROGRAMXML": true,
-    "SEPARATEDATA": false,
-    "ERROR_CODES": {
-      "0": {
-        "severity": 0,
-        "description": "OK"
-      },
-      "101": {
-        "description": "Import xrt file does not exist"
-      },
-      "102": {
-        "description": "Failed to read import xrt file"
-      },
-      "103": {
-        "description": "Failed to find insert xrt element in program file"
-      },
-      "104": {
-        "description": "Failed to find insert element in imported xrt file"
-      },
-      "105": {
-        "description": "Failed loading job info for jobId"
-      },
-      "106": {
-        "description": "Failed loading XML file"
-      },
-      "107": {
-        "description": "Failed creating csv file"
-      },
-      "108": {
-        "description": "Failed creating xml data file"
-      }
-    }
-  },
   "import_serial": {
     "module": "wrappers.import_serial.script.import_serial_report",
     "class": "import_serial_report",
@@ -5015,6 +4973,47 @@
       }
     }
   },
+  "shelx": {
+    "module": "pipelines.shelx.script.shelx_report",
+    "class": "shelx_report",
+    "TASKNAME": "shelx",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
   "servalcat_pipe": {
     "module": "pipelines.servalcat_pipe.script.servalcat_pipe_report",
     "class": "servalcat_pipe_report",
@@ -5025,6 +5024,457 @@
     "WATCHED_FILE": null,
     "FAILED": false,
     "USEPROGRAMXML": true,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_refatompick": {
+    "module": "pipelines.crank2.wrappers.crank2_refatompick.script.crank2_refatompick_report",
+    "class": "crank2_refatompick_report",
+    "TASKNAME": "crank2_refatompick",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_handdet": {
+    "module": "pipelines.crank2.wrappers.crank2_handdet.script.crank2_handdet_report",
+    "class": "crank2_handdet_report",
+    "TASKNAME": "crank2_handdet",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_mbref": {
+    "module": "pipelines.crank2.wrappers.crank2_mbref.script.crank2_mbref_report",
+    "class": "crank2_mbref_report",
+    "TASKNAME": "crank2_mbref",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_phdmmb": {
+    "module": "pipelines.crank2.wrappers.crank2_phdmmb.script.crank2_phdmmb_report",
+    "class": "crank2_phdmmb_report",
+    "TASKNAME": "crank2_phdmmb",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_dmfull": {
+    "module": "pipelines.crank2.wrappers.crank2_dmfull.script.crank2_dmfull_report",
+    "class": "crank2_dmfull_report",
+    "TASKNAME": "crank2_dmfull",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_comb_phdmmb": {
+    "module": "pipelines.crank2.wrappers.crank2_comb_phdmmb.script.crank2_comb_phdmmb_report",
+    "class": "crank2_comb_phdmmb_report",
+    "TASKNAME": "crank2_comb_phdmmb",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_ref": {
+    "module": "pipelines.crank2.wrappers.crank2_ref.script.crank2_ref_report",
+    "class": "crank2_ref_report",
+    "TASKNAME": "crank2_ref",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_phas": {
+    "module": "pipelines.crank2.wrappers.crank2_phas.script.crank2_phas_report",
+    "class": "crank2_phas_report",
+    "TASKNAME": "crank2_phas",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_faest": {
+    "module": "pipelines.crank2.wrappers.crank2_faest.script.crank2_faest_report",
+    "class": "crank2_faest_report",
+    "TASKNAME": "crank2_faest",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2_substrdet": {
+    "module": "pipelines.crank2.wrappers.crank2_substrdet.script.crank2_substrdet_report",
+    "class": "crank2_substrdet_report",
+    "TASKNAME": "crank2_substrdet",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
+    "SEPARATEDATA": true,
+    "ERROR_CODES": {
+      "0": {
+        "severity": 0,
+        "description": "OK"
+      },
+      "101": {
+        "description": "Import xrt file does not exist"
+      },
+      "102": {
+        "description": "Failed to read import xrt file"
+      },
+      "103": {
+        "description": "Failed to find insert xrt element in program file"
+      },
+      "104": {
+        "description": "Failed to find insert element in imported xrt file"
+      },
+      "105": {
+        "description": "Failed loading job info for jobId"
+      },
+      "106": {
+        "description": "Failed loading XML file"
+      },
+      "107": {
+        "description": "Failed creating csv file"
+      },
+      "108": {
+        "description": "Failed creating xml data file"
+      }
+    }
+  },
+  "crank2": {
+    "module": "pipelines.crank2.script.crank2_report",
+    "class": "crank2_report",
+    "TASKNAME": "crank2",
+    "TASKVERSION": "0.0.0",
+    "RUNNING": true,
+    "WATCHED_FILE": "i2.xml",
+    "FAILED": false,
+    "USEPROGRAMXML": false,
     "SEPARATEDATA": true,
     "ERROR_CODES": {
       "0": {

@@ -133,6 +133,14 @@ def extract_report_classes(mod, module_name: str) -> Dict[str, Any]:
         if not is_report_subclass(obj):
             continue
 
+        # Skip classes that were imported from other modules (not defined in this file)
+        # This prevents picking up GenericReport etc. from wildcard imports
+        obj_module = getattr(obj, "__module__", None)
+        if obj_module and obj_module != mod.__name__:
+            # Check if it's a class from CCP4ReportParser (common wildcard import)
+            if "CCP4ReportParser" in obj_module or "report.CCP4ReportParser" in obj_module:
+                continue
+
         entry = {"module": module_name, "class": name}
 
         # Get module file path for reference
