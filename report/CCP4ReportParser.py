@@ -193,518 +193,15 @@ def htmlBase():
     return htmlBase
 
 
-def htmlDoc(
-        htmlBase=None,
-        cssVersion=None,
-        cssFile=None,
-        jsFile=None,
-        title=None,
-        additionalJsFiles=None,
-        additionalCssFiles=None,
-        requireDataMain=None,
-        additionalScript=None):
-    from core import CCP4Utils
-    import sys
-    if cssFile is None:
-        cssFile = 'xreport.css'
-    if jsFile is None:
-        jsFile = 'xreport.js'
-    doc = etree.parse(StringIO(DOCTYPE))
-    html = doc.getroot()
-    if htmlBase is None:
-        htmlBase = '../../report_files'
-
-    # Default ot latest htmlBaseVersion or get the latest minor version
-    # for the version proposed
-    if cssVersion is not None:
-        cssVersion = getLastestMinorVersion(cssVersion)
-    if htmlBase.endswith('report_files'):
-        if cssVersion is None:
-            cssVersion = CURRENT_CSS_VERSION
-        # print 'htmlDoc cssVersion',cssVersion
-        htmlBase = htmlBase + '/' + cssVersion
-    head = etree.Element('head')
-    if title is not None:
-        titleEle = etree.Element('title')
-        titleEle.text = title
-        head.append(titleEle)
-
-    allJsFiles = [jsFile]
-    if additionalJsFiles is not None:
-        allJsFiles += additionalJsFiles
-    for aJsFile in allJsFiles:
-        script = etree.Element('script')
-        script.set('src', htmlBase + '/' + aJsFile)
-        head.append(script)
-
-    allCssFiles = [cssFile, 'jspimple.css', 'jquery-ui-1.10.4.custom.min.css']
-    if additionalCssFiles is not None:
-        allCssFiles += additionalCssFiles
-    for aCssFile in allCssFiles:
-        link = etree.Element('link')
-        link.set('rel', 'stylesheet')
-        link.set('type', 'text/css')
-        link.set('href', htmlBase + '/' + aCssFile)
-        head.append(link)
-
-    for webgl_source in WEBGLSOURCES:
-        script = etree.Element('script')
-        script.attrib['src'] = htmlBase + '/MGWebGL/' + webgl_source
-        script.attrib['type'] = "text/javascript"
-        head.append(script)
-
-    if additionalScript is not None:
-        script = etree.Element('script')
-        script.text = additionalScript
-        head.append(script)
-
-    if requireDataMain is not None:
-        script = etree.Element('script')
-        script.set('src', htmlBase + '/require.min.js')
-        script.set('data-main', htmlBase + '/' + requireDataMain)
-        head.append(script)
-
-    script = etree.Element('script')
-    script.attrib['src'] = htmlBase + '/' + "qwebchannel.js"
-    script.attrib['type'] = "text/javascript"
-    head.append(script)
-
-    script = etree.Element('script')
-    script.attrib['src'] = htmlBase + '/' + "jquery.min.js"
-    script.attrib['type'] = "text/javascript"
-    head.append(script)
-
-    script = etree.Element('script')
-    script.attrib['src'] = htmlBase + '/' + "jquery-ui-1.10.4.custom.min.js"
-    script.attrib['type'] = "text/javascript"
-    head.append(script)
-
-    mouseOutText = """
-        new QWebChannel(qt.webChannelTransport,
-                function(channel){
-                window.buttonBridge = channel.objects.handler;
-        });
-        function buttonClicked(name) {
-            window.buttonBridge.clicked(name);
-        }
-
-function onMouseOut(event,id) {
-    e = event.toElement || event.relatedTarget;
-    if(e == document.getElementById(id) || e.parentNode == document.getElementById(id) || e.parentNode.parentNode == document.getElementById(id)){
-        return;
-    }
-    document.getElementById(id).classList.remove("show");
-}
-  """
-
-    script = etree.Element('script')
-    script.text = mouseOutText
-    head.append(script)
-
-    onLoadText = """
-     var queue = [];
-     var loaded = false;
-
-     function enqueue(callback,fogdiv,clipdiv,mapLoadButton)
-     {
-         if(!loaded) queue.push([callback,fogdiv,clipdiv,mapLoadButton]);
-         else callback(fogdiv,clipdiv,mapLoadButton);
-     }
-
-     var getElementsByRegex = function(node,pattern,recurse){
-        var arrElements = [];   // to accumulate matching elements
-        var re = new RegExp(pattern);   // the regex to match with
-
-        function findRecursively(aNode) { // recursive function to traverse DOM
-            if (!aNode)
-                return;
-            if (aNode.tagName !== undefined && aNode.tagName.search(re) != -1)
-                arrElements.push(aNode);  // FOUND ONE!
-            for (var idx in aNode.childNodes) // search children...
-                findRecursively(aNode.childNodes[idx]);
-        };
-
-        findRecursively(node); // initiate recursive matching
-        return arrElements; // return matching elements
-    };
-    function loadData(gl,pdbatoms,enerLib,bruteForceHB,wizard){
-        var ribbons = [];
-        //FIXME - This is hackery ... need more wizards to be written.
-        if(wizard.startsWith("Site and ribbons by ")){
-           ribbons = wizardSiteAndRibbonsByChain(pdbatoms,enerLib,bruteForceHB);
-        } else if(wizard.startsWith("colour chains")) {
-           ribbons = wizardRibbonsByChain(pdbatoms,enerLib,bruteForceHB);
-        } else {
-           ribbons = wizardBonds(pdbatoms,enerLib,bruteForceHB);
-        }
-        //ribbons = wizardWorms(pdbatoms,enerLib,bruteForceHB);
-
-        var appendStart = new Date().getTime();
-        for(var i=0;i<ribbons.length;i++){
-            // FIXME - Should be done in wizardBonds call????
-            ribbons[i]["symmetry"] = pdbatoms["symmetry"];
-            gl.appendOtherData(ribbons[i],true);
-        }
-        console.log("Time to do appendData(actual): "+(new Date().getTime()-appendStart));
-        gl.buildBuffers();
-        console.log("Time to done buildBuffers after append : "+(new Date().getTime()-appendStart));
-        gl.drawScene();
-
-        var hier = pdbatoms["atoms"];
-        gl.setOrigin(hier[0].centre());
-        console.log(hier[0].centre());
-
-    }
-
-    function _base64ToArrayBuffer(base64) {
-        var binary_string =  window.atob(base64);
-        var len = binary_string.length;
-        var bytes = new Uint8Array( len );
-        for (var i = 0; i < len; i++)        {
-            bytes[i] = binary_string.charCodeAt(i);
-        }
-        return bytes.buffer;
-    }
-
-    function doParseAndLoad(gl,enerLib,xmlDoc,maploadButton){
-        var extent = 0.0;
-            var ccp4i2_header = xmlDoc.getElementsByTagName("ccp4i2_header")[0];
-            var projectId = "";
-            var jobNumber = "";
-            if(ccp4i2_header.getElementsByTagName("projectId").length>0&&ccp4i2_header.getElementsByTagName("jobNumber").length>0){
-                projectId = ccp4i2_header.getElementsByTagName("projectId")[0].innerHTML;
-                jobNumber = ccp4i2_header.getElementsByTagName("jobNumber")[0].innerHTML;
-            }
-            var atoms_ids = {};
-            if(xmlDoc.getElementsByTagName("ccp4i2_body").length>0){
-                var ccp4i2_body = xmlDoc.getElementsByTagName("ccp4i2_body")[0];
-                if(ccp4i2_body.getElementsByTagName("data").length>0){
-                    var data = ccp4i2_body.getElementsByTagName("data")[0];
-                    var molData = data.getElementsByTagName("MolData");
-                    for (var i=0; i < molData.length; i++) {
-                        var customResCIFFiles = molData[i].getElementsByTagName("customResCIFFiles");
-                        for(var k=0;k<customResCIFFiles.length;k++){
-                            var cifmonomers = customResCIFFiles[k].getElementsByTagName("cifmonomer");
-                            for(var l=0;l<cifmonomers.length;l++){
-                                console.log("Have a cifmonomer");
-                                var name = cifmonomers[l].getElementsByTagName("name");
-                                var ciffiledatanodes = cifmonomers[l].getElementsByTagName("filedata");
-                                if(name.length>0&&ciffiledatanodes.length>0){
-                                    console.log("Have some text");
-                                    var nameText = getNodeText(name[0]);
-                                    var cifText = getNodeText(ciffiledatanodes[0]);
-                                    console.log(nameText);
-                                    console.log(cifText);
-                                    enerLib.addCIFAtomTypes(nameText,cifText);
-                                    enerLib.addCIFBondTypes(nameText,cifText);
-                                }
-                            }
-                        }
-                        var modid = molData[i].getAttribute("id");
-                        var fileDatas = molData[i].getElementsByTagName("filedata");
-                        var fileData;
-                        for(var ifd=0;ifd<fileDatas.length;ifd++){
-                            console.log(ifd);
-                            if(fileDatas[ifd].parentNode===molData[i]){
-                                fileData = fileDatas[ifd];
-                                break;
-                            }
-                        }
-                        var pdbatoms;
-                        try {
-                            pdbatoms = parsePDB(fileData.innerHTML.split(String.fromCharCode(10)));
-                        } catch(e) {
-                            console.log("Failed to parse as PDB, try MMCIF");
-                            try {
-                                pdbatoms = parseMMCIF(fileData.innerHTML.split(String.fromCharCode(10)));
-                            } catch(e) {
-                                console.log("Failed to parse as PDB or MMCIF, this is probably a bug.");
-                                return;
-                            }
-                        }
-                        var hier = pdbatoms["atoms"];
-                        atoms_ids[modid] = pdbatoms;
-                        var molDisp = molData[i].getElementsByTagName("MolDisp");
-                        for (var j=0; j < molDisp.length; j++) {
-                            var selection = molDisp[j].getElementsByTagName("select")[0].innerHTML;
-                            var style = molDisp[j].getElementsByTagName("style")[0].innerHTML;
-                            if(true){
-                                var model = hier[0]; //FIXME - Loop over models?
-                                var selAtoms = model.getAtoms(selection);
-                                //FIXME - Now what do I do?
-                                if(style==="BALLSTICK"||style==="BONDS"||style==="THINBONDS"||style==="FATBONDS"||style==="SPHERES"||style==="CYLINDERS"){
-                                    //FIXME - pick up the colour scheme ....
-                                    var colourScheme = new ColourScheme(pdbatoms);
-                                    var atomColours = colourScheme.colourByAtomType();
-                                    var contactsAndSingletons = model.getBondsContactsAndSingletons(selAtoms);
-                                    var contacts = contactsAndSingletons["contacts"];
-                                    var singletons = contactsAndSingletons["singletons"];
-                                    if(style==="BONDS"||style==="FATBONDS"){
-                                        var singletonPrimitiveInfo = singletonsToLinesInfo(singletons,4,atomColours);
-                                        gl.appendOtherData(singletonPrimitiveInfo,true);
-                                        var ligandAtoms =  model.getAtoms(selection+" and ligands");
-                                        var multipleBonds = getMultipleBonds(ligandAtoms,enerLib,4,atomColours,"LINES");
-                                        for(var imbo=0;imbo<multipleBonds.length;imbo++){
-                                            gl.appendOtherData(multipleBonds[imbo]);
-                                        }
-                                        if(ligandAtoms.length<selAtoms.length){
-                                            var linePrimitiveInfo = contactsToLinesInfo(contacts,4,atomColours);
-                                            gl.appendOtherData(linePrimitiveInfo,true);
-                                        }
-                                    } else if(style==="THINBONDS"){
-                                        var singletonPrimitiveInfo = singletonsToLinesInfo(singletons,2,atomColours);
-                                        gl.appendOtherData(singletonPrimitiveInfo,true);
-                                        var ligandAtoms =  model.getAtoms(selection+" and ligands");
-                                        var multipleBonds = getMultipleBonds(ligandAtoms,enerLib,2,atomColours,"LINES");
-                                        for(var imbo=0;imbo<multipleBonds.length;imbo++){
-                                            gl.appendOtherData(multipleBonds[imbo]);
-                                        }
-                                        if(ligandAtoms.length<selAtoms.length){
-                                            var linePrimitiveInfo = contactsToLinesInfo(contacts,2,atomColours);
-                                            gl.appendOtherData(linePrimitiveInfo,true);
-                                        }
-                                    } else if(style==="BALLSTICK"){
-                                        var spheres = atomsToSpheresInfo(selAtoms,0.4,atomColours);
-                                        gl.appendOtherData(spheres,true);
-                                        var ligandAtoms =  model.getAtoms(selection+" and ligands");
-                                        var multipleBonds = getMultipleBonds(ligandAtoms,enerLib,0.2,atomColours,"CYLINDERS");
-                                        for(var imbo=0;imbo<multipleBonds.length;imbo++){
-                                            gl.appendOtherData(multipleBonds[imbo]);
-                                        }
-                                        if(ligandAtoms.length<selAtoms.length){
-                                            var cylinderPrimitiveInfo = contactsToCylindersInfo(contacts,0.2,atomColours);
-                                            gl.appendOtherData(cylinderPrimitiveInfo,true);
-                                        }
-                                    } else if(style==="CYLINDERS"){
-                                        var spheres = atomsToSpheresInfo(selAtoms,0.2,atomColours);
-                                        gl.appendOtherData(spheres,true);
-                                        var ligandAtoms =  model.getAtoms(selection+" and ligands");
-                                        var multipleBonds = getMultipleBonds(ligandAtoms,enerLib,0.2,atomColours,"CYLINDERS");
-                                        for(var imbo=0;imbo<multipleBonds.length;imbo++){
-                                            gl.appendOtherData(multipleBonds[imbo]);
-                                        }
-                                        if(ligandAtoms.length<selAtoms.length){
-                                            var cylinderPrimitiveInfo = contactsToCylindersInfo(contacts,0.2,atomColours);
-                                            gl.appendOtherData(cylinderPrimitiveInfo,true);
-                                        }
-                                    } else if(style==="SPHERES"){
-                                        var spheres = atomsToSpheresInfo(selAtoms,1.0,atomColours);
-                                        gl.appendOtherData(spheres,true);
-                                    }
-                                } else if(style==="SPLINE"||style==="WORM"){
-                                    var flagBulge = true;
-                                    CalcSecStructure(hier,flagBulge);
-                                    //FIXME - pick up the colour scheme ....
-                                    var colourScheme = new ColourScheme(pdbatoms);
-                                    //var atomColours = colourScheme.colourByAtomType();
-                                    var atomColours = colourScheme.colourBySecondaryStructure({"strand":[0.0,0.0,1.0,1.0],"helix":[1.0,0.0,0.0,1.0]});
-                                    //FIXME - ignores selection. Can we select in spline yet?
-                                    var coloured_splines_info;
-                                    if(pdbatoms["models"].length>0){
-                                        for(var modidx=0;modidx<pdbatoms["models"].length;modidx++){
-                                            if(style==="SPLINE"){
-                                                coloured_splines_info = GetSplinesColoured(pdbatoms,atomColours,false,pdbatoms["models"][modidx]);
-                                            } else {
-                                                coloured_splines_info = GetWormColoured(pdbatoms,atomColours,false,pdbatoms["models"][modidx]);
-                                            }
-                                            for(var i=0;i<coloured_splines_info.length;i++){
-                                                gl.appendOtherData(coloured_splines_info[i],true);
-                                            }
-                                        }
-                                    } else {
-                                        if(style==="SPLINE"){
-                                            coloured_splines_info = GetSplinesColoured(pdbatoms,atomColours);
-                                        } else {
-                                            coloured_splines_info = GetWormColoured(pdbatoms,atomColours);
-                                        }
-                                        for(var i=0;i<coloured_splines_info.length;i++){
-                                            gl.appendOtherData(coloured_splines_info[i],true);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    document.getElementById(maploadButton).onclick = function loadMaps(){
-                        console.log("Clicked map load")
-                        var mapData = data.getElementsByTagName("MapData");
-                        var clients =  [];
-                        for (var i=0; i < mapData.length; i++) {
-                            var filedata = mapData[i].getElementsByTagName("filedata")[0];
-                            console.log(mapData[i]);
-                            var theData = getNodeText(filedata);
-                            //basename of file
-                            theData = theData.split(/[\\\\/]/).pop();
-                            console.log(theData);
-                            clients.push(new XMLHttpRequest());
-                            clients[i].mapData = mapData[i];
-                            console.log("%%%%%%%%%%%%%%%%%%%%%");
-                            console.log("Create a client");
-                            console.log("%%%%%%%%%%%%%%%%%%%%%");
-                            clients[i].onreadystatechange = function() {
-                                if (this.readyState == 4 && this.status == 200) {
-                                    console.log("OK!");
-                                    console.log(this.mapData);
-                                    //Remove 1st and last quote and an EOL/EOF ?
-                                    loadMapsData(this.mapData,this.responseText.substr(1,this.responseText.length-2));
-                                }
-                            }
-                            clients[i].open("GET", \"""" + htmlBase.rstrip("/report_files/0.1.0") + """/database/?getProjectJobFile?projectId="+projectId+"?fileName="+theData+"?jobNumber="+jobNumber, true);
-
-                            clients[i].send(null);
-                        }
-                    }
-                    function loadMapsData(thisMapData,theData){
-
-                        console.log("####################");
-                        console.log("loadMapsData");
-                        console.log("####################");
-
-                        var isDiffNode = thisMapData.getElementsByTagName("isDifferenceMap")[0];
-                        var isDiff = false;
-                        if(typeof(isDiffNode)==='undefined'){
-                        } else {
-                            var isDiffText = getNodeText(isDiffNode);
-                            if(isDiffText==="True"||isDiffText==="true"||isDiffText==="1"){
-                                isDiff = true;
-                            }
-                        }
-
-                        var mapDisp = thisMapData.getElementsByTagName("MapDisp");
-                        var sigma;
-                        var units = thisMapData.getElementsByTagName("contourUnits")[0].innerHTML;
-                        var contourMult = 1.0;
-
-                        var sigmaNode = thisMapData.getElementsByTagName("sigma")[0];
-                        if(typeof(sigmaNode)==='undefined'){
-                        } else {
-                            var sigmaText = getNodeText(sigmaNode);
-                            sigma = parseFloat(sigmaText);
-                        }
-
-                        var unitsNode = thisMapData.getElementsByTagName("contourUnits")[0];
-                        if(typeof(unitsNode)==='undefined'){
-                        } else {
-                            var unitsText = getNodeText(unitsNode);
-                            if(unitsText==="sigma"){
-                                contourMult = sigma;
-                            }
-                        }
-
-                        var contents = _base64ToArrayBuffer(theData);
-                        var map = readMapFromArrayBuffer(contents);
-                        var mapGrid = mapToMapGrid(map);
-
-                        for (var j=0; j < mapDisp.length; j++) {
-                            if(isDiff){
-                                var contourLevel = contourMult * parseFloat(mapDisp[j].getElementsByTagName("contourLevel")[0].innerHTML);
-                                var mapTriangleData = {"mapColours": [[0.0,1.0,0.0,1.0]], "mapContourLevels":[contourLevel], "mapGrids":[mapGrid],"col_tri":[[]], "norm_tri":[[]], "vert_tri":[[]], "idx_tri":[[]] , "prim_types":[[]] };
-                                gl.appendOtherDataIfReady(mapTriangleData);
-                                var contourLevel = -contourMult * parseFloat(mapDisp[j].getElementsByTagName("contourLevel")[0].innerHTML);
-                                var mapTriangleData = {"mapColours": [[1.0,0.0,0.0,1.0]], "mapContourLevels":[contourLevel], "mapGrids":[mapGrid],"col_tri":[[]], "norm_tri":[[]], "vert_tri":[[]], "idx_tri":[[]] , "prim_types":[[]] };
-                                gl.appendOtherDataIfReady(mapTriangleData);
-                            } else {
-                                var contourLevel = contourMult * parseFloat(mapDisp[j].getElementsByTagName("contourLevel")[0].innerHTML);
-                                var mapTriangleData = {"mapColours": [[0.0,0.0,1.0,1.0]], "mapContourLevels":[contourLevel], "mapGrids":[mapGrid],"col_tri":[[]], "norm_tri":[[]], "vert_tri":[[]], "idx_tri":[[]] , "prim_types":[[]] };
-                                gl.appendOtherDataIfReady(mapTriangleData);
-                            }
-                        }
-                    }
-                }
-                if(ccp4i2_body.getElementsByTagName("wizard").length>0){
-                    var wizard = ccp4i2_body.getElementsByTagName("wizard")[0];
-                    var template = wizard.getElementsByTagName("template")[0].innerHTML.split(":")[1];
-                    var parameters = wizard.getElementsByTagName("parameters")[0];
-                    var molIds = getElementsByRegex(parameters,'^MolData.*');
-                    for (var i=0; i < molIds.length; i++) {
-                        loadData(gl,atoms_ids[molIds[i].innerHTML],enerLib,true,template);
-                    }
-                }
-                gl.buildBuffers();
-                gl.drawScene();
-                gl.setOrigin(hier[0].centre());
-
-                var atoms = hier[0].getAllAtoms();
-                var minX = 1e+8;
-                var minY = 1e+8;
-                var minZ = 1e+8;
-                var maxX = 1e-8;
-                var maxY = 1e-8;
-                var maxZ = 1e-8;
-                for(var iat=0;iat<atoms.length;iat++){
-                    var x = atoms[iat].x();
-                    var y = atoms[iat].y();
-                    var z = atoms[iat].z();
-                    if(x>maxX) maxX = x;
-                    if(y>maxY) maxY = y;
-                    if(z>maxZ) maxZ = z;
-                    if(x<minX) minX = x;
-                    if(y<minY) minY = y;
-                    if(z<minZ) minZ = z;
-                }
-                extent = 0.0;
-                if((maxX-minX)>extent) extent = maxX-minX;
-                if((maxY-minY)>extent) extent = maxY-minY;
-                if((maxZ-minZ)>extent) extent = maxZ-minZ;
-                gl.setFog([-0.25*extent,0.75*extent]);
-                gl.set_clip_range(-0.25*extent,extent*.25,true);
-
-                if(ccp4i2_body.getElementsByTagName("View").length>0){
-                    var View = ccp4i2_body.getElementsByTagName("View")[0];
-                }
-            } else {
-                console.log("no ccp4i2_body");
-            }
-            //addSymmetry(pdbatoms);
-            return extent;
-            }
-
-    window.onload = function()
-    {
-        loaded = true;
-        for(var i = 0; i < queue.length; i++)
-        {
-            queue[i][0](queue[i][1],queue[i][2],queue[i][3]);
-        }
-    }
-
-  """
-
-    script = etree.Element('script')
-    script.text = onLoadText
-    head.append(script)
-
-    html.append(head)
-
-    body = etree.Element('body')
-    html.append(body)
-    return doc
+# htmlDoc function removed - HTML generation no longer used
+# The data path uses as_data_etree() which returns XML for frontend rendering
 
 
 def testPathExists(self, relPath):
     return True
 
 
-def getLastestMinorVersion(baseIn):
-    import glob
-    from core import CCP4Utils
-    testSplit = baseIn.split('.')
-    globList = glob.glob(
-        os.path.join(
-            CCP4Utils.getCCP4I2Dir(),
-            'docs',
-            'report_files',
-            '*'))
-    lastMinor = -1
-    for path in globList:
-        v = os.path.split(path)[1].split('.')
-        if v[0] == testSplit[0] and v[1] == testSplit[1]:
-            minor = int(v[2])
-            lastMinor = max(lastMinor, minor)
-    if lastMinor >= 0:
-        return testSplit[0] + '.' + testSplit[1] + '.' + str(lastMinor)
-    else:
-        return None
+# getLastestMinorVersion removed - CSS version management no longer needed
 
 
 def toBoolean(text):
@@ -1150,16 +647,6 @@ class Container(ReportClass):
         # print 'Container.getPictures',rv
         return rv
 
-    def as_html(self):
-        s = ""
-        if self.text:
-            s += self.text
-        for child in self.children:
-            s += child.as_html() + "\n"
-        if self.tail:
-            s += self.tail
-        return s
-
     def as_data_etree(self):
         root = super().as_data_etree()
         for child in self.children:
@@ -1167,45 +654,6 @@ class Container(ReportClass):
                 root.append(child.as_data_etree())
             else:
                 print('No as_data_etree on ', type(child).__name__)
-        return root
-
-    def as_etree(self):
-        # Test if marked for removal or tag is not str (probably <!-- -->
-        # comment)
-        if self.tag == XRTNS + 'remove' or not isinstance(self.tag, str):
-            return None
-        root = etree.Element(self.tag)
-        root.text = self.text
-        root.tail = self.tail
-        if self.id is not None:
-            root.set('id', self.id)
-        if self.class_ is not None:
-            root.set('class', self.class_)
-        if self.style is not None:
-            root.set('style', self.style)
-        for child in self.children:
-            # print('Container.as_etree',child,type(child))
-            try:
-                tree = child.as_etree()
-                # print 'Container.as_etree',child,tree,tree.tag,len(tree)
-                if tree is not None:
-                    if str(tree.tag) in ['root', XHTMLNS + 'root']:
-                        # print 'Container.as_etree add root',len(root),root.
-                        root.extend(tree)
-
-                    elif tree.tag == XRTNS + 'dummy':
-                        # Dont output tags around this (always Text?) element
-                        # Need to put the text content in either self.text or
-                        # preceeding siblings tail
-                        if len(root) >= 1:
-                            root[-1].tail += child.getText()
-                        else:
-                            root.text += child.getText()
-                    else:
-                        root.append(tree)
-            except BaseException:
-                raise
-                root.append(etree.fromstring(child))
         return root
 
     def graph_data_as_rtf(self, fileName=None):
@@ -1332,30 +780,6 @@ class Loop(ReportClass):
                         self.children.append(obj)
                     # self.children[-1].text = xrtnode.text
                     # self.children[-1].tail = xrtnode.tail
-
-    def as_etree(self):
-        root = etree.Element('root')
-        root.text = self.text
-        root.tail = self.tail
-        if self.id is not None:
-            root.set('id', self.id)
-        if self.class_ is not None:
-            root.set('class', self.class_)
-        for child in self.children:
-            tree = child.as_etree()
-            if str(tree.tag) in ['root', XHTMLNS + 'root']:
-                root.extend(tree)
-            elif tree.tag == XRTNS + 'dummy':
-                # Dont output tags around this (always Text?) element
-                # Need to put the text content in either self.text or
-                # preceeding siblings tail
-                if len(root) >= 1:
-                    root[-1].tail += child.getText()
-                else:
-                    root.text += child.getText()
-            else:
-                root.append(tree)
-        return root
 
     def getPictures(self):
         rv = []
@@ -1565,106 +989,11 @@ class Report(Container):
         else:
             CCP4Utils.saveFile(fileName=fileName, text=text)
 
-    def as_html(self, htmlBase=None, cssVersion=None):
-        import sys
-
-        def remove_namespace(
-                doc,
-                namespace,
-                newname,
-                toplevel="XXXXX_UNLIKELY_XXXXX"):
-            """Remove namespace in the passed document in place."""
-            ns = u'{%s}' % namespace
-            nsl = len(ns)
-            for elem in doc.iter():
-                attribNew = {}
-                for k, v in elem.attrib.items():
-                    if type(k) is str and k.startswith(ns):
-                        attribNew[newname + ":" + k[nsl:]] = v
-                    else:
-                        attribNew[k] = v
-                elem.attrib = attribNew
-                if elem.tag.startswith(ns):
-                    elem.tag = elem.tag[nsl:]
-                    if elem.tag == toplevel:
-                        elem.attrib["xmlns:" + newname] = namespace
-
-        tree = self.as_etree(htmlBase, cssVersion=cssVersion)
-        remove_namespace(tree, u"http://www.w3.org/2000/svg", "svg", "svg")
-        remove_namespace(tree, u"http://www.w3.org/1999/xlink", "xlink")
-        text = b'<!DOCTYPE html>\n'
-        try:
-            text += etree.tostring(tree.getroot(),
-                                   short_empty_elements=False,
-                                   method="html")
-        except BaseException:
-            exc_type, exc_value, exc_tb = sys.exc_info()[:3]
-            sys.stderr.write(str(exc_type) + '\n')
-            sys.stderr.write(str(exc_value) + '\n')
-            import traceback
-            traceback.print_stack()
-        return text
-
     def as_data_etree(self):
         if self.standardise:
             self.standardisePythonReport()
         root = super().as_data_etree()
         return root
-
-    def as_etree(self, htmlBase=None, cssVersion=None):
-        if self.standardise:
-            self.standardisePythonReport()
-        if cssVersion is None:
-            cssVersion = self.cssVersion
-        if htmlBase is not None:
-            doc = htmlDoc(
-                htmlBase=htmlBase,
-                cssFile=self.cssFile,
-                jsFile=self.jsFile,
-                cssVersion=cssVersion,
-                title=self.getTitle(),
-                additionalJsFiles=self.additionalJsFiles,
-                additionalCssFiles=self.additionalCssFiles,
-                requireDataMain=self.requireDataMain,
-                additionalScript=self.additionalScript)
-        elif self.jobNumber is not None:
-            nSub = self.jobNumber.count('.')
-            htmlBase = '../..'
-            for n in range(nSub):
-                htmlBase = htmlBase + '/..'
-            htmlBase = htmlBase + '/report_files'
-            doc = htmlDoc(
-                htmlBase=htmlBase,
-                cssFile=self.cssFile,
-                jsFile=self.jsFile,
-                cssVersion=cssVersion,
-                title=self.getTitle(),
-                additionalJsFiles=self.additionalJsFiles,
-                additionalCssFiles=self.additionalCssFiles,
-                requireDataMain=self.requireDataMain,
-                additionalScript=self.additionalScript)
-        else:
-            doc = htmlDoc(
-                cssFile=self.cssFile,
-                jsFile=self.jsFile,
-                cssVersion=cssVersion,
-                title=self.getTitle(),
-                additionalJsFiles=self.additionalJsFiles,
-                additionalCssFiles=self.additionalCssFiles,
-                requireDataMain=self.requireDataMain,
-                additionalScript=self.additionalScript)
-        body = doc.getroot().findall('./body')[0]
-        # print
-        # 'Report.as_etree',self,etree.tostring(Container.as_etree(self),pretty_print=True)
-        tree = Container.as_etree(self)
-        body.text = tree.text
-        body.tail = tree.tail
-        body.extend(tree)
-        if self.style is not None:
-            body.set('style', self.style)
-        if self.standardise:
-            self.addLinks(body)
-        return doc
 
     def addLinks(self, body):
         links = etree.Element('div')
@@ -1889,27 +1218,8 @@ class Report(Container):
 
 
 class Results(Container):
-    def as_etree(self, htmlBase=None):
-        root = etree.Element('root')
-        anchor = etree.Element('a')
-        anchor.set('name', 'results')
-        root.append(anchor)
-        head = etree.Element('h5')
-        if self.id is not None:
-            head.set('id', self.id)
-        if self.class_ is not None:
-            head.set('class', self.class_)
-        else:
-            head.set('class', 'section')
-            # Substituted .style for .class_ below....looked like a typo MN
-            # if self.style is not None: head.set('style',self.class_)
-        if self.style is not None:
-            head.set('style', self.style)
-
-        head.text = 'Results'
-        root.append(head)
-        root.extend(Container.as_etree(self))
-        return root
+    """Results container - uses Container.as_data_etree() for data path."""
+    pass
 
 
 class DrillDown(ReportClass):
@@ -1918,82 +1228,6 @@ class DrillDown(ReportClass):
         super(DrillDown, self).__init__(**kw)
         self.jobInfo = jobInfo
         # print 'DrillDown jobInfo',jobInfo
-
-    def as_etree(self):
-        # Check that ther are some sub-directories
-        # Beware fileroot has fragment of file name on end of directory path
-        jobDir = self.jobInfo.get('fileroot', None)
-        if jobDir is not None:
-            jobDir = os.path.split(jobDir)[0]
-        subJobs = self.getSubJobs(jobDir)
-        # print 'DrillDown.as_etree subJobs',subJobs
-        if len(subJobs) == 0:
-            return etree.Element('root')
-
-        # make a folder
-        '''
-    fold = foldTitleLine('Show Sub-Jobs')
-    if fold.tag == 'root':
-      root.extend(fold)
-    else:
-      root.append(fold)
-    div = root.find('div')
-    '''
-        div = etree.Element('div')
-        div.set('class', 'sub-job-list')
-        if self.id is not None:
-            div.set('id', self.id)
-        if self.class_ is not None:
-            div.set('class', self.class_)
-        h4 = etree.Element('h4')
-        h4.text = 'Sub-Jobs'
-        div.append(h4)
-
-        try:
-            from core import CCP4TaskManager
-            ifi2 = True
-        except BaseException:
-            ifi2 = False
-
-        for job in subJobs:
-           # jobs is list of subJobNumber,jobId,pluginName,reportFile,subJobs
-            text = str(job[0]) + ': '
-            if job[1] is not None:
-                if ifi2:
-                    text = text + \
-                        CCP4TaskManager.TASKMANAGER().getTitle(job[2])
-
-                else:
-                    text = text + job[2]
-            fold = foldLinkLine(text, job[3], 'jobId' + str(job[1]))
-            div.extend(fold)
-
-            '''
-      # Simple link mode
-      div = root.find('div')
-      a =  etree.Element('a')
-      a.set('href',job[3])
-      a.set('id','jobId'+str(job[1]))
-      a.text= text
-      div.append(a)
-      div.append(etree.Element('br'))
-      '''
-
-            '''
-      # Alternative 'button' mode
-      obj = etree.Element('object')
-      obj.set('class','qt_object_subjob')
-      obj.set('type','x-ccp4-widget/CSubJobButton')
-      #obj.set('id',self.id+'_'+str(job[0]))
-      div.append(obj)
-
-      for key,value in [['label',text],['jobId',str(self.jobInfo.get('jobid',None))],['subJobNumber',job[0]],['link',job[2]]:
-        p = etree.Element('param')
-        p.set('name',key)
-        p.set('value',value)
-        obj.append(p)
-      '''
-        return div
 
     def getSubJobs(self, jobDir):
         import glob
@@ -2110,10 +1344,6 @@ class Fold(Container):
             self.brief = kw.get('brief', None)
         self.initiallyOpen = kw.get('initiallyOpen', False)
 
-    def as_html(self):
-        return """<span class='folder' onclick='toggleview(this)'>Show details</span><div class='hidesection'>\n{0}</div>\n""".format(
-            Container.as_html(self))
-
     def as_data_etree(self):
         if self.brief is None or len(self.brief) == 0:
             self.brief = self.label
@@ -2121,11 +1351,6 @@ class Fold(Container):
         root.set('label', self.label)
         root.set('initiallyOpen', str(self.initiallyOpen))
         root.set('brief', self.brief)
-        return root
-
-    def as_etree(self):
-        root = foldTitleLine(self.label, self.initiallyOpen, self.brief)
-        root.find('div').extend(Container.as_etree(self))
         return root
 
 
@@ -2167,22 +1392,9 @@ class Text(ReportClass):
             for node in nodes:
                 self.text += node.text
 
-    def as_html(self):
-        return self.text
-
     def as_data_etree(self):
         root = super().as_data_etree()
         return root
-
-    def as_etree(self):
-        # Tag as dummy so parent container will strip the tags
-        if self.outputXml:
-            return etree.fromstring(
-                '<span data-url="' +
-                self.data_url() +
-                '"></span>')
-        else:
-            return self.data_as_xml()
 
     def data_as_xml(self, fileName=None):
         # Tag as dummy so parent container will strip the tags
@@ -2258,27 +1470,10 @@ class FetchPre(Text):
 
 
 class Status(Container):
-
-    def as_html(self):
-        return "<div width='100%' style='background-color:#80FF80;'><h1>" + \
-            self.text + "</h1></div>"
-
-    def as_etree(self):
-        div = etree.Element('div')
-        if self.id is not None:
-            div.set('id', self.id)
-        if self.class_ is not None:
-            div.set('class', self.class_)
-        # div.set('width','100%')
-        if self.style is not None:
-            div.set('style', self.style)
-        else:
-            div.set('style', 'background-color:#80FF80;')
-        div.extend(self.text)
-        return div
+    """Status container - uses Container.as_data_etree() for data path."""
+    pass
 
 
-# Copy class
 class Copy(ReportClass):
     def __init__(self, xrtnode=None, xmlnode=None, **kw):
         super(Copy, self).__init__(xrtnode=xrtnode, xmlnode=xmlnode, **kw)
@@ -2291,15 +1486,6 @@ class Copy(ReportClass):
                 self.root.extend(xmlnode.findall(kw.get('select', False)))
 
         # print 'Copy __init__ root',self.root.tag
-
-    def as_html(self):
-        text = ''
-        for node in self.root.iterChildren():
-            text += etree.tostring(node)
-        return text
-
-    def as_etree(self):
-        return self.root
 
 
 class Generic(ReportClass):
@@ -2349,15 +1535,6 @@ class Generic(ReportClass):
         root = super().as_data_etree()
         root.append(self.xmltree)
         return root
-
-    def as_etree(self):
-        if self.id is not None:
-            self.xmltree.set('id', self.id)
-        if self.class_ is not None:
-            self.xmltree.set('class', self.class_)
-        return self.xmltree
-
-# Table class
 
 
 class BaseTable(ReportClass):
@@ -2470,183 +1647,6 @@ class BaseTable(ReportClass):
             self.coltitle.append(title)
             self.colsubtitle.append(subtitle)
 
-    def as_html(self):
-        # check for subheads
-        hassubhead = sum([x is not None for x in self.colsubtitle]) > 0
-        # deal with normal and transpose tables in turn
-        if not self.transpose:
-            # Normal tables
-            s = "<table><thead>\n"
-            # column headers
-            s += "<tr>"
-            for i in range(len(self.coltitle)):
-                if self.coltitle[i] is not None:
-                    span = 1
-                    while i + span < len(self.coltitle):
-                        if self.coltitle[i + span] is not None:
-                            break
-                        span += 1
-                    text = self.coltitle[i] if self.coltitle[i] else ""
-                    colTip = ""
-                    if i >= 0 and i < len(
-                            self.colTips) and self.colTips[i] is not None:
-                        colTip = "title='{0}'".format(self.colTips[i])
-                    if span > 1:
-                        s += "<th colspan='{0}' {1}>{2}</th>".format(
-                            span, colTip, text)
-                    else:
-                        s += "<th {0}>{1}</th>".format(colTip, text)
-            # column subheaders
-            if hassubhead:
-                s += "</tr>\n<tr>"
-                for i in range(len(self.colsubtitle)):
-                    if self.coltitle[i] is not None or self.colsubtitle[i] is not None:
-                        span = 1
-                        while i + span < len(self.colsubtitle):
-                            if self.coltitle[i +
-                                             span] is not None or self.colsubtitle[i +
-                                                                                   span] is not None:
-                                break
-                            span += 1
-                        text = self.colsubtitle[i] if self.colsubtitle[i] else ""
-                        colTip = ""
-                        if i >= 0 and i < len(
-                                self.colTips) and self.colTips[i] is not None:
-                            colTip = "title='{0}'".format(self.colTips[i])
-                        if span > 1:
-                            s += "<th colspan='{0}' {1}>{2}</th>".format(
-                                span, colTip, text)
-                        else:
-                            s += "<th>{0}</th>".format(text)
-            s += "</tr>\n</thead>\n"
-            # column data
-            s += "<tbody>\n"
-            for i in range(len(self.coldata[0])):
-                s += "<tr>"
-                for col in self.coldata:
-                    colTip = ""
-                    if col >= 0 and col < len(
-                            self.colTips) and self.colTips[col] is not None:
-                        colTip = "title='{0}'".format(self.colTips[col])
-                    s += "<td {0}>{1}</td>".format(colTip, col[i])
-                s += "</tr>\n"
-            s += "</tbody></table>\n"
-        else:
-            # Transpose tables
-            s = "<table><tbody>\n"
-            # column headers
-            for i in range(len(self.coldata)):
-                s += "<tr>"
-                colTip = ""
-                if col >= 0 and col < len(
-                        self.colTips) and self.colTips[col] is not None:
-                    colTip = "title='{0}'".format(self.colTips[col])
-                if self.coltitle[i] is not None:
-                    s += "<th {0}>{1}</th>".format(colTip, self.coltitle[i])
-                else:
-                    s += "<th {0}></th>".format(colTip)
-                if hassubhead:
-                    if self.colsubtitle[i] is not None:
-                        s += "<th>{0}</th>".format(self.colsubtitle[i])
-                    else:
-                        s += "<th></th>"
-                for j in range(len(self.coldata[i])):
-                    s += "<td {0}>{0}</td>".format(colTip, self.coldata[i][j])
-                s += "</tr>\n"
-            s += "</tbody></table>\n"
-        return s
-
-    def as_etree(self):
-        # check for subheads
-        hassubhead = sum([x is not None for x in self.colsubtitle]) > 0
-        table = etree.Element('table')
-        if self.id is not None:
-            table.set('id', self.id)
-        if self.class_ is not None:
-            table.set('class', self.class_)
-        if self.style is not None:
-            table.set('style', self.style)
-
-        # deal with normal and transpose tables in turn
-        if not self.transpose:
-            head = etree.Element('thead')
-            table.append(head)
-            headtr = etree.Element('tr')
-            for i in range(len(self.coltitle)):
-                if self.coltitle[i] is not None:
-                    span = 1
-                    while i + span < len(self.coltitle):
-                        if self.coltitle[i + span] is not None:
-                            break
-                        span += 1
-                    th = etree.Element('th')
-                    th.text = self.coltitle[i] if self.coltitle[i] else ""
-                    if span > 1:
-                        th.set('colspan', str(span))
-                    headtr.append(th)
-            head.append(headtr)
-            tbody = etree.Element('tbody')
-            tbody.set('class', 'fancy')
-            for i in range(len(self.coldata[0])):
-                tr = etree.Element('tr')
-                for col in self.coldata:
-                    td = etree.Element('td')
-                    td.text = str(col[i])
-                    tr.append(td)
-                tbody.append(tr)
-            table.append(tbody)
-        else:
-            tbody = etree.Element('tbody')
-            tbody.set('class', 'fancy')
-            for i in range(len(self.coldata)):
-                tr = etree.Element('tr')
-                tbody.append(tr)
-                th = etree.Element('th')
-                if self.coltitle[i] is not None:
-                    th.text = str(self.coltitle[i])
-                tr.append(th)
-                if hassubhead:
-                    th1 = etree.Element('th')
-                    if self.colsubtitle[i] is not None:
-                        th1.text = self.colsubtitle[i]
-                    tr.append(th1)
-                for j in range(len(self.coldata[i])):
-                    td = etree.Element('td')
-                    td.text = str(self.coldata[i][j])
-                    tr.append(td)
-            table.append(tbody)
-
-        root = etree.Element('root')
-        if self.help is None and self.download is None:
-            root.append(table)
-        else:
-
-            # This is not working well
-            div = etree.Element('div')
-            div.set('id', self.id)
-            root.append(div)
-            div.append(table)
-            if self.help is not None:
-                div.append(self.help.as_etree())
-            if self.download is not None:
-                div.append(self.download.as_etree())
-            '''
-      tab = etree.Element('table')
-      tab.append(etree.Element('tr'))
-      tab.append(etree.Element('tr'))
-      tab[0].append(etree.Element('td'))
-      tab[0][0].set('colspan','2')
-      tab[1].append(etree.Element('td'))
-      tab[1].append(etree.Element('td'))
-      tab[0][0].append(table)
-      if self.help is not None:
-        tab[1][0].append(self.help.as_etree())
-      if self.download is not None:
-        tab[1][1].append(self.download.as_etree())
-      root.append(tab)
-      '''
-        return root
-
     def data_as_csv(self, fileName=None):
         import csv
         if len(self.coldata) == 0:
@@ -2737,59 +1737,6 @@ class Table(BaseTable):
         root.set('transpose', 'True' if self.transpose else 'False')
         for child in self.data_as_etree().findall('.//table'):
             root.append(child)
-        return root
-
-    def as_etree(self):
-        # check for subheads
-        hassubhead = sum([x is not None for x in self.colsubtitle]) > 0
-
-        root = etree.Element('root')
-
-        # deal with normal and transpose tables in turn
-        if True:
-            styleDict = {
-                'height': '100%',
-                'width': '100%',
-                'margin': '0px',
-                'padding': '0px',
-                'display': 'inline-block',
-                'margin-top': '1px'}
-            styleStr = ';'.join([key + ':' + styleDict[key]
-                                for key in styleDict]) + ';'
-
-            if self.outputXml:
-                drawnDiv = DrawnDiv(
-                    style=styleStr,
-                    height=styleDict['height'],
-                    width=styleDict['width'],
-                    data=self.data_url(),
-                    data_is_urls=True,
-                    renderer='CCP4i2Widgets.CCP4TableRenderer',
-                    require='CCP4i2Widgets',
-                    initiallyDrawn='True')
-            else:
-                drawnDiv = DrawnDiv(
-                    style=styleStr,
-                    height=styleDict['height'],
-                    width=styleDict['width'],
-                    data='data_' + self.internalId,
-                    data_is_urls=False,
-                    renderer='CCP4i2Widgets.CCP4TableRenderer',
-                    require='CCP4i2Widgets',
-                    initiallyDrawn='True')
-            root.append(self.data_as_etree())
-            surroundingDiv = etree.SubElement(root, 'div')
-            surroundingDiv.append(drawnDiv.as_etree())
-            surroundingDiv.set('id', self.id)
-
-        if self.help is None and self.download is None:
-            pass
-        else:
-            # This is not working well (<- *not* written by me SJM 05/12/2014)
-            if self.help is not None:
-                surroundingDiv.append(self.help.as_etree())
-            if self.download is not None:
-                surroundingDiv.append(self.download.as_etree())
         return root
 
     def data_as_etree(self, fileName=None):
@@ -2906,67 +1853,6 @@ class Progress(ReportClass):
         if 'max' in kw:
             self.max = kw['max']
 
-    def as_etree(self):
-        # print '\n\n** In Progress.as_etree'
-        # Tag as dummy so parent container will strip the tags
-        styleDict = {
-            'height': '50px',
-            'width': '250px',
-            'margin': '0px',
-            'padding': '0px',
-            'display': 'inline-block',
-            'border': '1px solid black',
-            'margin-top': '0px'}
-        if self.style is not None:
-            styleBits = self.style.split(';')
-            extraStyleDict = {}
-            for styleBit in styleBits:
-                stylePair = styleBit.split(':')
-                if len(stylePair) == 2:
-                    extraStyleDict[stylePair[0].strip()] = stylePair[1].strip()
-            styleDict.update(extraStyleDict)
-        styleStr = ';'.join([key + ':' + styleDict[key]
-                            for key in styleDict]) + ';'
-
-        root = etree.Element('div', style=styleStr)
-        progressElement = etree.Element(
-            'progress', value=str(
-                self.value), max=str(
-                self.max), style=styleStr)
-        if self.outputXml:
-            drawnDiv = DrawnDiv(
-                style=styleStr,
-                height=styleDict['height'],
-                width=styleDict['width'],
-                data=self.data_url(),
-                data_is_urls=True,
-                renderer='CCP4i2Widgets.CCP4i2HTMLChunk',
-                require='CCP4i2Widgets',
-                initiallyDrawn=str(
-                    self.initiallyDrawn))
-        else:
-            t = etree.tostring(progressElement)
-            if hasattr(t, "decode"):
-                t = t.decode()
-            drawnDiv = DrawnDiv(
-                style=styleStr,
-                height=styleDict['height'],
-                width=styleDict['width'],
-                data=t,
-                data_is_urls=False,
-                renderer='CCP4i2Widgets.CCP4i2HTMLChunk',
-                require='CCP4i2Widgets',
-                initiallyDrawn=str(
-                    self.initiallyDrawn))
-
-            # print etree.tostring(drawnDiv.as_etree(), pretty_print=True)
-        root.append(drawnDiv.as_etree())
-
-        if self.style is not None:
-            root.set("style", styleStr)
-        # print 'Text.as_etree',root.text,root.tail
-        return root
-
     def data_as_xml(self, fileName=None):
         dataAsEtree = etree.Element('span')
         dataAsEtree.text = self.label
@@ -3031,59 +1917,6 @@ class GraphGroup(Container):
         elif 'help' in kw:
             self.help = Help(ref=kw['help'])
 
-    def as_etree(self):
-        root = etree.Element('root')
-
-        # Beware children could include Loop or other non-Graph elements
-        graphObjList = []
-        for child in self.children:
-            if isinstance(child, Graph):
-                # child.launch = None
-                child.help = None
-                graphObjList.append(child)
-
-            elif isinstance(child, (Container, Loop)):
-                # print 'GraphGroup.as_etree
-                # grandChildren',child,child.children
-                for grandChild in child.children:
-                    if isinstance(grandChild, Graph):
-                        graphObjList.append(grandChild)
-        # print 'GraphGroup.as_etree graphObjList',graphObjList
-        if len(graphObjList) == 0:
-            return root
-
-        if self.launch is None:
-            loggraphObj = etree.Element('object')
-            loggraphObj.set('type', 'x-ccp4-widget/LogGraph')
-            loggraphObj.set('class', 'loggraph')
-            if self.style is not None:
-                loggraphObj.set('style', self.style)
-            if graphObjList[0].id is not None:
-                loggraphObj.set('id', graphObjList[0].id)
-            root.append(loggraphObj)
-
-        for graphObj in graphObjList:
-            # print '    ',graphObj.title
-            param = etree.Element('param')
-            param.set('name', 'ccp4_data_id')
-            param.set('value', 'data_' + graphObj.internalId)
-            if self.launch is None:
-                loggraphObj.append(param)
-            else:
-                self.launch.appendDataId('data_' + graphObj.id)
-
-            root.append(graphObj.data_as_etree())
-
-        # if self.help is not None or self.launch is not None:
-        if self.help is not None:
-            h = self.help.as_etree()
-            if h.tag == 'root':
-                root.extend(h)
-            else:
-                root.append(h)
-
-        return root
-
 
 class FlotGraphGroup(Container):
     def __init__(self, xrtnode=None, xmlnode=None, jobInfo={}, **kw):
@@ -3116,108 +1949,6 @@ class FlotGraphGroup(Container):
                     xrtnode.remove(help)
         elif 'help' in kw:
             self.help = Help(ref=kw['help'])
-
-    def as_etree(self):
-        root = etree.Element('root')
-
-        # Beware children could include Loop or other non-Graph elements
-        graphObjList = []
-        for child in self.children:
-            if isinstance(child, FlotGraph):
-                # child.launch = None
-                child.help = None
-                graphObjList.append(child)
-
-            elif isinstance(child, (Container, Loop)):
-                # print 'GraphGroup.as_etree
-                # grandChildren',child,child.children
-                for grandChild in child.children:
-                    if isinstance(grandChild, FlotGraph):
-                        graphObjList.append(grandChild)
-        # print 'GraphGroup.as_etree graphObjList',graphObjList
-        if len(graphObjList) == 0:
-            return root
-
-        dataList = ",".join(
-            ['data_' + graphObj.internalId for graphObj in graphObjList])
-        for graphObj in graphObjList:
-            # print '    ',graphObj.title
-            if self.launch is not None:
-                param = etree.Element('param')
-                param.set('name', 'ccp4_data_id')
-                param.set('value', 'data_' + graphObj.internalId)
-                self.launch.appendDataId('data_' + graphObj.id)
-            root.append(graphObj.data_as_etree())
-
-        styleDict = {
-            'height': '250px',
-            'width': '250px',
-            'margin': '0px',
-            'padding': '0px',
-            'display': 'inline-block',
-            'border': '1px solid black',
-            'margin-top': '1px'}
-        if self.style is not None:
-            styleBits = self.style.split(';')
-            extraStyleDict = {}
-            for styleBit in styleBits:
-                stylePair = styleBit.split(':')
-                if len(stylePair) == 2:
-                    extraStyleDict[stylePair[0].strip()] = stylePair[1].strip()
-            styleDict.update(extraStyleDict)
-        styleStr = ';'.join([key + ':' + styleDict[key]
-                            for key in styleDict]) + ';'
-
-        launchButtonLocation = root
-        if not self.launchOnly:
-            surroundingDiv = etree.SubElement(root, 'div', style=styleStr)
-            launchButtonLocation = surroundingDiv
-            # Here I shring the Flot Div if I am going to append a launch
-            # button
-            if self.launch is not None:
-                heightPx = int(styleDict['height'][:-2])
-                heightPx -= 30
-                styleDict['height'] = str(heightPx) + 'px'
-            if 'border-width' in styleDict:
-                del styleDict['border-width']
-            if 'border-style' in styleDict:
-                del styleDict['border-style']
-            if 'border-color' in styleDict:
-                del styleDict['border-color']
-            styleDict['margin-top'] = '0px'
-            styleDict['margin'] = '0px'
-            styleDict['padding'] = '0px'
-            styleDict['border'] = '0px solid white'
-
-            styleStr = ';'.join([key + ':' + styleDict[key]
-                                for key in styleDict]) + ';'
-            drawnDiv = DrawnDiv(
-                style=styleStr,
-                height=styleDict['height'],
-                width=styleDict['width'],
-                data=dataList,
-                renderer='CCP4i2Widgets.CCP4FlotRenderer',
-                require='CCP4i2Widgets',
-                initiallyDrawn='True')
-            # print etree.tostring(drawnDiv.as_etree(), pretty_print=True)
-            surroundingDiv.append(drawnDiv.as_etree())
-
-        if self.launch:
-            l = self.launch.as_etree()
-            if l.tag == 'root':
-                launchButtonLocation.extend(l)
-            else:
-                launchButtonLocation.append(l)
-
-        # if self.help is not None or self.launch is not None:
-        if self.help is not None:
-            h = self.help.as_etree()
-            if h.tag == 'root':
-                root.extend(h)
-            else:
-                root.append(h)
-
-        return root
 
     def data_as_xmls(self, fileRoot=None):
         # Beware children could include Loop or other non-Graph elements
@@ -3261,30 +1992,6 @@ class DrawnDiv(Container):
         self.data_require = kw.get('require', 'None')
         self.data_initially_drawn = kw.get('initiallyDrawn', False)
 
-    def as_etree(self):
-        rootDiv = etree.Element('div')
-        rootDiv.set('style', self.style)
-        try:
-            from core import CCP4Modules
-            preferences = CCP4Modules.PREFERENCES()
-            rootDiv.set('data-app-font-size',
-                        str(preferences.GUI_FONT_SIZE) + 'px')
-        except BaseException:
-            pass
-        rootDiv.set('data-data', self.data_data)
-        rootDiv.set('data-renderer', self.data_renderer)
-        rootDiv.set('data-height', self.height)
-        rootDiv.set('data-width', self.width)
-        rootDiv.set('data-widget-type', 'CCP4i2DrawnDiv')
-        rootDiv.set('data-is-urls', str(self.data_is_urls))
-        rootDiv.set('id', self.id)
-
-        if self.data_require is not None:
-            rootDiv.set('data-require', self.data_require)
-        rootDiv.set('data-initially-drawn', str(self.data_initially_drawn))
-        rootDiv.text = ''
-        return rootDiv
-
 
 class ObjectGallery(Container):
     galleryCount = 0
@@ -3316,74 +2023,6 @@ class ObjectGallery(Container):
         self.style = kw.get(
             'style',
             'padding:0px;overflow:auto;display:inline-block;margin:1px;')
-
-    def as_etree(self):
-        rootElement = etree.Element('root')
-        rootDiv = etree.SubElement(rootElement, 'div', style=self.style)
-        rootDiv.set('class', 'ObjectGallery')
-        listDiv = etree.SubElement(
-            rootDiv,
-            'div',
-            style='width:' +
-            self.tableWidth +
-            ';height:' +
-            self.height +
-            ';overflow:auto;float:left;margin:0px;')
-        contentDiv = etree.SubElement(
-            rootDiv,
-            'div',
-            style='width:' +
-            self.contentWidth +
-            ';height:' +
-            self.height +
-            ';overflow:auto;padding:0px;border-width:0px;margin:0px;float:left;')
-
-        tableElement = etree.SubElement(
-            listDiv, 'table', style='width:' + self.tableWidth + ';')
-        bodyElement = etree.SubElement(tableElement, 'tbody')
-        bodyElement.set('class', 'fancy')
-        for iChild, child in enumerate(self.children):
-            # Make an entry for each child in the list
-            rowElement = etree.SubElement(bodyElement, 'tr')
-
-            cellElement = etree.SubElement(
-                rowElement, 'td', onclick='galleryListObjClicked(this)')
-            cellElement.set('value', self.id + '_item_' + str(iChild))
-
-            if iChild == 0:
-                cellElement.set('class', 'galleryListObj Selected')
-            else:
-                cellElement.set('class', 'galleryListObj NotSelected')
-
-            cellElement.text = 'Item ' + str(iChild)
-            if hasattr(child, 'title') and child.title:
-                cellElement.text = child.title
-            if hasattr(child, 'label') and child.label:
-                cellElement.text = child.label
-
-            # and make a Div for each child of the contentDiv
-            correspondingDiv = etree.SubElement(
-                contentDiv,
-                'div',
-                style='width:' +
-                self.contentWidth +
-                ';height:' +
-                self.height +
-                ';padding:0px;margin:0px;overflow:auto;',
-                id=self.id +
-                '_item_' +
-                str(iChild) +
-                '_div')
-
-            if iChild == 0:
-                correspondingDiv.set('class', 'galleryDivObj displayed')
-
-            else:
-                correspondingDiv.set('class', 'galleryDivObj hidden')
-
-            correspondingDiv.append(child.as_etree())
-
-        return rootElement
 
 
 class GraphLineChooser(Container):
@@ -3419,21 +2058,6 @@ class GraphLineChooser(Container):
                 int(self.tableWidth[:-2]) + int(self.contentWidth[:-2])) + 'px'
         self.style = kw.get('style', 'margin:0px;padding:0px;display:inline-block;') + \
             'height:' + self.height + '; width:' + totalWidth + ';'
-
-    def as_etree(self):
-        rootDiv = etree.Element('div', style=self.style, id=self.id)
-        rootDiv.set('data-widget-type', 'CCP4i2LineChooser')
-        rootDiv.set('data-table-width', self.tableWidth)
-        rootDiv.set('data-content-width', self.contentWidth)
-        rootDiv.set('data-height', self.height)
-        self.children[0].makeTableText()
-        rootDiv.set(
-            'data-data',
-            etree.tostring(
-                self.children[0].data_as_etree()))
-        return rootDiv
-
-# Graph class
 
 
 class Graph(ReportClass):
@@ -3691,66 +2315,6 @@ class Graph(ReportClass):
         self.coldata = []
         self.coltitle = []
 
-    def as_html(self):
-        s = "<object type='x-ccp4-widget/LogGraph' id='{0}'><param name='ccp4_data_id' value = 'data_{0}'/></object>\n<ccp4_data id='data_{0}' title='{1}' style='display:none;'>\n".format(
-            self.id, self.title)
-        s += "<headers>\n"
-        for head in self.coltitle:
-            s += head + " "
-        s += "\n</headers>\n<data>\n"
-        for i in range(len(self.coldata[0])):
-            for col in self.coldata:
-                s += "{0} ".format(col[i])
-            s += "\n"
-        s += "</data>\n"
-        for plot in self.plots:
-            s += "<plot "
-            for attr in plot:
-                s += "{0}='{1}' ".format(attr[0], attr[1])
-            s += "/>\n"
-        s += "</ccp4_data>\n"
-        return s
-
-    def as_etree(self):
-
-        self.makeTableText()
-        root = etree.Element('root')
-
-        if not self.launch:
-            obj = etree.Element('object')
-            obj.set('type', 'x-ccp4-widget/LogGraph')
-            if self.class_ is not None:
-                obj.set('class', self.class_)
-            else:
-                obj.set('class', 'loggraph')
-            if self.id is not None:
-                obj.set('id', self.id)
-            if self.style is not None:
-                obj.set('style', self.style)
-            root.append(obj)
-            param = etree.Element('param')
-            param.set('name', 'ccp4_data_id')
-            param.set('value', 'data_' + self.internalId)
-            obj.append(param)
-        else:
-            l = self.launch.as_etree()
-            if l.tag == 'root':
-                root.extend(l)
-            else:
-                root.append(l)
-
-        root.append(self.data_as_etree())
-
-        # if self.help is not None or self.launch is not None:
-        if self.help is not None:
-            h = self.help.as_etree()
-            if h.tag == 'root':
-                root.extend(h)
-            else:
-                root.append(h)
-
-        return root
-
     def data_as_etree(self):
         eleTree = etree.parse(
             StringIO(
@@ -3919,125 +2483,6 @@ class FlotGraph(Graph):
                     jobInfo=jobInfo,
                     ccp4_data_id='data_' +
                     self.internalId)
-
-    def as_etree(self):
-        self.makeTableText()
-        root = etree.Element('root')
-
-        styleDict = {
-            'height': '250px',
-            'width': '250px',
-            'margin': '0px',
-            'padding': '0px',
-            'display': 'inline-block',
-            'border': '1px solid black',
-            'margin-top': '1px'}
-        if self.style is not None:
-            styleBits = self.style.split(';')
-            extraStyleDict = {}
-            for styleBit in styleBits:
-                stylePair = styleBit.split(':')
-                if len(stylePair) == 2:
-                    extraStyleDict[stylePair[0].strip()] = stylePair[1].strip()
-            styleDict.update(extraStyleDict)
-        styleStr = ';'.join([key + ':' + styleDict[key]
-                            for key in styleDict]) + ';'
-        launchButtonLocation = root
-        if not self.launchOnly:
-            surroundingDiv = etree.SubElement(root, 'div', style=styleStr)
-            launchButtonLocation = surroundingDiv
-            # Here I shring the Flot Div if I am going to append a launch
-            # button
-            if self.launch is not None:
-                heightPx = int(styleDict['height'][:-2])
-                heightPx -= 30
-                styleDict['height'] = str(heightPx) + 'px'
-            if 'border-width' in styleDict:
-                del styleDict['border-width']
-            if 'border-style' in styleDict:
-                del styleDict['border-style']
-            if 'border-color' in styleDict:
-                del styleDict['border-color']
-            styleDict['margin-top'] = '0px'
-            styleDict['margin'] = '0px'
-            styleDict['padding'] = '0px'
-            styleDict['border'] = '0px solid white'
-
-            styleStr = ';'.join([key + ':' + styleDict[key]
-                                for key in styleDict]) + ';'
-
-            if self.flot_id:
-
-                if self.outputXml:
-                    drawnDiv = DrawnDiv(
-                        style=styleStr,
-                        height=styleDict['height'],
-                        width=styleDict['width'],
-                        data=self.data_url(),
-                        data_is_urls=True,
-                        renderer='CCP4i2Widgets.CCP4FlotRenderer',
-                        require='CCP4i2Widgets',
-                        initiallyDrawn=str(
-                            self.initiallyDrawn),
-                        id=self.flot_id)
-                else:
-                    drawnDiv = DrawnDiv(
-                        style=styleStr,
-                        height=styleDict['height'],
-                        width=styleDict['width'],
-                        data=self.data_id(),
-                        data_is_urls=False,
-                        renderer='CCP4i2Widgets.CCP4FlotRenderer',
-                        require='CCP4i2Widgets',
-                        initiallyDrawn=str(
-                            self.initiallyDrawn),
-                        id=self.flot_id)
-            else:
-
-                if self.outputXml:
-                    drawnDiv = DrawnDiv(
-                        style=styleStr,
-                        height=styleDict['height'],
-                        width=styleDict['width'],
-                        data=self.data_url(),
-                        data_is_urls=True,
-                        renderer='CCP4i2Widgets.CCP4FlotRenderer',
-                        require='CCP4i2Widgets',
-                        initiallyDrawn=str(
-                            self.initiallyDrawn))
-                else:
-                    drawnDiv = DrawnDiv(
-                        style=styleStr,
-                        height=styleDict['height'],
-                        width=styleDict['width'],
-                        data=self.data_id(),
-                        data_is_urls=False,
-                        renderer='CCP4i2Widgets.CCP4FlotRenderer',
-                        require='CCP4i2Widgets',
-                        initiallyDrawn=str(
-                            self.initiallyDrawn))
-
-            # print etree.tostring(drawnDiv.as_etree(), pretty_print=True)
-            surroundingDiv.append(drawnDiv.as_etree())
-        if self.launch is not None:
-            l = self.launch.as_etree()
-            if l.tag == 'root':
-                launchButtonLocation.extend(l)
-            else:
-                launchButtonLocation.append(l)
-
-        if not self.outputXml:
-            root.append(self.data_as_etree())
-
-        # if self.help is not None or self.launch is not None:
-        if self.help is not None:
-            h = self.help.as_etree()
-            if h.tag == 'root':
-                root.extend(h)
-            else:
-                root.append(h)
-
-        return root
 
     def as_data_etree(self):
         self.makeTableText()
@@ -4344,10 +2789,13 @@ SceneDataFile
                 menu.set('onmouseout', 'onMouseOut(event,' + objid + ')')
 
                 command = '(function (event) {console.log(' + objid + ');document.getElementById(' + objid + \
-                    ').classList.toggle(' + showstr + ');event.preventDefault();return false;})(event);'
+                    ').classList.toggle(' + showstr + \
+                    ');event.preventDefault();return false;})(event);'
 
                 dragcommand = "(function (event) { event.dataTransfer.clearData();event.dataTransfer.effectAllowed = 'copy';event.dataTransfer.setData(" + \
-                    texturistr + ", " + texturiLinkstr + ");event.dataTransfer.setData(" + textstr + ", " + textidstr + ");})(event)"
+                    texturistr + ", " + texturiLinkstr + \
+                    ");event.dataTransfer.setData(" + textstr + \
+                    ", " + textidstr + ");})(event)"
 
                 launchImage.set('oncontextmenu', command)
                 launchImage.set('ondragstart', dragcommand)
@@ -4454,25 +2902,6 @@ class Title(ReportClass):
         root.set('title2', title2)
         return root
 
-    def as_etree(self):
-        root = etree.Element('div')
-        root.set('class', 'title')
-        # for item in ['title0','title1','title2']:
-        for item in ['title1', 'title2']:
-            if getattr(self, item, None) is not None:
-                h1 = etree.Element('p')
-                h1.set('class', item)
-                h1.text = getattr(self, item)
-                root.append(h1)
-
-        '''
-    intLinks = etree.Element('p')
-    intLinks.set('class','links')
-    root.append(intLinks)
-    '''
-
-        return root
-
 
 class JobDetails(ReportClass):
     def __init__(self, xrtnode=None, xmlnode=None, jobInfo={}, **kw):
@@ -4514,23 +2943,6 @@ class JobDetails(ReportClass):
                     self.jobInfo['finishtime'])))
         root.set('status', self.jobInfo.get('status', 'Unknown'))
         return root
-
-    def as_etree(self):
-        import time
-        fold = Fold(label='Job run details', brief='Run')
-        tab = fold.addTable()
-        tab.internalId = 'data_JobDetails'
-        self.jobInfo['creationtime'] = time.strftime(
-            '%H:%M %d-%b-%Y', time.localtime(self.jobInfo['creationtime']))
-        self.jobInfo['finishtime'] = time.strftime(
-            '%H:%M %d-%b-%Y', time.localtime(self.jobInfo['finishtime']))
-        for key1, key2 in [['status', 'Job status'], [
-                'creationtime', 'Creation time'], ['finishtime', 'Finish time']]:
-            if key1 in self.jobInfo:
-                tab.addData(title=key2, data=[str(self.jobInfo[key1])])
-        tab.transpose = True
-
-        return fold.as_etree()
 
     def makeRow(self, key, value):
         tr = etree.Element('tr')
@@ -4584,61 +2996,6 @@ class JobLogFiles(ReportClass):
         root.set('status', self.jobInfo.get('status', 'Unknown'))
         return root
 
-    def as_etree(self):
-
-        logFold = Fold(label='Log files', brief='Logs')
-        tab = logFold.addTable()
-        tab.internalId = 'data_LogFiles'
-
-        jobId = self.jobInfo["jobid"]
-        jobDirectory = PROJECTSMANAGER().makeFileName(jobId=jobId, mode='ROOT')
-
-        """
-#TODO = Need a whole bunch of fetches.
-    allText = ""
-    for root, subFolders, files in os.walk(jobDirectory):
-        for fn in files:
-            if (fn.endswith(".log") or fn.endswith(".txt")) and os.path.exists(os.path.join(root,fn)):
-                fileName = os.path.join(root,fn)
-                if os.path.exists(fileName):
-                    allText += fileName + "\n"
-                    try:
-                        f = open(fileName)
-                        t = f.read()
-                        allText += t + "\n\n"
-                    except:
-                        print("Could not read file",fn)
-
-    download = logFold.addCopyToClipboard(text=allText,label="Copy all to clipboard")
-    """
-
-        for root, subFolders, files in os.walk(jobDirectory):
-            for fn in files:
-                if (fn.endswith(".log") or fn.endswith(".txt")
-                        ) and os.path.exists(os.path.join(root, fn)):
-                    fileName = os.path.join(root, fn)
-                    if os.path.exists(fileName):
-                        fileFold = Fold(
-                            label=os.path.relpath(
-                                fileName,
-                                jobDirectory),
-                            brief=os.path.basename(fileName))
-                        logFold.append(fileFold)
-                        t = os.path.relpath(fileName, jobDirectory)
-                        download = fileFold.addCopyUrlToClipboard(
-                            text=t,
-                            label="Copy " +
-                            os.path.basename(fileName) +
-                            " to clipboard",
-                            projectId=self.jobInfo['projectid'],
-                            jobnumber=self.jobInfo['jobnumber'])
-                        logPre = fileFold.addFetchPre()
-                        url = htmlBase().rstrip("/report_files/" + CURRENT_CSS_VERSION) + "/database/?getProjectJobFile?projectId=" + \
-                            self.jobInfo['projectid'] + "?jobNumber=" + self.jobInfo['jobnumber'] + "?fileName=" + t
-                        logPre.text = url
-
-        return logFold.as_etree()
-
     def makeRow(self, key, value):
         tr = etree.Element('tr')
         th = etree.Element('th')
@@ -4680,20 +3037,6 @@ class Help:
         else:
             self.label = kw.get('label', 'About this ' + kw.get('mode', ''))
 
-    def as_etree(self):
-        root = etree.Element('root')
-        span = etree.Element('span')
-        if self.id is not None:
-            span.set('id', self.id)
-        root.append(span)
-        span.set('class', 'help')
-        if self.ref is not None:
-            a = etree.Element('a')
-            a.set('href', self.ref)
-            a.text = self.label
-            span.append(a)
-        return root
-
 
 class Launch:
 
@@ -4731,70 +3074,11 @@ class Launch:
         if self.ccp4_data_id.count(ccp4_data_id) == 0:
             self.ccp4_data_id.append(ccp4_data_id)
 
-    def as_etree(self):
-        import json
-
-        """
-    Let's replace this with some js...
-  <object class="qt_launch" type="x-ccp4-widget/CLauncherButton"><param name="label" value="View in CCP4mg" /><param name="exe" value="CCP4mg" /><param name="sceneFile" value="./scene_26.scene.xml" /><param name="jobId" value="de3c23abab0511eabf72820f1d307bc0" /></object>
-    """
-
-        root = etree.Element('root')
-
-        obj = etree.Element('button')
-        obj.set('style', 'line-height: 14pt; box-sizing: border-box;')
-        if getattr(self, "label", None) is not None:
-            obj.text = getattr(self, "label")
-            obj.set('title', getattr(self, "label"))
-            params = {}
-            if getattr(self, "exe", None) is not None:
-                params['exe'] = getattr(self, "exe")
-            if getattr(self, "sceneFile", None) is not None:
-                params['sceneFile'] = getattr(self, "sceneFile")
-            if self.jobId is not None:
-                params['jobId'] = self.jobId
-            dataId = ""
-            for data_id in self.ccp4_data_id:
-                dataId += data_id + ","
-            if len(dataId) > 0:
-                params['ccp4_data_id'] = dataId
-
-            jsonParams = json.dumps(params)
-
-            a = escapeI2Quotify(jsonParams)
-
-            obj.set('onclick', 'window.buttonBridge.clicked(' + a + ')')
-
-        root.append(obj)
-
-        return root
-
 
 class CopyToClipboard:
     def __init__(self, text="", label="Copy to clipboard", **kw):
         self.text = text
         self.label = label
-
-    def as_etree(self):
-        import json
-
-        obj = etree.Element('button')
-
-        obj.set('style', 'line-height: 14pt; box-sizing: border-box;')
-        obj.text = self.label
-        obj.set('title', "CopyToClipboard")
-
-        n = 4096
-        split_text = [escapeI2Quotify(self.text[i:i + n])
-                      for i in range(0, len(self.text), n)]
-
-        obj.set(
-            'onclick',
-            'navigator.clipboard.writeText(' +
-            "+".join(split_text) +
-            ')')
-
-        return obj
 
 
 class CopyUrlToClipboard:
@@ -4803,31 +3087,6 @@ class CopyUrlToClipboard:
         self.label = label
         self.projectId = kw.get("projectId")
         self.jobnumber = kw.get("jobnumber")
-
-    def as_etree(self):
-        import json
-
-        obj = etree.Element('button')
-
-        obj.set('style', 'line-height: 14pt; box-sizing: border-box;')
-        obj.text = self.label
-        obj.set('title', "CopyUrlToClipboard")
-
-        n = 4096
-        split_text = [escapeI2Quotify(self.text[i:i + n])
-                      for i in range(0, len(self.text), n)]
-
-        url = htmlBase().rstrip("/report_files/" + CURRENT_CSS_VERSION) + "/database/?getProjectJobFile?projectId=" + \
-            self.projectId + "?jobNumber=" + self.jobnumber + "?fileName=" + self.text
-
-        escaped = escapeI2Quotify(
-            'fetch("' +
-            url +
-            '").then(response => {if(response.ok) response.text().then(text => {navigator.clipboard.writeText(text)})})')
-
-        obj.set('onclick', "eval(" + escaped + ")")
-
-        return obj
 
 
 class Download:
@@ -4848,32 +3107,6 @@ class Download:
         self.dataName = kw.get('dataName', self.dataName)
         self.label = kw.get('label', self.label)
 
-    def as_etree(self):
-        import json
-
-        obj = etree.Element('button')
-
-        obj.set('style', 'line-height: 14pt; box-sizing: border-box;')
-        obj.text = "Download"
-        obj.set('title', "Download")
-
-        if True:
-            params = {}
-            if self.dataName is not None:
-                params['dataName'] = self.dataName
-            if self.jobId is not None:
-                params['jobId'] = self.jobId
-
-            params['action'] = 'download'
-
-            jsonParams = json.dumps(params)
-
-            a = escapeI2Quotify(jsonParams)
-
-            obj.set('onclick', 'window.buttonBridge.clicked(' + a + ')')
-
-        return obj
-
 
 class LaunchTask:
 
@@ -4892,31 +3125,6 @@ class LaunchTask:
         self.taskName = kw.get('taskName', self.taskName)
         self.label = kw.get('label', self.label)
         self.ccp4_data_id = kw.get('ccp4_data_id', self.ccp4_data_id)
-
-    def as_etree(self):
-
-        # root =etree.Element('root')
-        obj = etree.Element('object')
-        obj.set('class', 'qt_launch_task')
-        obj.set('type', 'x-ccp4-widget/CLaunchTaskButton')
-        if self.id is not None:
-            obj.set('id', self.id)
-        # root.append(obj)
-
-        for key in ['label', 'taskName', 'ccp4_data_id']:
-            if getattr(self, key, None) is not None:
-                p = etree.Element('param')
-                p.set('name', key)
-                p.set('value', getattr(self, key))
-                obj.append(p)
-
-        if self.jobId is not None:
-            p = etree.Element('param')
-            p.set('name', 'jobId')
-            p.set('value', str(self.jobId))
-            obj.append(p)
-
-        return obj
 
 
 class Picture:
@@ -5017,235 +3225,6 @@ class Picture:
         # launchNode.set('cootScript',self.cootScript)
         self.launchList.append(Launch(xrtnode=launchNode, jobInfo=jobInfo))
 
-    def as_etree(self):
-        import uuid
-        import json
-        from core import CCP4Utils
-
-        root = etree.Element('div')
-        if self.picDefFile is None:
-            return root
-
-        # Make the path relative or will be broken on exporting project
-        fileRoot = os.path.split(os.path.splitext(
-            os.path.splitext(str(self.picDefFile))[0])[0])[-1]
-        picFile = './' + fileRoot + '.png'
-        # print 'Picture.as_etree picFile',picFile
-
-        t = etree.Element('table')
-        if self.class_ is None:
-            t.set('class', 'picture')
-        else:
-            t.set('class', self.class_)
-        if self.id is not None:
-            t.set('id', self.id)
-        r = etree.Element('tr')
-        t.append(r)
-
-        d = etree.Element('td')
-        d.set('colspan', str(len(self.launchList)))
-        r.append(d)
-
-        webglDiv = etree.Element('div')
-        uuid_str = uuid.uuid4().hex
-        webglDiv.set('id', uuid_str)
-        webglDiv.set(
-            'style',
-            'border: none; width: 350px; height: 350px; float: left;')
-        d.append(webglDiv)
-
-        table = etree.Element('div')
-        d.append(table)
-        tr = etree.Element('tr')
-        table.append(tr)
-        td = etree.Element('td')
-        td.text = "Fog"
-        tr.append(td)
-        td = etree.Element('td')
-        fog_slider_rangeDiv = etree.Element('div')
-        fog_slider_range_uuid_str = uuid.uuid4().hex
-        fog_slider_rangeDiv.set('id', fog_slider_range_uuid_str)
-        td.append(fog_slider_rangeDiv)
-        tr.append(td)
-        tr = etree.Element('tr')
-        table.append(tr)
-        td = etree.Element('td')
-        td.text = "Clip"
-        tr.append(td)
-        td = etree.Element('td')
-        clip_slider_rangeDiv = etree.Element('div')
-        clip_slider_range_uuid_str = uuid.uuid4().hex
-        clip_slider_rangeDiv.set('id', clip_slider_range_uuid_str)
-        td.append(clip_slider_rangeDiv)
-        tr.append(td)
-
-        tree = self.picDefFile.getEtreeRoot(useLXML=False)
-        MolDatas = tree.findall("ccp4i2_body/scene/data/MolData")
-
-        for m in MolDatas:
-            fn = m.findall("filename")
-            if fn[0].text is not None:
-                with open(fn[0].text) as f:
-                    fnt = f.read()
-                fd = etree.SubElement(m, "filedata")
-                fd.text = fnt.replace("<", "&lt;").replace(">", "&gt;")
-                m.remove(fn[0])
-        MapDatas = tree.findall("ccp4i2_body/scene/data/MapData")
-
-        # I think I want to put this "in a different file", for on demand
-        # loading.
-        for m in MapDatas:
-            fn = m.findall("filename")
-            fd = etree.SubElement(m, "filedata")
-            # FIXME - So how do I get these?
-            fd_projid = etree.SubElement(m, "ccp4i2_project")
-            fd_jobno = etree.SubElement(m, "ccp4i2_jobno")
-            if fn[0].text is not None:
-                b64map, mean, std_dev = MTZToB64Map(fn[0].text)
-                mapName = fn[0].text[:-3] + "map"
-                # fd.text = b64map
-                with open(mapName, "wb+") as mapF:
-                    mapF.write(b64map)
-                fd.text = mapName
-                sigma = etree.SubElement(m, "sigma")
-                sigma.text = str(std_dev)
-                mean = etree.SubElement(m, "mean")
-                mean.text = str(mean)
-                m.remove(fn[0])
-
-        mapLoad_uuid_str = uuid.uuid4().hex
-
-        sceneText = etree.tostring(tree).decode("utf-8")
-
-        script = etree.Element('script')
-        script.text = """
-    function webglfun(fogdiv,clipdiv,maploadButton) {
-
-        var gl = new MGWebGL(""" + '"' + uuid_str + '"' + """,true,false);
-
-        var enerLib = new EnerLib();
-
-        gl.setBackground([1.0,1.0,1.0,1.0]);
-        var contents = """ + '`' + sceneText + '`' + """;
-        if (window.DOMParser) {
-            var parser=new DOMParser();
-            xmlDoc=parser.parseFromString(contents,"text/xml");
-        } else {
-            xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
-            xmlDoc.async=false;
-            xmlDoc.loadXML(contents);
-        }
-        var extent = doParseAndLoad(gl,enerLib,xmlDoc,maploadButton);
-        gl.setShowAxes(true);
-  $( function() {
-    $( fogdiv ).slider({
-      range: true,
-      min: -extent,
-      max: extent,
-      values: [ -0.25*extent,0.75*extent ],
-      slide: function( event, ui ) {
-        gl.setFog(ui.values);
-      }
-    });
-    $( "#amount" ).val( "$" + $( fogdiv ).slider( "values", 0 ) +
-      " - $" + $( fogdiv ).slider( "values", 1 ) );
-  } );
-
-  $( function() {
-    $( clipdiv ).slider({
-      range: true,
-      min: -extent,
-      max: extent,
-      values: [ -0.25*extent,extent*.25 ],
-      slide: function( event, ui ) {
-        gl.set_clip_range(ui.values[0],ui.values[1],true);
-      }
-    });
-    $( "#amount" ).val( "$" + $( clipdiv ).slider( "values", 0 ) +
-      " - $" + $( clipdiv ).slider( "values", 1 ) );
-  } );
-        };
-    enqueue(webglfun,"#""" + fog_slider_range_uuid_str + "\",\"#" + clip_slider_range_uuid_str + "\",\"" + mapLoad_uuid_str + """\");
-    """
-        d.append(script)
-
-        d = etree.Element('td')
-        r.append(d)
-        if self.label is not None:
-            anno = etree.Element('p')
-            anno.set('class', 'annotation')
-            anno.text = self.label
-        d.append(anno)
-
-        buttonRow = etree.Element('tr')
-        t.append(buttonRow)
-        root.append(t)
-
-        model_uuid_str = uuid.uuid4().hex
-        pbc = etree.Element('td')
-        buttonRow.append(pbc)
-        pb = etree.Element("button")
-        pb.set("type", "button")
-        pb.text = "Expand"
-        pb.set("class", "webgllaunchbutton")
-        itemparams = dict()
-        itemparams["action"] = "WebGL"
-        itemparams["htmlBase"] = htmlBase()
-        itemparams["picdef"] = str(self.picDefFile)
-
-        stringparams = escapeI2Quotify(json.dumps(itemparams))
-        pb.set("onclick", 'window.buttonBridge.clicked(' + stringparams + ');')
-        pbc.append(pb)
-
-        pb = etree.Element("button")
-        pb.set("type", "button")
-        pb.text = "Load maps"
-        pb.set("class", "webgllaunchbutton")
-        pb.set("id", mapLoad_uuid_str)
-        pbc.append(pb)
-
-        """
-#FIXME - This probably isn't the right thing to do anyway. The modal dialog can only be as big as visible report area. That's not big enough. Want a Qt dialog
-    pb.set("onclick",'var modal = document.getElementById("'+model_uuid_str+'"); modal.style.display = "block";');
-
-    myModal = etree.Element('div')
-    myModal.set("id",model_uuid_str)
-    myModal.set("class","modal")
-    myModalContent = etree.Element('div')
-    myModalContent.set("class","modal-content")
-    closeButton = etree.Element("span")
-    closeButton.set("class","close")
-    closeButton.text = u"\u00D7"
-    closeButton.set("onclick",'var modal = document.getElementById("'+model_uuid_str+'"); modal.style.display = "none";')
-    myModalContent.append(closeButton)
-    myModal.append(myModalContent)
-    root.append(myModal)
-    """
-
-        for launch in self.launchList:
-            d = etree.Element('td')
-            buttonRow.append(d)
-            l = launch.as_etree()
-            if l.tag == 'root':
-                d.extend(l)
-            else:
-                d.append(l)
-
-        return root
-
-
-# Main program, if run from command line.
-# Usage: python report.py my.xrt my.xml
-if __name__ == "__main__":
-    import sys
-    xrt = etree.fromstring(open(sys.argv[1]).read(), PARSER())
-    xml = etree.fromstring(open(sys.argv[2]).read(), PARSER())
-    xreport = xrt.findall("/report")[0]
-    report = Report(xreport, xml)
-    # print report.as_html()
-
-    tree = report.as_etree()
-
 
 class GenericReport(Report):
     def __init__(self, xmlnode=None, jobInfo={}, **kw):
@@ -5284,49 +3263,6 @@ class Reference(ReportClass):
             root.set('authorList', str(self.authorList))
         return root
 
-    def as_etree(self):
-        root = etree.Element('div')
-        root.set('class', 'bibreference')
-        '''
-    div = etree.SubElement(root,'div')
-    div.set('style','float:left;')
-    if USEQTICONS:
-      icon = etree.SubElement(div,'object')
-      icon.set('class','qticon')
-      icon.set('type','x-ccp4-widget/CReferenceIcon')
-    else:
-      icon = etree.SubElement(div,'image')
-      icon.set('height','24')
-      icon.set('width','24')
-      icon.set('src',htmlBase()+"/book.svg")
-      icon.set('alt','Bibliographic reference icon')
-    div = etree.SubElement(root,'div')
-    div.set('style','float:left;')
-    '''
-        div = root
-        p = etree.SubElement(div, 'p')
-        p.set('class', 'articletitle')
-        if self.articleLink is not None:
-            a = etree.SubElement(p, 'a')
-            a.set('href', self.articleLink)
-            a.text = self.articleTitle
-        else:
-            p.text = self.articleTitle
-        # div = etree.SubElement(root,'div')
-        # div.set('style','clear:both;')
-        if len(self.authorList) > 0:
-            ele = etree.SubElement(div, 'p')
-            ele.set('class', 'authors')
-            t = ''
-            for item in self.authorList:
-                t += item + ', '
-            ele.text = t[0:-2]
-        ele = etree.SubElement(div, 'p')
-        ele.set('class', 'source')
-        ele.text = self.source
-
-        return root
-
 
 class ReferenceGroup(Container):
     ERROR_CODES = {
@@ -5344,49 +3280,6 @@ class ReferenceGroup(Container):
         self.tag = 'div'
         self._class = 'bibreference_group'
         self.taskName = kw.get('taskName', None)
-
-    def as_etree(self):
-
-        if self.title is not None:
-            title = self.title
-        elif self.taskName is not None:
-            from core import CCP4TaskManager
-            title = CCP4TaskManager.TASKMANAGER().getTitle(
-                taskName=self.taskName) + ' references'
-        else:
-            title = 'References'
-
-        root = etree.Element('div')
-        root.set('class', 'bibreference_group')
-
-        div = etree.SubElement(root, 'div')
-        div.set('style', 'float:left;')
-        if USEQTICONS:
-            icon = etree.SubElement(div, 'object')
-            icon.set('class', 'qticon')
-            icon.set('type', 'x-ccp4-widget/CReferenceIcon')
-            param = etree.SubElement(icon, 'param')
-            param.set('name', 'taskName')
-            param.set('value', str(self.taskName))
-        else:
-            icon = etree.SubElement(div, 'image')
-            icon.set('height', '24')
-            icon.set('width', '24')
-            icon.set('src', htmlBase() + "/book.svg")
-            icon.set('alt', 'Bibliographic reference icon')
-        div = etree.SubElement(root, 'div')
-        div.set('style', 'float:left;')
-        # p = etree.SubElement(div,'p')
-        div.set('class', 'reference_group_title')
-        div.text = title
-        div = etree.SubElement(root, 'div')
-        div.set('style', 'clear:both;')
-        for child in self.children:
-            tree = child.as_etree()
-            if tree is not None:
-                div.append(tree)
-
-        return root
 
     def loadFromMedLine(self, taskName=None, fileName=None):
         if fileName is None and taskName is not None:
