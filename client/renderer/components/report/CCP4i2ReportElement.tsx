@@ -16,6 +16,12 @@ import { CCP4i2ReportObjectGallery } from "./CCP4i2ReportObjectGallery";
 import { CCP4i2ApplicationOutputView } from "./CCP4i2ApplicationOutputView";
 import { CCP4i2ReportJobDetails } from "./CCP4i2ReportJobDetails";
 import { CCP4i2ReportVerdict } from "./CCP4i2ReportVerdict";
+import {
+  CCP4i2ReportGridContainer,
+  CCP4i2ReportGridItem,
+  CCP4i2ReportGridRow,
+  CCP4i2ReportDiagnostics,
+} from "./CCP4i2ReportGrid";
 
 export interface CCP4i2ReportElementProps {
   iItem: number;
@@ -172,6 +178,46 @@ export const CCP4i2ReportElement: React.FC<CCP4i2ReportElementProps> = ({
       } else if (["CCP4i2ReportJobLogFiles"].includes(tagName)) {
         //Skip this one, since handled by new log tab
         return null;
+      } else if (["CCP4i2ReportGridContainer"].includes(tagName)) {
+        // Grid container for responsive layouts
+        return (
+          <CCP4i2ReportGridContainer
+            key={`${iItem}`}
+            iItem={iItem}
+            item={item}
+            job={job}
+          />
+        );
+      } else if (["CCP4i2ReportGridItem"].includes(tagName)) {
+        // Grid item with responsive column spans
+        return (
+          <CCP4i2ReportGridItem
+            key={`${iItem}`}
+            iItem={iItem}
+            item={item}
+            job={job}
+          />
+        );
+      } else if (["CCP4i2ReportGridRow"].includes(tagName)) {
+        // Grid row (semantic alias for container)
+        return (
+          <CCP4i2ReportGridRow
+            key={`${iItem}`}
+            iItem={iItem}
+            item={item}
+            job={job}
+          />
+        );
+      } else if (["CCP4i2ReportDiagnostics"].includes(tagName)) {
+        // Diagnostic messages from report generation
+        return (
+          <CCP4i2ReportDiagnostics
+            key={`${iItem}`}
+            iItem={iItem}
+            item={item}
+            job={job}
+          />
+        );
       } else return <div>{tagName}</div>;
     }
     return null;

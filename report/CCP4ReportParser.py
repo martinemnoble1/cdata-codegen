@@ -1,34 +1,51 @@
-from __future__ import print_function
+"""
+CCP4i2 Report Parser and Element Classes.
 
-# Top class:
-# read xml file
-# generate html headers
-# get root node
-# pass node to container element
+This module provides the core report element classes for generating
+XML reports from CCP4 job output. Reports are serialized to XML and
+consumed by the React frontend for display.
 
-# Container class:
-# loop over elements
-# pass each element to appropriate subclass
+Architecture:
+    Report (Container)
+        ├── Title
+        ├── Results (Container)
+        │   ├── Fold (Container)
+        │   │   ├── Table
+        │   │   ├── Graph/FlotGraph
+        │   │   └── Text/Pre
+        │   └── ...
+        ├── InputData
+        ├── OutputData
+        └── ReferenceGroup
 
-# Table class:
-# produce table
+Key Classes:
+    Report - Main report container, subclassed by plugin reports
+    Container - Base for elements that contain children
+    Fold - Collapsible section
+    Table - Data table
+    Graph/FlotGraph - Chart/graph visualization
+    Text/Pre - Text content
 
-# Graph class:
-# produce graph
+Backward Compatibility:
+    This module maintains full backward compatibility with existing
+    plugin report classes in wrappers/, pipelines/, etc. Legacy code
+    that subclasses Report continues to work unchanged.
 
-# Text class:
-# produce text
+Modern Usage:
+    New reports can use the grid layout system for responsive layouts:
 
-# Questions: does reading cause formatting straight away?
-# Or do we store the content for later? Yes.
+        from report import GridContainer, GridItem, GridSpan
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+        grid = GridContainer(spacing=2)
+        left = grid.item(span=GridSpan(xs=12, md=8))
+        left.append(self.addTable(...))
+        self.append(grid)
+"""
+
+from io import StringIO
 import os
 import sys
-# from lxml import etree
+import logging
 import xml.etree.ElementTree as etree
 
 from lxml import html as lxml_html
@@ -36,6 +53,20 @@ from lxml import html as lxml_html
 from core.CCP4ErrorHandling import *
 from core.CCP4Modules import PROJECTSMANAGER
 from core.base_object.hierarchy_system import HierarchicalObject
+
+# Import error handling (lazy to avoid circular imports)
+_diagnostics_module = None
+
+
+def _get_diagnostics():
+    """Lazy import of diagnostics module to avoid circular imports."""
+    global _diagnostics_module
+    if _diagnostics_module is None:
+        from report import errors as _diagnostics_module
+    return _diagnostics_module
+
+
+logger = logging.getLogger(f"ccp4x:{__name__}")
 
 XRTNS = "{http://www.ccp4.ac.uk/xrt}"
 CCP4NS = "http://www.ccp4.ac.uk/ccp4ns"
@@ -390,6 +421,27 @@ class I2XmlParser:
 
 
 class ReportClass(object):
+    """
+    Base class for all report elements.
+
+    Provides common attributes and methods for report elements including
+    ID generation, parent traversal, and XML serialization.
+
+    Attributes:
+        id: Unique identifier for this element
+        label: Human-readable label
+        title: Title/tooltip text
+        class_: CSS class(es) for styling
+        style: Inline CSS styles
+        parent: Parent element in the hierarchy
+        internalId: Auto-generated internal ID for XML output
+
+    Modern Usage:
+        Elements can access the diagnostics system for error reporting:
+
+            self.add_diagnostic('warning', 'TABLE_EMPTY', 'No data rows')
+    """
+
     def __init__(self, *arg, **kw):
         super(ReportClass, self).__init__()
         self.id = kw.get('id', None)
@@ -400,6 +452,10 @@ class ReportClass(object):
         self.parent = kw.get('parent', None)
         self.outputXml = kw.get('outputXml', False)
         self.internalId = kw.get('internalId', None)
+
+        # Modern diagnostics collector (lazy initialized)
+        self._diagnostics = None
+
         if self.internalId is None:
             report = self.getReport()
             if report is not None:
@@ -411,18 +467,67 @@ class ReportClass(object):
                 self.internalId = className + '_' + str(Report.elementCount)
                 Report.elementCount += 1
 
+    @property
+    def diagnostics(self):
+        """Get or create the diagnostics collector for this element."""
+        if self._diagnostics is None:
+            errors = _get_diagnostics()
+            self._diagnostics = errors.DiagnosticCollector()
+        return self._diagnostics
+
+    def add_diagnostic(self, level: str, code: str, message: str, **kwargs):
+        """
+        Add a diagnostic to this element.
+
+        Args:
+            level: 'debug', 'info', 'warning', 'error', or 'critical'
+            code: Machine-readable error code (e.g., 'TABLE_EMPTY')
+            message: Human-readable description
+            **kwargs: Additional context (location, details, exception)
+        """
+        errors = _get_diagnostics()
+        level_enum = errors.DiagnosticLevel(level.lower())
+        location = kwargs.pop('location', type(self).__name__)
+        return self.diagnostics.add(level_enum, code, message, location=location, **kwargs)
+
+    def warning(self, code: str, message: str, **kwargs):
+        """Add a warning diagnostic."""
+        return self.add_diagnostic('warning', code, message, **kwargs)
+
+    def error(self, code: str, message: str, **kwargs):
+        """Add an error diagnostic."""
+        return self.add_diagnostic('error', code, message, **kwargs)
+
     def getReport(self):
+        """
+        Get the root Report object.
+
+        Traverses up the parent hierarchy to find the Report.
+        """
         if hasattr(self, 'parent') and self.parent is not None:
             return self.parent.getReport()
         return None
 
+    # Modern alias
+    def get_report(self):
+        """Modern alias for getReport()."""
+        return self.getReport()
+
     def data_id(self):
+        """Get the data ID for this element (used in XML output)."""
         return 'data_' + self.internalId
 
     def data_url(self):
+        """Get the data URL for this element."""
         return './tables_as_xml_files/' + self.data_id() + '.xml'
 
     def as_data_etree(self):
+        """
+        Generate XML element for frontend consumption.
+
+        Returns:
+            ET.Element with tag 'CCP4i2Report{ClassName}'
+        """
         root = etree.Element(
             'CCP4i2Report{}'.format(type(self).__name__),
             key=self.internalId,
@@ -636,6 +741,93 @@ class Container(ReportClass):
 
     def addHelp(self, xrtnode=None, xmlnode=None, jobInfo=None, **kw):
         return self.addObjectOfClass(Help, xrtnode, xmlnode, jobInfo, **kw)
+
+    # Modern grid layout methods
+
+    def addGrid(self, spacing=2, direction='row', **kw):
+        """
+        Add a grid container for responsive layouts.
+
+        Creates a MUI Grid container that arranges its children in a
+        responsive grid layout.
+
+        Args:
+            spacing: Gap between grid items (0-10)
+            direction: 'row', 'column', 'row-reverse', 'column-reverse'
+            **kw: Additional arguments passed to GridContainer
+
+        Returns:
+            GridContainer that can have GridItems added
+
+        Example:
+            grid = self.addGrid(spacing=2)
+            left = grid.addItem(xs=12, md=8)
+            left.append(self.addTable(...))
+            right = grid.addItem(xs=12, md=4)
+            right.append(self.addGraph(...))
+        """
+        from report.grid import GridContainer, GridDirection
+        if isinstance(direction, str):
+            direction = GridDirection(direction)
+        grid = GridContainer(spacing=spacing, direction=direction, parent=self, **kw)
+        self.children.append(grid)
+        return grid
+
+    def addGridItem(self, xs=12, sm=None, md=None, lg=None, xl=None, **kw):
+        """
+        Add a grid item directly to this container.
+
+        Usually you would add items to a GridContainer instead, but this
+        method allows adding a single grid item for simple layouts.
+
+        Args:
+            xs: Columns at extra-small (0-600px) - default 12 (full width)
+            sm: Columns at small (600-900px)
+            md: Columns at medium (900-1200px)
+            lg: Columns at large (1200-1536px)
+            xl: Columns at extra-large (1536px+)
+            **kw: Additional arguments passed to GridItem
+
+        Returns:
+            GridItem that can have content added
+        """
+        from report.grid import GridItem, GridSpan
+        span = GridSpan(xs=xs, sm=sm, md=md, lg=lg, xl=xl)
+        item = GridItem(span=span, parent=self, **kw)
+        self.children.append(item)
+        return item
+
+    def addTwoColumnLayout(self, left_span=8, right_span=4, spacing=2, **kw):
+        """
+        Add a two-column layout (convenience method).
+
+        Creates a grid with two columns. Returns a tuple of (left, right)
+        containers that you can add content to.
+
+        Args:
+            left_span: Column width for left column (1-12, default 8)
+            right_span: Column width for right column (1-12, default 4)
+            spacing: Gap between columns
+
+        Returns:
+            Tuple of (left_item, right_item) GridItems
+
+        Example:
+            left, right = self.addTwoColumnLayout()
+            left.append(self.addTable(...))
+            right.append(self.addGraph(...))
+        """
+        from report.grid import GridContainer, GridItem, GridSpan
+        grid = GridContainer(spacing=spacing, parent=self, **kw)
+        self.children.append(grid)
+
+        left = GridItem(span=GridSpan(xs=12, md=left_span), parent=grid)
+        grid.append(left)
+
+        right = GridItem(span=GridSpan(xs=12, md=right_span), parent=grid)
+        grid.append(right)
+
+        return left, right
 
     def getPictures(self):
         rv = []
