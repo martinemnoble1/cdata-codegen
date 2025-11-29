@@ -36,6 +36,7 @@ import { useProject } from "../../utils";
 import { Job } from "../../types/models";
 import { usePopcorn } from "../../providers/popcorn-provider";
 import { useRouter } from "next/navigation";
+import { useTheme } from "../../theme/theme-provider";
 
 interface SuggestedParameters {
   [key: string]: string;
@@ -56,9 +57,10 @@ interface VerdictData {
 }
 
 // SVG Meter Component
-const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
+const VerdictMeter: React.FC<{ score: number; size?: number; isDark?: boolean }> = ({
   score,
   size = 120,
+  isDark = false,
 }) => {
   const radius = size / 2 - 10;
   const circumference = Math.PI * radius; // Half circle
@@ -77,6 +79,11 @@ const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
   };
 
   const scoreColor = getScoreColor(score);
+
+  // Theme-aware colors
+  const tickColor = isDark ? "#999" : "#666";
+  const needleColor = isDark ? "#ccc" : "#333";
+  const bgArcColor = isDark ? "#444" : "#e0e0e0";
 
   // Create tick marks for the scale
   const createTickMarks = () => {
@@ -97,7 +104,7 @@ const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
           y1={y1}
           x2={x2}
           y2={y2}
-          stroke="#666"
+          stroke={tickColor}
           strokeWidth={isMainTick ? 2 : 1}
         />
       );
@@ -114,7 +121,7 @@ const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize="10"
-            fill="#666"
+            fill={tickColor}
           >
             {i * 10}
           </text>
@@ -139,7 +146,7 @@ const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
             center + radius
           } ${center}`}
           fill="none"
-          stroke="#e0e0e0"
+          stroke={bgArcColor}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -169,13 +176,13 @@ const VerdictMeter: React.FC<{ score: number; size?: number }> = ({
           y1={center}
           x2={needleX}
           y2={needleY}
-          stroke="#333"
+          stroke={needleColor}
           strokeWidth={3}
           strokeLinecap="round"
         />
 
         {/* Center dot */}
-        <circle cx={center} cy={center} r={4} fill="#333" />
+        <circle cx={center} cy={center} r={4} fill={needleColor} />
 
         {/* Score text */}
         <text
@@ -207,6 +214,8 @@ export const CCP4i2ReportVerdict: React.FC<CCP4i2ReportElementProps> = ({
   const { project, mutateJobs } = useProject(job.project);
   const { setMessage } = usePopcorn();
   const router = useRouter();
+  const { mode } = useTheme();
+  const isDark = mode === "dark";
 
   // Define the core nodes that should not be treated as statistics
   const coreNodes = new Set([
@@ -574,14 +583,14 @@ export const CCP4i2ReportVerdict: React.FC<CCP4i2ReportElementProps> = ({
               <Typography variant="h6" gutterBottom>
                 Quality Score
               </Typography>
-              <VerdictMeter score={verdictData.verdictScore} size={140} />
+              <VerdictMeter score={verdictData.verdictScore} size={140} isDark={isDark} />
             </Paper>
           </Grid>
           <Grid item xs={12} md={8}>
             {verdictData.verdictMessage && (
               <Paper
                 elevation={1}
-                sx={{ p: 2, backgroundColor: "grey.50", height: "100%" }}
+                sx={{ p: 2, backgroundColor: isDark ? "grey.900" : "grey.50", height: "100%" }}
               >
                 <Typography variant="body1" gutterBottom>
                   <strong>Assessment:</strong>
@@ -728,9 +737,9 @@ export const CCP4i2ReportVerdict: React.FC<CCP4i2ReportElementProps> = ({
         aria-controls="verdict-content"
         id="verdict-header"
         sx={{
-          backgroundColor: "grey.100",
+          backgroundColor: isDark ? "grey.800" : "grey.100",
           "&:hover": {
-            backgroundColor: "grey.200",
+            backgroundColor: isDark ? "grey.700" : "grey.200",
           },
           minHeight: 48,
           "& .MuiAccordionSummary-content": {

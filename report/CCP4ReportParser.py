@@ -213,15 +213,12 @@ def escapeI2Quotify(itemparams):
 
 
 def htmlBase():
-    # This is a bad i2 dependence which we are trying to avoid in the Reportparser
-    # Needed to support use of images for Reference icon etc
-    from core import CCP4Modules
-    port = CCP4Modules.HTTPSERVER().port
-    if port is None:
-        port = 43434
-    htmlBase = 'http://127.0.0.1:' + \
-        str(port) + '/report_files/' + CURRENT_CSS_VERSION
-    return htmlBase
+    """Return base path for report static files (images, CSS, etc.).
+
+    In the new architecture, static files are served via Django.
+    Legacy HTTPSERVER is no longer used.
+    """
+    return '/djangostatic/report_files/' + CURRENT_CSS_VERSION
 
 
 # htmlDoc function removed - HTML generation no longer used

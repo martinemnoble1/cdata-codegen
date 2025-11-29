@@ -39,7 +39,7 @@ export const CCP4i2ReportGridContainer: React.FC<CCP4i2ReportGridProps> = ({
 }) => {
   const gridProps = useMemo(() => {
     const $item = $(item);
-    return {
+    const props = {
       spacing: parseInt($item.attr("spacing") || "2", 10),
       direction: ($item.attr("direction") || "row") as
         | "row"
@@ -61,6 +61,8 @@ export const CCP4i2ReportGridContainer: React.FC<CCP4i2ReportGridProps> = ({
         | "baseline",
       wrap: $item.attr("wrap") !== "nowrap" ? "wrap" : "nowrap",
     };
+    console.log("[Grid] Container props:", props, "children:", $item.children().length);
+    return props;
   }, [item]);
 
   const children = useMemo(() => {
@@ -134,6 +136,7 @@ export const CCP4i2ReportGridItem: React.FC<CCP4i2ReportGridProps> = ({
       size.xs = 12;
     }
 
+    console.log("[Grid] Item size:", size, "children:", $item.children().length);
     return size;
   }, [item]);
 

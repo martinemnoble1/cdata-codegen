@@ -119,7 +119,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
     Add file I/O, validation, and business logic here.
     """
 
-    def saveFile(self, bodyEtree=None):
+    def saveFile(self, bodyEtree=None, useLXML=None):
         """
         Save the XML file with header and body structure.
 
@@ -132,6 +132,7 @@ class CI2XmlDataFile(CI2XmlDataFileStub):
         Args:
             bodyEtree: Optional ElementTree element for the body content.
                       If not provided, an empty body will be created.
+            useLXML: Ignored - kept for backward compatibility with legacy code.
         """
         import xml.etree.ElementTree as ET
         import traceback

@@ -38,11 +38,13 @@ Breakpoints:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Any
 from xml.etree import ElementTree as ET
 from enum import Enum
 
-from report.base import ReportContainer, ReportElement
+# Import from CCP4ReportParser to get all the addXxx methods (addDiv, addTable, etc.)
+# This ensures GridItem can be used as a drop-in container replacement
+from report.CCP4ReportParser import Container
 
 
 class GridDirection(Enum):
@@ -148,12 +150,14 @@ class GridPresets:
     GROW = GridSpan(xs='grow')
 
 
-class GridContainer(ReportContainer):
+class GridContainer(Container):
     """
     MUI Grid container element.
 
     Creates a flex container that arranges its children in a grid layout.
     Maps to <Grid2 container> in the React frontend.
+
+    Inherits from Container to get all addXxx methods (addDiv, addTable, etc.)
 
     Attributes:
         spacing: Gap between grid items (0-10, in MUI spacing units)
@@ -194,7 +198,7 @@ class GridContainer(ReportContainer):
             justify: Justify-content value
             align: Align-items value
             wrap: Whether to wrap items
-            **kwargs: Additional arguments passed to ReportContainer
+            **kwargs: Additional arguments passed to Container
         """
         super().__init__(**kwargs)
 
@@ -318,13 +322,15 @@ class GridRow(GridContainer):
         super().__init__(**kwargs)
 
 
-class GridItem(ReportContainer):
+class GridItem(Container):
     """
     MUI Grid item element.
 
     A single item within a grid container. The span configuration
     determines how many columns this item occupies at each breakpoint.
     Maps to <Grid2 size={{...}}> in the React frontend.
+
+    Inherits from Container to get all addXxx methods (addDiv, addTable, etc.)
 
     Attributes:
         span: Column span at each breakpoint
@@ -349,7 +355,7 @@ class GridItem(ReportContainer):
 
         Args:
             span: Column span configuration (defaults to full width)
-            **kwargs: Additional arguments passed to ReportContainer
+            **kwargs: Additional arguments passed to Container
         """
         super().__init__(**kwargs)
         self.span = span or GridSpan()
@@ -372,8 +378,8 @@ class GridItem(ReportContainer):
 # Convenience functions for common layouts
 
 def two_column_layout(
-    left_content: List[ReportElement],
-    right_content: List[ReportElement],
+    left_content: List[Any],
+    right_content: List[Any],
     left_span: GridSpan = GridPresets.TWO_THIRDS,
     right_span: GridSpan = GridPresets.THIRD,
     spacing: int = 2
@@ -405,7 +411,7 @@ def two_column_layout(
 
 
 def equal_columns(
-    *contents: List[ReportElement],
+    *contents: List[Any],
     min_width: int = 4,
     spacing: int = 2
 ) -> GridContainer:
@@ -439,7 +445,7 @@ def equal_columns(
     return grid
 
 
-def stacked_layout(*contents: ReportElement, spacing: int = 2) -> GridContainer:
+def stacked_layout(*contents: Any, spacing: int = 2) -> GridContainer:
     """
     Create a vertically stacked layout.
 

@@ -50,8 +50,12 @@ export const JobView: React.FC<JobViewProps> = ({ jobid }) => {
   );
 
   const report_xml: XMLDocument | null = useMemo(() => {
-    if (!report_xml_json || !report_xml_json.xml) return null;
-    return $.parseXML(report_xml_json.xml);
+    if (!report_xml_json) return null;
+    // Handle both wrapped response {success: true, data: {xml: ...}} and direct {xml: ...}
+    const xmlString = report_xml_json.data?.xml || report_xml_json.xml;
+    console.log("[JobView] report_xml_json:", report_xml_json, "xmlString length:", xmlString?.length);
+    if (!xmlString) return null;
+    return $.parseXML(xmlString);
   }, [report_xml_json]);
 
   const handleTabChange = (event: React.SyntheticEvent, value: number) => {

@@ -292,7 +292,8 @@ class DiagnosticCollector:
 
     def merge(self, other: 'DiagnosticCollector'):
         """Merge diagnostics from another collector."""
-        self._diagnostics.extend(other._diagnostics)
+        if other is not None and hasattr(other, '_diagnostics') and other._diagnostics is not None:
+            self._diagnostics.extend(other._diagnostics)
 
 
 # Standard error codes for report generation

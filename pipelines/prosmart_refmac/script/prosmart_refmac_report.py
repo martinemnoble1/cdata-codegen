@@ -102,13 +102,17 @@ class prosmart_refmac_report(Report):
         if refmacReportNode0 is not None:
             refmacReport = refmac_report.refmac_report(xmlnode=refmacReportNode0, jobStatus='nooutput', jobInfo=self.jobInfo)
 
-        topElementsDiv = summaryFold.addDiv(style='width:800px; height:270px;overflow:auto;')
-        if refmacReport is not None and not self.jobStatus.lower().count('running'):
-            refmacReport.addScrollableDownloadableTable1(parent=topElementsDiv)
-        else:
-            self.addProgressTable(topElementsDiv, xmlnode)
+        # Use grid layout to present table and graph side by side
+        grid = summaryFold.addGrid(spacing=2)
+        leftItem = grid.item(xs=12, md=5)  # Table: full width on mobile, ~5/12 on desktop
+        rightItem = grid.item(xs=12, md=7)  # Graph: full width on mobile, ~7/12 on desktop
 
-        self.addProgressGraph(topElementsDiv, xmlnode)
+        if refmacReport is not None and not self.jobStatus.lower().count('running'):
+            refmacReport.addScrollableDownloadableTable1(parent=leftItem)
+        else:
+            self.addProgressTable(leftItem, xmlnode)
+
+        self.addProgressGraph(rightItem, xmlnode)
 
         try:
             cootAddWatersNode = xmlnode.findall('.//CootAddWaters')[0]

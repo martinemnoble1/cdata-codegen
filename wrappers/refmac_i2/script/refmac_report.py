@@ -30,10 +30,17 @@ class refmac_report(Report):
     def addSummary(self, xmlnode=None, parent=None, withTables=True):
         if parent is None: parent=self
         if xmlnode is None: xmlnode = self.xmlnode
-        
+
         summaryFold = parent.addFold(label='Summary of refinement', brief='Summary', initiallyOpen=True)
-        self.addScrollableDownloadableTable1(parent=summaryFold)
-        self.addProgressGraph(parent=summaryFold)
+
+        # Use grid layout to present table and graph side by side
+        grid = summaryFold.addGrid(spacing=2)
+        leftItem = grid.item(xs=12, md=5)  # Table: full width on mobile, ~5/12 on desktop
+        rightItem = grid.item(xs=12, md=7)  # Graph: full width on mobile, ~7/12 on desktop
+
+        self.addScrollableDownloadableTable1(parent=leftItem)
+        self.addProgressGraph(parent=rightItem)
+
         if withTables: self.addTables(parent=summaryFold)
     
     def addRunningProgressGraph(self, parent):
@@ -69,9 +76,10 @@ class refmac_report(Report):
         if parent is None: parent=self
         if xmlnode is None: xmlnode = self.xmlnode
         #I *do not know* why This is needed
-        
+
         #Note that when I add the progressgraph, I have to ensure that the select is rooted in my own xmlnode
-        progressGraph = parent.addFlotGraph( title="Refinement results", xmlnode=self.xmlnode, select = ".//Overall_stats/stats_vs_cycle/new_cycle",style="height:250px; width:400px;float:left;")
+        # Note: float:left removed - grid layout now handles positioning
+        progressGraph = parent.addFlotGraph( title="Refinement results", xmlnode=self.xmlnode, select = ".//Overall_stats/stats_vs_cycle/new_cycle",style="height:250px; width:100%; max-width:400px;")
         progressGraph.addData(title="Cycle",   select=".//cycle")
         progressGraph.addData(title="R-free",   select=".//r_free", expr="x if float(x)>=0.0 else '-'")
         progressGraph.addData(title="R-factor", select=".//r_factor", expr="x if float(x)>=0.0 else ''")
@@ -640,11 +648,12 @@ class refmac_report(Report):
     def addScrollableDownloadableTable1(self, xmlnode=None, parent=None,internalId='Table1'):
         if xmlnode is None: xmlnode = self.xmlnode
         if parent is None: parent = self
-        
+
         #create a "shell" div to contain the scrollable table and the hyperlink
-        scrollableDownloadableTableDiv = parent.addDiv(style="height:250px; width:315px;float:left;margin-top:2px;")
+        # Note: float:left removed - grid layout now handles positioning
+        scrollableDownloadableTableDiv = parent.addDiv(style="height:250px; width:100%; max-width:315px; margin-top:2px;")
         #place a scrollable div into the shell: the table will be inserted into this div
-        scrollableTableDiv = scrollableDownloadableTableDiv.addDiv(style="height:225px; width:300px;clear:both;overflow:auto;")
+        scrollableTableDiv = scrollableDownloadableTableDiv.addDiv(style="height:225px; width:100%; max-width:300px; overflow:auto;")
         #Put table1 into this (autoscrolling) div
         table1 = self.addTable1(xmlnode=xmlnode, parent=scrollableTableDiv,internalId=internalId)
         #scrollableDownloadableTableDiv.addDiv(style="height:10px;width:15px; float:right;")

@@ -221,8 +221,10 @@ class ReportElement(HierarchicalObject):
         if hasattr(self, 'children'):
             for child in self.children:
                 if hasattr(child, 'collect_all_diagnostics'):
-                    collector.merge(child.collect_all_diagnostics())
-                elif hasattr(child, '_diagnostics'):
+                    child_diags = child.collect_all_diagnostics()
+                    if child_diags is not None:
+                        collector.merge(child_diags)
+                elif hasattr(child, '_diagnostics') and child._diagnostics is not None:
                     collector.merge(child._diagnostics)
 
         return collector
