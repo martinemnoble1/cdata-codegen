@@ -1102,6 +1102,54 @@ class CMtzData(CMtzDataStub):
             from core.cdata_stubs.CCP4XtalData import CResolutionRangeStub
             self.resolutionRange = CResolutionRangeStub(parent=self, name='resolutionRange')
 
+    def to_dict(self):
+        """
+        Convert CMtzData to a dictionary for serialization.
+
+        Includes all standard children plus type-specific attributes like
+        datasets, wavelengths, crystalNames, listOfColumns, and datasetCells.
+        """
+        from server.ccp4x.lib.utils.parameters.value_dict import value_dict_for_object
+
+        # Start with base serialization from children
+        result = {}
+        try:
+            for child in self.children():
+                if hasattr(child, 'objectName') and callable(child.objectName):
+                    name = child.objectName()
+                elif hasattr(child, 'object_name') and callable(child.object_name):
+                    name = child.object_name()
+                elif hasattr(child, 'name'):
+                    name = child.name
+                else:
+                    continue
+                result[name] = value_dict_for_object(child)
+        except Exception:
+            pass
+
+        # Add type-specific attributes that may be plain Python lists
+        type_specific_attrs = [
+            'datasets', 'wavelengths', 'crystalNames', 'datasetCells', 'listOfColumns'
+        ]
+        for attr_name in type_specific_attrs:
+            if attr_name not in result and hasattr(self, attr_name):
+                try:
+                    attr_value = getattr(self, attr_name)
+                    if attr_value is not None:
+                        if isinstance(attr_value, list) and len(attr_value) > 0:
+                            result[attr_name] = value_dict_for_object(attr_value)
+                        elif hasattr(attr_value, 'value') and attr_value.value:
+                            result[attr_name] = value_dict_for_object(attr_value)
+                        elif hasattr(attr_value, '__iter__'):
+                            # Handle CList or other iterables
+                            converted = value_dict_for_object(attr_value)
+                            if converted:
+                                result[attr_name] = converted
+                except Exception:
+                    pass
+
+        return result
+
     def loadFile(self, file_path: str = None):
         """
         Load MTZ file using gemmi library.
@@ -1603,6 +1651,146 @@ class CMtzData(CMtzDataStub):
             'maximumResolution1': max_res1,
             'maximumResolution2': max_res2
         }
+
+    def matthewsCoeff(self, seqDataFile=None, nRes=None, molWt=None, polymerMode=""):
+        """
+        Calculate Matthews coefficient using the CCP4 matthews_coef program.
+
+        This provides estimates of the number of molecules in the asymmetric unit
+        based on cell volume, space group, and molecular weight.
+
+        Args:
+            seqDataFile: Optional sequence data file to get molecular weight from
+            nRes: Optional number of residues (will estimate MW as 112.5 * nRes)
+            molWt: Optional molecular weight in Daltons (preferred if known)
+            polymerMode: Optional polymer mode string for matthews_coef
+
+        Returns:
+            dict: Results containing:
+                - cell_volume: Unit cell volume
+                - results: List of dicts with nmol_in_asu, matth_coef, percent_solvent, prob_matth
+
+        Raises:
+            CException: If molecular weight cannot be determined or program fails
+
+        Example:
+            >>> mtz = CMtzDataFile()
+            >>> mtz.setFullPath('/path/to/data.mtz')
+            >>> mtz.loadFile()
+            >>> result = mtz.fileContent.matthewsCoeff(molWt=25000)
+            >>> for r in result['results']:
+            ...     print(f"{r['nmol_in_asu']} copies: {r['percent_solvent']:.1f}% solvent")
+        """
+        import os
+        import tempfile
+        import math
+        from core.base_object.error_reporting import CException
+
+        # Determine molecular weight
+        if seqDataFile is not None:
+            try:
+                molWt = seqDataFile.fileContent.getAnalysis('molecularWeight')
+            except Exception:
+                molWt = 0.0
+        elif nRes is not None:
+            # Estimated residue weight as per ccp4 matthews_coeff documentation
+            molWt = 112.5 * float(nRes)
+
+        if molWt is None or molWt < 0.01:
+            raise CException(self.__class__, 410, str(seqDataFile))
+
+        # Create temporary files for output
+        f1 = tempfile.mkstemp()
+        os.close(f1[0])
+        f2 = tempfile.mkstemp()
+        os.close(f2[0])
+
+        try:
+            # Build command text for matthews_coef
+            com_text = f'MOLWEIGHT {molWt}\nCELL'
+
+            # Get cell parameters
+            for p in ['a', 'b', 'c']:
+                cell_val = getattr(self.cell, p, None)
+                if cell_val is not None:
+                    if hasattr(cell_val, 'value'):
+                        com_text += f' {cell_val.value}'
+                    else:
+                        com_text += f' {cell_val}'
+
+            for p in ['alpha', 'beta', 'gamma']:
+                angle = getattr(self.cell, p, None)
+                if angle is not None:
+                    if hasattr(angle, 'value'):
+                        a = float(angle.value)
+                    else:
+                        a = float(angle)
+                    # Convert from radians if needed
+                    if a < 3.0:
+                        a = a * 180.0 / math.pi
+                    com_text += f' {a}'
+
+            # Get space group number
+            sg_number = 1
+            if hasattr(self, 'spaceGroup') and self.spaceGroup is not None:
+                if hasattr(self.spaceGroup, 'number'):
+                    sg_number = self.spaceGroup.number()
+                elif hasattr(self.spaceGroup, 'value'):
+                    # Try to get number from space group name
+                    try:
+                        import gemmi
+                        sg = gemmi.SpaceGroup(str(self.spaceGroup.value))
+                        sg_number = sg.number
+                    except Exception:
+                        sg_number = 1
+
+            com_text += f'\nSYMM {sg_number}\n'
+            com_text += 'XMLO\nAUTO\n'
+
+            if polymerMode:
+                com_text += f'\nMODE {polymerMode}'
+
+            # Run matthews_coef
+            from core.CCP4TaskManager import TASKMANAGER
+            arg_list = ['XMLFILE', f1[1]]
+            TASKMANAGER().PROCESSMANAGER.startProcess(
+                'matthews_coef', arg_list, logFile=f2[1], inputText=com_text
+            )
+
+            if not os.path.exists(f1[1]):
+                raise CException(self.__class__, 411, str(seqDataFile))
+
+            # Parse results from XML file
+            rv = {'results': []}
+
+            from core.CCP4Utils import openFileToEtree
+            x_tree = openFileToEtree(fileName=f1[1])
+
+            try:
+                rv['cell_volume'] = float(x_tree.xpath('cell')[0].get('volume'))
+            except Exception:
+                pass
+
+            x_result_list = x_tree.xpath('result')
+            for x_result in x_result_list:
+                rv['results'].append({
+                    'nmol_in_asu': int(x_result.get('nmol_in_asu'))
+                })
+                for item in ['matth_coef', 'percent_solvent', 'prob_matth']:
+                    rv['results'][-1][item] = float(x_result.get(item))
+
+            return rv
+
+        finally:
+            # Clean up temporary files
+            try:
+                os.unlink(f1[1])
+            except Exception:
+                pass
+            try:
+                os.unlink(f2[1])
+            except Exception:
+                pass
 
 
 class CMtzDataFile(CMtzDataFileStub):
@@ -2213,6 +2401,54 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
             self.crystalNames = CList(name='crystalNames', parent=self)
         if not hasattr(self, 'wavelengths') or self.wavelengths is None:
             self.wavelengths = CList(name='wavelengths', parent=self)
+
+    def to_dict(self):
+        """
+        Convert CUnmergedDataContent to a dictionary for serialization.
+
+        Includes all standard children plus type-specific attributes like
+        datasets, wavelengths, crystalNames, listOfColumns, and datasetCells.
+        """
+        from server.ccp4x.lib.utils.parameters.value_dict import value_dict_for_object
+
+        # Start with base serialization from children
+        result = {}
+        try:
+            for child in self.children():
+                if hasattr(child, 'objectName') and callable(child.objectName):
+                    name = child.objectName()
+                elif hasattr(child, 'object_name') and callable(child.object_name):
+                    name = child.object_name()
+                elif hasattr(child, 'name'):
+                    name = child.name
+                else:
+                    continue
+                result[name] = value_dict_for_object(child)
+        except Exception:
+            pass
+
+        # Add type-specific attributes that may be plain Python lists
+        type_specific_attrs = [
+            'datasets', 'wavelengths', 'crystalNames', 'datasetCells', 'listOfColumns'
+        ]
+        for attr_name in type_specific_attrs:
+            if attr_name not in result and hasattr(self, attr_name):
+                try:
+                    attr_value = getattr(self, attr_name)
+                    if attr_value is not None:
+                        if isinstance(attr_value, list) and len(attr_value) > 0:
+                            result[attr_name] = value_dict_for_object(attr_value)
+                        elif hasattr(attr_value, 'value') and attr_value.value:
+                            result[attr_name] = value_dict_for_object(attr_value)
+                        elif hasattr(attr_value, '__iter__'):
+                            # Handle CList or other iterables
+                            converted = value_dict_for_object(attr_value)
+                            if converted:
+                                result[attr_name] = converted
+                except Exception:
+                    pass
+
+        return result
 
     def loadFile(self, file_path: str = None):
         """

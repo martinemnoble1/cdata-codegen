@@ -50,10 +50,23 @@ def value_dict_for_object(ccp4i2_object):
 
     # Handle general CData objects - convert attributes to dict
     if isinstance(ccp4i2_object, CData):
+        # Check if object has a custom to_dict() method (e.g., CDataFileContent subclasses)
+        if hasattr(ccp4i2_object, 'to_dict') and callable(ccp4i2_object.to_dict):
+            custom_dict = ccp4i2_object.to_dict()
+            if custom_dict is not None:
+                return custom_dict
+        # Fall back to generic CData handling
         return handle_cdata(ccp4i2_object)
 
+    # Handle other objects with __dict__ (e.g., CPdbDataComposition)
+    if hasattr(ccp4i2_object, '__dict__'):
+        return handle_plain_object(ccp4i2_object)
+
     # Fallback for unknown types
-    logger.warning("Unknown type %s, returning string representation", type(ccp4i2_object))
+    logger.warning(
+        "Unknown type %s, returning string representation",
+        type(ccp4i2_object)
+    )
     return str(ccp4i2_object)
 
 
@@ -95,10 +108,25 @@ def handle_container(ccp4i2_object):
     result = {}
 
     # Get all children from the container
+    # Try both children() (HierarchicalObject) and get_children() (legacy) methods
     try:
-        children = ccp4i2_object.get_children()
+        if hasattr(ccp4i2_object, 'children') and callable(ccp4i2_object.children):
+            children = ccp4i2_object.children()
+        elif hasattr(ccp4i2_object, 'get_children'):
+            children = ccp4i2_object.get_children()
+        else:
+            children = []
+
         for child in children:
-            name = child.objectName() if hasattr(child, 'objectName') else str(child)
+            # Get child name - try objectName() first, then object_name(), then name attribute
+            if hasattr(child, 'objectName') and callable(child.objectName):
+                name = child.objectName()
+            elif hasattr(child, 'object_name') and callable(child.object_name):
+                name = child.object_name()
+            elif hasattr(child, 'name'):
+                name = child.name
+            else:
+                name = str(child)
             result[name] = value_dict_for_object(child)
     except Exception as e:
         logger.warning("Failed to get children from container: %s", e)
@@ -125,16 +153,90 @@ def handle_cdata(ccp4i2_object):
         except Exception as e:
             logger.debug("Failed to get metadata attributes: %s", e)
 
-    # Fallback: try to get children (in case it has a hierarchical structure)
-    if not result and hasattr(ccp4i2_object, 'get_children'):
+    # Second strategy: try to get children (in case it has a hierarchical structure)
+    # Try both children() (HierarchicalObject) and get_children() (legacy) methods
+    if not result:
         try:
-            children = ccp4i2_object.get_children()
-            for child in children:
-                name = child.objectName() if hasattr(child, 'objectName') else str(child)
-                result[name] = value_dict_for_object(child)
+            children = None
+            if hasattr(ccp4i2_object, 'children') and callable(ccp4i2_object.children):
+                children = ccp4i2_object.children()
+            elif hasattr(ccp4i2_object, 'get_children'):
+                children = ccp4i2_object.get_children()
+
+            if children:
+                for child in children:
+                    # Get child name - try objectName() first, then object_name(), then name attribute
+                    if hasattr(child, 'objectName') and callable(child.objectName):
+                        name = child.objectName()
+                    elif hasattr(child, 'object_name') and callable(child.object_name):
+                        name = child.object_name()
+                    elif hasattr(child, 'name'):
+                        name = child.name
+                    else:
+                        name = str(child)
+                    result[name] = value_dict_for_object(child)
         except Exception as e:
             logger.debug("Failed to get children: %s", e)
 
+    # Third strategy: inspect __dict__ for public attributes
+    # This handles objects where data is stored directly
+    if not result:
+        try:
+            skip_attrs = {
+                'destroyed', 'parent_changed', 'child_added', 'child_removed',
+                'qualifiers_order', 'qualifiers_definition'
+            }
+            for attr_name, attr_value in ccp4i2_object.__dict__.items():
+                # Skip private attributes, signals, and metadata
+                if attr_name.startswith('_'):
+                    continue
+                if attr_name in skip_attrs:
+                    continue
+                # Include CData, basic types, lists, dicts, or custom objects
+                result[attr_name] = value_dict_for_object(attr_value)
+        except Exception as e:
+            logger.debug("Failed to inspect __dict__: %s", e)
+
+    # Fourth strategy: Check class CONTENTS for known attributes
+    # This handles CDataFileContent classes like CPdbData
+    if not result:
+        try:
+            contents = getattr(type(ccp4i2_object), 'CONTENTS', None)
+            if contents:
+                for attr_name in contents:
+                    if hasattr(ccp4i2_object, attr_name):
+                        attr_value = getattr(ccp4i2_object, attr_name)
+                        if attr_value is not None:
+                            result[attr_name] = value_dict_for_object(attr_value)
+        except Exception as e:
+            logger.debug("Failed to get CONTENTS attributes: %s", e)
+
+    # Fifth strategy: Check known property names for file content classes
+    if not result:
+        known_content_props = ['composition', 'sequences', 'cell', 'spaceGroup']
+        for prop_name in known_content_props:
+            if hasattr(ccp4i2_object, prop_name):
+                try:
+                    prop_value = getattr(ccp4i2_object, prop_name)
+                    if prop_value is not None:
+                        result[prop_name] = value_dict_for_object(prop_value)
+                except Exception:
+                    pass
+
+    return result if result else {}
+
+
+def handle_plain_object(obj):
+    """Convert a plain Python object with __dict__ to a dictionary."""
+    logger.debug("Handling plain object: %s", type(obj).__name__)
+    result = {}
+    try:
+        for attr_name, attr_value in obj.__dict__.items():
+            if attr_name.startswith('_'):
+                continue
+            result[attr_name] = value_dict_for_object(attr_value)
+    except Exception as e:
+        logger.warning("Failed to convert plain object: %s", e)
     return result if result else {}
 
 

@@ -14,6 +14,7 @@ import { useJob, SetParameterResponse } from "../../../utils";
 import { ErrorTrigger } from "./error-info";
 import { useTaskInterface } from "../../../providers/task-provider";
 import { usePopcorn } from "../../../providers/popcorn-provider";
+import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
 
 // Types
 type InputValue = string | number | boolean;
@@ -51,7 +52,7 @@ const useProcessedItem = (
 
     return {
       objectPath,
-      value: item?._value || "",
+      value: item?._value ?? "",
       guiLabel,
       isMultiLine,
       tooltipText,
@@ -59,15 +60,31 @@ const useProcessedItem = (
   }, [item, qualifiers, objectPath]);
 };
 
-const useFormState = (initialValue: InputValue, type: InputType) => {
+/**
+ * Custom hook for form state with intent-aware syncing.
+ *
+ * Key improvement: Only syncs from server (initialValue) if the user
+ * hasn't recently edited this field. This prevents the jarring experience
+ * of having your edit overwritten by a container refetch.
+ */
+const useFormState = (
+  initialValue: InputValue,
+  type: InputType,
+  objectPath: string | null,
+  wasRecentlyChanged: (path: string, withinMs?: number) => boolean
+) => {
   const [value, setValue] = useState<InputValue>(initialValue);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync with prop changes
+  // Sync with prop changes - but skip if user recently edited this field
   useEffect(() => {
+    // Don't overwrite local state if user just edited this field
+    if (objectPath && wasRecentlyChanged(objectPath)) {
+      return;
+    }
     setValue(initialValue);
-  }, [initialValue]);
+  }, [initialValue, objectPath, wasRecentlyChanged]);
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -153,12 +170,21 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
   const { item } = useTaskItem(itemName);
   const { inFlight, setInFlight } = useTaskInterface();
   const { setMessage } = usePopcorn();
+  const { setIntentForPath, clearIntentForPath, wasRecentlyChanged } =
+    useParameterChangeIntent();
 
   // Process item data
   const objectPath = useMemo(() => item?._objectPath || null, [item]);
   const processedItem = useProcessedItem(item, qualifiers, objectPath);
+
+  // Use intent-aware form state
   const { value, setValue, isSubmitting, setIsSubmitting, setDebouncedValue } =
-    useFormState(processedItem.value, type as InputType);
+    useFormState(
+      processedItem.value,
+      type as InputType,
+      objectPath,
+      wasRecentlyChanged
+    );
 
   // Computed properties
   const isVisible = useMemo(() => {
@@ -245,6 +271,15 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
         value: parsedValue,
       };
 
+      // Record intent BEFORE making the API call
+      // This prevents the container refetch from overwriting our local state
+      setIntentForPath({
+        jobId: job.id,
+        parameterPath: objectPath,
+        reason: "UserEdit",
+        previousValue: item?._value,
+      });
+
       setInFlight(true);
       setIsSubmitting(true);
 
@@ -257,16 +292,26 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
 
         if (result && !result.success) {
           setMessage(`Unacceptable value provided: "${newValue}"`);
-          setValue(item?._value || ""); // Revert to original value
+          setValue(item?._value ?? ""); // Revert to original value
+          // Clear intent on failure so next sync can happen
+          clearIntentForPath(objectPath);
         } else if (result?.success && result.data?.updated_item && onChange) {
+          // Clear intent after successful update and before calling onChange
+          // This allows derived updates to trigger proper re-renders
+          clearIntentForPath(objectPath);
           await onChange(result.data.updated_item);
+        } else if (result?.success) {
+          // Successful but no onChange handler - still clear intent
+          clearIntentForPath(objectPath);
         }
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         setMessage(`Error updating parameter: ${errorMessage}`);
         console.error("Parameter update failed:", error);
-        setValue(item?._value || ""); // Revert to original value
+        setValue(item?._value ?? ""); // Revert to original value
+        // Clear intent on error so next sync can happen
+        clearIntentForPath(objectPath);
       } finally {
         setInFlight(false);
         setIsSubmitting(false);
@@ -283,6 +328,9 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
       onChange,
       item,
       type,
+      job.id,
+      setIntentForPath,
+      clearIntentForPath,
     ]
   );
 
@@ -297,11 +345,30 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
         const inputValue = event.target.value;
         setValue(inputValue); // Always store as string while editing
 
+        // Record intent immediately when user starts typing
+        // This prevents any in-flight container refetch from overwriting
+        if (objectPath) {
+          setIntentForPath({
+            jobId: job.id,
+            parameterPath: objectPath,
+            reason: "UserEdit",
+            previousValue: item?._value,
+          });
+        }
+
         // Debounce updates for text inputs
         setDebouncedValue(inputValue, handleParameterUpdate);
       }
     },
-    [type, handleParameterUpdate, setDebouncedValue]
+    [
+      type,
+      handleParameterUpdate,
+      setDebouncedValue,
+      objectPath,
+      job.id,
+      item?._value,
+      setIntentForPath,
+    ]
   );
 
   const handleKeyDown = useCallback(

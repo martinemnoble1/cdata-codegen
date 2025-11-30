@@ -140,3 +140,26 @@ class CDataFileContent(CData):
         # Subclasses should override to provide actual loading logic
         # Base implementation just returns success
         return error
+
+    def to_dict(self):
+        """
+        Convert file content to a dictionary for serialization.
+
+        This base method returns None, indicating the caller should use
+        the default serialization strategy. Subclasses should override to
+        provide type-specific serialization that includes attributes not
+        registered as children (e.g., plain Python lists for datasets, wavelengths).
+
+        Returns:
+            dict or None: Dictionary representation of the file content,
+                          or None to use default serialization strategy
+
+        Example:
+            >>> mtz_content = CMtzData()
+            >>> mtz_content.loadFile('/path/to/data.mtz')
+            >>> content_dict = mtz_content.to_dict()
+            >>> print(content_dict['wavelength'])
+        """
+        # Base implementation returns None - use default serialization
+        # Subclasses override to provide type-specific dict conversion
+        return None

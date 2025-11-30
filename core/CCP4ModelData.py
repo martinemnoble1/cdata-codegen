@@ -224,6 +224,27 @@ class CAsuContentSeqList(CAsuContentSeqListStub):
         # subItem must be a dict with 'class' key pointing to the class
         self.set_qualifier('subItem', {'class': CAsuContentSeq, 'qualifiers': {}})
 
+    def molecularWeight(self):
+        """
+        Calculate total molecular weight of all sequences in the list.
+
+        Sums the molecular weight of each CAsuContentSeq item, using its
+        polymerType to determine the calculation method.
+
+        Returns:
+            float: Total molecular weight in Daltons
+        """
+        total_weight = 0.0
+        for seq_obj in self:
+            # Get polymerType - handle CString wrapper
+            polymer_type = seq_obj.polymerType
+            if hasattr(polymer_type, 'value'):
+                polymer_type = str(polymer_type.value)
+            else:
+                polymer_type = str(polymer_type) if polymer_type else "PROTEIN"
+            total_weight += seq_obj.molecularWeight(polymer_type)
+        return total_weight
+
 
 class CAsuDataFile(CAsuDataFileStub):
     """

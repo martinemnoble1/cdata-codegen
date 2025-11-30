@@ -1,15 +1,10 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { Paper } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob } from "../../../utils";
+import { useJob, useDigestEffect } from "../../../utils";
 import { useRunCheck } from "../../../providers/run-check-provider";
 
 /**
@@ -34,10 +29,19 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
 
   // File digest for wavelength extraction
-  const { data: F_SIGFDigest } = useFileDigest(F_SIGFItem?._objectPath);
+  const F_SIGFDigest = useFileDigest(F_SIGFItem?._objectPath);
 
-  // Track last set wavelength to avoid re-setting the same value
-  const lastSetWavelengthRef = useRef<number | null>(null);
+  // Auto-update wavelength when F_SIGF file changes
+  useDigestEffect(
+    F_SIGFDigest,
+    (digestData) => {
+      const wavelength = digestData.wavelengths?.at(-1);
+      if (!wavelength || wavelength <= 0 || wavelength >= 9) return undefined;
+      return wavelength;
+    },
+    updateWAVELENGTH,
+    job?.status
+  );
 
   // Task values for visibility conditions (memoized to prevent re-creation)
   const taskValues = useMemo(
@@ -87,29 +91,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       setProcessedErrors(newErrors);
     }
   }, [XYZIN_PARTIALValue?.contentFlag, validation, setProcessedErrors]);
-
-  // Extract wavelength from F_SIGF digest when it changes
-  useEffect(() => {
-    // API returns {success: true, data: {...}} - extract the data
-    const digestData = F_SIGFDigest?.data;
-    if (!digestData || !updateWAVELENGTH || job?.status !== 1) return;
-
-    // Extract wavelength from the last dataset
-    const wavelengths = digestData.wavelengths;
-    if (!wavelengths || wavelengths.length === 0) return;
-
-    const wavelength = wavelengths[wavelengths.length - 1];
-
-    // Sanity check: wavelength should be positive and reasonable (< 9 Angstrom)
-    if (!wavelength || wavelength <= 0 || wavelength >= 9) return;
-
-    // Don't re-set if we already set this value
-    if (lastSetWavelengthRef.current === wavelength) return;
-
-    console.log("Updating wavelength from F_SIGF digest:", wavelength);
-    lastSetWavelengthRef.current = wavelength;
-    updateWAVELENGTH(wavelength);
-  }, [F_SIGFDigest, updateWAVELENGTH, job?.status]);
 
   // Element configurations (stable reference)
   const elementConfigs = useMemo(

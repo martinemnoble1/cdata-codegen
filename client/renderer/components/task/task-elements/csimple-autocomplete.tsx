@@ -20,6 +20,7 @@ import { useJob, SetParameterResponse } from "../../../utils";
 import { ErrorTrigger } from "./error-info";
 import { useTaskInterface } from "../../../providers/task-provider";
 import { usePopcorn } from "../../../providers/popcorn-provider";
+import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
 
 type OptionValue = string | number;
 type GuiMode = "multiLineRadio" | "radio" | "autocomplete";
@@ -49,17 +50,26 @@ export const CSimpleAutocompleteElement: React.FC<
   const { item } = useTaskItem(itemName);
   const { setMessage } = usePopcorn();
   const { inFlight, setInFlight } = useTaskInterface();
+  const { setIntentForPath, clearIntentForPath, wasRecentlyChanged } =
+    useParameterChangeIntent();
 
   // Local state
   const [localValue, setLocalValue] = useState<OptionValue>(item?._value || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync local state with item value changes
+  // Get object path for intent tracking
+  const objectPath = useMemo(() => item?._objectPath || null, [item]);
+
+  // Sync local state with item value changes - but skip if recently edited
   useEffect(() => {
     if (item?._value !== undefined) {
+      // Don't overwrite local state if user just edited this field
+      if (objectPath && wasRecentlyChanged(objectPath)) {
+        return;
+      }
       setLocalValue(item._value);
     }
-  }, [item?._value]);
+  }, [item?._value, objectPath, wasRecentlyChanged]);
 
   // Process enumerators and labels
   const { enumerators, labels, guiLabel, guiMode, onlyEnumerators } =
@@ -136,15 +146,23 @@ export const CSimpleAutocompleteElement: React.FC<
   // Parameter update handler
   const handleParameterUpdate = useCallback(
     async (newValue: OptionValue) => {
-      if (!item?._objectPath) {
+      if (!objectPath) {
         console.error("No object path available for parameter update");
         return;
       }
 
       const setParameterArg = {
-        object_path: item._objectPath,
+        object_path: objectPath,
         value: newValue,
       };
+
+      // Record intent BEFORE making the API call
+      setIntentForPath({
+        jobId: job.id,
+        parameterPath: objectPath,
+        reason: "UserEdit",
+        previousValue: item?._value,
+      });
 
       setInFlight(true);
       setIsSubmitting(true);
@@ -160,8 +178,12 @@ export const CSimpleAutocompleteElement: React.FC<
         if (result && !result.success) {
           setMessage(`Unacceptable value provided: "${newValue}"`);
           setLocalValue(item._value); // Revert to original value
+          clearIntentForPath(objectPath);
         } else if (result?.success && result.data?.updated_item && onChange) {
+          clearIntentForPath(objectPath);
           await onChange(result.data.updated_item);
+        } else if (result?.success) {
+          clearIntentForPath(objectPath);
         }
       } catch (error) {
         const errorMessage =
@@ -169,12 +191,14 @@ export const CSimpleAutocompleteElement: React.FC<
         setMessage(`Error updating parameter: ${errorMessage}`);
         console.error("Parameter update failed:", error);
         setLocalValue(item._value); // Revert to original value
+        clearIntentForPath(objectPath);
       } finally {
         setInFlight(false);
         setIsSubmitting(false);
       }
     },
     [
+      objectPath,
       item,
       suppressMutations,
       setParameterNoMutate,
@@ -183,6 +207,9 @@ export const CSimpleAutocompleteElement: React.FC<
       setIsSubmitting,
       setMessage,
       onChange,
+      job.id,
+      setIntentForPath,
+      clearIntentForPath,
     ]
   );
 
@@ -298,6 +325,15 @@ export const CSimpleAutocompleteElement: React.FC<
             !onlyEnumerators
           ) {
             setLocalValue(newInputValue);
+            // Record intent when typing to prevent container refetch overwrites
+            if (objectPath) {
+              setIntentForPath({
+                jobId: job.id,
+                parameterPath: objectPath,
+                reason: "UserEdit",
+                previousValue: item?._value,
+              });
+            }
           }
         }}
         onBlur={async () => {

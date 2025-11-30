@@ -116,6 +116,11 @@ export const PushToCCP4i2Panel: React.FC<PushToCCP4i2Props> = ({
         setMessage(`Failed to create job: ${result.error || 'Unknown error'}`);
         return;
       }
+      // Note: Direct API call is OK here because:
+      // 1. This uploads to a NEWLY created job (not an existing one with SWR cache)
+      // 2. No concurrent SWR fetching exists for this job yet
+      // 3. The job runs immediately after upload, so no UI race conditions
+      // For existing jobs, use uploadFileParam from useJob() for proper intent tracking
       const uploadResult = await api.post<any>(
         `jobs/${newJobId}/upload_file_param`,
         formData

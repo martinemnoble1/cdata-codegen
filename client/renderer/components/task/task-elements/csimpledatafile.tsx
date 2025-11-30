@@ -2,7 +2,6 @@ import { Stack } from "@mui/material";
 import { CDataFileElement } from "./cdatafile";
 import { CCP4i2TaskElementProps } from "./task-element";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useApi } from "../../../api";
 import { readFilePromise, useJob, useProject } from "../../../utils";
 
 interface CSimpleDataFileElementProps extends CCP4i2TaskElementProps {
@@ -14,9 +13,7 @@ export const CSimpleDataFileElement: React.FC<CSimpleDataFileElementProps> = (
   props
 ) => {
   const { job, itemName, onChange, visibility } = props;
-  const api = useApi();
-  const { useTaskItem, useFileDigest, mutateContainer, mutateValidation } =
-    useJob(job.id);
+  const { useTaskItem, useFileDigest, uploadFileParam } = useJob(job.id);
   const { mutateFiles, mutateJobs } = useProject(job.project);
   const { item } = useTaskItem(itemName);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
@@ -30,43 +27,33 @@ export const CSimpleDataFileElement: React.FC<CSimpleDataFileElementProps> = (
     if (selectedFiles === previousSelectedFiles.current) return;
     previousSelectedFiles.current = selectedFiles;
     const fileBuffer = await readFilePromise(selectedFiles[0], "ArrayBuffer");
-    const formData = new FormData();
 
-    formData.append("objectPath", item._objectPath);
-    formData.append(
-      "file",
-      new Blob([fileBuffer as string], { type: item._qualifiers.mimeTypeName }),
-      selectedFiles[0].name
-    );
+    // Use centralized uploadFileParam with intent tracking
+    const uploadResult = await uploadFileParam({
+      objectPath: item._objectPath,
+      file: new Blob([fileBuffer as ArrayBuffer], { type: item._qualifiers.mimeTypeName }),
+      fileName: selectedFiles[0].name,
+    });
 
-    const uploadResult = await api.post<any>(
-      `jobs/${job.id}/upload_file_param`,
-      formData
-    );
-
-    // Handle new standardized API response format: {success: true, data: {...}}
-    const resultData = uploadResult.data || uploadResult;
-    onChange?.(resultData.updated_item);
+    // Handle response
+    if (uploadResult?.success && uploadResult.data?.updated_item) {
+      onChange?.(uploadResult.data.updated_item);
+    }
     setSelectedFiles(null);
 
-    // Execute all mutations in parallel
+    // Execute additional mutations not handled by uploadFileParam
     await Promise.all([
       mutateJobs(),
       mutateFiles(),
-      mutateContainer(),
-      mutateValidation(),
       mutateDigest(),
     ]);
   }, [
-    job,
     item,
     selectedFiles,
     onChange,
-    api,
+    uploadFileParam,
     mutateJobs,
     mutateFiles,
-    mutateContainer,
-    mutateValidation,
     mutateDigest,
   ]);
 

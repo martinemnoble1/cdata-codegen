@@ -2,9 +2,8 @@ import { Grid2, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
-import { useJob } from "../../../utils";
+import { useJob, useDigestEffect } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useEffect, useRef } from "react";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { job } = props;
@@ -16,33 +15,21 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { item: SEQINItem } = useTaskItem("SEQIN");
 
   // Use the file digest hook to get sequence data
-  const { data: SEQINDigest } = useFileDigest(SEQINItem?._objectPath);
+  const SEQINDigest = useFileDigest(SEQINItem?._objectPath);
 
-  // Track last set sequence to avoid re-setting the same value
-  const lastSetSequenceRef = useRef<string | null>(null);
+  // Auto-update sequence text when SEQIN file changes
+  useDigestEffect(
+    SEQINDigest,
+    (digestData) => {
+      const newSequence = digestData.sequence || "";
+      if (!newSequence) return undefined;
 
-  // Extract sequence from SEQIN digest when it changes
-  useEffect(() => {
-    // API returns {success: true, data: {...}} - extract the data
-    const digestData = SEQINDigest?.data;
-    if (!digestData || !setSEQUENCETEXT || job?.status !== 1) return;
-
-    const newSequence = digestData.sequence || "";
-    if (!newSequence) return;
-
-    // Build the formatted sequence text
-    const formattedSequence = `>${digestData.identifier || ""}\n${newSequence}`.replace(
-      "*",
-      ""
-    );
-
-    // Don't re-set if we already set this value
-    if (lastSetSequenceRef.current === formattedSequence) return;
-
-    console.log("Updating sequence from SEQIN digest");
-    lastSetSequenceRef.current = formattedSequence;
-    setSEQUENCETEXT(formattedSequence);
-  }, [SEQINDigest, setSEQUENCETEXT, job?.status]);
+      // Build the formatted sequence text
+      return `>${digestData.identifier || ""}\n${newSequence}`.replace("*", "");
+    },
+    setSEQUENCETEXT,
+    job?.status
+  );
 
   return (
     <CCP4i2Tabs {...props}>

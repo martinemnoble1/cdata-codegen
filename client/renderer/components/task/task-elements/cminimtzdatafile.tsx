@@ -2,10 +2,8 @@ import { Stack } from "@mui/material";
 import { CDataFileElement } from "./cdatafile";
 import { CCP4i2TaskElementProps } from "./task-element";
 import { useCallback, useMemo } from "react";
-import { useApi } from "../../../api";
 import { BaseSpacegroupCellElement } from "./base-spacegroup-cell-element";
-import { readFilePromise, useJob } from "../../../utils";
-import { Job } from "../../../types/models";
+import { readFilePromise, useJob, useProject } from "../../../utils";
 import { useCCP4i2Window } from "../../../app-context";
 import { selectMtzColumns } from "./mtz-column-dialog";
 
@@ -13,30 +11,10 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
   props
 ) => {
   const { job, itemName, onChange, visibility } = props;
-  const api = useApi();
-  const { useTaskItem, useFileDigest } = useJob(job.id);
+  const { useTaskItem, useFileDigest, uploadFileParam } = useJob(job.id);
+  const { mutateJobs, mutateFiles } = useProject(job.project);
   const { item } = useTaskItem(itemName);
   const { cootModule } = useCCP4i2Window();
-
-  // Mutation hooks
-  const mutators = {
-    jobs: api.get_endpoint<Job[]>({
-      type: "projects",
-      id: job.project,
-      endpoint: "jobs",
-    }).mutate,
-    container: api.get_wrapped_endpoint_json<any>({
-      type: "jobs",
-      id: job.id,
-      endpoint: "container",
-    }).mutate,
-    validation: api.get_endpoint_xml({
-      type: "jobs",
-      id: job.id,
-      endpoint: "validation",
-    }).mutate,
-    files: api.get<File[]>(`projects/${job.project}/files`).mutate,
-  };
 
   const { data: fileDigest, mutate: mutateDigest } = useFileDigest(
     item?._objectPath || ""
@@ -51,7 +29,7 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
    * Handle file selection from the file picker.
    * This is the single entry point for file uploads - it handles:
    * 1. Showing the column selection dialog (for MTZ files)
-   * 2. Uploading the file with the selected columns
+   * 2. Uploading the file with the selected columns (with intent tracking)
    * 3. Updating the UI state
    */
   const handleFileSelection = useCallback(
@@ -75,35 +53,25 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
           return;
         }
 
-        // Read file and upload
+        // Read file and upload using centralized uploadFileParam (with intent tracking)
         const fileBuffer = await readFilePromise(file, "ArrayBuffer");
 
-        const formData = new FormData();
-        if (columnSelector?.trim()) {
-          formData.append("column_selector", columnSelector);
+        const uploadResult = await uploadFileParam({
+          objectPath: item._objectPath,
+          file: new Blob([fileBuffer as ArrayBuffer], { type: "application/CCP4-mtz-file" }),
+          fileName: file.name,
+          columnSelector: columnSelector || undefined,
+        });
+
+        // Handle response
+        if (uploadResult?.success && uploadResult.data?.updated_item) {
+          onChange?.(uploadResult.data.updated_item);
         }
-        formData.append("objectPath", item._objectPath);
-        formData.append(
-          "file",
-          new Blob([fileBuffer as string], { type: "application/CCP4-mtz-file" }),
-          file.name
-        );
 
-        const uploadResult = await api.post<any>(
-          `jobs/${job.id}/upload_file_param`,
-          formData
-        );
-
-        // Handle new standardized API response format: {success: true, data: {...}}
-        const resultData = uploadResult.data || uploadResult;
-        onChange?.(resultData.updated_item);
-
-        // Trigger all mutations
+        // Trigger additional mutations not handled by uploadFileParam
         await Promise.all([
-          mutators.jobs(),
-          mutators.files(),
-          mutators.container(),
-          mutators.validation(),
+          mutateJobs(),
+          mutateFiles(),
           mutateDigest(),
         ]);
       } catch (error) {
@@ -111,7 +79,7 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
         // Could show an error toast/snackbar here
       }
     },
-    [job.id, item, cootModule, onChange, api, mutators, mutateDigest]
+    [item, cootModule, onChange, uploadFileParam, mutateJobs, mutateFiles, mutateDigest]
   );
 
   const isVisible = useMemo(

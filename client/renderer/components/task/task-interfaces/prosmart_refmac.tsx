@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import { Paper, Grid2 } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob, usePrevious } from "../../../utils";
-import { CDataFileElement } from "../task-elements/cdatafile";
+import { useJob, useDigestEffect } from "../../../utils";
 
 /**
  * Task interface component for Prosmart-Refmac - Prosmart-guided Refinement.
@@ -28,9 +27,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { update: updateUSE_TWIN } = useTaskItem("USE_TWIN");
 
   // File digest for wavelength extraction
-  const { data: F_SIGFDigest } = useFileDigest(F_SIGFItem?._objectPath);
-  const oldDigest = usePrevious(F_SIGFDigest);
-  const oldF_SIGFValue = usePrevious(F_SIGFValue);
+  const F_SIGFDigest = useFileDigest(F_SIGFItem?._objectPath);
 
   // Get current values for visibility conditions
   const { value: hydrUseValue } = useTaskItem("HYDR_USE");
@@ -47,33 +44,20 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { value: resCustomValue } = useTaskItem("RES_CUSTOM");
   const { value: useAnomalousValue } = useTaskItem("USEANOMALOUS");
 
-  // Handle wavelength extraction from F_SIGF file
-  const handleF_SIGFDigestChanged = useCallback(
-    async (digest: any) => {
-      if (!updateWAVELENGTH || !digest || !job || job.status !== 1) return;
-      if (JSON.stringify(digest) === JSON.stringify(oldDigest)) return;
-      console.log("In handleF_SIGFDigestChanged");
-
-      // Extract wavelength from digest
-      if (digest?.wavelengths?.length > 0) {
-        const wavelength = digest.wavelengths[digest.wavelengths.length - 1];
-        if (wavelength && wavelength < 9) {
-          // Sanity check for wavelength
-          await updateWAVELENGTH(wavelength);
-        }
-      }
+  // Auto-update wavelength when F_SIGF file changes
+  useDigestEffect(
+    F_SIGFDigest,
+    (digestData) => {
+      const wavelength = digestData.wavelengths?.at(-1);
+      // Return undefined to skip if invalid
+      if (!wavelength || wavelength <= 0 || wavelength >= 9) return undefined;
+      return wavelength;
     },
-    [updateWAVELENGTH, job, oldDigest]
+    updateWAVELENGTH,
+    job?.status
   );
 
-  // Effect to handle F_SIGF digest changes
-  useEffect(() => {
-    if (F_SIGFDigest) {
-      handleF_SIGFDigestChanged(F_SIGFDigest);
-    }
-  }, [F_SIGFDigest, handleF_SIGFDigestChanged]);
-
-  // Handle F_SIGF file changes
+  // Handle F_SIGF file changes (for anomalous/twinning flags)
   const handleF_SIGFChange = useCallback(async () => {
     if (!F_SIGFValue || !job || job.status !== 1) return;
     try {

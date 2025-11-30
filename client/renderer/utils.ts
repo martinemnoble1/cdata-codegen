@@ -1272,6 +1272,238 @@ export const useJob = (jobId: number | null | undefined): JobData => {
 };
 
 // ============================================================================
+// Digest Effect Hooks - Simplified patterns for reacting to file digest changes
+// ============================================================================
+
+/**
+ * Options for useDigestEffect hook
+ */
+export interface UseDigestEffectOptions<T> {
+  /**
+   * Only run the effect when job is in pending status (status === 1).
+   * Default: true
+   *
+   * Set to false if you need to react to digest changes regardless of job status.
+   */
+  onlyWhenPending?: boolean;
+
+  /**
+   * Custom equality function to determine if the extracted value has changed.
+   * Default: JSON.stringify comparison
+   *
+   * @example
+   * // Custom comparison for floating point tolerance
+   * isEqual: (a, b) => Math.abs(a - b) < 0.001
+   */
+  isEqual?: (prev: T | null, next: T) => boolean;
+
+  /**
+   * Enable debug logging to console.
+   * Default: false
+   */
+  debug?: boolean;
+
+  /**
+   * Label for debug logging (helps identify which effect is logging).
+   */
+  debugLabel?: string;
+}
+
+/**
+ * Hook to react to file digest changes with automatic duplicate prevention.
+ *
+ * This hook simplifies the common pattern of:
+ * 1. Watching a file digest for changes
+ * 2. Extracting a value from the digest
+ * 3. Calling an update function only when the value actually changes
+ * 4. Preventing duplicate updates (e.g., from React strict mode or re-renders)
+ *
+ * The hook handles all the boilerplate including:
+ * - Unwrapping the API response format ({success: true, data: {...}})
+ * - Tracking previously set values via useRef
+ * - Checking job status (only updates pending jobs by default)
+ * - Null/undefined safety throughout
+ *
+ * @param digest - The SWR response from useFileDigest (or similar)
+ * @param extract - Function to extract the desired value from digest data.
+ *                  Return undefined/null to skip the update.
+ * @param update - Function to call when the extracted value changes.
+ *                 This is typically from useTaskItem("PARAM").update
+ * @param jobStatus - Current job status (from job.status or props.job.status)
+ * @param options - Optional configuration (see UseDigestEffectOptions)
+ *
+ * @example
+ * // Basic usage: Extract wavelength from MTZ file digest
+ * const { data: F_SIGFDigest } = useFileDigest(F_SIGFItem?._objectPath);
+ * const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
+ *
+ * useDigestEffect(
+ *   F_SIGFDigest,
+ *   (digestData) => {
+ *     const wavelength = digestData.wavelengths?.at(-1);
+ *     // Return undefined to skip update if value is invalid
+ *     if (!wavelength || wavelength <= 0 || wavelength >= 9) return undefined;
+ *     return wavelength;
+ *   },
+ *   updateWAVELENGTH,
+ *   job?.status
+ * );
+ *
+ * @example
+ * // With validation and debug logging
+ * useDigestEffect(
+ *   SEQINDigest,
+ *   (digestData) => {
+ *     if (!digestData.sequence) return undefined;
+ *     return `>${digestData.identifier || ""}\n${digestData.sequence}`;
+ *   },
+ *   setSEQUENCETEXT,
+ *   job?.status,
+ *   { debug: true, debugLabel: "ProvideSequence" }
+ * );
+ *
+ * @example
+ * // Extract cell parameters (object value)
+ * useDigestEffect(
+ *   HKLINDigest,
+ *   (digestData) => digestData.cell,
+ *   updateCell,
+ *   job?.status
+ * );
+ */
+export function useDigestEffect<T>(
+  digest: SWRResponse<any, Error> | { data?: any } | null | undefined,
+  extract: (digestData: any) => T | undefined | null,
+  update: ((value: T) => unknown) | undefined | null,
+  jobStatus: number | undefined,
+  options: UseDigestEffectOptions<T> = {}
+): void {
+  const {
+    onlyWhenPending = true,
+    isEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b),
+    debug = false,
+    debugLabel = "useDigestEffect",
+  } = options;
+
+  // Track the last value we set to prevent duplicate updates
+  const lastSetValueRef = useRef<T | null>(null);
+
+  useEffect(() => {
+    // Guard: need update function
+    if (!update) {
+      if (debug) console.log(`[${debugLabel}] Skipping: no update function`);
+      return;
+    }
+
+    // Guard: check job status if required
+    if (onlyWhenPending && jobStatus !== 1) {
+      if (debug)
+        console.log(
+          `[${debugLabel}] Skipping: job status is ${jobStatus}, not pending (1)`
+        );
+      return;
+    }
+
+    // Unwrap API response format: {success: true, data: {...}}
+    const digestData = digest?.data?.data ?? digest?.data;
+    if (!digestData) {
+      if (debug) console.log(`[${debugLabel}] Skipping: no digest data`);
+      return;
+    }
+
+    // Extract the value using the provided function
+    const extractedValue = extract(digestData);
+
+    // Guard: extraction returned null/undefined (indicates skip)
+    if (extractedValue === undefined || extractedValue === null) {
+      if (debug)
+        console.log(`[${debugLabel}] Skipping: extract returned null/undefined`);
+      return;
+    }
+
+    // Guard: value hasn't changed (prevent duplicate updates)
+    if (
+      lastSetValueRef.current !== null &&
+      isEqual(lastSetValueRef.current, extractedValue)
+    ) {
+      if (debug)
+        console.log(`[${debugLabel}] Skipping: value unchanged`, extractedValue);
+      return;
+    }
+
+    // Update!
+    if (debug)
+      console.log(`[${debugLabel}] Updating with value:`, extractedValue);
+    lastSetValueRef.current = extractedValue;
+    update(extractedValue);
+  }, [digest, update, jobStatus, extract, onlyWhenPending, isEqual, debug, debugLabel]);
+}
+
+/**
+ * Convenience hook for the common pattern of extracting a single field from digest.
+ *
+ * This is a simplified version of useDigestEffect for the most common case:
+ * extracting a single field by path and optionally validating it.
+ *
+ * @param digest - The SWR response from useFileDigest
+ * @param fieldPath - Dot-separated path to the field (e.g., "wavelengths.-1" for last item)
+ * @param update - Update function from useTaskItem
+ * @param jobStatus - Current job status
+ * @param validate - Optional validation function. Return false to skip update.
+ *
+ * @example
+ * // Extract last wavelength with validation
+ * useDigestField(
+ *   F_SIGFDigest,
+ *   "wavelengths.-1",  // -1 means last element
+ *   updateWAVELENGTH,
+ *   job?.status,
+ *   (w) => w > 0 && w < 9  // validation
+ * );
+ *
+ * @example
+ * // Extract cell parameters (no validation needed)
+ * useDigestField(HKLINDigest, "cell", updateCell, job?.status);
+ */
+export function useDigestField<T>(
+  digest: SWRResponse<any, Error> | { data?: any } | null | undefined,
+  fieldPath: string,
+  update: ((value: T) => void | Promise<void>) | undefined | null,
+  jobStatus: number | undefined,
+  validate?: (value: T) => boolean
+): void {
+  const extract = useCallback(
+    (digestData: any): T | undefined => {
+      // Navigate the field path
+      const parts = fieldPath.split(".");
+      let value: any = digestData;
+
+      for (const part of parts) {
+        if (value === null || value === undefined) return undefined;
+
+        // Handle negative indices for arrays (e.g., -1 for last element)
+        if (Array.isArray(value) && /^-?\d+$/.test(part)) {
+          const index = parseInt(part, 10);
+          value = index < 0 ? value.at(index) : value[index];
+        } else {
+          value = value[part];
+        }
+      }
+
+      // Apply validation if provided
+      if (value !== undefined && value !== null && validate) {
+        return validate(value) ? value : undefined;
+      }
+
+      return value;
+    },
+    [fieldPath, validate]
+  );
+
+  useDigestEffect(digest, extract, update, jobStatus);
+}
+
+// ============================================================================
 // Optional: Queue Status Hooks
 // ============================================================================
 
