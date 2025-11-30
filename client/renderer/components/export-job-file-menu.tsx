@@ -196,7 +196,7 @@ export const ExportJobMenu: React.FC<ExportJobMenuProps> = ({
 
     try {
       const data: ExportJobFileMenuResponse = await apiGet(
-        `/api/proxy/jobs/${currentJobId}/export_job_file_menu/`
+        `jobs/${currentJobId}/export_job_file_menu`
       );
 
       // Handle new API format: {success: true, data: {result: ...}}

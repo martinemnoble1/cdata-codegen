@@ -5,10 +5,8 @@
  * - Authentication token injection
  * - Request/response logging
  * - Retry logic
+ * - Automatic /api/proxy/ prefix for relative API endpoints
  */
-
-// Re-export the existing makeApiUrl helper
-export { makeApiUrl } from "./api";
 
 /**
  * Configuration for API requests
@@ -28,6 +26,42 @@ const DEFAULT_CONFIG: ApiFetchConfig = {
 };
 
 /**
+ * Normalize a URL to include the /api/proxy/ prefix for API endpoints.
+ *
+ * - If URL starts with "http://" or "https://", return as-is (absolute URL)
+ * - If URL starts with "/api/", return as-is (already prefixed)
+ * - Otherwise, prepend "/api/proxy/" and ensure trailing slash
+ *
+ * @example
+ * normalizeApiUrl("jobs/123/digest") => "/api/proxy/jobs/123/digest/"
+ * normalizeApiUrl("/api/proxy/jobs/123") => "/api/proxy/jobs/123"
+ * normalizeApiUrl("/api/config") => "/api/config"
+ * normalizeApiUrl("https://example.com/data") => "https://example.com/data"
+ */
+function normalizeApiUrl(url: string): string {
+  // Absolute URLs pass through unchanged
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  // Already has /api/ prefix (covers /api/proxy/, /api/config, etc.)
+  if (url.startsWith("/api/")) {
+    return url;
+  }
+
+  // Strip leading slash if present for consistency
+  const endpoint = url.startsWith("/") ? url.slice(1) : url;
+
+  // Build the API URL with trailing slash
+  let apiUrl = `/api/proxy/${endpoint}`;
+  if (!apiUrl.endsWith("/")) {
+    apiUrl += "/";
+  }
+
+  return apiUrl;
+}
+
+/**
  * Core fetch wrapper with error handling and timeout
  */
 async function coreFetch(
@@ -36,6 +70,9 @@ async function coreFetch(
   config: ApiFetchConfig = {}
 ): Promise<Response> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // Normalize URL to include /api/proxy/ prefix for API endpoints
+  const normalizedUrl = normalizeApiUrl(url);
 
   // Prepare headers - don't assume JSON content type
   const headers: Record<string, string> = {
@@ -98,7 +135,7 @@ async function coreFetch(
     requestOptions.signal = controller.signal;
 
     try {
-      const response = await fetch(url, requestOptions);
+      const response = await fetch(normalizedUrl, requestOptions);
       clearTimeout(timeoutId);
       return response;
     } catch (error) {
@@ -107,7 +144,7 @@ async function coreFetch(
     }
   }
 
-  return fetch(url, requestOptions);
+  return fetch(normalizedUrl, requestOptions);
 }
 
 /**

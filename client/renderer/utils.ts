@@ -80,6 +80,31 @@ export interface ProjectData {
   mutateJobFloatValues: () => void;
 }
 
+/**
+ * API response format for upload_file_param endpoint.
+ */
+export type UploadFileParamResponse =
+  | {
+      success: true;
+      data: {
+        updated_item: any;
+      };
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+/**
+ * Arguments for uploadFileParam function.
+ */
+export interface UploadFileParamArg {
+  objectPath: string;
+  file: Blob;
+  fileName: string;
+  columnSelector?: string;
+}
+
 export interface JobData {
   job: Job | undefined;
   mutateJob: () => void;
@@ -99,6 +124,9 @@ export interface JobData {
   setParameterNoMutate: (
     arg: SetParameterArg
   ) => Promise<SetParameterResponse | undefined>;
+  uploadFileParam: (
+    arg: UploadFileParamArg
+  ) => Promise<UploadFileParamResponse | undefined>;
   useTaskItem: (paramName: string) => TaskItem;
   createPeerTask: (taskName: string) => Promise<Job | undefined>;
   useFileContent: (paramName: string) => SWRResponse<string, Error>;
@@ -747,7 +775,7 @@ export const useJob = (jobId: number | null | undefined): JobData => {
   });
 
   const { mutateJobs } = useProject(job?.project || 0);
-  const { setIntent } = useParameterChangeIntent();
+  const { setIntent, setIntentForPath, clearIntentForPath } = useParameterChangeIntent();
 
   // Memoized functions
   const setParameter = useCallback(
@@ -761,12 +789,25 @@ export const useJob = (jobId: number | null | undefined): JobData => {
         return undefined;
       }
 
+      const objectPath = setParameterArg.object_path;
+
+      // Record intent BEFORE making the API call
+      // This prevents the container refetch from overwriting local state
+      // Get previous value from container lookup if available
+      const previousValue = container?.lookup?.[objectPath]?._value;
+      setIntentForPath({
+        jobId: job.id,
+        parameterPath: objectPath,
+        reason: "UserEdit",
+        previousValue,
+      });
+
       // Enqueue the operation to ensure sequential execution
       return parameterQueue.enqueue(async () => {
         try {
           console.log(
             "Executing setParameter for:",
-            setParameterArg.object_path
+            objectPath
           );
 
           const result = await api.post<SetParameterResponse>(
@@ -781,9 +822,14 @@ export const useJob = (jobId: number | null | undefined): JobData => {
             mutateParams_xml(),
           ]);
 
+          // Clear intent after successful update
+          clearIntentForPath(objectPath);
+
           console.log("Parameter set successfully:", result);
           return result;
         } catch (error) {
+          // Clear intent on error so future syncs work
+          clearIntentForPath(objectPath);
           console.error("Error setting parameter:", error);
           throw error;
         }
@@ -791,11 +837,14 @@ export const useJob = (jobId: number | null | undefined): JobData => {
     },
     [
       job,
+      container,
       mutateContainer,
       mutateValidation,
       mutateParams_xml,
       api,
       setProcessedErrors,
+      setIntentForPath,
+      clearIntentForPath,
     ]
   );
 
@@ -810,12 +859,25 @@ export const useJob = (jobId: number | null | undefined): JobData => {
         return undefined;
       }
 
+      const objectPath = setParameterArg.object_path;
+
+      // Record intent even for no-mutate calls
+      // This is important for derived updates (e.g., CImportUnmergedElement)
+      // where multiple fields are updated before a single mutateContainer()
+      const previousValue = container?.lookup?.[objectPath]?._value;
+      setIntentForPath({
+        jobId: job.id,
+        parameterPath: objectPath,
+        reason: "UserEdit",
+        previousValue,
+      });
+
       // Enqueue the operation to ensure sequential execution
       return parameterQueue.enqueue(async () => {
         try {
           console.log(
             "Executing setParameterNoMutate for:",
-            setParameterArg.object_path
+            objectPath
           );
 
           const result = await api.post<SetParameterResponse>(
@@ -823,17 +885,106 @@ export const useJob = (jobId: number | null | undefined): JobData => {
             setParameterArg
           );
 
-          // Update only validation data
-          //await Promise.all([mutateParams_xml(), mutateValidation()]);
+          // Note: We don't clear intent here because the caller will typically
+          // call mutateContainer() later, and we want the intent to persist
+          // until that refetch completes. The auto-cleanup will handle stale intents.
 
           return result;
         } catch (error) {
+          // Clear intent on error
+          clearIntentForPath(objectPath);
           console.error("Error setting parameter (no mutate):", error);
           throw error;
         }
       });
     },
-    [job, mutateParams_xml, mutateValidation, api]
+    [job, container, mutateParams_xml, mutateValidation, api, setIntentForPath, clearIntentForPath]
+  );
+
+  /**
+   * Upload a file to a CDataFile parameter with intent tracking.
+   * This is the centralized function for all file uploads that should
+   * integrate with the intent tracking mechanism.
+   */
+  const uploadFileParam = useCallback(
+    async (
+      uploadArg: UploadFileParamArg
+    ): Promise<UploadFileParamResponse | undefined> => {
+      if (job?.status !== JOB_STATUS.PENDING) {
+        console.warn(
+          "Attempting to upload file to task not in pending state"
+        );
+        return undefined;
+      }
+
+      const { objectPath, file, fileName, columnSelector } = uploadArg;
+
+      // Record intent BEFORE making the API call
+      // This prevents the container refetch from overwriting local state
+      const previousValue = container?.lookup?.[objectPath]?._value;
+      setIntentForPath({
+        jobId: job.id,
+        parameterPath: objectPath,
+        reason: "FileUpload",
+        previousValue,
+      });
+
+      // Enqueue the operation to ensure sequential execution
+      return parameterQueue.enqueue(async () => {
+        try {
+          console.log("Executing uploadFileParam for:", objectPath);
+
+          const formData = new FormData();
+          formData.append("objectPath", objectPath);
+          formData.append("file", file, fileName);
+          if (columnSelector?.trim()) {
+            formData.append("column_selector", columnSelector);
+          }
+
+          const result = await api.post<UploadFileParamResponse>(
+            `jobs/${job.id}/upload_file_param`,
+            formData
+          );
+
+          setProcessedErrors(null);
+
+          // Update all related data
+          await Promise.all([
+            mutateValidation(),
+            mutateContainer(),
+            mutateParams_xml(),
+          ]);
+
+          // Invalidate the file digest cache for this objectPath
+          // This triggers re-fetch of the digest, which task interfaces can use
+          // to extract metadata like wavelength from the uploaded file
+          const digestKey = `jobs/${job.id}/digest?object_path=${objectPath}/`;
+          await mutate(digestKey);
+
+          // Clear intent after successful update
+          clearIntentForPath(objectPath);
+
+          console.log("File uploaded successfully:", result);
+          return result;
+        } catch (error) {
+          // Clear intent on error so future syncs work
+          clearIntentForPath(objectPath);
+          console.error("Error uploading file:", error);
+          throw error;
+        }
+      }) as Promise<UploadFileParamResponse | undefined>;
+    },
+    [
+      job,
+      container,
+      mutateContainer,
+      mutateValidation,
+      mutateParams_xml,
+      api,
+      setProcessedErrors,
+      setIntentForPath,
+      clearIntentForPath,
+    ]
   );
 
   const useTaskItem = useMemo(() => {
@@ -858,12 +1009,7 @@ export const useJob = (jobId: number | null | undefined): JobData => {
           return false;
         }
 
-        setIntent({
-          jobId: job.id,
-          parameterPath: item._objectPath,
-          reason: "UserEdit",
-          previousValue: value,
-        });
+        // Note: Intent is now recorded inside setParameter, no need to call setIntent here
 
         // Use the queued setParameter instead of direct fetch
         try {
@@ -943,14 +1089,11 @@ export const useJob = (jobId: number | null | undefined): JobData => {
   const getFileDigest = useMemo(() => {
     return (paramName: string): Promise<any | undefined> => {
       const dbFileId = container?.lookup?.[paramName]?.dbFileId;
-      const url = dbFileId
-        ? `/api/proxy/files/${dbFileId}/digest_by_uuid/`
-        : null;
-      if (!url) {
+      if (!dbFileId) {
         console.warn(`Parameter ${paramName} not found in container`);
         return Promise.resolve(null);
       }
-      return apiJson(url).catch((error) => {
+      return apiJson(`files/${dbFileId}/digest_by_uuid`).catch((error) => {
         console.error(`Error fetching file digest for ${paramName}:`, error);
         return null;
       });
@@ -965,16 +1108,15 @@ export const useJob = (jobId: number | null | undefined): JobData => {
 
     //console.log("dbFileId", JSON.stringify(dbFileId));
     // Return null key when dbFileId is falsey - this prevents SWR from fetching
-    const swrKey = dbFileId ? `files/${dbFileId}/download_by_uuid/` : null;
+    const swrKey = dbFileId ? `files/${dbFileId}/download_by_uuid` : null;
 
     const fetcher = async (): Promise<string> => {
-      if (!dbFileId) {
+      if (!swrKey) {
         throw new Error(
           `Parameter "${paramName}" not found or has no dbFileId`
         );
       }
-      const url = `/api/proxy/${swrKey}`;
-      return apiText(url);
+      return apiText(swrKey);
     };
 
     return useSWR<string, Error>(swrKey, swrKey ? fetcher : null, {
@@ -997,18 +1139,17 @@ export const useJob = (jobId: number | null | undefined): JobData => {
   };
 
   // Custom hook to fetch file digest using SWR
-  const useFileDigest = (paramName: string): SWRResponse<any, Error> => {
-    const objectPath = container?.lookup?.[paramName]?._objectPath;
+  // Note: objectPath should be the full path like "prosmart_refmac.inputData.F_SIGF"
+  const useFileDigest = (objectPath: string): SWRResponse<any, Error> => {
     // Create a unique key for SWR caching
     const swrKey = objectPath
-      ? `jobs/${job?.id}/digest?object_path=${objectPath}/`
+      ? `jobs/${job?.id}/digest?object_path=${objectPath}`
       : null;
     const fetcher = async (): Promise<string> => {
       if (!swrKey) {
         throw new Error("Parameter not found");
       }
-      const url = `/api/proxy/${swrKey}`;
-      return apiJson(url);
+      return apiJson(swrKey);
     };
 
     return useSWR<string, Error>(swrKey, swrKey ? fetcher : null, {
@@ -1118,6 +1259,7 @@ export const useJob = (jobId: number | null | undefined): JobData => {
     mutateDef_xml,
     setParameter,
     setParameterNoMutate,
+    uploadFileParam,
     useTaskItem,
     createPeerTask,
     useFileContent,

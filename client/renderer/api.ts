@@ -42,6 +42,10 @@ interface ValidationErrors {
 // URL Helpers
 // =============================================================================
 
+/**
+ * @deprecated No longer needed - apiGet/apiPost/etc. now auto-prefix with /api/proxy/
+ * Kept for backward compatibility. Just use the endpoint directly with api functions.
+ */
 export function makeApiUrl(endpoint: string): string {
   let api_path = `/api/proxy/${endpoint}`;
   if (api_path.charAt(api_path.length - 1) !== "/") api_path += "/";
@@ -49,7 +53,7 @@ export function makeApiUrl(endpoint: string): string {
 }
 
 function endpointToUrl(ef: EndpointFetch): string {
-  return makeApiUrl(`${ef.type}/${ef.id}/${ef.endpoint}`);
+  return `${ef.type}/${ef.id}/${ef.endpoint}`;
 }
 
 function isValidEndpoint(ef: EndpointFetch | null | undefined): ef is EndpointFetch {
@@ -235,7 +239,7 @@ function getEndpointKey(ef: EndpointFetch | null | undefined): EndpointFetch | n
 }
 
 function getStringKey(endpoint: string | null | undefined): string | null {
-  return isValidStringEndpoint(endpoint) ? makeApiUrl(endpoint) : null;
+  return isValidStringEndpoint(endpoint) ? endpoint : null;
 }
 
 // =============================================================================
@@ -320,21 +324,21 @@ export function useApi() {
      * POST request
      */
     async post<T>(endpoint: string, body: any = {}): Promise<T> {
-      return apiPost<T>(makeApiUrl(endpoint), body);
+      return apiPost<T>(endpoint, body);
     },
 
     /**
      * DELETE request
      */
     async delete(endpoint: string): Promise<void> {
-      await apiDelete(makeApiUrl(endpoint));
+      await apiDelete(endpoint);
     },
 
     /**
      * PATCH request
      */
     async patch<T>(endpoint: string, body: any = {}): Promise<T> {
-      return apiPatch<T>(makeApiUrl(endpoint), body);
+      return apiPatch<T>(endpoint, body);
     },
 
     /**
@@ -342,7 +346,7 @@ export function useApi() {
      */
     fileTextContent(djangoFile: any) {
       const swrKey = djangoFile?.dbFileId
-        ? `/api/proxy/files/${djangoFile.dbFileId}/download_by_uuid/`
+        ? `files/${djangoFile.dbFileId}/download_by_uuid`
         : null;
       return useSWR<string>(swrKey, apiText);
     },

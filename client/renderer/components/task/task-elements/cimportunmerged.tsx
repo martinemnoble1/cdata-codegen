@@ -43,33 +43,35 @@ export const CImportUnmergedElement: React.FC<CCP4i2TaskElementProps> = (
     async (updated: any) => {
       if (!item || !setParameterNoMutate || !updated) return;
       const updatedValue = valueOfItem(updated);
-      const fileDigest = await apiGet(
-        `/api/proxy/files/${updatedValue.dbFileId}/digest_by_uuid/`
+      const digestResponse = await apiGet(
+        `files/${updatedValue.dbFileId}/digest_by_uuid`
       );
+      // API returns {success: true, data: {...}} - extract the data
+      const digestData = digestResponse?.data;
       const updates: Promise<any>[] = [];
       if (
-        fileDigest?.cell &&
-        JSON.stringify(fileDigest?.cell) !== JSON.stringify(cell)
+        digestData?.cell &&
+        JSON.stringify(digestData?.cell) !== JSON.stringify(cell)
       ) {
-        updates.push(updateCell(fileDigest?.cell));
+        updates.push(updateCell(digestData?.cell));
       }
       if (
-        fileDigest?.wavelength &&
-        JSON.stringify(fileDigest?.wavelength) !== JSON.stringify(wavelength)
+        digestData?.wavelength &&
+        JSON.stringify(digestData?.wavelength) !== JSON.stringify(wavelength)
       ) {
-        updates.push(updateWavelength(fileDigest?.wavelength));
+        updates.push(updateWavelength(digestData?.wavelength));
       }
       if (
-        fileDigest?.crystalName &&
-        JSON.stringify(fileDigest?.crystalName) !== JSON.stringify(crystalName)
+        digestData?.crystalName &&
+        JSON.stringify(digestData?.crystalName) !== JSON.stringify(crystalName)
       ) {
-        updates.push(updateCrystalName(fileDigest?.crystalName));
+        updates.push(updateCrystalName(digestData?.crystalName));
       }
       if (
-        fileDigest?.crystalName &&
-        JSON.stringify(fileDigest?.datasetName) !== JSON.stringify(dataset)
+        digestData?.crystalName &&
+        JSON.stringify(digestData?.datasetName) !== JSON.stringify(dataset)
       ) {
-        updates.push(updateDataset(fileDigest?.datasetName));
+        updates.push(updateDataset(digestData?.datasetName));
       }
 
       if (updates.length > 0) {
@@ -153,7 +155,7 @@ export const CImportUnmergedElement: React.FC<CCP4i2TaskElementProps> = (
         </Grid2>
         <Grid2 size={{ xs: 8 }}>
           <Typography variant="body1">
-            {fileDigest?.batchs && JSON.stringify(fileDigest.batchs)}
+            {fileDigest?.data?.batchs && JSON.stringify(fileDigest.data.batchs)}
           </Typography>
         </Grid2>
 

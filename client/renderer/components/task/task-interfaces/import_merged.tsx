@@ -4,7 +4,7 @@ import {
   CCP4i2TaskElementProps,
 } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
-import { doRetrieve, useApi, makeApiUrl } from "../../../api";
+import { doRetrieve, useApi } from "../../../api";
 import { useJob, usePrevious } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
 import { useCallback, useEffect, useMemo } from "react";
@@ -24,7 +24,7 @@ import {
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const api = useApi();
   const { job } = props;
-  const { useFileDigest, useTaskItem, mutateContainer, mutateValidation } =
+  const { useFileDigest, useTaskItem, mutateContainer, mutateValidation, uploadFileParam } =
     useJob(job.id);
   const { cootModule } = useCCP4i2Window();
 
@@ -60,9 +60,11 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   // and we do not want the actual function to be called when those methods are updated (hence not symply put into the useEffect)
   const handleDigestChanged = useCallback(
     (digest: any) => {
+      // API returns {success: true, data: {...}} - extract the data
+      const digestData = digest?.data;
       if (
-        !digest ||
-        Object.keys(digest).length == 0 ||
+        !digestData ||
+        Object.keys(digestData).length == 0 ||
         !updateSPACEGROUP ||
         !updateWAVELENGTH ||
         !updateHKLIN_FORMAT ||
@@ -75,26 +77,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         let parametersChanged = false;
         {
           const result = await updateSPACEGROUP(
-            digest.spaceGroup.replace(/\s+/g, "")
+            digestData.spaceGroup.replace(/\s+/g, "")
           );
           parametersChanged = parametersChanged || Boolean(result);
         }
-        if (digest.wavelength) {
+        if (digestData.wavelength) {
           //Note some ancient MTZ files lack a wavelength
-          const result = await updateWAVELENGTH(digest.wavelength);
+          const result = await updateWAVELENGTH(digestData.wavelength);
           parametersChanged = parametersChanged || Boolean(result);
         }
         {
-          const result = await updateHKLIN_FORMAT(digest.format.toUpperCase());
+          const result = await updateHKLIN_FORMAT(digestData.format.toUpperCase());
           parametersChanged = parametersChanged || Boolean(result);
         }
         {
-          const result = await updateUNITCELL(digest.cell);
+          const result = await updateUNITCELL(digestData.cell);
           parametersChanged = parametersChanged || Boolean(result);
         }
         if (parametersChanged) {
           await mutateContainer();
-          await mutateValidation;
+          await mutateValidation();
         }
       };
       return asyncFunc();
@@ -117,6 +119,9 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       if (!setHKLIN_OBS_CONTENT_FLAG) return;
       if (!setHKLIN_OBS_COLUMNS) return;
 
+      // API returns {success: true, data: {...}} - extract the data
+      const digestData = HKLINDigest?.data;
+
       const match = columnPath.match(/\[([^\]]+)\]/);
       console.log({ match });
       if (match) {
@@ -124,13 +129,13 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         const columnNames = match[1].split(",").map((name) => name.trim());
         const columnTypes = columnNames.map(
           (name) =>
-            HKLINDigest?.listOfColumns.find(
+            digestData?.listOfColumns?.find(
               (col: { columnLabel: string }) => col.columnLabel === name
             )?.columnType
         );
         const datasetNames = columnNames.map(
           (name) =>
-            HKLINDigest?.listOfColumns.find(
+            digestData?.listOfColumns?.find(
               (col: { columnLabel: string }) => col.columnLabel === name
             )?.dataset
         );
@@ -149,20 +154,20 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           const consensusDatasetName = datasetNames[0];
 
           // Try to find matching index in datasets array
-          datasetIndex = HKLINDigest.datasets.indexOf(consensusDatasetName);
+          datasetIndex = digestData?.datasets?.indexOf(consensusDatasetName) ?? -1;
         }
         // Handle crystal names if available
         let selectedCrystalName = "Xtal1"; // Default fallback
         if (
           datasetIndex !== -1 &&
-          Array.isArray(HKLINDigest.crystalNames) &&
-          datasetIndex < HKLINDigest.crystalNames.length
+          Array.isArray(digestData?.crystalNames) &&
+          datasetIndex < digestData.crystalNames.length
         ) {
           // Option a) Use crystal name at same index as consensus dataset
-          selectedCrystalName = HKLINDigest.crystalNames[datasetIndex];
-        } else {
+          selectedCrystalName = digestData.crystalNames[datasetIndex];
+        } else if (Array.isArray(digestData?.crystalNames)) {
           // Option b) Find last entry that is not "HKL_base"
-          const validCrystalNames = HKLINDigest.crystalNames.filter(
+          const validCrystalNames = digestData.crystalNames.filter(
             (name: string) => name !== "HKL_base"
           );
 
@@ -178,21 +183,21 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         let selectedWavelength = "1.0"; // Default fallback
         if (
           datasetIndex !== -1 &&
-          Array.isArray(HKLINDigest.wavelengths) &&
-          datasetIndex < HKLINDigest.wavelengths.length
+          Array.isArray(digestData?.wavelengths) &&
+          datasetIndex < digestData.wavelengths.length
         ) {
           // Option a) Use wavelength at same index as consensus dataset
-          selectedWavelength = HKLINDigest.wavelengths[datasetIndex];
-        } else if (Array.isArray(HKLINDigest.wavelengths)) {
+          selectedWavelength = digestData.wavelengths[datasetIndex];
+        } else if (Array.isArray(digestData?.wavelengths)) {
           // Option b) Find last entry that is not "HKL_base"
-          const validWavelengths = HKLINDigest.wavelengths.filter(
+          const validWavelengths = digestData.wavelengths.filter(
             (name: string) => name !== "HKL_base"
           );
 
           if (validWavelengths.length > 0) {
             selectedWavelength = validWavelengths[validWavelengths.length - 1];
-          } else if (HKLINDigest.wavelengths.length > 0) {
-            selectedWavelength = HKLINDigest.wavelengths[0]; // Fallback to first wavelength
+          } else if (digestData.wavelengths.length > 0) {
+            selectedWavelength = digestData.wavelengths[0]; // Fallback to first wavelength
           }
           // If no valid wavelengths found, keep default "1.0"
         }
@@ -206,18 +211,15 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         }
       }
 
-      // Upload the file with selected columns
+      // Upload the file with selected columns using centralized uploadFileParam (with intent tracking)
       if (columnPath && columnPath.trim().length > 0) {
-        const formData = new FormData();
-        formData.append("column_selector", columnPath);
-        formData.append("objectPath", HKLIN_OBSItem._objectPath);
-        formData.append("file", file, file.name);
-        await api.post<Job>(
-          `jobs/${job.id}/upload_file_param`,
-          formData
-        );
-        mutateContainer();
-        mutateValidation();
+        await uploadFileParam({
+          objectPath: HKLIN_OBSItem._objectPath,
+          file: file,
+          fileName: file.name,
+          columnSelector: columnPath,
+        });
+        // Note: uploadFileParam already handles mutateContainer and mutateValidation
       }
     },
     [
@@ -229,9 +231,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       updateDATASETNAME,
       updateCRYSTALNAME,
       updateWAVELENGTH,
-      api,
-      mutateContainer,
-      mutateValidation,
+      uploadFileParam,
     ]
   );
 
@@ -250,9 +250,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       if (JSON.stringify(hklinValue) === JSON.stringify(oldHKLINValue)) return;
 
       // Download the file
-      const downloadURL = makeApiUrl(
-        `files/${hklinValue.dbFileId}/download_by_uuid/`
-      );
+      const downloadURL = `files/${hklinValue.dbFileId}/download_by_uuid`;
       const arrayBuffer = await doRetrieve(downloadURL, hklinValue.baseName);
       const blob = new Blob([arrayBuffer], {
         type: "application/CCP4-mtz-file",
@@ -386,6 +384,8 @@ interface MmcifPanelProps extends CCP4i2TaskElementProps {
 const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
   const api = useApi();
   const { digest, job } = props;
+  // API returns {success: true, data: {...}} - extract the data
+  const digestData = digest?.data;
   const { useTaskItem, mutateContainer, mutateValidation } = useJob(job.id);
   const { value: MMCIF_SELECTED_BLOCKValue } = useTaskItem(
     "MMCIF_SELECTED_BLOCK"
@@ -405,7 +405,7 @@ const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
 
   const handleSelectedBlockChange = useCallback(
     async (mmcifSelectedBlockName) => {
-      if (!digest?.rblock_infos || job?.status != 1) return;
+      if (!digestData?.rblock_infos || job?.status != 1) return;
       if (
         !setMMCIF_SELECTED_COLUMNS ||
         !setMMCIF_SELECTED_ISINTENSITY ||
@@ -413,10 +413,10 @@ const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
       )
         return;
       if (mmcifSelectedBlockName === oldMMCIF_SELECTED_BLOCKValue) return;
-      if (!digest?.format || digest?.format !== "mmcif") return;
+      if (!digestData?.format || digestData?.format !== "mmcif") return;
       const asyncFunc = async () => {
-        if (digest?.rblock_infos) {
-          const selectedBlock = digest.rblock_infos.find(
+        if (digestData?.rblock_infos) {
+          const selectedBlock = digestData.rblock_infos.find(
             (info: { bname: string }) => info.bname === mmcifSelectedBlockName
           );
           if (selectedBlock) {
@@ -440,7 +440,7 @@ const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
     },
     [
       oldMMCIF_SELECTED_BLOCKValue,
-      digest,
+      digestData,
       setMMCIF_SELECTED_COLUMNS,
       setMMCIF_SELECTED_ISINTENSITY,
       setMMCIF_SELECTED_INFO,
@@ -456,7 +456,7 @@ const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
   }, [MMCIF_SELECTED_BLOCKValue]);
 
   return (
-    digest?.rblock_infos && (
+    digestData?.rblock_infos && (
       <>
         <Card>
           <CardHeader variant="primary" title="Mmcif file information" />
@@ -469,7 +469,7 @@ const MmcifPanel: React.FC<MmcifPanelProps> = (props) => {
                 guiLabel: "Selected block",
                 guiMode: "multiLineRadio",
                 onlyEnumerators: true,
-                enumerators: digest.rblock_infos.map(
+                enumerators: digestData.rblock_infos.map(
                   (info: { bname: string }) => info.bname
                 ),
               }}

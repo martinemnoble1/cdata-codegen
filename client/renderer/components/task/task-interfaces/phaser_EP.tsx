@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Paper } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob, usePrevious } from "../../../utils";
+import { useJob } from "../../../utils";
 
 /**
  * Task interface component for Phaser Experimental Phasing (EP).
@@ -22,12 +22,14 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   );
 
   // Get task items for file handling and parameter updates
-  const { item: F_SIGFItem, value: F_SIGFValue } = useTaskItem("F_SIGF");
+  const { item: F_SIGFItem } = useTaskItem("F_SIGF");
   const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
 
   // File digest for wavelength extraction
   const { data: F_SIGFDigest } = useFileDigest(F_SIGFItem?._objectPath);
-  const oldF_SIGFValue = usePrevious(F_SIGFValue);
+
+  // Track last set wavelength to avoid re-setting the same value
+  const lastSetWavelengthRef = useRef<number | null>(null);
 
   // Task values for visibility conditions
   const taskValues = useMemo(
@@ -125,33 +127,28 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     [visibility]
   );
 
-  // Handle wavelength extraction from F_SIGF file
-  const handleF_SIGFDigestChanged = useCallback(
-    async (digest: any) => {
-      if (!updateWAVELENGTH || !digest || !job || job.status !== 1) return;
-
-      // Check if F_SIGF value actually changed
-      if (F_SIGFValue === oldF_SIGFValue) return;
-
-      // Extract wavelength from digest
-      if (digest?.wavelengths?.length > 0) {
-        const wavelength = digest.wavelengths[digest.wavelengths.length - 1];
-        if (wavelength && wavelength < 9) {
-          // Sanity check for wavelength
-          await updateWAVELENGTH(wavelength);
-          await mutateContainer();
-        }
-      }
-    },
-    [updateWAVELENGTH, job, F_SIGFValue, oldF_SIGFValue, mutateContainer]
-  );
-
-  // Effect to handle F_SIGF digest changes
+  // Extract wavelength from F_SIGF digest when it changes
   useEffect(() => {
-    if (F_SIGFDigest) {
-      handleF_SIGFDigestChanged(F_SIGFDigest);
-    }
-  }, [F_SIGFDigest, handleF_SIGFDigestChanged]);
+    // API returns {success: true, data: {...}} - extract the data
+    const digestData = F_SIGFDigest?.data;
+    if (!digestData || !updateWAVELENGTH || job?.status !== 1) return;
+
+    // Extract wavelength from the last dataset
+    const wavelengths = digestData.wavelengths;
+    if (!wavelengths || wavelengths.length === 0) return;
+
+    const wavelength = wavelengths[wavelengths.length - 1];
+
+    // Sanity check: wavelength should be positive and reasonable (< 9 Angstrom)
+    if (!wavelength || wavelength <= 0 || wavelength >= 9) return;
+
+    // Don't re-set if we already set this value
+    if (lastSetWavelengthRef.current === wavelength) return;
+
+    console.log("Updating wavelength from F_SIGF digest:", wavelength);
+    lastSetWavelengthRef.current = wavelength;
+    updateWAVELENGTH(wavelength);
+  }, [F_SIGFDigest, updateWAVELENGTH, job?.status]);
 
   // Render helper function
   const renderElements = useCallback(

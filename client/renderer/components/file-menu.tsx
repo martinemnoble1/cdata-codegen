@@ -16,7 +16,7 @@ import {
   Box,
 } from "@mui/material";
 import { Add, Download, Menu as MenuIcon, Upload } from "@mui/icons-material";
-import { makeApiUrl, useApi } from "../api";
+import { useApi } from "../api";
 import { Project } from "../types/models";
 import { useCCP4i2Window } from "../app-context";
 import { apiPost } from "../api-fetch";
@@ -63,8 +63,7 @@ export default function FileMenu() {
   };
 
   const handleExportProject = () => {
-    const url = makeApiUrl(`projects/${projectId}/export/`);
-    apiPost(url, {})
+    apiPost(`projects/${projectId}/export`, {})
       .then((result: ExportResult) => {
         console.log("Export started:", result);
         setExportResult(result);

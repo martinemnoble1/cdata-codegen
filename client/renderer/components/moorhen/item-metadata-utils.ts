@@ -28,15 +28,13 @@ export async function fetchItemMetadata(
 
   try {
     // Step 1: Fetch file information
-    const fileInfo: FileInfo = await apiGet(`/api/proxy/files/${fileId}/`);
+    const fileInfo: FileInfo = await apiGet(`files/${fileId}`);
 
     // Step 2: Fetch job information
-    const jobInfo: JobInfo = await apiGet(`/api/proxy/jobs/${fileInfo.job}/`);
+    const jobInfo: JobInfo = await apiGet(`jobs/${fileInfo.job}`);
 
     // Step 3: Fetch project information
-    const projectInfo: ProjectInfo = await apiGet(
-      `/api/proxy/projects/${jobInfo.project}/`
-    );
+    const projectInfo: ProjectInfo = await apiGet(`projects/${jobInfo.project}`);
 
     return {
       fileId,

@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { doRetrieve, makeApiUrl } from "../api";
+import { doRetrieve } from "../api";
 import {
   Dialog,
   DialogContent,

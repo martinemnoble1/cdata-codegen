@@ -8,12 +8,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useApi } from "../../../api";
-import { Job } from "../../../types/models";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiFetch, apiBlob, apiText } from "../../../api-fetch";
 import { useCCP4i2Window } from "../../../app-context";
-import { useJob } from "../../../utils";
+import { useJob, useProject } from "../../../utils";
 import { usePopcorn } from "../../../providers/popcorn-provider";
 import { useTaskInterface } from "../../../providers/task-provider";
 interface FetchFileForParamProps {
@@ -25,7 +23,6 @@ export const FetchFileForParam: React.FC<FetchFileForParamProps> = ({
   open,
   onClose,
 }) => {
-  const api = useApi();
   const { setMessage } = usePopcorn();
   const { fetchItemParams, setFetchItemParams, setDownloadDialogOpen } =
     useTaskInterface();
@@ -43,29 +40,9 @@ export const FetchFileForParam: React.FC<FetchFileForParamProps> = ({
   );
 
   const { jobId, cootModule } = useCCP4i2Window();
-  const { job } = useJob(jobId);
+  const { job, uploadFileParam } = useJob(jobId);
+  const { mutateJobs, mutateFiles } = useProject(job?.project || 0);
 
-  const { mutate: mutateJobs } = api.get_endpoint<Job[]>({
-    type: "projects",
-    id: job?.project,
-    endpoint: "jobs",
-  });
-
-  const { mutate: mutateContainer } = api.get_wrapped_endpoint_json<any>({
-    type: "jobs",
-    id: job?.id,
-    endpoint: "container",
-  });
-
-  const { mutate: mutateValidation } = api.get_endpoint_xml({
-    type: "jobs",
-    id: job?.id,
-    endpoint: "validation",
-  });
-
-  const { mutate: mutateFiles } = api.get<File[]>(
-    `projects/${job?.project}/files`
-  );
   const [mode, setMode] = useState<string | null>(null);
 
   //Initialise identifier to empty string
@@ -84,28 +61,28 @@ export const FetchFileForParam: React.FC<FetchFileForParamProps> = ({
 
   const uploadFile = useCallback(
     async (fileBlob: Blob, fileName: string) => {
-      if (job) {
-        const formData = new FormData();
-        formData.append("objectPath", item._objectPath);
-        formData.append("file", fileBlob, fileName);
+      if (job && item) {
         setMessage(`Uploading file ${fileName} for ${item._objectPath}`);
-        const uploadResult = await api.post<any>(
-          `jobs/${job.id}/upload_file_param`,
-          formData
-        );
+
+        // Use centralized uploadFileParam with intent tracking
+        const uploadResult = await uploadFileParam({
+          objectPath: item._objectPath,
+          file: fileBlob,
+          fileName,
+        });
+
         setMessage(`File ${fileName} uploaded for ${item._objectPath}`);
-        if (uploadResult.success && uploadResult.data?.updated_item) {
+        if (uploadResult?.success && uploadResult.data?.updated_item) {
           if (onChange) {
             onChange(uploadResult.data.updated_item);
           }
+          // Additional mutations not handled by uploadFileParam
           mutateJobs();
           mutateFiles();
-          mutateContainer();
-          mutateValidation();
         }
       }
     },
-    [item, job]
+    [item, job, uploadFileParam, onChange, mutateJobs, mutateFiles, setMessage]
   );
 
   const handleEbiCoordFetch = useCallback(async () => {
@@ -162,9 +139,8 @@ export const FetchFileForParam: React.FC<FetchFileForParamProps> = ({
 
   const handleUniprotFastaFetch = useCallback(async () => {
     if (identifier) {
-      const url = `/api/proxy/uniprot/${identifier.toUpperCase()}.fasta`;
       setMessage(`Fetching FASTA file for ${identifier.toUpperCase()}`);
-      const data = await apiText(url);
+      const data = await apiText(`uniprot/${identifier.toUpperCase()}.fasta`);
       setMessage(`Fetched FASTA file for ${identifier.toUpperCase()}`);
       const content = new Blob([data], {
         type: "text/plain",

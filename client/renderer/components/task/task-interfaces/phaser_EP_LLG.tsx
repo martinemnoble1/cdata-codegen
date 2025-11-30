@@ -1,6 +1,5 @@
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -10,11 +9,8 @@ import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob, usePrevious } from "../../../utils";
-import {
-  RunCheckContext,
-  useRunCheck,
-} from "../../../providers/run-check-provider";
+import { useJob } from "../../../utils";
+import { useRunCheck } from "../../../providers/run-check-provider";
 
 /**
  * Task interface component for Phaser Experimental Phasing LLG (Log-Likelihood Gain) calculation.
@@ -32,19 +28,16 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     job.id
   );
 
-  // Use refs to track processed states and prevent cycles
-  const lastProcessedF_SIGFValue = useRef<any>(null);
-  const lastProcessedXYZIN_PARTIALValue = useRef<any>(null);
-  const wavelengthUpdateInProgress = useRef(false);
-
   // Get task items for file handling and parameter updates
-  const { item: F_SIGFItem, value: F_SIGFValue } = useTaskItem("F_SIGF");
-  const { item: XYZIN_PARTIALItem, value: XYZIN_PARTIALValue } =
-    useTaskItem("XYZIN_PARTIAL");
+  const { item: F_SIGFItem } = useTaskItem("F_SIGF");
+  const { value: XYZIN_PARTIALValue } = useTaskItem("XYZIN_PARTIAL");
   const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
 
   // File digest for wavelength extraction
   const { data: F_SIGFDigest } = useFileDigest(F_SIGFItem?._objectPath);
+
+  // Track last set wavelength to avoid re-setting the same value
+  const lastSetWavelengthRef = useRef<number | null>(null);
 
   // Task values for visibility conditions (memoized to prevent re-creation)
   const taskValues = useMemo(
@@ -55,12 +48,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     [useTaskItem]
   );
 
-  const {
-    processedErrors,
-    setProcessedErrors,
-    setExtraDialogActions,
-    extraDialogActions = [],
-  } = useRunCheck();
+  const { processedErrors, setProcessedErrors } = useRunCheck();
 
   // Visibility conditions (stable references)
   const visibility = useMemo(
@@ -73,15 +61,10 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     [taskValues]
   );
 
-  // Stable error processing function with cycle prevention
-  const processErrors = useCallback(() => {
-    // Prevent processing the same value multiple times
-    if (lastProcessedXYZIN_PARTIALValue.current === XYZIN_PARTIALValue) {
-      return;
-    }
-    lastProcessedXYZIN_PARTIALValue.current = XYZIN_PARTIALValue;
+  // Effect for error processing when XYZIN_PARTIAL changes
+  useEffect(() => {
+    if (!setProcessedErrors) return;
 
-    const newProcessedErrors = { ...validation };
     const errorKey = "phaser_EP_LLG.inputData.XYZIN_PARTIAL";
     const hasError =
       processedErrors && Object.keys(processedErrors).includes(errorKey);
@@ -89,65 +72,44 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     if (XYZIN_PARTIALValue?.contentFlag === 2) {
       // Add error if not already present
       if (!hasError) {
-        newProcessedErrors[errorKey] = {
-          messages: ["Phaser apps can only work with PDB format"],
-          maxSeverity: 2,
-        };
-        setProcessedErrors(newProcessedErrors);
+        setProcessedErrors({
+          ...validation,
+          [errorKey]: {
+            messages: ["Phaser apps can only work with PDB format"],
+            maxSeverity: 2,
+          },
+        });
       }
     } else if (hasError) {
       // Remove error if it exists but shouldn't
-      setProcessedErrors(newProcessedErrors);
+      const newErrors = { ...processedErrors };
+      delete newErrors[errorKey];
+      setProcessedErrors(newErrors);
     }
-  }, [XYZIN_PARTIALValue, validation, setProcessedErrors, processedErrors]);
+  }, [XYZIN_PARTIALValue?.contentFlag, validation, setProcessedErrors]);
 
-  // Handle wavelength extraction with cycle prevention
-  const handleF_SIGFDigestChanged = useCallback(
-    async (digest: any) => {
-      // Prevent multiple simultaneous updates
-      if (wavelengthUpdateInProgress.current) return;
-
-      // Check if we've already processed this value
-      if (lastProcessedF_SIGFValue.current === F_SIGFValue) return;
-
-      // Basic validation checks
-      if (!updateWAVELENGTH || !digest || !job || job.status !== 1) return;
-
-      // Extract wavelength from digest (last wavelength in array)
-      if (digest?.wavelengths?.length > 0) {
-        const wavelength = digest.wavelengths[digest.wavelengths.length - 1];
-        if (wavelength && wavelength < 9) {
-          // Sanity check for reasonable wavelength
-          try {
-            wavelengthUpdateInProgress.current = true;
-            lastProcessedF_SIGFValue.current = F_SIGFValue;
-
-            await updateWAVELENGTH(wavelength);
-            await mutateContainer();
-          } catch (error) {
-            console.error("Error updating wavelength:", error);
-          } finally {
-            wavelengthUpdateInProgress.current = false;
-          }
-        }
-      }
-    },
-    [updateWAVELENGTH, job, F_SIGFValue, mutateContainer] // Removed oldF_SIGFValue
-  );
-
-  // Effect for error processing with minimal dependencies
+  // Extract wavelength from F_SIGF digest when it changes
   useEffect(() => {
-    if (XYZIN_PARTIALValue !== undefined) {
-      processErrors();
-    }
-  }, [XYZIN_PARTIALValue, processErrors]);
+    // API returns {success: true, data: {...}} - extract the data
+    const digestData = F_SIGFDigest?.data;
+    if (!digestData || !updateWAVELENGTH || job?.status !== 1) return;
 
-  // Effect for F_SIGF digest changes with cycle prevention
-  useEffect(() => {
-    if (F_SIGFDigest && F_SIGFValue !== lastProcessedF_SIGFValue.current) {
-      handleF_SIGFDigestChanged(F_SIGFDigest);
-    }
-  }, [F_SIGFDigest, handleF_SIGFDigestChanged, F_SIGFValue]);
+    // Extract wavelength from the last dataset
+    const wavelengths = digestData.wavelengths;
+    if (!wavelengths || wavelengths.length === 0) return;
+
+    const wavelength = wavelengths[wavelengths.length - 1];
+
+    // Sanity check: wavelength should be positive and reasonable (< 9 Angstrom)
+    if (!wavelength || wavelength <= 0 || wavelength >= 9) return;
+
+    // Don't re-set if we already set this value
+    if (lastSetWavelengthRef.current === wavelength) return;
+
+    console.log("Updating wavelength from F_SIGF digest:", wavelength);
+    lastSetWavelengthRef.current = wavelength;
+    updateWAVELENGTH(wavelength);
+  }, [F_SIGFDigest, updateWAVELENGTH, job?.status]);
 
   // Element configurations (stable reference)
   const elementConfigs = useMemo(

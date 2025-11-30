@@ -142,7 +142,7 @@ const MoorhenWrapper: React.FC<MoorhenWrapperProps> = ({ fileIds }) => {
   }, [cootInitialized, leftPanelWidth, windowHeight, theme.mode]);
 
   const fetchFile = async (fileId: number) => {
-    const fileInfo = await apiGet(`/api/proxy/files/${fileId}/`);
+    const fileInfo = await apiGet(`files/${fileId}`);
     console.log(fileInfo);
     if (!fileInfo) {
       console.warn(`File with ID ${fileId} not found.`);

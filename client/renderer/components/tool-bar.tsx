@@ -104,7 +104,7 @@ export default function ToolBar() {
   const handleI2Run = async () => {
     if (job) {
       const result: { status: string; command: string } = await apiGet(
-        `/api/proxy/jobs/${job.id}/i2run_command/`
+        `jobs/${job.id}/i2run_command`
       );
       if (result?.command) {
         navigator.clipboard.writeText(result.command);

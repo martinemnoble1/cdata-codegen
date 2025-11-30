@@ -13,8 +13,8 @@ import {
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
-import { makeApiUrl, useApi } from "../../../api";
-import { useJob, usePrevious, valueOfItem } from "../../../utils";
+import { useApi } from "../../../api";
+import { useJob, valueOfItem } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
 import { useCallback, useEffect, useMemo } from "react";
 import useSWR from "swr";
@@ -34,7 +34,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
    * Fetches the molecular weight for the current job's ASU content using SWR.
    *
    * Uses the `useSWR` hook to send a POST request to the backend API endpoint
-   * `/api/proxy/jobs/${job.id}/object_method/` with the required payload to invoke
+   * `jobs/${job.id}/object_method` with the required payload to invoke
    * the `molecularWeight` method on the `ProvideAsuContents.inputData.ASU_CONTENT` object.
    *
    * @returns
@@ -45,7 +45,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
    *   Throws an error if the response from the API is not successful.
    */
   const { data: molWeight, mutate: mutateMolWeight } = useSWR(
-    `/api/proxy/jobs/${job.id}/object_method/`,
+    `jobs/${job.id}/object_method`,
     (url) =>
       apiPost(url, {
         object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
@@ -58,7 +58,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
    *
    * @remarks
    * This hook uses the SWR library to fetch data from the backend API endpoint
-   * `/api/proxy/jobs/${job.id}/object_method/` via a POST request. The request body
+   * `jobs/${job.id}/object_method` via a POST request. The request body
    * includes the object path and method name required for the analysis, along with
    * the molecular weight as a parameter. The response is expected to be a JSON object
    * containing the Matthews analysis results.
@@ -78,7 +78,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
    */
   const { data: matthewsAnalysis, mutate: mutateMatthewsAnalysis } = useSWR(
     [
-      `/api/proxy/jobs/${job.id}/object_method/`,
+      `jobs/${job.id}/object_method`,
       molWeight?.result,
       HKLINDigest,
     ],
@@ -96,9 +96,13 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       if (!setAsuContent) return;
       const { dbFileId } = valueOfItem(updatedItem);
       if (dbFileId) {
-        const digest = await apiGet(
-          makeApiUrl(`files/${dbFileId}/digest_by_uuid/`)
+        const digestResponse = await apiGet(
+          `files/${dbFileId}/digest_by_uuid`
         );
+        // API returns {success: true, data: {...}} - extract the data
+        const digest = digestResponse?.data;
+        if (!digest?.seqList) return;
+
         //Note here I filter out the source file information, which may not be properly formed
         await setAsuContent(
           digest.seqList.map((seq: any) => {
