@@ -207,8 +207,16 @@ class CData(HierarchicalObject):
         Uses smart assignment to avoid overwriting CData objects.
 
         Args:
-            values: Either a dict of attributes, or another CData object to copy from
+            values: None to clear/unset, dict of attributes, or another CData object to copy from
         """
+        # Handle None: clear all children and mark as unset
+        if values is None:
+            for child in self.children():
+                if isinstance(child, CData):
+                    child.set(None)  # Recursively clear children
+            self.unSet()
+            return
+
         # If values is a CData object, extract its attributes as a dict
         if isinstance(values, CData):
             source_obj = values  # Keep reference to original CData object

@@ -865,11 +865,17 @@ class CDataFile(CData):
 
         Args:
             value: Can be:
+                - None: Clear the file (unset path)
                 - str: File path (calls setFullPath)
                 - dict: Dict of attributes to set
                 - CDataFile: Another file object to copy from
             **kw: Additional keyword arguments passed to parent
         """
+        if value is None:
+            # None argument: clear the file path
+            self.setFullPath('')
+            self.unSet()
+            return
         if isinstance(value, str):
             # String argument: set as file path
             self.setFullPath(value)

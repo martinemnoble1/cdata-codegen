@@ -1043,7 +1043,7 @@ class JobViewSet(ModelViewSet):
                 packedXML = ET.fromstring(def_xml)
                 unpackedXML = load_nested_xml(packedXML)
                 ET.indent(unpackedXML, " ")
-                return api_success({"xml": ET.tostring(unpackedXML)})
+                return api_success({"xml": ET.tostring(unpackedXML).decode("utf-8")})
         except (ValueError, models.Job.DoesNotExist) as err:
             logging.exception("Failed to retrieve job with id %s", pk, exc_info=err)
             return api_error(str(err), status=400)
@@ -1124,7 +1124,7 @@ class JobViewSet(ModelViewSet):
                         parent.remove(stack_element)
 
                 ET.indent(error_etree, " ")
-                return api_success({"xml": ET.tostring(error_etree)})
+                return api_success({"xml": ET.tostring(error_etree).decode("utf-8")})
             else:
                 return api_error(result.error, status=400, details=result.error_details)
 

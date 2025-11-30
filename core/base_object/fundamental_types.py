@@ -115,7 +115,16 @@ class CInt(CData):
         return int(self.value)
 
     def set(self, value: int):
-        """Set the value directly using .set() method."""
+        """Set the value directly using .set() method.
+
+        Args:
+            value: The integer value to set, or None to clear/unset
+        """
+        if value is None:
+            # Clear the value and mark as unset
+            super().__setattr__("_value", 0)
+            self.unSet()
+            return self
         self.value = value
         return self
 
@@ -510,7 +519,16 @@ class CFloat(CData):
         return self.isSet(allowDefault=False)
 
     def set(self, value: float):
-        """Set the value directly using .set() method."""
+        """Set the value directly using .set() method.
+
+        Args:
+            value: The float value to set, or None to clear/unset
+        """
+        if value is None:
+            # Clear the value and mark as unset
+            super().__setattr__("_value", 0.0)
+            self.unSet()
+            return self
         self.value = value
         return self
 
@@ -904,7 +922,16 @@ class CString(CData):
             self._value_states["value"] = ValueState.EXPLICITLY_SET
 
     def set(self, value: str):
-        """Set the value directly using .set() method."""
+        """Set the value directly using .set() method.
+
+        Args:
+            value: The string value to set, or None to clear/unset
+        """
+        if value is None:
+            # Clear the value and mark as unset
+            super().__setattr__("_value", "")
+            self.unSet()
+            return self
         self.value = value
         return self
 
@@ -1238,7 +1265,16 @@ class CBoolean(CData):
         return bool(self.value)
 
     def set(self, value: bool):
-        """Set the value directly using .set() method."""
+        """Set the value directly using .set() method.
+
+        Args:
+            value: The boolean value to set, or None to clear/unset
+        """
+        if value is None:
+            # Clear the value and mark as unset
+            super().__setattr__("_value", False)
+            self.unSet()
+            return self
         self.value = value
         return self
 
