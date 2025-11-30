@@ -1,4 +1,4 @@
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import $ from "jquery";
 import { prettifyXml } from "./utils";
 import {
@@ -9,6 +9,10 @@ import {
   apiPatch,
   apiDelete,
 } from "./api-fetch";
+
+// =============================================================================
+// Types
+// =============================================================================
 
 /**
  * Standard API response format from the backend.
@@ -21,16 +25,22 @@ interface ApiResponse<T = any> {
   status: number;
 }
 
-/**
- * Extracts data from the new API response format.
- * Returns the data property if success is true, otherwise throws an error.
- */
-function unwrapResponse<T>(response: ApiResponse<T>): T {
-  if (response.success && response.data !== undefined) {
-    return response.data;
-  }
-  throw new Error(response.error || "API request failed");
+export interface EndpointFetch {
+  type: string;
+  id: number | null | undefined;
+  endpoint: string;
 }
+
+interface ValidationErrors {
+  [objectPath: string]: {
+    messages: string[];
+    maxSeverity: number;
+  };
+}
+
+// =============================================================================
+// URL Helpers
+// =============================================================================
 
 export function makeApiUrl(endpoint: string): string {
   let api_path = `/api/proxy/${endpoint}`;
@@ -38,314 +48,365 @@ export function makeApiUrl(endpoint: string): string {
   return api_path;
 }
 
-export interface EndpointFetch {
-  type: string;
-  id: number | null | undefined;
-  endpoint: string;
+function endpointToUrl(ef: EndpointFetch): string {
+  return makeApiUrl(`${ef.type}/${ef.id}/${ef.endpoint}`);
 }
 
-const endpoint_xml_fetcher = (endpointFetch: EndpointFetch) => {
-  if (!endpointFetch.id) return Promise.reject();
-  const url = makeApiUrl(
-    `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
-  );
-  return apiJson<ApiResponse<{ xml: string }>>(url).then((r1) =>
-    Promise.resolve(r1?.success ? $.parseXML(r1.data?.xml || "") : null)
-  );
-};
+function isValidEndpoint(ef: EndpointFetch | null | undefined): ef is EndpointFetch {
+  return !!(ef?.id && ef?.type);
+}
 
-const endpoint_validation_fetcher = (endpointFetch: EndpointFetch) => {
-  if (!endpointFetch.id) return Promise.reject();
-  const url = makeApiUrl(
-    `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
-  );
-  return apiJson<ApiResponse<{ xml: string }>>(url).then((r1) => {
-    if (!r1?.success || !r1.data?.xml) {
-      return Promise.resolve({});
+function isValidStringEndpoint(endpoint: string | null | undefined): endpoint is string {
+  return !!(endpoint && !endpoint.includes("undefined") && !endpoint.includes("null"));
+}
+
+// =============================================================================
+// Base Fetcher - Single source of truth for API calls
+// =============================================================================
+
+/**
+ * Base fetcher that handles the standard API response format.
+ * All other fetchers compose on top of this.
+ */
+async function baseFetcher<T>(url: string): Promise<T> {
+  const response = await apiJson<ApiResponse<T>>(url);
+  if (response?.success && response.data !== undefined) {
+    return response.data;
+  }
+  throw new Error(response?.error || "API request failed");
+}
+
+/**
+ * Simple JSON fetcher (no unwrapping - for endpoints that return data directly)
+ */
+const jsonFetcher = <T>(url: string): Promise<T> => apiJson<T>(url);
+
+// =============================================================================
+// Transformers - Pure functions that transform data
+// =============================================================================
+
+/**
+ * Parse XML string to XMLDocument
+ */
+function parseXml(data: { xml: string } | null): XMLDocument | null {
+  if (!data?.xml) return null;
+  return $.parseXML(data.xml);
+}
+
+/**
+ * Parse and prettify XML string
+ */
+function parseAndPrettifyXml(data: { xml: string } | null): string | null {
+  if (!data?.xml) return null;
+  return prettifyXml($.parseXML(data.xml));
+}
+
+/**
+ * Transform validation XML to structured error object
+ */
+function parseValidationXml(data: { xml: string } | null): ValidationErrors {
+  if (!data?.xml) return {};
+
+  const validationXml = $.parseXML(data.xml);
+  const objectPaths = $(validationXml).find("objectPath").toArray();
+  const results: ValidationErrors = {};
+
+  objectPaths.forEach((errorObjectNode: HTMLElement) => {
+    const objectPath = errorObjectNode.textContent?.trim();
+    if (!objectPath) return;
+
+    if (!results[objectPath]) {
+      results[objectPath] = { messages: [], maxSeverity: 0 };
     }
-    const validationXml = $.parseXML(r1.data.xml);
-    const objectPaths = $(validationXml).find("objectPath").toArray();
-    const results: any = {};
-    objectPaths.forEach((errorObjectNode: HTMLElement) => {
-      const objectPath = errorObjectNode.textContent?.trim();
-      if (objectPath && objectPath.length > 0) {
-        let objectErrors: { messages: string[]; maxSeverity: number };
-        if (!Object.keys(results).includes(objectPath)) {
-          results[objectPath] = { messages: [], maxSeverity: 0 };
-        }
-        objectErrors = results[objectPath];
-        const errorNode = $(errorObjectNode).parent();
-        if (errorNode) {
-          const severity = $(errorNode).find("severity").get(0)?.textContent;
-          if (severity?.includes("WARNING") && objectErrors.maxSeverity < 1)
-            objectErrors.maxSeverity = 1;
-          if (severity?.includes("ERROR") && objectErrors.maxSeverity < 2)
-            objectErrors.maxSeverity = 2;
-          const description = $(errorNode)
-            .find("description")
-            .get(0)?.textContent;
-          if (description) objectErrors.messages.push(description);
-        }
+
+    const errorNode = $(errorObjectNode).parent();
+    if (errorNode) {
+      const severity = $(errorNode).find("severity").get(0)?.textContent;
+      if (severity?.includes("WARNING") && results[objectPath].maxSeverity < 1) {
+        results[objectPath].maxSeverity = 1;
       }
-    });
-    return Promise.resolve(results);
-  });
-};
+      if (severity?.includes("ERROR") && results[objectPath].maxSeverity < 2) {
+        results[objectPath].maxSeverity = 2;
+      }
 
-const pretty_endpoint_xml_fetcher = (endpointFetch: EndpointFetch) => {
-  if (!endpointFetch.id) return Promise.reject();
-  const url = makeApiUrl(
-    `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
-  );
-  return apiJson<ApiResponse<{ xml: string }>>(url).then((r1) =>
-    Promise.resolve(
-      r1?.success && r1.data?.xml ? prettifyXml($.parseXML(r1.data.xml)) : null
-    )
-  );
-};
-
-const endpoint_wrapped_json_fetcher = (endpointFetch: EndpointFetch) => {
-  if (!endpointFetch.id) return Promise.reject();
-  const url = makeApiUrl(
-    `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
-  );
-  return apiJson<any>(url).then((r) => {
-    // Handle both old format {"status": "Success", "result": ...}
-    // and new format {"success": true, "data": {"result": ...}}
-    let result: any;
-
-    if (r?.success && r.data?.result) {
-      // New format - result might be string or object
-      result = typeof r.data.result === "string"
-        ? JSON.parse(r.data.result)
-        : r.data.result;
-    } else if (r?.status === "Success" && r.result) {
-      // Old format - result is already an object
-      result = r.result;
-    } else {
-      throw new Error(r?.error || r?.reason || "Failed to fetch endpoint data");
+      const description = $(errorNode).find("description").get(0)?.textContent;
+      if (description) {
+        results[objectPath].messages.push(description);
+      }
     }
-
-    if (endpointFetch.endpoint === "container") {
-      const lookup = buildLookup(result);
-      return Promise.resolve({ container: result, lookup });
-    }
-    return result;
   });
-};
 
-const buildLookup = (container: any, lookup_in?: any): any => {
-  const lookup = lookup_in ? lookup_in : {};
+  return results;
+}
+
+/**
+ * Build lookup table for container navigation
+ */
+function buildLookup(container: any, lookup: Record<string, any> = {}): Record<string, any> {
   const objectPath = container._objectPath;
   const pathElements = objectPath.split(".");
+
+  // Add all suffix paths to lookup
   for (let i = 0; i < pathElements.length; i++) {
     const subPath = pathElements.slice(-i).join(".");
     lookup[subPath] = container;
   }
+
+  // Recurse into children
   if (container._baseClass === "CList") {
-    container._value.forEach((item: any) => {
-      buildLookup(item, lookup);
-    });
-  } else if (container._value?.constructor == Object) {
-    Object.keys(container._value).forEach((key: string) => {
-      const item = container._value[key];
-      buildLookup(item, lookup);
-    });
+    container._value.forEach((item: any) => buildLookup(item, lookup));
+  } else if (container._value?.constructor === Object) {
+    Object.values(container._value).forEach((item: any) => buildLookup(item, lookup));
   }
+
   return lookup;
-};
+}
 
-const endpoint_fetcher = (endpointFetch: EndpointFetch) => {
-  if (!endpointFetch.id || !endpointFetch.type) {
-    throw new Error("Invalid endpointFetch: and id are required");
-  }
-  const url = makeApiUrl(
-    `${endpointFetch.type}/${endpointFetch.id}/${endpointFetch.endpoint}`
-  );
-  return apiJson(url);
-};
+/**
+ * Transform container response (handles old and new API formats)
+ */
+function parseContainerResponse(response: any, isContainer: boolean): any {
+  let result: any;
 
-const digest_fetcher = (url: string) => {
-  if (url.includes("/undefined/")) {
-    throw new Error("Invalid URL: " + url);
+  // Handle new format: {"success": true, "data": {"result": ...}}
+  if (response?.success && response.data?.result) {
+    result = typeof response.data.result === "string"
+      ? JSON.parse(response.data.result)
+      : response.data.result;
   }
-  return apiJson(url);
-};
+  // Handle old format: {"status": "Success", "result": ...}
+  else if (response?.status === "Success" && response.result) {
+    result = response.result;
+  }
+  else {
+    throw new Error(response?.error || response?.reason || "Failed to fetch endpoint data");
+  }
+
+  // Build lookup for container endpoints
+  if (isContainer) {
+    return { container: result, lookup: buildLookup(result) };
+  }
+
+  return result;
+}
+
+// =============================================================================
+// Composed Fetchers - Built from base fetcher + transformers
+// =============================================================================
+
+/**
+ * Fetcher for endpoints returning {xml: string}
+ */
+function createXmlFetcher(transform: (data: { xml: string } | null) => any) {
+  return async (ef: EndpointFetch) => {
+    if (!isValidEndpoint(ef)) throw new Error("Invalid endpoint");
+    const data = await baseFetcher<{ xml: string }>(endpointToUrl(ef));
+    return transform(data);
+  };
+}
+
+const xmlFetcher = createXmlFetcher(parseXml);
+const prettyXmlFetcher = createXmlFetcher(parseAndPrettifyXml);
+const validationFetcher = createXmlFetcher(parseValidationXml);
+
+/**
+ * Fetcher for wrapped JSON (container, etc.)
+ */
+async function wrappedJsonFetcher(ef: EndpointFetch): Promise<any> {
+  if (!isValidEndpoint(ef)) throw new Error("Invalid endpoint");
+  const response = await jsonFetcher<any>(endpointToUrl(ef));
+  return parseContainerResponse(response, ef.endpoint === "container");
+}
+
+/**
+ * Simple endpoint fetcher (returns raw API response)
+ */
+async function endpointFetcher<T>(ef: EndpointFetch): Promise<T> {
+  if (!isValidEndpoint(ef)) throw new Error("Invalid endpoint");
+  return jsonFetcher<T>(endpointToUrl(ef));
+}
+
+// =============================================================================
+// SWR Key Helpers
+// =============================================================================
+
+function getEndpointKey(ef: EndpointFetch | null | undefined): EndpointFetch | null {
+  return isValidEndpoint(ef) ? ef : null;
+}
+
+function getStringKey(endpoint: string | null | undefined): string | null {
+  return isValidStringEndpoint(endpoint) ? makeApiUrl(endpoint) : null;
+}
+
+// =============================================================================
+// Main API Hook
+// =============================================================================
 
 export function useApi() {
-  const fetcher = (url: string) => apiJson(url);
-
-  function noSlashUrl(endpoint: string): string {
-    let api_path = `/api/proxy/${endpoint}`;
-    return api_path;
-  }
-
   return {
-    noSlashUrl,
-
-    get: function <T>(endpoint: string, refreshInterval: number = 0) {
-      // Return null key if endpoint contains undefined/null values - prevents SWR from fetching
-      const swrKey =
-        endpoint &&
-        !endpoint.includes("undefined") &&
-        !endpoint.includes("null")
-          ? makeApiUrl(endpoint)
-          : null;
-      return useSWR<T>(swrKey, fetcher, { refreshInterval });
+    /**
+     * Build URL without trailing slash
+     */
+    noSlashUrl(endpoint: string): string {
+      return `/api/proxy/${endpoint}`;
     },
 
-    config: function <T>() {
-      return useSWR<T>("config", () => {
-        return apiJson("/api/config");
+    /**
+     * Generic GET request with SWR caching
+     */
+    get<T>(endpoint: string, refreshInterval: number = 0) {
+      return useSWR<T>(getStringKey(endpoint), jsonFetcher, { refreshInterval });
+    },
+
+    /**
+     * Fetch app config
+     */
+    config<T>() {
+      return useSWR<T>("config", () => apiJson("/api/config"));
+    },
+
+    /**
+     * Fetch from typed endpoint (returns raw response)
+     */
+    get_endpoint<T>(ef: EndpointFetch, refreshInterval: number = 0) {
+      return useSWR<T>(getEndpointKey(ef), endpointFetcher as any, { refreshInterval });
+    },
+
+    /**
+     * Fetch XML endpoint, parse to XMLDocument
+     */
+    get_endpoint_xml(ef: EndpointFetch, refreshInterval: number = 0) {
+      return useSWR<XMLDocument | null>(getEndpointKey(ef), xmlFetcher, { refreshInterval });
+    },
+
+    /**
+     * Fetch XML endpoint, parse and prettify
+     */
+    get_pretty_endpoint_xml(ef: EndpointFetch) {
+      return useSWR<string | null>(getEndpointKey(ef), prettyXmlFetcher, {
+        shouldRetryOnError: false,
+        // Silently handle errors - caller can check error state
+        onError: () => {},
       });
     },
 
-    get_endpoint: function <T>(
-      endpointFetch: EndpointFetch,
-      refreshInterval: number = 0
-    ) {
-      // Return null key if ID is invalid - prevents SWR from fetching
-      const swrKey =
-        endpointFetch?.id && endpointFetch?.type ? endpointFetch : null;
-      return useSWR<T>(swrKey, endpoint_fetcher as any, {
-        refreshInterval,
-      });
+    /**
+     * Fetch JSON endpoint with legacy format handling (container, etc.)
+     */
+    get_wrapped_endpoint_json<T>(ef: EndpointFetch) {
+      return useSWR<T>(getEndpointKey(ef), wrappedJsonFetcher);
     },
 
-    get_endpoint_xml: function <XMLDocument>(
-      endpointFetch: EndpointFetch,
-      refreshInterval: number = 0
-    ) {
-      // Return null key if ID is invalid - prevents SWR from fetching
-      const swrKey =
-        endpointFetch?.id && endpointFetch?.type ? endpointFetch : null;
-      return useSWR(swrKey, endpoint_xml_fetcher, { refreshInterval });
+    /**
+     * Fetch validation endpoint, transform to error map
+     */
+    get_validation(ef: EndpointFetch) {
+      return useSWR<ValidationErrors>(getEndpointKey(ef), validationFetcher);
     },
 
-    get_pretty_endpoint_xml: function (endpointFetch: EndpointFetch) {
-      // Return null key if ID is invalid - prevents SWR from fetching
-      const swrKey =
-        endpointFetch?.id && endpointFetch?.type ? endpointFetch : null;
-      return useSWR(swrKey, pretty_endpoint_xml_fetcher);
-    },
-
-    get_wrapped_endpoint_json: function <T>(endpointFetch: EndpointFetch) {
-      // Return null key if ID is invalid - prevents SWR from fetching
-      const swrKey =
-        endpointFetch?.id && endpointFetch?.type ? endpointFetch : null;
-      return useSWR<T>(swrKey, endpoint_wrapped_json_fetcher, {});
-    },
-
-    get_validation: function (endpointFetch: EndpointFetch) {
-      // Return null key if ID is invalid - prevents SWR from fetching
-      const swrKey =
-        endpointFetch?.id && endpointFetch?.type ? endpointFetch : null;
-      return useSWR(swrKey, endpoint_validation_fetcher, {});
-    },
-
-    digest: function <T>(endpoint: string) {
-      // Return null key if endpoint contains undefined/null values - prevents SWR from fetching
-      const swrKey =
-        endpoint &&
-        !endpoint.includes("undefined") &&
-        !endpoint.includes("null")
-          ? makeApiUrl(endpoint)
-          : null;
-      const result = useSWR<T>(swrKey, digest_fetcher, {
-        onError: (error) => {
-          console.warn(`Digest error for endpoint "${endpoint}":`, error);
-        },
+    /**
+     * Fetch digest with error handling
+     */
+    digest<T>(endpoint: string) {
+      const swrConfig: SWRConfiguration = {
+        onError: (error) => console.warn(`Digest error for "${endpoint}":`, error),
         fallbackData: null as T,
         shouldRetryOnError: false,
-      });
-      return result;
+      };
+      return useSWR<T>(getStringKey(endpoint), jsonFetcher, swrConfig);
     },
 
-    post: async function <T>(endpoint: string, body: any = {}): Promise<T> {
+    /**
+     * POST request
+     */
+    async post<T>(endpoint: string, body: any = {}): Promise<T> {
       return apiPost<T>(makeApiUrl(endpoint), body);
     },
 
-    delete: async function (endpoint: string): Promise<void> {
+    /**
+     * DELETE request
+     */
+    async delete(endpoint: string): Promise<void> {
       await apiDelete(makeApiUrl(endpoint));
     },
 
-    patch: async function <T>(endpoint: string, body: any = {}): Promise<T> {
+    /**
+     * PATCH request
+     */
+    async patch<T>(endpoint: string, body: any = {}): Promise<T> {
       return apiPatch<T>(makeApiUrl(endpoint), body);
     },
 
-    fileTextContent: function (djangoFile: any) {
-      // Return null key if djangoFile or dbFileId is invalid - prevents SWR from fetching
+    /**
+     * Fetch file text content by UUID
+     */
+    fileTextContent(djangoFile: any) {
       const swrKey = djangoFile?.dbFileId
         ? `/api/proxy/files/${djangoFile.dbFileId}/download_by_uuid/`
         : null;
-      return useSWR(swrKey, (url) => {
-        return apiText(url);
-      });
+      return useSWR<string>(swrKey, apiText);
     },
   };
 }
+
+// =============================================================================
+// File Download Utilities
+// =============================================================================
 
 export const doDownload = (
   theURL: string,
   targetName: string,
   optionsIn?: any,
-  onProgress: (bytesRead: number) => void = (bytesRead) =>
-    console.log(bytesRead)
+  onProgress: (bytesRead: number) => void = (bytesRead) => console.log(bytesRead)
 ) => {
-  const options = typeof optionsIn !== "undefined" ? optionsIn : {};
-  if (onProgress && onProgress !== null) {
-    return apiFetch(theURL, options).then(async (response) => {
-      const reader = response.body?.getReader();
-      if (reader) {
-        const chunks: Uint8Array[] = [];
-        let receivedLength = 0;
-        while (true) {
-          // done is true for the last chunk
-          // value is Uint8Array of the chunk bytes
-          const { done, value } = await reader.read();
-          if (value) chunks.push(value);
-          if (done) {
-            break;
-          }
-          receivedLength += value.length;
-          if (onProgress) onProgress(receivedLength);
-        }
-        let Uint8Chunks = new Uint8Array(receivedLength),
-          position = 0;
-        for (let chunk of chunks) {
-          Uint8Chunks.set(chunk, position);
-          position += chunk.length;
-        }
+  const options = optionsIn ?? {};
 
-        // ==> you may want to get the mimetype from the content-type header
-        const blob = new Blob([Uint8Chunks]);
+  if (!onProgress) return;
 
-        // Create blob link to download
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", targetName);
+  return apiFetch(theURL, options).then(async (response) => {
+    const reader = response.body?.getReader();
+    if (!reader) return;
 
-        // Append to html link element page
-        document.body.appendChild(link);
+    const chunks: Uint8Array[] = [];
+    let receivedLength = 0;
 
-        // Start download
-        link.click();
-
-        // Clean up and remove the link
-        link.parentNode?.removeChild(link);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (value) {
+        chunks.push(value);
+        receivedLength += value.length;
+        onProgress(receivedLength);
       }
-    });
-  }
+      if (done) break;
+    }
+
+    // Combine chunks
+    const combined = new Uint8Array(receivedLength);
+    let position = 0;
+    for (const chunk of chunks) {
+      combined.set(chunk, position);
+      position += chunk.length;
+    }
+
+    // Trigger download
+    const blob = new Blob([combined]);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", targetName);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
 };
 
 export const doRetrieve = async (
   theURL: string,
-  targetName: string,
+  _targetName: string,
   optionsIn?: any
-) => {
-  const options = typeof optionsIn !== "undefined" ? optionsIn : {};
+): Promise<ArrayBuffer> => {
+  const options = optionsIn ?? {};
   const response = await apiFetch(theURL, options);
-  const contents = await response.arrayBuffer();
-  return contents;
+  return response.arrayBuffer();
 };

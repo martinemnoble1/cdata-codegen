@@ -370,23 +370,8 @@ class CData(HierarchicalObject):
             if hasattr(self, '_value_states'):
                 self._value_states[k] = ValueState.EXPLICITLY_SET
 
-    def objectPath(self) -> str:
-        """Return the full hierarchical path to this object.
-
-        Returns:
-            String path like "project.inputData.XYZIN" for hierarchical objects
-        """
-        path_parts = []
-        current = self
-
-        # Walk up the hierarchy collecting names
-        while current is not None:
-            if hasattr(current, 'objectName') and current.objectName():
-                path_parts.insert(0, current.objectName())
-            # parent is now a method, not a property - must call it
-            current = current.parent() if hasattr(current, 'parent') and callable(current.parent) else None
-
-        return ".".join(path_parts) if path_parts else ""
+    # objectPath() is now inherited from HierarchicalObject
+    # It uses object_path() which properly handles objectName()
 
     def objectName(self) -> str:
         """Return the name of this object from the HierarchicalObject hierarchy.

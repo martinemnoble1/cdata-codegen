@@ -921,6 +921,111 @@ class CPluginScript(CData):
 
         return error
 
+    def validity(self) -> CErrorReport:
+        """
+        Validate the plugin's container and return an error report.
+
+        This method provides comprehensive validation of the plugin's container,
+        combining container validation with input file checking. It is the
+        canonical way to validate a CPluginScript instance.
+
+        The validation includes:
+        - Container validity (all child objects' validity() methods)
+        - Input file existence checks (mustExist files)
+
+        Returns:
+            CErrorReport containing all validation errors/warnings
+
+        Example:
+            >>> plugin = get_job_plugin(job)
+            >>> errors = plugin.validity()
+            >>> if errors.maxSeverity() >= SEVERITY_ERROR:
+            ...     print(f"Validation failed: {errors.report()}")
+        """
+        error = CErrorReport()
+
+        # First, get container validation
+        if hasattr(self, 'container') and self.container is not None:
+            container_errors = self.container.validity()
+            if container_errors:
+                error.extend(container_errors)
+
+        # Then add input data checks (file existence etc.)
+        input_errors = self.checkInputData()
+        if input_errors:
+            error.extend(input_errors)
+
+        return error
+
+    def validity_as_xml(self):
+        """
+        Validate the plugin's container and return an XML Element.
+
+        This is a convenience method that calls validity() and converts
+        the CErrorReport to an XML Element tree, suitable for serialization
+        or API responses.
+
+        Returns:
+            xml.etree.ElementTree.Element: Root element 'errorReportList'
+            containing 'errorReport' children
+
+        Example:
+            >>> plugin = get_job_plugin(job)
+            >>> error_xml = plugin.validity_as_xml()
+            >>> xml_str = ET.tostring(error_xml, encoding='unicode')
+        """
+        from xml.etree import ElementTree as ET
+        from core import CCP4ErrorHandling
+
+        error_report = self.validity()
+
+        # Convert CErrorReport to XML using the same logic as validate_container
+        element = ET.Element("errorReportList")
+
+        # Mapping from severity codes to text
+        SEVERITY_TEXT = {
+            CCP4ErrorHandling.SEVERITY_OK: "OK",
+            CCP4ErrorHandling.SEVERITY_UNDEFINED: "UNDEFINED",
+            CCP4ErrorHandling.SEVERITY_WARNING: "WARNING",
+            CCP4ErrorHandling.SEVERITY_UNDEFINED_ERROR: "UNDEFINED_ERROR",
+            CCP4ErrorHandling.SEVERITY_ERROR: "ERROR"
+        }
+
+        for item in error_report.getErrors():
+            try:
+                ele = ET.Element("errorReport")
+
+                e = ET.Element("className")
+                class_name = item["class"] if isinstance(item["class"], str) else item["class"].__name__
+                e.text = class_name
+                ele.append(e)
+
+                e = ET.Element("code")
+                e.text = str(item["code"])
+                ele.append(e)
+
+                e = ET.Element("description")
+                e.text = item["details"]
+                ele.append(e)
+
+                e = ET.Element("severity")
+                severity = item["severity"]
+                e.text = SEVERITY_TEXT.get(severity, f"UNKNOWN({severity})")
+                ele.append(e)
+
+                # Add objectPath from 'name' field (which contains the object path)
+                if item.get("name"):
+                    e = ET.Element("objectPath")
+                    e.text = item["name"]
+                    ele.append(e)
+
+                element.append(ele)
+            except Exception as e:
+                logger.exception("Error converting error to XML", exc_info=e)
+
+        ET.indent(element, " ")
+        return element
+
     def checkOutputData(self) -> CErrorReport:
         """
         Set output file names if not already set.

@@ -1325,3 +1325,58 @@ class CDataFile(CData):
         metadata['className'] = self.__class__.__name__
 
         return metadata
+
+    def validity(self):
+        """Validate this file object and return an error report.
+
+        Checks the following conditions:
+        - If allowUndefined=False and no file path is set → ERROR
+        - If mustExist=True and file path is set but file doesn't exist → ERROR
+
+        This validation is part of the CData hierarchy - CDataFile knows its
+        own validation rules (allowUndefined, mustExist qualifiers) and reports
+        issues via CErrorReport.
+
+        Returns:
+            CErrorReport containing any validation errors/warnings
+        """
+        from .error_reporting import CErrorReport, SEVERITY_ERROR, SEVERITY_WARNING
+
+        report = CErrorReport()
+
+        # Get file path - may be None/empty if not set
+        full_path = self.getFullPath()
+        has_path = bool(full_path and str(full_path).strip())
+
+        # Get qualifiers for this file object
+        allow_undefined = self.get_qualifier('allowUndefined')
+        must_exist = self.get_qualifier('mustExist')
+
+        # Check allowUndefined
+        # If allowUndefined is False (or not set), the file path is required
+        if allow_undefined is False and not has_path:
+            # Required file not set
+            obj_path = self.object_path()
+            report.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f'Required input file not set: {obj_path}',
+                name=obj_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Check mustExist
+        # If mustExist=True and path is set, file must exist
+        if must_exist and has_path:
+            from pathlib import Path
+            if not Path(full_path).exists():
+                obj_path = self.object_path()
+                report.append(
+                    klass=self.__class__.__name__,
+                    code=102,
+                    details=f'File does not exist: {full_path}',
+                    name=obj_path,
+                    severity=SEVERITY_ERROR
+                )
+
+        return report

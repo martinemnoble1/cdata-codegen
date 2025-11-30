@@ -304,25 +304,45 @@ class HierarchicalObject(ABC):
         return current
 
     def path_from_root(self) -> List[str]:
-        """Get the path from root to this object as list of names."""
+        """Get the path from root to this object as list of names.
+
+        Only includes objects that have a valid name (non-empty objectName()).
+        Objects without names are skipped to produce clean paths.
+        """
         path = []
         current = self
         while current is not None:
-            # Defensive: parent might not be a HierarchicalObject (e.g., QEventLoop)
-            if hasattr(current, '_name'):
+            # Use objectName() if available (CData objects), else fall back to _name
+            if hasattr(current, 'objectName') and callable(current.objectName):
+                name = current.objectName()
+                if name:  # Only include non-empty names
+                    path.insert(0, name)
+            elif hasattr(current, '_name') and current._name:
                 path.insert(0, current._name)
-            elif hasattr(current, '__class__'):
-                # Use class name for non-HierarchicalObject parents
-                path.insert(0, f"<{current.__class__.__name__}>")
-            else:
-                path.insert(0, "<unknown>")
+            # Skip objects without names - don't add <ClassName> placeholders
 
-            current = current.parent if hasattr(current, 'parent') else None
+            # Navigate to parent - handle both property and method parent access
+            if hasattr(current, 'parent'):
+                if callable(current.parent):
+                    current = current.parent()
+                else:
+                    current = current.parent
+            else:
+                current = None
         return path
 
     def object_path(self) -> str:
-        """Get the dot-separated path from root to this object."""
+        """Get the dot-separated path from root to this object.
+
+        Returns a clean path like "task_name.container.inputData.XYZIN".
+        Only includes objects with valid names (non-empty objectName()).
+        """
         return ".".join(self.path_from_root())
+
+    # Legacy camelCase alias for compatibility with CCP4i2 code
+    def objectPath(self) -> str:
+        """Legacy alias for object_path(). Use object_path() in new code."""
+        return self.object_path()
 
     def find_by_path(self, path: str) -> Optional["HierarchicalObject"]:
         """

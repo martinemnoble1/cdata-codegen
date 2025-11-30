@@ -470,6 +470,24 @@ class DefXmlParser:
 
             elif key == "mustExist":
                 metadata.required = value
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("mustExist", value)
+
+            elif key == "allowUndefined":
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("allowUndefined", value)
+
+            elif key == "fromPreviousJob":
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("fromPreviousJob", value)
+
+            elif key == "requiredSubType":
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("requiredSubType", value)
+
+            elif key == "saveToDb":
+                if hasattr(obj, "set_qualifier"):
+                    obj.set_qualifier("saveToDb", value)
 
             # Store all qualifiers for reference
             if not hasattr(metadata, "extra_data"):

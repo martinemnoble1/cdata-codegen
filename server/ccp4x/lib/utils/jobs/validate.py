@@ -2,8 +2,8 @@
 Job parameter validation utilities using CPluginScript architecture.
 
 Provides validation of job parameters against task definitions,
-returning detailed error reports. Uses CPluginScript to ensure proper
-container hierarchy and validation context.
+returning detailed error reports. Uses CPluginScript.validity_as_xml()
+for comprehensive validation including container and input file checks.
 """
 
 import logging
@@ -11,7 +11,6 @@ from xml.etree import ElementTree as ET
 from ccp4x.db import models
 from ccp4x.lib.response import Result
 from ccp4x.lib.utils.plugins.plugin_context import get_plugin_with_context
-from ..containers.validate import validate_container
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,10 @@ def validate_job(job: models.Job) -> Result[ET.Element]:
     """
     Validate job parameters using CPluginScript architecture.
 
-    Uses CPluginScript to ensure proper container hierarchy and validation
-    context. The plugin's container has built-in validation via validity().
+    Uses CPluginScript.validity_as_xml() which provides comprehensive
+    validation including:
+    - Container validation (all child objects' validity() methods)
+    - Input file existence checks (mustExist files)
 
     Args:
         job: Job model instance to validate
@@ -54,21 +55,13 @@ def validate_job(job: models.Job) -> Result[ET.Element]:
 
     try:
         logger.debug(
-            "Validating job %s (task: %s) using plugin.container",
+            "Validating job %s (task: %s) using plugin.validity_as_xml()",
             job.uuid, job.task_name
         )
 
-        # Validate container using plugin's container
-        # This ensures proper hierarchy and context
-        error_tree = validate_container(plugin.container)
-
-        # Clean up stack elements (they can be verbose and aren't user-friendly)
-        stack_elements = error_tree.findall('.//stack')
-        for stack_element in stack_elements:
-            stack_element.clear()
-
-        # Format XML nicely for readability
-        ET.indent(error_tree, ' ')
+        # Use CPluginScript.validity_as_xml() for comprehensive validation
+        # This includes container validation AND input file checks
+        error_tree = plugin.validity_as_xml()
 
         # Count errors for logging
         error_reports = error_tree.findall('.//errorReport')
