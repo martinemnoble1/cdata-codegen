@@ -82,12 +82,14 @@ def clone_job(jobId: str = None) -> Result[models.Job]:
             )
 
         # Create new job record
+        # Use title from old job, or get from task manager, or fall back to task name
+        title = old_job.title or task_manager.getTitle(task_name) or task_name
         new_job = models.Job(
             number=str(next_job_number),
             finish_time=datetime.datetime.fromtimestamp(0, tz=timezone("UTC")),
             status=models.Job.Status.PENDING,
             evaluation=models.Job.Evaluation.UNKNOWN,
-            title=task_manager.getTitle(task_name),
+            title=title,
             project=the_project,
             task_name=task_name,
             parent=None,

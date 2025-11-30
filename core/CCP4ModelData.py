@@ -75,7 +75,11 @@ class CAsuContent(CAsuContentStub):
             # Parse sequences from XML
             # Handle namespace
             ns = {'ccp4': 'http://www.ccp4.ac.uk/ccp4ns'}
-            body = root.find('.//ccp4i2_body', ns) or root.find('.//ccp4i2_body')
+            # Check if root IS ccp4i2_body (common case), otherwise search for it
+            if root.tag == 'ccp4i2_body':
+                body = root
+            else:
+                body = root.find('.//ccp4i2_body', ns) or root.find('.//ccp4i2_body')
 
             if body is not None:
                 seqList_elem = body.find('seqList')
@@ -126,6 +130,44 @@ class CAsuContentSeq(CAsuContentSeqStub):
     Extends CAsuContentSeqStub with implementation-specific methods.
     Add file I/O, validation, and business logic here.
     """
+
+    def formattedSequence(self):
+        """
+        Format the sequence for display with line wrapping and spacing.
+
+        Formats sequence with:
+        - 60 characters per line (6 blocks of 10)
+        - Space every 10 characters for readability
+
+        Returns:
+            str: Formatted sequence string
+        """
+        GROUP_SIZE = 10
+        GROUPS_PER_LINE = 6
+
+        # Get sequence value - handle both CString and plain string
+        sequence = self.sequence
+        if hasattr(sequence, 'value'):
+            seq = str(sequence.value)
+        else:
+            seq = str(sequence)
+
+        # Clean whitespace from sequence
+        seq = seq.replace(' ', '').replace('\n', '').replace('\t', '')
+
+        if not seq:
+            return ''
+
+        # Split into groups of 10
+        groups = [seq[i:i + GROUP_SIZE] for i in range(0, len(seq), GROUP_SIZE)]
+
+        # Build lines with 6 groups each
+        lines = []
+        for i in range(0, len(groups), GROUPS_PER_LINE):
+            line_groups = groups[i:i + GROUPS_PER_LINE]
+            lines.append(' '.join(line_groups))
+
+        return '\n'.join(lines)
 
     def numberOfResidues(self, countMulti=False):
         """
@@ -2010,6 +2052,8 @@ class CSequence(CSequenceStub, CBioPythonSeqInterface):
                     self.identifier = data['identifier']
                 if 'sequence' in data:
                     self.sequence = data['sequence']
+                    # Detect and set moleculeType based on sequence content
+                    self.moleculeType = self._detect_molecule_type(data['sequence'])
                 if 'name' in data:
                     self.name = data['name']
                 if 'description' in data:
@@ -2018,6 +2062,54 @@ class CSequence(CSequenceStub, CBioPythonSeqInterface):
                     self.referenceDb = data['referenceDb']
                 if 'reference' in data:
                     self.reference = data['reference']
+
+    def _detect_molecule_type(self, sequence: str) -> str:
+        """
+        Detect whether a sequence is PROTEIN, DNA, or RNA.
+
+        Args:
+            sequence: The sequence string (single-letter codes)
+
+        Returns:
+            "PROTEIN", "DNA", or "RNA"
+
+        Notes:
+            - Checks for presence of U (uracil) to identify RNA
+            - Checks for T (thymine) to identify DNA
+            - Defaults to PROTEIN for amino acid sequences
+        """
+        seq_upper = str(sequence).upper().replace('*', '').strip()
+
+        # Remove common modifications and gaps
+        seq_clean = seq_upper.replace('-', '').replace('.', '').replace(' ', '')
+
+        if not seq_clean:
+            return "PROTEIN"
+
+        # Count nucleotide-specific characters
+        has_u = 'U' in seq_clean
+        has_t = 'T' in seq_clean
+
+        # DNA/RNA detection
+        dna_bases = set('ACGT')
+        rna_bases = set('ACGU')
+
+        # If majority are DNA/RNA bases, classify as nucleic acid
+        base_count = sum(1 for c in seq_clean if c in dna_bases.union(rna_bases))
+        base_fraction = base_count / len(seq_clean) if seq_clean else 0
+
+        if base_fraction > 0.7:  # >70% nucleotide bases
+            if has_u and not has_t:
+                return "RNA"
+            elif has_t and not has_u:
+                return "DNA"
+            elif has_u:  # Both U and T present - prefer RNA
+                return "RNA"
+            else:
+                return "DNA"
+
+        # Default to protein
+        return "PROTEIN"
 
     def _loadInternalFile(self, fileName: str):
         """
@@ -2053,6 +2145,8 @@ class CSequence(CSequenceStub, CBioPythonSeqInterface):
                 # Parse sequence (concatenate all remaining lines)
                 seq = ''.join(lines[1:])
                 self.sequence = seq
+                # Detect and set moleculeType based on sequence content
+                self.moleculeType = self._detect_molecule_type(seq)
         except Exception as e:
             print(f'ERROR parsing sequence file: {e}')
 

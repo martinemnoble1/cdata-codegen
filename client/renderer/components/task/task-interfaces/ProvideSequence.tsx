@@ -2,34 +2,28 @@ import { Grid2, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
-import { useJob, useDigestEffect } from "../../../utils";
+import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
+import { useCallback } from "react";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { job } = props;
-  const { useTaskItem, useFileDigest, mutateContainer } = useJob(job.id);
+  const { useTaskItem, fetchDigest } = useJob(job.id);
 
-  const { value: SEQUENCETEXT, update: setSEQUENCETEXT } =
-    useTaskItem("SEQUENCETEXT");
-
+  const { update: setSEQUENCETEXT } = useTaskItem("SEQUENCETEXT");
   const { item: SEQINItem } = useTaskItem("SEQIN");
 
-  // Use the file digest hook to get sequence data
-  const SEQINDigest = useFileDigest(SEQINItem?._objectPath);
+  // Handle SEQIN file change - explicitly fetch digest and populate SEQUENCETEXT
+  const handleSeqInChange = useCallback(async () => {
+    if (!SEQINItem?._objectPath) return;
 
-  // Auto-update sequence text when SEQIN file changes
-  useDigestEffect(
-    SEQINDigest,
-    (digestData) => {
-      const newSequence = digestData.sequence || "";
-      if (!newSequence) return undefined;
+    const digestData = await fetchDigest(SEQINItem._objectPath);
+    if (!digestData?.sequence) return;
 
-      // Build the formatted sequence text
-      return `>${digestData.identifier || ""}\n${newSequence}`.replace("*", "");
-    },
-    setSEQUENCETEXT,
-    job?.status
-  );
+    // Build the formatted sequence text
+    const newSequence = `>${digestData.identifier || ""}\n${digestData.sequence}`.replace("*", "");
+    await setSEQUENCETEXT(newSequence);
+  }, [SEQINItem?._objectPath, fetchDigest, setSEQUENCETEXT]);
 
   return (
     <CCP4i2Tabs {...props}>
@@ -53,6 +47,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             {...props}
             itemName="SEQIN"
             qualifiers={{ guiLabel: "File from which to extract sequence" }}
+            onChange={handleSeqInChange}
           />
 
           <CCP4i2TaskElement

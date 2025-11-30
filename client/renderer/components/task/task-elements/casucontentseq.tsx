@@ -28,6 +28,7 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
     async (seqinDigestResponse: any, annotation: string) => {
       // API returns {success: true, data: {...}} - extract the data
       const seqinDigest = seqinDigestResponse?.data;
+      console.log("Setting SEQUENCE from SEQIN digest", seqinDigest);
       if (
         !setSequence ||
         !setName ||
@@ -36,8 +37,10 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
         !item ||
         !seqinDigest ||
         job?.status != 1
-      )
+      ) {
+        console.log("Cannot set SEQUENCE from SEQIN - missing data", seqinDigest);
         return;
+      }
       if (seqinDigest?.moleculeType) {
         console.log("Seqin digest was a sequence file");
         const { name, moleculeType, sequence } = seqinDigest || {};

@@ -37,8 +37,9 @@ const ParameterChangeIntentContext = createContext<
 // Default timeout for considering an intent "recent" (2 seconds)
 const DEFAULT_RECENT_THRESHOLD_MS = 2000;
 
-// Auto-cleanup threshold - intents older than this are removed (10 seconds)
-const CLEANUP_THRESHOLD_MS = 10000;
+// Auto-cleanup threshold - intents older than this are removed (30 seconds)
+// Needs to be long enough for file upload + server processing + digest calculation
+const CLEANUP_THRESHOLD_MS = 30000;
 
 export const ParameterChangeIntentProvider: React.FC<{
   children: ReactNode;

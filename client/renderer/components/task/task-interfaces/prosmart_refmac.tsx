@@ -4,7 +4,7 @@ import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob, useDigestEffect } from "../../../utils";
+import { useJob } from "../../../utils";
 
 /**
  * Task interface component for Prosmart-Refmac - Prosmart-guided Refinement.
@@ -18,16 +18,13 @@ import { useJob, useDigestEffect } from "../../../utils";
  */
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { job } = props;
-  const { useTaskItem, useFileDigest } = useJob(job.id);
+  const { useTaskItem, fetchDigest } = useJob(job.id);
 
   // Get task items with update functions and/or values
   const { item: F_SIGFItem, value: F_SIGFValue } = useTaskItem("F_SIGF");
   const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
   const { update: updateUSEANOMALOUS } = useTaskItem("USEANOMALOUS");
   const { update: updateUSE_TWIN } = useTaskItem("USE_TWIN");
-
-  // File digest for wavelength extraction
-  const F_SIGFDigest = useFileDigest(F_SIGFItem?._objectPath);
 
   // Get current values for visibility conditions
   const { value: hydrUseValue } = useTaskItem("HYDR_USE");
@@ -44,37 +41,34 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { value: resCustomValue } = useTaskItem("RES_CUSTOM");
   const { value: useAnomalousValue } = useTaskItem("USEANOMALOUS");
 
-  // Auto-update wavelength when F_SIGF file changes
-  useDigestEffect(
-    F_SIGFDigest,
-    (digestData) => {
-      const wavelength = digestData.wavelengths?.at(-1);
-      // Return undefined to skip if invalid
-      if (!wavelength || wavelength <= 0 || wavelength >= 9) return undefined;
-      return wavelength;
-    },
-    updateWAVELENGTH,
-    job?.status
-  );
-
-  // Handle F_SIGF file changes (for anomalous/twinning flags)
+  // Handle F_SIGF file changes - extract wavelength and update anomalous/twinning flags
   const handleF_SIGFChange = useCallback(async () => {
-    if (!F_SIGFValue || !job || job.status !== 1) return;
-    try {
-      // Handle anomalous signal based on content flag
-      const contentFlag = F_SIGFValue.contentFlag;
-      if (![1, 2].includes(contentFlag) && updateUSEANOMALOUS) {
-        await updateUSEANOMALOUS(false);
-      }
+    if (!job || job.status !== 1) return;
 
-      // Handle twinning based on content flag
-      if (![3].includes(contentFlag) && updateUSE_TWIN) {
-        await updateUSE_TWIN(false);
+    // Fetch digest and extract wavelength
+    if (F_SIGFItem?._objectPath) {
+      const digestData = await fetchDigest(F_SIGFItem._objectPath);
+      const wavelength = digestData?.wavelengths?.at(-1);
+      if (wavelength && wavelength > 0 && wavelength < 9 && updateWAVELENGTH) {
+        await updateWAVELENGTH(wavelength);
       }
-    } catch (error) {
-      console.error("Error processing F_SIGF change:", error);
     }
-  }, [F_SIGFValue, job, updateUSEANOMALOUS, updateUSE_TWIN]);
+
+    // Handle anomalous signal and twinning based on content flag
+    if (F_SIGFValue) {
+      try {
+        const contentFlag = F_SIGFValue.contentFlag;
+        if (![1, 2].includes(contentFlag) && updateUSEANOMALOUS) {
+          await updateUSEANOMALOUS(false);
+        }
+        if (![3].includes(contentFlag) && updateUSE_TWIN) {
+          await updateUSE_TWIN(false);
+        }
+      } catch (error) {
+        console.error("Error processing F_SIGF change:", error);
+      }
+    }
+  }, [F_SIGFItem?._objectPath, F_SIGFValue, job, fetchDigest, updateWAVELENGTH, updateUSEANOMALOUS, updateUSE_TWIN]);
 
   // Visibility conditions
   const visibility = {

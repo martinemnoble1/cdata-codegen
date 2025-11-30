@@ -335,9 +335,23 @@ class HierarchicalObject(ABC):
         """Get the dot-separated path from root to this object.
 
         Returns a clean path like "task_name.container.inputData.XYZIN".
+        For list items, produces paths like "list_name[0].child" (no dot before index).
         Only includes objects with valid names (non-empty objectName()).
         """
-        return ".".join(self.path_from_root())
+        parts = self.path_from_root()
+        if not parts:
+            return ""
+
+        # Build path, omitting dot before array indices (names starting with '[')
+        result = parts[0]
+        for part in parts[1:]:
+            if part.startswith('['):
+                # Array index - don't add dot
+                result += part
+            else:
+                # Regular name - add dot separator
+                result += '.' + part
+        return result
 
     # Legacy camelCase alias for compatibility with CCP4i2 code
     def objectPath(self) -> str:

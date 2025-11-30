@@ -67,7 +67,12 @@ export const CCP4i2TaskElement: React.FC<CCP4i2TaskElementProps> = (props) => {
   }, [props.visibility]);
 
   const { item } = useTaskItem(props.itemName);
-  const the_uuid = uuid4();
+  // Use a stable key based on the item's object path instead of generating a new UUID on each render
+  // A new UUID on each render causes the component to unmount/remount, losing all state
+  const the_uuid = useMemo(
+    () => item?._objectPath || props.itemName || uuid4(),
+    [item?._objectPath, props.itemName]
+  );
 
   const qualifiers = useMemo<any>(() => {
     if (item?._qualifiers) {

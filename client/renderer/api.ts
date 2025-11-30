@@ -285,8 +285,9 @@ export function useApi() {
 
     /**
      * Fetch XML endpoint, parse and prettify
+     * Pass null to skip fetching (conditional fetch pattern)
      */
-    get_pretty_endpoint_xml(ef: EndpointFetch) {
+    get_pretty_endpoint_xml(ef: EndpointFetch | null) {
       return useSWR<string | null>(getEndpointKey(ef), prettyXmlFetcher, {
         shouldRetryOnError: false,
         // Silently handle errors - caller can check error state

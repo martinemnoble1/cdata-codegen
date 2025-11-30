@@ -2,6 +2,7 @@ import { CCP4i2TaskElement, CCP4i2TaskElementProps } from "./task-element";
 import {
   Button,
   Dialog,
+  DialogActions,
   DialogContent,
   Table,
   TableBody,
@@ -13,17 +14,23 @@ import {
 } from "@mui/material";
 import { useApi } from "../../../api";
 import { useJob, usePrevious, valueOfItem } from "../../../utils";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Add, Delete } from "@mui/icons-material";
 import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
-import { clear } from "console";
 
 export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
   props
 ) => {
   const api = useApi();
   const { itemName, job } = props;
-  const [detailItem, setDetailItem] = useState<any | null>(null);
+
+  // Use separate state for dialog open vs which item is selected
+  // This prevents re-renders from closing the dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Store the object path when we open, so it doesn't change during editing
+  const selectedObjectPathRef = useRef<string | null>(null);
+
   const { useTaskItem, setParameter, container, mutateContainer } = useJob(
     job.id
   );
@@ -31,6 +38,20 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
 
   const { item, update: updateList, value: itemValue } = useTaskItem(itemName);
   const previousItemValue = usePrevious(itemValue);
+
+  const handleOpenDialog = useCallback((index: number) => {
+    if (!item?._value?.[index]) return;
+
+    // Store the object path at the time of opening
+    selectedObjectPathRef.current = item._value[index]._objectPath;
+    setIsDialogOpen(true);
+  }, [item?._value]);
+
+  const handleCloseDialog = useCallback(() => {
+    setIsDialogOpen(false);
+    selectedObjectPathRef.current = null;
+    mutateContainer();
+  }, [mutateContainer]);
 
   const extendListItem = useCallback(async () => {
     if (!updateList) return;
@@ -69,17 +90,18 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
       JSON.stringify(intent.previousValue) !== JSON.stringify(itemValue)
     ) {
       if (intent.previousValue.length < itemValue.length) {
-        setDetailItem(item?._value[item?._value.length - 1]);
+        // Open the newly added item (last in list)
+        const newIndex = item._value.length - 1;
+        handleOpenDialog(newIndex);
       }
       clearIntent();
     }
-  }, [item?._value, intent, job.id, clearIntent]);
+  }, [item?._value, intent, job.id, clearIntent, itemValue, handleOpenDialog]);
 
   const deleteItem = useCallback(
-    async (deletedItem: any) => {
+    async (index: number) => {
       const array = item._value;
-      const index = array.indexOf(deletedItem);
-      if (index > -1) {
+      if (index > -1 && index < array.length) {
         array.splice(index, 1);
         const setParameterArg = {
           object_path: item._objectPath,
@@ -132,7 +154,7 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
             {item?._value?.map((contentElement: any, iElement: number) => (
               <TableRow
                 key={`${iElement}`}
-                onClick={() => setDetailItem(contentElement)}
+                onClick={() => handleOpenDialog(iElement)}
                 sx={{
                   transition: "box-shadow 0.2s, background 0.2s",
                   cursor: "pointer",
@@ -171,7 +193,7 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
                         whiteSpace: "pre-wrap",
                       }}
                     >
-                      {contentElement._value[property]._value}
+                      {contentElement._value[property]?._value ?? ""}
                     </div>
                   </TableCell>
                 ))}
@@ -182,7 +204,7 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
                     onClick={(ev: any) => {
                       ev.stopPropagation();
                       ev.preventDefault();
-                      deleteItem(contentElement);
+                      deleteItem(iElement);
                     }}
                   />
                 </TableCell>
@@ -219,32 +241,35 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
             </div>
           </div>
         )}
-        {detailItem && (
-          <Dialog
-            open={Boolean(detailItem)}
-            onClose={() => {
-              setDetailItem(null);
-              mutateContainer();
-            }}
-            fullWidth
-            maxWidth={false}
-            slotProps={{
-              paper: {
-                style: {
-                  margin: "1rem",
-                  width: "calc(100% - 2rem)",
-                },
+        <Dialog
+          open={isDialogOpen}
+          onClose={handleCloseDialog}
+          fullWidth
+          maxWidth={false}
+          slotProps={{
+            paper: {
+              style: {
+                margin: "1rem",
+                width: "calc(100% - 2rem)",
               },
-            }}
-          >
-            <DialogContent>
+            },
+          }}
+        >
+          <DialogContent>
+            {/* Use the stored object path ref so it doesn't change during editing */}
+            {isDialogOpen && selectedObjectPathRef.current && (
               <CCP4i2TaskElement
                 {...props}
-                itemName={`${detailItem._objectPath}`}
+                itemName={selectedObjectPathRef.current}
               />
-            </DialogContent>
-          </Dialog>
-        )}
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog} variant="contained">
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
       </>
     )
   );

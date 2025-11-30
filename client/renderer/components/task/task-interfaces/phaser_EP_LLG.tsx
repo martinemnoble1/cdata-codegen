@@ -4,7 +4,7 @@ import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useJob, useDigestEffect } from "../../../utils";
+import { useJob } from "../../../utils";
 import { useRunCheck } from "../../../providers/run-check-provider";
 
 /**
@@ -19,29 +19,23 @@ import { useRunCheck } from "../../../providers/run-check-provider";
  */
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { job } = props;
-  const { useTaskItem, useFileDigest, mutateContainer, validation } = useJob(
-    job.id
-  );
+  const { useTaskItem, fetchDigest, validation } = useJob(job.id);
 
   // Get task items for file handling and parameter updates
   const { item: F_SIGFItem } = useTaskItem("F_SIGF");
   const { value: XYZIN_PARTIALValue } = useTaskItem("XYZIN_PARTIAL");
   const { update: updateWAVELENGTH } = useTaskItem("WAVELENGTH");
 
-  // File digest for wavelength extraction
-  const F_SIGFDigest = useFileDigest(F_SIGFItem?._objectPath);
+  // Handle F_SIGF file change - extract wavelength from digest
+  const handleF_SIGFChange = useCallback(async () => {
+    if (!F_SIGFItem?._objectPath) return;
 
-  // Auto-update wavelength when F_SIGF file changes
-  useDigestEffect(
-    F_SIGFDigest,
-    (digestData) => {
-      const wavelength = digestData.wavelengths?.at(-1);
-      if (!wavelength || wavelength <= 0 || wavelength >= 9) return undefined;
-      return wavelength;
-    },
-    updateWAVELENGTH,
-    job?.status
-  );
+    const digestData = await fetchDigest(F_SIGFItem._objectPath);
+    const wavelength = digestData?.wavelengths?.at(-1);
+    if (wavelength && wavelength > 0 && wavelength < 9) {
+      await updateWAVELENGTH(wavelength);
+    }
+  }, [F_SIGFItem?._objectPath, fetchDigest, updateWAVELENGTH]);
 
   // Task values for visibility conditions (memoized to prevent re-creation)
   const taskValues = useMemo(
@@ -96,7 +90,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const elementConfigs = useMemo(
     () => ({
       inputData: [
-        { key: "F_SIGF", label: "Reflections" },
+        { key: "F_SIGF", label: "Reflections", onChange: handleF_SIGFChange },
         {
           key: "PARTIALMODELORMAP",
           label: "Partial model as",
@@ -149,19 +143,20 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
       ],
       keywords: [{ key: "keywords", label: "Additional keywords" }],
     }),
-    [visibility]
+    [visibility, handleF_SIGFChange]
   );
 
   // Stable render helper function
   const renderElements = useCallback(
     (elements: any[]) =>
-      elements.map(({ key, label, visible = () => true, ...extraProps }) => (
+      elements.map(({ key, label, visible = () => true, onChange, ...extraProps }) => (
         <CCP4i2TaskElement
           {...props}
           key={key}
           itemName={key}
           qualifiers={{ guiLabel: label, ...extraProps }}
           visibility={visible}
+          onChange={onChange}
         />
       )),
     [props]

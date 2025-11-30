@@ -1393,7 +1393,7 @@ class CList(CData):
         for i, item in enumerate(self._items):
             if isinstance(item, CData):
                 item.set_parent(self)
-                item.name = f"{self.name}[{i}]"
+                item._name = f"[{i}]"
 
     def append(self, item: Any) -> None:
         """Add an item to the list.
@@ -1419,8 +1419,10 @@ class CList(CData):
         # If item is CData, register as child
         if isinstance(item, CData):
             item.set_parent(self)
-            # Set hierarchical name directly (don't use property to avoid collision with CData 'name' attributes)
-            item._name = f"{self._name}[{index}]"
+            # Set hierarchical name to just the index (no parent name)
+            # The parent's name will be included in path_from_root() traversal
+            # This produces paths like "list_name[0]" not "list_name.list_name[0]"
+            item._name = f"[{index}]"
 
         self._items.append(item)
 
@@ -1431,15 +1433,15 @@ class CList(CData):
         """Insert an item at specified index."""
         if isinstance(item, CData):
             item.set_parent(self)
-            # Set hierarchical name directly
-            item._name = f"{self._name}[{index}]"
+            # Set hierarchical name to just the index
+            item._name = f"[{index}]"
 
         self._items.insert(index, item)
 
         # Update names of subsequent items
         for i in range(index + 1, len(self._items)):
             if isinstance(self._items[i], CData):
-                self._items[i]._name = f"{self._name}[{i}]"
+                self._items[i]._name = f"[{i}]"
 
         # Mark as explicitly set
         self._value_states["_items"] = ValueState.EXPLICITLY_SET
@@ -1452,7 +1454,7 @@ class CList(CData):
         # Update names of subsequent items
         for i in range(index, len(self._items)):
             if isinstance(self._items[i], CData):
-                self._items[i]._name = f"{self._name}[{i}]"
+                self._items[i]._name = f"[{i}]"
 
         # Mark as explicitly set
         self._value_states["_items"] = ValueState.EXPLICITLY_SET
@@ -1465,7 +1467,7 @@ class CList(CData):
         if index >= 0:
             for i in range(index, len(self._items)):
                 if isinstance(self._items[i], CData):
-                    self._items[i].name = f"{self.name}[{i}]"
+                    self._items[i]._name = f"[{i}]"
 
         # Mark as explicitly set
         self._value_states["_items"] = ValueState.EXPLICITLY_SET
@@ -1482,6 +1484,9 @@ class CList(CData):
 
         Legacy API compatibility method for CList. Accepts a list or CList
         and replaces all current items with the new items.
+
+        If items are dicts and this list has a subItem qualifier with a 'class',
+        the dicts will be converted to proper typed objects.
 
         Args:
             value: List, CList, or single item to set. If None or empty list, clears the list.
@@ -1505,11 +1510,23 @@ class CList(CData):
             if v.maxSeverity() > SEVERITY_WARNING:
                 raise v
 
+        # Get subItem class for dict conversion
+        sub_item_def = self.get_qualifier('subItem')
+        item_class = sub_item_def.get('class') if isinstance(sub_item_def, dict) else None
+
         # Clear current items
         self._items.clear()
 
         # Add new items using append to ensure proper parent/name setup
         for item in value:
+            # Convert dict to typed object if we have a subItem class
+            if isinstance(item, dict) and item_class is not None:
+                # Create a new instance of the item class
+                new_item = item_class(parent=None, name=None)
+                # Update the new item with dict values
+                if hasattr(new_item, 'update'):
+                    new_item.update(item)
+                item = new_item
             self.append(item)
 
         return self
@@ -1594,8 +1611,9 @@ class CList(CData):
             )
 
         # Instantiate the item with qualifiers
-        # The item will be added to the list by the caller using append()
-        item = item_class(parent=None, name=f"temp_item_{len(self._items)}")
+        # Set parent to self and name to [?] placeholder for JSON encoder
+        # Frontend will replace [?] with actual index when cloning for new items
+        item = item_class(parent=self, name="[?]")
 
         # Apply qualifiers if provided
         if item_qualifiers and hasattr(item, '_qualifiers'):

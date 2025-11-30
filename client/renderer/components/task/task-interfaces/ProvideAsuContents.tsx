@@ -14,39 +14,61 @@ import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { useApi } from "../../../api";
-import { useJob, valueOfItem } from "../../../utils";
+import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import useSWR from "swr";
-import { apiPost, apiGet } from "../../../api-fetch";
+import { apiPost } from "../../../api-fetch";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const api = useApi();
   const { job } = props;
-  const { useTaskItem, mutateContainer, useFileDigest } = useJob(job.id);
-  const { update: setAsuContent } = useTaskItem("ASU_CONTENT");
+  const { useTaskItem, useFileDigest, fetchDigest } = useJob(job.id);
+  const { update: setAsuContent, item: asuContentItem } = useTaskItem("ASU_CONTENT");
+  const { item: asuContentInItem } = useTaskItem("ASUCONTENTIN");
 
+  // File digest for HKLIN (used for Matthews calculation)
   const { data: HKLINDigest } = useFileDigest(
     `ProvideAsuContents.inputData.HKLIN`
   );
 
   /**
+   * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
+   * Uses imperative fetchDigest for deterministic, race-condition-free behavior.
+   */
+  const handleAsuContentInChange = useCallback(async () => {
+    if (!asuContentInItem?._objectPath) return;
+
+    // Fetch the digest for the newly uploaded/selected file
+    const digestData = await fetchDigest(asuContentInItem._objectPath);
+
+    // Extract seqList and populate ASU_CONTENT
+    if (digestData?.seqList && Array.isArray(digestData.seqList)) {
+      const seqList = digestData.seqList.map((seq: any) => ({
+        name: seq.name,
+        sequence: seq.sequence,
+        polymerType: seq.polymerType,
+        description: seq.description,
+        nCopies: seq.nCopies,
+      }));
+      await setAsuContent(seqList);
+    }
+  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent]);
+
+  // Check if ASU_CONTENT has any sequences defined
+  const hasAsuContent = useMemo(() => {
+    const content = asuContentItem?._value;
+    return Array.isArray(content) && content.length > 0;
+  }, [asuContentItem?._value]);
+
+  /**
    * Fetches the molecular weight for the current job's ASU content using SWR.
-   *
-   * Uses the `useSWR` hook to send a POST request to the backend API endpoint
-   * `jobs/${job.id}/object_method` with the required payload to invoke
-   * the `molecularWeight` method on the `ProvideAsuContents.inputData.ASU_CONTENT` object.
-   *
-   * @returns
-   *   - `data: molWeight` - The fetched molecular weight value, or `undefined` if not yet loaded.
-   *   - `mutate: mutateMolWeight` - Function to manually revalidate or update the molecular weight data.
-   *
-   * @throws
-   *   Throws an error if the response from the API is not successful.
+   * Only fetches when ASU_CONTENT has data (sequences defined).
    */
   const { data: molWeight, mutate: mutateMolWeight } = useSWR(
-    `jobs/${job.id}/object_method`,
-    (url) =>
+    // Only fetch when we have ASU content data
+    hasAsuContent ? [`jobs/${job.id}/object_method`, "molecularWeight"] : null,
+    ([url]) =>
       apiPost(url, {
         object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
         method_name: "molecularWeight",
@@ -55,71 +77,25 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
 
   /**
    * Fetches and caches the Matthews coefficient analysis for the current job using SWR.
-   *
-   * @remarks
-   * This hook uses the SWR library to fetch data from the backend API endpoint
-   * `jobs/${job.id}/object_method` via a POST request. The request body
-   * includes the object path and method name required for the analysis, along with
-   * the molecular weight as a parameter. The response is expected to be a JSON object
-   * containing the Matthews analysis results.
-   *
-   * @param job.id - The unique identifier for the current job.
-   * @param molWeight?.result - The calculated molecular weight to be used in the analysis.
-   * @param HKLINDigest - The digest of the HKLIN file, used as a cache key dependency.
-   *
-   * @returns
-   * - `data: matthewsAnalysis` - The result of the Matthews coefficient analysis, or `undefined` if not yet loaded.
-   * - `mutate: mutateMatthewsAnalysis` - A function to manually revalidate or update the cached data.
-   *
-   * @throws
-   * Throws an error if the API request fails.
-   *
-   * @see https://swr.vercel.app/ for more information about SWR.
+   * Only fetches when we have both a valid molecular weight result AND an HKLIN file.
    */
-  const { data: matthewsAnalysis, mutate: mutateMatthewsAnalysis } = useSWR(
-    [
-      `jobs/${job.id}/object_method`,
-      molWeight?.result,
-      HKLINDigest,
-    ],
-    ([url, molWeightResult, hklinDigest]) =>
+  const { data: matthewsAnalysis } = useSWR(
+    // Only fetch when we have molecular weight AND HKLIN digest
+    molWeight?.result && HKLINDigest?.data
+      ? [
+          `jobs/${job.id}/object_method`,
+          "matthewsCoeff",
+          molWeight.result,
+          HKLINDigest.data,
+        ]
+      : null,
+    ([url, , molWeightResult]) =>
       apiPost(url, {
         object_path: "ProvideAsuContents.inputData.HKLIN.fileContent",
         method_name: "matthewsCoeff",
         kwargs: { molWt: molWeightResult },
       }),
     { keepPreviousData: true }
-  );
-
-  const handleNewASUCONTENTIN = useCallback(
-    async (updatedItem: any) => {
-      if (!setAsuContent) return;
-      const { dbFileId } = valueOfItem(updatedItem);
-      if (dbFileId) {
-        const digestResponse = await apiGet(
-          `files/${dbFileId}/digest_by_uuid`
-        );
-        // API returns {success: true, data: {...}} - extract the data
-        const digest = digestResponse?.data;
-        if (!digest?.seqList) return;
-
-        //Note here I filter out the source file information, which may not be properly formed
-        await setAsuContent(
-          digest.seqList.map((seq: any) => {
-            return {
-              name: seq.name,
-              sequence: seq.sequence,
-              polymerType: seq.polymerType,
-              description: seq.description,
-              nCopies: seq.nCopies,
-            };
-          })
-        );
-        mutateContainer();
-      }
-      mutateMolWeight();
-    },
-    [setAsuContent]
   );
 
   return (
@@ -139,7 +115,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             {...props}
             itemName="ASUCONTENTIN"
             qualifiers={{ guiLabel: "ASU contents" }}
-            onChange={handleNewASUCONTENTIN}
+            onChange={handleAsuContentInChange}
           />
         </CCP4i2ContainerElement>
         <CCP4i2ContainerElement

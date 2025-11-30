@@ -30,9 +30,9 @@ class TestExample:
         # Access via children() method
         items = c.children()
         assert len(items) == 2
-        assert b.name == "test_int"
+        assert b.objectName() == "test_int"
         assert b.object_path() == "container.test_int"
-        assert d.name == "test_file"
+        assert d.objectName() == "test_file"
         assert d.object_path() == "container.test_file"
 
         # Add another item
@@ -43,7 +43,7 @@ class TestExample:
 
         # Access by index
         the_list: CList = c[2]
-        assert the_list.name == "test_list"
+        assert the_list.objectName() == "test_list"
         assert the_list.object_path() == "container.test_list"
         assert isinstance(the_list, CList)
         assert l is the_list

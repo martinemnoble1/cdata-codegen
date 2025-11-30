@@ -572,6 +572,7 @@ class CContainer(CData):
 
         Args:
             path: Dot-separated path (e.g., "controlParameters.NCYCLES")
+                  Supports array indexing: "ASU_CONTENT[0].source"
             skip_first: If True (default), skip first path element for legacy compatibility.
                        Legacy paths often include task name as first element
                        (e.g., "prosmart_refmac.controlParameters.NCYCLES"), but since
@@ -588,7 +589,10 @@ class CContainer(CData):
             >>> ncycles = container.find_by_path("prosmart_refmac.controlParameters.NCYCLES")
             >>> # Or with modern path (skip_first=False):
             >>> ncycles = container.find_by_path("controlParameters.NCYCLES", skip_first=False)
+            >>> # Array indexing:
+            >>> seq = container.find_by_path("task.inputData.ASU_CONTENT[0].source")
         """
+        import re
         path_elements = path.split(".")
 
         # Skip first element if requested (legacy task/plugin name)
@@ -600,24 +604,66 @@ class CContainer(CData):
         # Navigate the path using built-in hierarchy traversal
         current = self
         for segment in path_to_search:
-            # Try getattr() first - triggers __getattr__ which searches children
-            next_obj = getattr(current, segment, None)
+            # Check for array indexing: "name[index]" or just "[index]"
+            array_match = re.match(r'^(\w*)(\[(\d+)\])$', segment)
+            if array_match:
+                name_part = array_match.group(1)  # May be empty
+                array_index = int(array_match.group(3))
 
-            # Fall back to .find() if available - does depth-first recursive search
-            # Note: find() returns -1 for not found (like Python's str.find())
-            if next_obj is None and hasattr(current, 'find'):
-                found = current.find(segment)
-                # Only use the result if it's not -1 (not found indicator)
-                if found != -1:
-                    next_obj = found
+                # First navigate to the named child (if name provided)
+                if name_part:
+                    next_obj = getattr(current, name_part, None)
+                    if next_obj is None and hasattr(current, 'find'):
+                        found = current.find(name_part)
+                        if found != -1:
+                            next_obj = found
+                    if next_obj is None:
+                        raise AttributeError(
+                            f"Element '{name_part}' not found in path '{path}' "
+                            f"(searching from {current.object_path()})"
+                        )
+                    current = next_obj
 
-            if next_obj is None:
-                raise AttributeError(
-                    f"Element '{segment}' not found in path '{path}' "
-                    f"(searching from {current.object_path()})"
-                )
+                # Then apply array indexing
+                try:
+                    # For CList, use __getitem__ which returns children by index
+                    if hasattr(current, '__getitem__'):
+                        current = current[array_index]
+                    elif hasattr(current, 'children'):
+                        children = current.children()
+                        if 0 <= array_index < len(children):
+                            current = children[array_index]
+                        else:
+                            raise IndexError(f"Index {array_index} out of range")
+                    else:
+                        raise AttributeError(
+                            f"Object at '{segment}' does not support indexing"
+                        )
+                except (IndexError, KeyError) as e:
+                    raise AttributeError(
+                        f"Index [{array_index}] not valid in path '{path}' "
+                        f"(searching from {current.object_path()}): {e}"
+                    )
+            else:
+                # Regular name lookup (no array indexing)
+                # Try getattr() first - triggers __getattr__ which searches children
+                next_obj = getattr(current, segment, None)
 
-            current = next_obj
+                # Fall back to .find() if available - does depth-first recursive search
+                # Note: find() returns -1 for not found (like Python's str.find())
+                if next_obj is None and hasattr(current, 'find'):
+                    found = current.find(segment)
+                    # Only use the result if it's not -1 (not found indicator)
+                    if found != -1:
+                        next_obj = found
+
+                if next_obj is None:
+                    raise AttributeError(
+                        f"Element '{segment}' not found in path '{path}' "
+                        f"(searching from {current.object_path()})"
+                    )
+
+                current = next_obj
 
         return current
 
