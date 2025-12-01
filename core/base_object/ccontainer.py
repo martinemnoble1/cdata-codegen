@@ -850,3 +850,35 @@ class CContainer(CData):
 
         return None
 
+    def validity(self):
+        """
+        Validate the container and all its children recursively.
+
+        This method aggregates validation errors from:
+        - The container's own validation (from parent CData.validity())
+        - All children that have validity() methods (CList, CDataFile, etc.)
+
+        The aggregation ensures that the plugin.validity() -> container.validity()
+        call chain properly collects errors from nested structures like CList items.
+
+        Returns:
+            CErrorReport containing validation errors/warnings from entire hierarchy
+        """
+        from .error_reporting import CErrorReport
+
+        # Start with own validation from CData base class
+        report = super().validity()
+
+        # Recursively validate all children
+        for child in self.children():
+            if hasattr(child, 'validity'):
+                try:
+                    child_report = child.validity()
+                    if child_report:
+                        report.extend(child_report)
+                except Exception:
+                    # Don't let one child's validation failure stop others
+                    pass
+
+        return report
+

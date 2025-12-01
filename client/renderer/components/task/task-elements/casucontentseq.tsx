@@ -6,14 +6,15 @@ import { useJob, usePrevious, valueOfItem } from "../../../utils";
 import { ErrorInfo } from "./error-info";
 import { apiGet } from "../../../api-fetch";
 import { useCallback, useEffect } from "react";
+import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
 
 export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
   props
 ) => {
   const api = useApi();
   const { itemName, job } = props;
-  const { useTaskItem, getValidationColor, mutateContainer, mutateValidation } =
-    useJob(job.id);
+  const { useTaskItem, getValidationColor, mutateContainer } = useJob(job.id);
+  const { clearIntentForPath } = useParameterChangeIntent();
 
   const { item } = useTaskItem(itemName);
   const { update: setPolymerType } = useTaskItem(
@@ -24,6 +25,7 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
   const { update: setDescription } = useTaskItem(
     `${item._objectPath}.description`
   );
+  const { update: setNCopies } = useTaskItem(`${item._objectPath}.nCopies`);
   const setSEQUENCEFromSEQIN = useCallback(
     async (seqinDigestResponse: any, annotation: string) => {
       // API returns {success: true, data: {...}} - extract the data
@@ -34,6 +36,7 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
         !setName ||
         !setPolymerType ||
         !setDescription ||
+        !setNCopies ||
         !item ||
         !seqinDigest ||
         job?.status != 1
@@ -45,12 +48,22 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
         console.log("Seqin digest was a sequence file");
         const { name, moleculeType, sequence } = seqinDigest || {};
         const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, "_");
+        // Each setParameter call triggers mutations, so container/validation
+        // will be updated automatically after each call
         await setPolymerType(moleculeType);
         await setName(sanitizedName);
         await setSequence(sequence);
         await setDescription(annotation);
+        await setNCopies(1);
+        // Clear intents so child components will sync their local state
+        // with the new container data (otherwise wasRecentlyChanged blocks the sync)
+        clearIntentForPath(`${item._objectPath}.polymerType`);
+        clearIntentForPath(`${item._objectPath}.name`);
+        clearIntentForPath(`${item._objectPath}.sequence`);
+        clearIntentForPath(`${item._objectPath}.description`);
+        clearIntentForPath(`${item._objectPath}.nCopies`);
+        // Force a final container refresh to ensure modal displays updated data
         await mutateContainer();
-        await mutateValidation();
         props.onChange?.({ name, moleculeType, sequence });
       } else if (seqinDigest?.composition) {
         console.log("Seqin digest was a coordinate file");
@@ -65,8 +78,16 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
         await setName(sanitizedName);
         await setSequence(sequence);
         await setDescription(annotation);
+        await setNCopies(1);
+        // Clear intents so child components will sync their local state
+        // with the new container data (otherwise wasRecentlyChanged blocks the sync)
+        clearIntentForPath(`${item._objectPath}.polymerType`);
+        clearIntentForPath(`${item._objectPath}.name`);
+        clearIntentForPath(`${item._objectPath}.sequence`);
+        clearIntentForPath(`${item._objectPath}.description`);
+        clearIntentForPath(`${item._objectPath}.nCopies`);
+        // Force a final container refresh to ensure modal displays updated data
         await mutateContainer();
-        await mutateValidation();
         props.onChange?.({ name, moleculeType, sequence });
       }
     },
@@ -75,9 +96,11 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
       setName,
       setPolymerType,
       setDescription,
+      setNCopies,
       job,
       item,
       mutateContainer,
+      clearIntentForPath,
     ]
   );
 
@@ -90,21 +113,19 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
       />
       <CardContent sx={{ my: 0, py: 0, pt: 2 }}>
         <Grid2 container rowSpacing={0} sx={{ my: 0, py: 0 }}>
-          {item &&
-            ["nCopies"].map((key) => (
-              <Grid2 key={key} size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  sx={{ my: 0, py: 0, minWidth: "10rem" }}
-                  itemName={`${item._objectPath}.${key}`}
-                  qualifiers={{
-                    guiLabel: key,
-                    onlyEnumerators: true,
-                  }}
-                  suppressMutations={true}
-                />
-              </Grid2>
-            ))}
+          {item && (
+            <Grid2 size={{ xs: 4 }}>
+              <CCP4i2TaskElement
+                {...props}
+                sx={{ my: 0, py: 0, minWidth: "10rem" }}
+                itemName={`${item._objectPath}.nCopies`}
+                qualifiers={{
+                  guiLabel: "nCopies",
+                  enumerators: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                }}
+              />
+            </Grid2>
+          )}
           {item &&
             ["polymerType", "name"].map((key) => (
               <Grid2 key={key} size={{ xs: 4 }}>
@@ -115,7 +136,6 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
                   qualifiers={{
                     guiLabel: key,
                   }}
-                  suppressMutations={true}
                 />
               </Grid2>
             ))}
@@ -129,7 +149,6 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
                   guiLabel: key,
                   guiMode: "multiLine",
                 }}
-                suppressMutations={true}
               />
             </Grid2>
           ))}

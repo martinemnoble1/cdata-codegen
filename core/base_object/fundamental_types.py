@@ -1756,6 +1756,55 @@ class CList(CData):
         self.append(new_item)
         return new_item
 
+    def validity(self):
+        """
+        Validate the list against qualifiers and children.
+
+        Checks:
+        - List length >= listMinLength qualifier (if set)
+        - List length <= listMaxLength qualifier (if set)
+        - All children are valid (aggregates their validity errors)
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        from .error_reporting import CErrorReport, SEVERITY_ERROR
+
+        report = CErrorReport()
+
+        # Get full object path for error reporting (matches frontend _objectPath)
+        obj_path = self.object_path() if hasattr(self, 'object_path') else ''
+
+        # Check listMinLength
+        min_length = self.get_qualifier('listMinLength')
+        if min_length is not None and len(self) < min_length:
+            report.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details=f'List must have at least {min_length} item(s), has {len(self)}',
+                name=obj_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Check listMaxLength
+        max_length = self.get_qualifier('listMaxLength')
+        if max_length is not None and len(self) > max_length:
+            report.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f'List must have at most {max_length} item(s), has {len(self)}',
+                name=obj_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Validate each child and aggregate their errors
+        for item in self._items:
+            if hasattr(item, 'validity'):
+                child_report = item.validity()
+                report.extend(child_report)
+
+        return report
+
 
 # NOTE: Type aliases removed - all custom types now have proper stub classes
 # in core/cdata_stubs/ and implementation classes in core/

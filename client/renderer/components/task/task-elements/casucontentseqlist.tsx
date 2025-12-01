@@ -31,7 +31,7 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
   // Store the object path when we open, so it doesn't change during editing
   const selectedObjectPathRef = useRef<string | null>(null);
 
-  const { useTaskItem, setParameter, container, mutateContainer } = useJob(
+  const { useTaskItem, setParameter, container, mutateContainer, getValidationColor } = useJob(
     job.id
   );
   const { intent, setIntent, clearIntent } = useParameterChangeIntent();
@@ -51,7 +51,9 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
     setIsDialogOpen(false);
     selectedObjectPathRef.current = null;
     mutateContainer();
-  }, [mutateContainer]);
+    // Notify parent that content may have changed (triggers validity/molWeight recalc)
+    props.onChange?.(item);
+  }, [mutateContainer, props.onChange, item]);
 
   const extendListItem = useCallback(async () => {
     if (!updateList) return;
@@ -151,65 +153,81 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
             </TableRow>
           </TableHead>
           <TableBody>
-            {item?._value?.map((contentElement: any, iElement: number) => (
-              <TableRow
-                key={`${iElement}`}
-                onClick={() => handleOpenDialog(iElement)}
-                sx={{
-                  transition: "box-shadow 0.2s, background 0.2s",
-                  cursor: "pointer",
-                  "&:hover": {
-                    boxShadow: 3,
-                    backgroundColor: "rgba(0, 0, 0, 0.04)",
-                  },
-                }}
-              >
-                {[
-                  "name",
-                  "polymerType",
-                  "description",
-                  "nCopies",
-                  "sequence",
-                ].map((property) => (
-                  <TableCell
-                    key={property}
-                    style={{
-                      maxWidth: ["name", "polymerType", "nCopies"].includes(
-                        property
-                      )
-                        ? "5rem"
-                        : property === "description"
-                          ? "10rem"
-                          : property === "sequence"
-                            ? "20rem"
-                            : undefined,
-                    }}
-                  >
-                    <div
-                      style={{
-                        maxHeight: "12rem",
-                        overflowY: "auto",
-                        wordWrap: "break-word",
-                        whiteSpace: "pre-wrap",
+            {item?._value?.map((contentElement: any, iElement: number) => {
+              // Get validation color for the whole row (CAsuContentSeq element)
+              const rowValidationColor = getValidationColor(contentElement);
+              return (
+                <TableRow
+                  key={`${iElement}`}
+                  onClick={() => handleOpenDialog(iElement)}
+                  sx={{
+                    transition: "box-shadow 0.2s, background 0.2s",
+                    cursor: "pointer",
+                    // Apply row background color based on validation status
+                    backgroundColor: rowValidationColor,
+                    "&:hover": {
+                      boxShadow: 3,
+                      // Darken hover color slightly when there's a validation color
+                      backgroundColor: rowValidationColor !== "inherit"
+                        ? rowValidationColor
+                        : "rgba(0, 0, 0, 0.04)",
+                      filter: rowValidationColor !== "inherit" ? "brightness(0.95)" : undefined,
+                    },
+                  }}
+                >
+                  {[
+                    "name",
+                    "polymerType",
+                    "description",
+                    "nCopies",
+                    "sequence",
+                  ].map((property) => {
+                    // Get validation color for each individual field
+                    const cellValidationColor = getValidationColor(contentElement._value[property]);
+                    return (
+                      <TableCell
+                        key={property}
+                        sx={{
+                          maxWidth: ["name", "polymerType", "nCopies"].includes(
+                            property
+                          )
+                            ? "5rem"
+                            : property === "description"
+                              ? "10rem"
+                              : property === "sequence"
+                                ? "20rem"
+                                : undefined,
+                          // Apply cell background color if field has validation error
+                          backgroundColor: cellValidationColor !== "inherit" ? cellValidationColor : undefined,
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxHeight: "12rem",
+                            overflowY: "auto",
+                            wordWrap: "break-word",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {contentElement._value[property]?._value ?? ""}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell style={{ maxWidth: "5rem" }}>
+                    <Button
+                      startIcon={<Delete />}
+                      size="small"
+                      onClick={(ev: any) => {
+                        ev.stopPropagation();
+                        ev.preventDefault();
+                        deleteItem(iElement);
                       }}
-                    >
-                      {contentElement._value[property]?._value ?? ""}
-                    </div>
+                    />
                   </TableCell>
-                ))}
-                <TableCell style={{ maxWidth: "5rem" }}>
-                  <Button
-                    startIcon={<Delete />}
-                    size="small"
-                    onClick={(ev: any) => {
-                      ev.stopPropagation();
-                      ev.preventDefault();
-                      deleteItem(iElement);
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
         {(item?._value?.length ?? 0) === 0 && (

@@ -12,7 +12,6 @@ import {
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
-import { useApi } from "../../../api";
 import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
 import { useCallback, useState } from "react";
@@ -21,12 +20,12 @@ import { apiPost } from "../../../api-fetch";
 import { BaseSpacegroupCellElement } from "../task-elements/base-spacegroup-cell-element";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
-  const api = useApi();
   const { job } = props;
-  const { useTaskItem, useFileDigest, fetchDigest } = useJob(job.id);
+  const { useTaskItem, useFileDigest, fetchDigest, getErrors, mutateValidation } = useJob(job.id);
   const { update: setAsuContent } = useTaskItem("ASU_CONTENT");
   const { item: asuContentInItem } = useTaskItem("ASUCONTENTIN");
   const { item: hklinItem } = useTaskItem("HKLIN");
+  const { item: asuContentItem } = useTaskItem("ASU_CONTENT");
 
   // State to hold HKLIN digest (fetched imperatively on file change)
   const [hklinDigest, setHklinDigest] = useState<any>(null);
@@ -72,30 +71,17 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         sequence: seq.sequence,
         polymerType: seq.polymerType,
         description: seq.description,
-        nCopies: seq.nCopies,
+        nCopies: seq.nCopies ?? 1,  // Default to 1 if not provided
       }));
       await setAsuContent(seqList);
     }
   }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent]);
 
-  /**
-   * Fetch ASU content validity from the backend.
-   * This calls the validity() method on CAsuContentSeqList which checks:
-   * - At least one sequence entry
-   * - Each entry has valid polymerType, name, nCopies > 0, sequence length > 1
-   */
-  const { data: asuValidity, mutate: mutateAsuValidity } = useSWR(
-    [`jobs/${job.id}/object_method`, "validity", "ASU_CONTENT"],
-    ([url]) =>
-      apiPost(url, {
-        object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
-        method_name: "validity",
-      })
-  );
-
-  // ASU content is valid when the backend validity check passes
-  // API response format: {success: true, data: {result: {...}}}
-  const isAsuContentValid = asuValidity?.data?.result?.valid === true;
+  // ASU content is valid when there are no validation errors for it
+  // Uses the existing validation infrastructure from useJob().getErrors()
+  // which fetches from /api/jobs/{id}/validation/ endpoint
+  const asuContentErrors = getErrors(asuContentItem);
+  const isAsuContentValid = asuContentErrors.length === 0 && (asuContentItem?._value?.length ?? 0) > 0;
 
   /**
    * Fetches the molecular weight for the current job's ASU content using SWR.
@@ -171,7 +157,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             qualifiers={{ guiLabel: "ASU contents" }}
             onChange={() => {
               // Re-check validity and molecular weight when ASU content changes
-              mutateAsuValidity();
+              mutateValidation();
               mutateMolWeight();
             }}
           />
@@ -182,7 +168,9 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             ? molWeight.data.result?.toFixed(2)
             : isAsuContentValid
               ? "(calculating...)"
-              : asuValidity?.data?.result?.message || "(no valid sequences)"}
+              : asuContentErrors.length > 0
+                ? `(${asuContentErrors.length} validation error(s))`
+                : "(no valid sequences)"}
         </Typography>
         <CCP4i2ContainerElement
           {...props}
