@@ -478,9 +478,18 @@ class ParamsXmlHandler:
                 if elem_name != expected_class_name:
                     print(f"Warning: Expected <{expected_class_name}> but found <{elem_name}> in CList")
 
-                # Recursively import the item's contents
-                item_count = self._import_container_values(child_elem, new_item)
-                pass  # DEBUG: print(f"[DEBUG _import_container_values] Imported {item_count} values into item")
+                # Import the item's contents - use appropriate method based on item type
+                # For simple value types (CString, CInt, CFloat, CBoolean), the XML element
+                # has text content directly (e.g., <CString>CA</CString>)
+                # For complex types (CContainer), we need to recurse into child elements
+                from core.base_object.fundamental_types import CString, CInt, CFloat, CBoolean
+                if isinstance(new_item, (CString, CInt, CFloat, CBoolean)):
+                    # Simple value type - use _import_parameter_value which handles text content
+                    self._import_parameter_value(child_elem, new_item)
+                else:
+                    # Complex type - recurse to handle nested structure
+                    item_count = self._import_container_values(child_elem, new_item)
+                    pass  # DEBUG: print(f"[DEBUG _import_container_values] Imported {item_count} values into item")
 
                 # Append the item to the list
                 cdata_container.append(new_item)

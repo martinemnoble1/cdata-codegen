@@ -278,8 +278,10 @@ class CContainer(CData):
             # Check if we already have this item in the destination
             if hasattr(self, item_name):
                 # Item exists - update it in place
+                # Use preserve_state=True to keep the original value states from the source
+                # This prevents copyData from marking everything as EXPLICITLY_SET
                 dest_item = getattr(self, item_name)
-                dest_item.setEtree(source_etree, ignore_missing=True)
+                dest_item.setEtree(source_etree, ignore_missing=True, preserve_state=True)
             else:
                 # Item doesn't exist - need to create it first
                 # Get the class of the source item
@@ -296,7 +298,8 @@ class CContainer(CData):
                     self._data_order.append(item_name)
 
                 # Now populate it with the source data
-                new_item.setEtree(source_etree, ignore_missing=True)
+                # Use preserve_state=True to keep the original value states from the source
+                new_item.setEtree(source_etree, ignore_missing=True, preserve_state=True)
 
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""

@@ -54,6 +54,17 @@
                     <baseName>metalCoord.def.xml</baseName>
                 </CI2XmlDataFile>
             </file>
+            <!-- Override XYZIN qualifiers: when metalCoord is embedded as optional
+                 component in servalcat_pipe, its inputData.XYZIN should not block
+                 execution if not set. The actual XYZIN is set at runtime via
+                 executeMetalCoord() when RUN_METALCOORD is True. -->
+            <container id="inputData">
+                <content id="XYZIN">
+                    <qualifiers>
+                        <allowUndefined>True</allowUndefined>
+                    </qualifiers>
+                </content>
+            </container>
         </container>
 
         <container id="metalCoordPipeline">

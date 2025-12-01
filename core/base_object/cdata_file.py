@@ -350,6 +350,14 @@ class CDataFile(CData):
         - relPath: Relative path from project root (e.g., "CCP4_JOBS/job_17" or "CCP4_IMPORTED_FILES")
         - baseName: Just the filename (e.g., "XYZOUT.mtz")
 
+        For external files (paths without CCP4_JOBS or CCP4_IMPORTED_FILES markers):
+        - If the input is a relative path, preserve it as-is in baseName
+        - If the input is an absolute path, store the full path in baseName
+
+        This distinction is important for ASU content files where source/baseName
+        is a user-provided filename like "beta.seq" that should NOT be converted
+        to an absolute path using CWD.
+
         Args:
             path: Full file path (e.g., "/path/to/project/CCP4_JOBS/job_17/XYZOUT.mtz")
             plugin: Parent CPluginScript instance
@@ -357,8 +365,19 @@ class CDataFile(CData):
         from pathlib import Path
         import re
 
-        abs_path = Path(path).resolve()
-        path_str = str(abs_path)
+        input_path = Path(path)
+
+        # Only resolve to absolute path if the input is already absolute
+        # or if it contains known project markers (CCP4_JOBS, CCP4_IMPORTED_FILES)
+        # This preserves relative external paths like "beta.seq" as-is
+        is_project_path = 'CCP4_JOBS' in path or 'CCP4_IMPORTED_FILES' in path
+
+        if input_path.is_absolute() or is_project_path:
+            abs_path = input_path.resolve()
+            path_str = str(abs_path)
+        else:
+            # Keep relative paths as-is - don't convert to absolute using CWD
+            path_str = path
 
         # Get project ID from plugin
         project_id = getattr(plugin, '_dbProjectId', None)
@@ -366,21 +385,18 @@ class CDataFile(CData):
             logger.debug("  No _dbProjectId on plugin, cannot parse for database")
             return
 
-        # Set project UUID
-        if hasattr(self, 'project') and hasattr(self.project, 'set'):
-            self.project.set(str(project_id))
-            logger.debug("  Set project = %s", project_id)
-
-        # Extract baseName (just the filename)
-        if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
-            self.baseName.set(abs_path.name)
-            logger.debug("  Set baseName = %s", abs_path.name)
-
-        # Determine relPath by looking for known directory patterns
+        # Determine relPath by looking for known directory patterns FIRST
         # Pattern 1: CCP4_JOBS/job_17 or CCP4_JOBS/job_17/job_1 (nested jobs)
         jobs_match = re.search(r'(CCP4_JOBS/job_\d+(?:/job_\d+)*)', path_str)
         if jobs_match:
             rel_path = jobs_match.group(1)
+            # For project paths, set project UUID and extract baseName
+            if hasattr(self, 'project') and hasattr(self.project, 'set'):
+                self.project.set(str(project_id))
+                logger.debug("  Set project = %s", project_id)
+            if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
+                self.baseName.set(Path(path_str).name)
+                logger.debug("  Set baseName = %s", Path(path_str).name)
             if hasattr(self, 'relPath') and hasattr(self.relPath, 'set'):
                 self.relPath.set(rel_path)
                 logger.debug("  Set relPath = %s (from CCP4_JOBS pattern)", rel_path)
@@ -388,17 +404,25 @@ class CDataFile(CData):
 
         # Pattern 2: CCP4_IMPORTED_FILES
         if 'CCP4_IMPORTED_FILES' in path_str:
+            # For imported files, set project UUID and extract baseName
+            if hasattr(self, 'project') and hasattr(self.project, 'set'):
+                self.project.set(str(project_id))
+                logger.debug("  Set project = %s", project_id)
+            if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
+                self.baseName.set(Path(path_str).name)
+                logger.debug("  Set baseName = %s", Path(path_str).name)
             if hasattr(self, 'relPath') and hasattr(self.relPath, 'set'):
                 self.relPath.set('CCP4_IMPORTED_FILES')
                 logger.debug("  Set relPath = CCP4_IMPORTED_FILES")
             return
 
-        # Pattern 3: Absolute path outside project structure
-        # In this case, we keep the full path in baseName and leave relPath empty
-        logger.debug("  Path is outside project structure, keeping full path in baseName")
+        # Pattern 3: External path (outside project structure)
+        # Keep the path as provided (relative or absolute) in baseName
+        # Do NOT set project for external files - they are not part of the project
+        logger.debug("  Path is external (outside project structure), keeping as-is in baseName")
         if hasattr(self, 'baseName') and hasattr(self.baseName, 'set'):
             self.baseName.set(path_str)
-            logger.debug("  Set baseName = %s (full external path)", path_str)
+            logger.debug("  Set baseName = %s (external path)", path_str)
 
     def setOutputPath(self, jobName: str = "", projectId: str = None, relPath: str = None):
         """Set output file path using project/relPath/baseName structure (legacy API).

@@ -877,12 +877,14 @@ class CData(HierarchicalObject):
 
         return elem
 
-    def setEtree(self, element, ignore_missing: bool = False):
+    def setEtree(self, element, ignore_missing: bool = False, preserve_state: bool = False):
         """Deserialize from an XML ElementTree element.
 
         Args:
             element: xml.etree.ElementTree.Element to deserialize from
             ignore_missing: If True, ignore attributes in XML that don't exist on this object
+            preserve_state: If True, don't mark values as EXPLICITLY_SET when deserializing.
+                           This is useful for copyData() to preserve the original value states.
         """
         # For simple value types, read from text
         if hasattr(self, 'value') and element.text:
@@ -891,6 +893,12 @@ class CData(HierarchicalObject):
             # not meet current min/max constraints but were valid when saved
             old_skip_validation = getattr(self, '_skip_validation', False)
             self._skip_validation = True
+
+            # Save old state if preserving
+            old_state = None
+            if preserve_state and hasattr(self, '_value_states'):
+                old_state = self._value_states.get('value', ValueState.NOT_SET)
+
             try:
                 # Determine the type and convert
                 if hasattr(self, '__class__'):
@@ -909,13 +917,17 @@ class CData(HierarchicalObject):
                 # Restore previous validation state
                 self._skip_validation = old_skip_validation
 
+                # Restore previous value state if preserving
+                if preserve_state and old_state is not None and hasattr(self, '_value_states'):
+                    self._value_states['value'] = old_state
+
         # For containers, deserialize children
         for child in element:
             child_name = child.tag
             if hasattr(self, child_name):
                 child_obj = getattr(self, child_name)
                 if isinstance(child_obj, CData):
-                    child_obj.setEtree(child, ignore_missing=ignore_missing)
+                    child_obj.setEtree(child, ignore_missing=ignore_missing, preserve_state=preserve_state)
             elif not ignore_missing:
                 raise AttributeError(f"Object has no attribute '{child_name}'")
 

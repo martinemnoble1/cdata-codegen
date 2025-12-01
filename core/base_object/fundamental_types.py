@@ -1704,7 +1704,7 @@ class CList(CData):
 
         return container_elem
 
-    def setEtree(self, element, ignore_missing: bool = False):
+    def setEtree(self, element, ignore_missing: bool = False, preserve_state: bool = False):
         """Override setEtree to deserialize CList with proper item structure.
 
         For CList, child elements use class names as tags (CCP4i2 convention).
@@ -1713,6 +1713,7 @@ class CList(CData):
         Args:
             element: xml.etree.ElementTree.Element containing list items
             ignore_missing: If True, ignore missing attributes (passed to item's setEtree)
+            preserve_state: If True, don't mark values as EXPLICITLY_SET when deserializing
 
         Example XML structure:
             <UNMERGEDFILES>
@@ -1737,7 +1738,7 @@ class CList(CData):
 
             # Recursively deserialize the item's content
             if hasattr(new_item, 'setEtree'):
-                new_item.setEtree(child_elem, ignore_missing=ignore_missing)
+                new_item.setEtree(child_elem, ignore_missing=ignore_missing, preserve_state=preserve_state)
 
             # Add the item to the list
             self.append(new_item)
