@@ -195,6 +195,137 @@ class CAsuContentSeq(CAsuContentSeqStub):
 
         return num_residues
 
+    def validity(self):
+        """
+        Validate this ASU content sequence entry.
+
+        Checks:
+        - nCopies is defined and >= 1
+        - polymerType is defined and valid (PROTEIN, DNA, or RNA)
+        - name is not null or zero length
+        - sequence can be parsed by BioPython given the polymer type
+
+        Returns:
+            CErrorReport containing validation errors/warnings
+        """
+        import re
+        from core.base_object.error_reporting import CErrorReport, SEVERITY_ERROR
+
+        report = CErrorReport()
+        valid_polymer_types = {'PROTEIN', 'DNA', 'RNA'}
+
+        # Get full object path for error reporting (matches frontend _objectPath)
+        base_path = self.object_path() if hasattr(self, 'object_path') else ''
+
+        # Check nCopies >= 1
+        n_copies = getattr(self, 'nCopies', None)
+        if n_copies is not None and hasattr(n_copies, 'value') and hasattr(n_copies, 'isSet'):
+            n_copies_val = int(n_copies.value) if n_copies.isSet() else 0
+        elif n_copies is not None:
+            try:
+                n_copies_val = int(n_copies)
+            except (ValueError, TypeError):
+                n_copies_val = 0
+        else:
+            n_copies_val = 0
+
+        if n_copies_val < 1:
+            # Use field path for cell-level highlighting
+            field_path = f"{base_path}.nCopies" if base_path else 'nCopies'
+            report.append(
+                klass=self.__class__.__name__,
+                code=101,
+                details='nCopies must be >= 1',
+                name=field_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Check polymerType is valid
+        polymer_type = getattr(self, 'polymerType', None)
+        if polymer_type is not None and hasattr(polymer_type, 'value'):
+            pt_str = str(polymer_type.value).strip().upper()
+        elif polymer_type is not None:
+            pt_str = str(polymer_type).strip().upper()
+        else:
+            pt_str = ''
+
+        if not pt_str or pt_str not in valid_polymer_types:
+            field_path = f"{base_path}.polymerType" if base_path else 'polymerType'
+            report.append(
+                klass=self.__class__.__name__,
+                code=102,
+                details=f'Invalid or missing polymer type (must be PROTEIN, DNA, or RNA, got "{pt_str}")',
+                name=field_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Check name is not null or empty
+        name = getattr(self, 'name', None)
+        if name is not None and hasattr(name, 'value'):
+            name_str = str(name.value).strip()
+        elif name is not None:
+            name_str = str(name).strip()
+        else:
+            name_str = ''
+
+        if not name_str:
+            field_path = f"{base_path}.name" if base_path else 'name'
+            report.append(
+                klass=self.__class__.__name__,
+                code=103,
+                details='Name is required',
+                name=field_path,
+                severity=SEVERITY_ERROR
+            )
+
+        # Check sequence can be parsed by BioPython
+        sequence = getattr(self, 'sequence', None)
+        if sequence is not None and hasattr(sequence, 'value'):
+            seq_str = str(sequence.value).replace(' ', '').replace('\n', '').replace('\t', '').upper()
+        elif sequence is not None:
+            seq_str = str(sequence).replace(' ', '').replace('\n', '').replace('\t', '').upper()
+        else:
+            seq_str = ''
+
+        if len(seq_str) <= 1:
+            field_path = f"{base_path}.sequence" if base_path else 'sequence'
+            report.append(
+                klass=self.__class__.__name__,
+                code=104,
+                details='Sequence must have more than 1 residue',
+                name=field_path,
+                severity=SEVERITY_ERROR
+            )
+        elif pt_str in valid_polymer_types:
+            # Validate sequence characters based on polymer type
+            field_path = f"{base_path}.sequence" if base_path else 'sequence'
+            if pt_str == 'PROTEIN':
+                # Standard amino acid one-letter codes
+                valid_chars = set('GALMFWKQESPVICYHRNDT')
+                invalid_chars = set(seq_str) - valid_chars
+                if invalid_chars:
+                    report.append(
+                        klass=self.__class__.__name__,
+                        code=105,
+                        details=f'Sequence contains invalid amino acid characters: {", ".join(sorted(invalid_chars))}',
+                        name=field_path,
+                        severity=SEVERITY_ERROR
+                    )
+            else:
+                # DNA or RNA - valid nucleotide codes
+                valid_chars = set('CAUGT')
+                invalid_chars = set(seq_str) - valid_chars
+                if invalid_chars:
+                    report.append(
+                        klass=self.__class__.__name__,
+                        code=106,
+                        details=f'Sequence contains invalid nucleotide characters: {", ".join(sorted(invalid_chars))}',
+                        name=field_path,
+                        severity=SEVERITY_ERROR
+                    )
+
+        return report
+
     def molecularWeight(self, polymerType="PROTEIN"):
         """
         Calculate molecular weight of the sequence.
@@ -265,16 +396,19 @@ class CAsuContentSeqList(CAsuContentSeqListStub):
         # Set the subItem qualifier to specify what type of items this list contains
         # subItem must be a dict with 'class' key pointing to the class
         self.set_qualifier('subItem', {'class': CAsuContentSeq, 'qualifiers': {}})
+        # Require at least one entry for ASU content
+        self.set_qualifier('listMinLength', 1)
 
-    def validity(self):
+    # Note: validity() is inherited from CList which handles:
+    # - listMinLength/listMaxLength checks
+    # - Aggregating child validity errors
+
+    def validityAsDict(self):
         """
-        Validate the ASU content list for molecular weight calculation.
+        Validate the ASU content list and return result as a dict.
 
-        Checks that:
-        - There is at least one sequence entry
-        - Each entry has a valid polymerType (PROTEIN, DNA, or RNA)
-        - Each entry has nCopies > 0
-        - Each entry has a sequence length > 1
+        This is a convenience method for the frontend that returns a dict format
+        suitable for displaying validation status messages.
 
         Returns:
             dict: Validation result with keys:
@@ -282,73 +416,10 @@ class CAsuContentSeqList(CAsuContentSeqListStub):
                 - message (str): Description of validation status
                 - errors (list): List of specific validation errors
         """
-        import logging
-        logger = logging.getLogger(__name__)
+        report = self.validity()
 
-        errors = []
-
-        # Check for at least one entry
-        logger.info(f"CAsuContentSeqList.validity() called, len(self)={len(self)}")
-        if len(self) == 0:
-            return {
-                'valid': False,
-                'message': 'No sequences defined',
-                'errors': ['At least one sequence is required']
-            }
-
-        valid_polymer_types = {'PROTEIN', 'DNA', 'RNA'}
-
-        for i, seq_obj in enumerate(self):
-            entry_num = i + 1
-            logger.info(f"Validating entry {entry_num}: {seq_obj}")
-
-            # Check polymerType
-            polymer_type = getattr(seq_obj, 'polymerType', None)
-            logger.info(f"  polymerType attr: {polymer_type}")
-            if polymer_type is not None and hasattr(polymer_type, 'value'):
-                pt_str = str(polymer_type.value).strip().upper()
-            elif polymer_type is not None:
-                pt_str = str(polymer_type).strip().upper()
-            else:
-                pt_str = ''
-
-            logger.info(f"  polymerType string: '{pt_str}'")
-            if not pt_str or pt_str not in valid_polymer_types:
-                errors.append(f'Entry {entry_num}: Invalid or missing polymer type (must be PROTEIN, DNA, or RNA)')
-
-            # Check nCopies > 0
-            n_copies = getattr(seq_obj, 'nCopies', None)
-            logger.info(f"  nCopies attr: {n_copies}")
-            if n_copies is not None and hasattr(n_copies, 'value') and hasattr(n_copies, 'isSet'):
-                n_copies_val = int(n_copies.value) if n_copies.isSet() else 0
-            elif n_copies is not None:
-                try:
-                    n_copies_val = int(n_copies)
-                except (ValueError, TypeError):
-                    n_copies_val = 0
-            else:
-                n_copies_val = 0
-
-            logger.info(f"  nCopies value: {n_copies_val}")
-            if n_copies_val <= 0:
-                errors.append(f'Entry {entry_num}: nCopies must be greater than 0')
-
-            # Check sequence length > 1
-            sequence = getattr(seq_obj, 'sequence', None)
-            logger.info(f"  sequence attr: {sequence}")
-            if sequence is not None and hasattr(sequence, 'value'):
-                seq_str = str(sequence.value).replace(' ', '').replace('\n', '').replace('\t', '')
-            elif sequence is not None:
-                seq_str = str(sequence).replace(' ', '').replace('\n', '').replace('\t', '')
-            else:
-                seq_str = ''
-
-            logger.info(f"  sequence length: {len(seq_str)}")
-            if len(seq_str) <= 1:
-                errors.append(f'Entry {entry_num}: Sequence must have more than 1 residue')
-
-        logger.info(f"Validation errors: {errors}")
-        if errors:
+        if report.maxSeverity() >= 4:  # SEVERITY_ERROR = 4
+            errors = [err.get('details', str(err)) for err in report._errors]
             return {
                 'valid': False,
                 'message': f'{len(errors)} validation error(s)',
