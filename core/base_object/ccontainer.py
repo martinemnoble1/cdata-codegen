@@ -263,7 +263,8 @@ class CContainer(CData):
         else:
             items_to_copy = dataList
 
-        # Copy each item
+        # Copy each item using direct deep copy (no XML serialization)
+        # This preserves value states from the source correctly
         for item_name in items_to_copy:
             if not hasattr(otherContainer, item_name):
                 # Skip items that don't exist in source
@@ -271,17 +272,16 @@ class CContainer(CData):
 
             source_item = getattr(otherContainer, item_name)
 
-            # Serialize the source item to XML
-            # excludeUnset=False ensures we copy everything including unset values
-            source_etree = source_item.getEtree(name=item_name, excludeUnset=False)
-
             # Check if we already have this item in the destination
             if hasattr(self, item_name):
-                # Item exists - update it in place
-                # Use preserve_state=True to keep the original value states from the source
-                # This prevents copyData from marking everything as EXPLICITLY_SET
+                # Item exists - deep copy values from source
                 dest_item = getattr(self, item_name)
-                dest_item.setEtree(source_etree, ignore_missing=True, preserve_state=True)
+                if hasattr(dest_item, '_deep_copy_from'):
+                    dest_item._deep_copy_from(source_item)
+                else:
+                    # Fallback: use smart assignment if _deep_copy_from not available
+                    if hasattr(dest_item, '_smart_assign_from_cdata'):
+                        dest_item._smart_assign_from_cdata(source_item)
             else:
                 # Item doesn't exist - need to create it first
                 # Get the class of the source item
@@ -297,9 +297,9 @@ class CContainer(CData):
                 if item_name not in self._data_order:
                     self._data_order.append(item_name)
 
-                # Now populate it with the source data
-                # Use preserve_state=True to keep the original value states from the source
-                new_item.setEtree(source_etree, ignore_missing=True, preserve_state=True)
+                # Now populate it with the source data using deep copy
+                if hasattr(new_item, '_deep_copy_from'):
+                    new_item._deep_copy_from(source_item)
 
     def clear(self):
         """Remove all content items from the container (old API compatibility)."""

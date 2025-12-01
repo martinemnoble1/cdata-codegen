@@ -1091,6 +1091,69 @@ class CData(HierarchicalObject):
                         if child.isSet(allowDefault=False):
                             setattr(self, key, child)
 
+    def _deep_copy_from(self, source: "CData"):
+        """Deep copy values and value states from source, without creating references.
+
+        This method performs a true deep copy:
+        - For simple value types (CInt, CFloat, CString, CBoolean): copies the value and value state
+        - For containers/complex types: recursively deep copies all children
+
+        Unlike _smart_assign_from_cdata, this never creates references to source objects.
+        This is intended for use by copyData() to ensure independent copies.
+
+        Args:
+            source: The source CData object to copy from
+        """
+        from .fundamental_types import CList, CString, CInt, CFloat, CBoolean
+
+        # Handle simple value types - copy value and state directly
+        if isinstance(self, (CString, CInt, CFloat, CBoolean)) and isinstance(source, (CString, CInt, CFloat, CBoolean)):
+            # Copy the value
+            if hasattr(source, '_value'):
+                self._value = source._value
+            elif hasattr(source, 'value'):
+                # Use direct attribute access, not property, to avoid triggering setters
+                object.__setattr__(self, '_value', getattr(source, '_value', source.value))
+
+            # Copy the value state
+            if hasattr(source, '_value_states') and hasattr(self, '_value_states'):
+                self._value_states = source._value_states.copy()
+            return
+
+        # Handle CList - deep copy each item
+        if isinstance(self, CList) and isinstance(source, CList):
+            self.clear()
+            for source_item in source:
+                # Create a new item of the same type
+                new_item = self.makeItem()
+                if hasattr(new_item, '_deep_copy_from') and isinstance(source_item, CData):
+                    new_item._deep_copy_from(source_item)
+                elif hasattr(source_item, 'value'):
+                    # Simple value type without _deep_copy_from
+                    new_item.value = source_item.value
+                    if hasattr(source_item, '_value_states') and hasattr(new_item, '_value_states'):
+                        new_item._value_states = source_item._value_states.copy()
+                self.append(new_item)
+            return
+
+        # Handle containers/complex types - recursively copy children
+        for source_child in source.children():
+            if not isinstance(source_child, CData):
+                continue
+
+            child_name = source_child.objectName() if hasattr(source_child, 'objectName') else None
+            if not child_name:
+                continue
+
+            # Get or create the destination child
+            if hasattr(self, child_name):
+                dest_child = getattr(self, child_name)
+                if isinstance(dest_child, CData) and isinstance(source_child, CData):
+                    # Recursively deep copy
+                    dest_child._deep_copy_from(source_child)
+            # Note: We don't create new children that don't exist in destination
+            # copyData's dataList controls which items to copy
+
     def _setup_hierarchy_for_value(self, key: str, value: Any):
         """Set up hierarchical relationships for attribute values.
 
