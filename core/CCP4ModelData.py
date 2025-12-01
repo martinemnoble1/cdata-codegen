@@ -266,6 +266,101 @@ class CAsuContentSeqList(CAsuContentSeqListStub):
         # subItem must be a dict with 'class' key pointing to the class
         self.set_qualifier('subItem', {'class': CAsuContentSeq, 'qualifiers': {}})
 
+    def validity(self):
+        """
+        Validate the ASU content list for molecular weight calculation.
+
+        Checks that:
+        - There is at least one sequence entry
+        - Each entry has a valid polymerType (PROTEIN, DNA, or RNA)
+        - Each entry has nCopies > 0
+        - Each entry has a sequence length > 1
+
+        Returns:
+            dict: Validation result with keys:
+                - valid (bool): True if all checks pass
+                - message (str): Description of validation status
+                - errors (list): List of specific validation errors
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        errors = []
+
+        # Check for at least one entry
+        logger.info(f"CAsuContentSeqList.validity() called, len(self)={len(self)}")
+        if len(self) == 0:
+            return {
+                'valid': False,
+                'message': 'No sequences defined',
+                'errors': ['At least one sequence is required']
+            }
+
+        valid_polymer_types = {'PROTEIN', 'DNA', 'RNA'}
+
+        for i, seq_obj in enumerate(self):
+            entry_num = i + 1
+            logger.info(f"Validating entry {entry_num}: {seq_obj}")
+
+            # Check polymerType
+            polymer_type = getattr(seq_obj, 'polymerType', None)
+            logger.info(f"  polymerType attr: {polymer_type}")
+            if polymer_type is not None and hasattr(polymer_type, 'value'):
+                pt_str = str(polymer_type.value).strip().upper()
+            elif polymer_type is not None:
+                pt_str = str(polymer_type).strip().upper()
+            else:
+                pt_str = ''
+
+            logger.info(f"  polymerType string: '{pt_str}'")
+            if not pt_str or pt_str not in valid_polymer_types:
+                errors.append(f'Entry {entry_num}: Invalid or missing polymer type (must be PROTEIN, DNA, or RNA)')
+
+            # Check nCopies > 0
+            n_copies = getattr(seq_obj, 'nCopies', None)
+            logger.info(f"  nCopies attr: {n_copies}")
+            if n_copies is not None and hasattr(n_copies, 'value') and hasattr(n_copies, 'isSet'):
+                n_copies_val = int(n_copies.value) if n_copies.isSet() else 0
+            elif n_copies is not None:
+                try:
+                    n_copies_val = int(n_copies)
+                except (ValueError, TypeError):
+                    n_copies_val = 0
+            else:
+                n_copies_val = 0
+
+            logger.info(f"  nCopies value: {n_copies_val}")
+            if n_copies_val <= 0:
+                errors.append(f'Entry {entry_num}: nCopies must be greater than 0')
+
+            # Check sequence length > 1
+            sequence = getattr(seq_obj, 'sequence', None)
+            logger.info(f"  sequence attr: {sequence}")
+            if sequence is not None and hasattr(sequence, 'value'):
+                seq_str = str(sequence.value).replace(' ', '').replace('\n', '').replace('\t', '')
+            elif sequence is not None:
+                seq_str = str(sequence).replace(' ', '').replace('\n', '').replace('\t', '')
+            else:
+                seq_str = ''
+
+            logger.info(f"  sequence length: {len(seq_str)}")
+            if len(seq_str) <= 1:
+                errors.append(f'Entry {entry_num}: Sequence must have more than 1 residue')
+
+        logger.info(f"Validation errors: {errors}")
+        if errors:
+            return {
+                'valid': False,
+                'message': f'{len(errors)} validation error(s)',
+                'errors': errors
+            }
+
+        return {
+            'valid': True,
+            'message': f'{len(self)} valid sequence(s)',
+            'errors': []
+        }
+
     def molecularWeight(self):
         """
         Calculate total molecular weight of all sequences in the list.

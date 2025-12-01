@@ -307,11 +307,32 @@ def handle_reflections(
     column_selector: str,
     downloaded_file_path: pathlib.Path,
 ):
-    logger.error(
-        "Dealing with a reflection object %s %s",
-        isinstance(param_object, (CMtzDataFile,)),
-        isinstance(param_object, (CCP4XtalData.CMtzDataFile,)),
+    logger.info(
+        "Dealing with a reflection object, class=%s, column_selector=%s",
+        param_object.__class__.__name__,
+        column_selector,
     )
+
+    # CMtzDataFile (exact class, not subclasses) is a general container that stores
+    # the intact reflection file without column extraction.
+    # If column_selector is empty/None, just copy the file as-is.
+    is_general_container = type(param_object).__name__ == "CMtzDataFile"
+    skip_column_split = is_general_container and not column_selector
+
+    if skip_column_split:
+        logger.info("CMtzDataFile with no column selector - copying file as-is")
+        dest = (
+            pathlib.Path(job.project.directory)
+            / "CCP4_IMPORTED_FILES"
+            / slugify(pathlib.Path(file_name).stem)
+        ).with_suffix(pathlib.Path(downloaded_file_path).suffix)
+        dest = available_file_name_based_on(dest)
+        import shutil
+        shutil.copy2(downloaded_file_path, dest)
+        return dest
+
+    # For specific reflection types (CObsDataFile, etc.) or when column_selector
+    # is provided, proceed with column extraction
     try:
         _ = gemmi.read_mtz_file(str(downloaded_file_path))
     except RuntimeError as err:
@@ -329,7 +350,7 @@ def handle_reflections(
         / "CCP4_IMPORTED_FILES"
         / slugify(pathlib.Path(file_name).stem)
     ).with_suffix(pathlib.Path(downloaded_file_path).suffix)
-    logger.error("Preferred imported file destination is %s", dest)
+    logger.info("Preferred imported file destination is %s", dest)
     imported_file_path = gemmi_split_mtz(downloaded_file_path, column_selector, dest)
     return imported_file_path
 

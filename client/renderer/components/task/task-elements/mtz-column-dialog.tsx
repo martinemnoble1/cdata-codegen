@@ -151,6 +151,9 @@ const buildColumnOptions = (
   });
 
   // Determine signatures to process
+  // CGenericReflDataFile is a general container without specific column types
+  // so it uses the generic signatures. Other types use their correctColumns qualifier.
+  // Note: CMtzDataFile is handled earlier in selectMtzColumns() - it skips the dialog entirely.
   const signatures =
     item._class === "CGenericReflDataFile"
       ? [...GENERIC_SIGNATURES]
@@ -417,6 +420,7 @@ export function showMtzColumnDialog(
  * Returns the column selector string, or null if cancelled/failed.
  *
  * For non-MTZ files, returns a default column selector.
+ * For CMtzDataFile (general container), skips column selection entirely.
  */
 export async function selectMtzColumns(
   options: ParseMtzOptions
@@ -429,6 +433,12 @@ export async function selectMtzColumns(
   if (!isMtzFile) {
     // For non-MTZ files, return a default
     return "/*/*/[FP,SIGFP]";
+  }
+
+  // CMtzDataFile is a general container that stores the intact reflection file
+  // without separating out columns - no column selection needed
+  if (item._class === "CMtzDataFile") {
+    return "";  // Empty string signals "store whole file as-is"
   }
 
   // Parse the MTZ file

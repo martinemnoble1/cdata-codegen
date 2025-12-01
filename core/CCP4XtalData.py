@@ -1750,15 +1750,38 @@ class CMtzData(CMtzDataStub):
             if polymerMode:
                 com_text += f'\nMODE {polymerMode}'
 
-            # Run matthews_coef
-            from core.CCP4TaskManager import TASKMANAGER
-            arg_list = ['XMLFILE', f1[1]]
-            TASKMANAGER().PROCESSMANAGER.startProcess(
-                'matthews_coef', arg_list, logFile=f2[1], inputText=com_text
-            )
+            # Run matthews_coef using subprocess
+            import subprocess
+            import shutil
 
-            if not os.path.exists(f1[1]):
-                raise CException(self.__class__, 411, str(seqDataFile))
+            # Find matthews_coef executable
+            ccp4_bin = os.environ.get('CCP4', os.environ.get('CBIN', ''))
+            if ccp4_bin:
+                matthews_exe = os.path.join(ccp4_bin, 'bin', 'matthews_coef')
+            else:
+                # Fall back to PATH
+                matthews_exe = shutil.which('matthews_coef')
+
+            if not matthews_exe or not os.path.exists(matthews_exe):
+                raise CException(self.__class__, 411, 'matthews_coef executable not found')
+
+            # Run the command
+            cmd = [matthews_exe, 'XMLFILE', f1[1]]
+            with open(f2[1], 'w') as log_file:
+                result = subprocess.run(
+                    cmd,
+                    input=com_text,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                log_file.write(result.stdout)
+                if result.stderr:
+                    log_file.write('\n--- STDERR ---\n')
+                    log_file.write(result.stderr)
+
+            if result.returncode != 0 or not os.path.exists(f1[1]):
+                raise CException(self.__class__, 411, f'matthews_coef failed: {result.stderr}')
 
             # Parse results from XML file
             rv = {'results': []}

@@ -10,7 +10,7 @@ from core import CCP4ModelData
 from core.CCP4Container import CContainer
 from core.base_object.cdata_file import CDataFile
 from core.base_object.cdata import CData
-from core.CCP4XtalData import CGenericReflDataFile, CMapDataFile
+from core.CCP4XtalData import CGenericReflDataFile, CMapDataFile, CMtzDataFile
 from core.CCP4ModelData import CPdbDataFile, CDictDataFile
 from pipelines.import_merged.script import mmcifutils
 from ..containers.find_objects import find_objects
@@ -267,6 +267,9 @@ def digest_file_object(file_object: CDataFile):
         return digest_cpdbdata_file_object(file_object)
     if isinstance(file_object, CCP4XtalData.CGenericReflDataFile):
         return digest_cgenericrefldatafile_file_object(file_object)
+    # CMtzDataFile inherits from CDataFile, not CGenericReflDataFile, so check separately
+    if isinstance(file_object, (CCP4XtalData.CMtzDataFile, CMtzDataFile)):
+        return digest_cmtzdatafile_file_object(file_object)
     if isinstance(file_object, CCP4ModelData.CSeqDataFile):
         return digest_cseqdata_file_object(file_object)
     if isinstance(file_object, (CCP4ModelData.CDictDataFile, CDictDataFile)):
@@ -346,6 +349,30 @@ def digest_cdictdata_file_object(file_object: CPdbDataFile):
         }
     content_dict = parse_cif_ligand_summary(file_object.fullPath.__str__())
     return content_dict
+
+
+def digest_cmtzdatafile_file_object(file_object):
+    """
+    Digest a CMtzDataFile by converting it to CGenericReflDataFile.
+
+    CMtzDataFile inherits from CDataFile, not CGenericReflDataFile,
+    so we create a CGenericReflDataFile with the same path to use
+    the standard reflection data digestion.
+    """
+    if not file_object.isSet():
+        return {"status": "Failed", "reason": "File object is not set", "digest": {}}
+    try:
+        # Create a CGenericReflDataFile with the same path
+        generic_refl = CCP4XtalData.CGenericReflDataFile()
+        generic_refl.setFullPath(str(file_object.fullPath))
+        return digest_cgenericrefldatafile_file_object(generic_refl)
+    except Exception as err:
+        logger.exception("Error digesting CMtzDataFile %s", file_object, exc_info=err)
+        return {
+            "status": "Failed",
+            "reason": f"Failed digesting CMtzDataFile {err}",
+            "digest": {},
+        }
 
 
 def digest_cgenericrefldatafile_file_object(file_object: CGenericReflDataFile):

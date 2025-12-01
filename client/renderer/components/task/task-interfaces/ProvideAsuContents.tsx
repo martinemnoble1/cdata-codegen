@@ -1,7 +1,6 @@
 import {
+  Alert,
   Grid2,
-  LinearProgress,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -16,21 +15,45 @@ import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { useApi } from "../../../api";
 import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useCallback, useMemo } from "react";
+import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { apiPost } from "../../../api-fetch";
+import { BaseSpacegroupCellElement } from "../task-elements/base-spacegroup-cell-element";
 
 const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const api = useApi();
   const { job } = props;
   const { useTaskItem, useFileDigest, fetchDigest } = useJob(job.id);
-  const { update: setAsuContent, item: asuContentItem } = useTaskItem("ASU_CONTENT");
+  const { update: setAsuContent } = useTaskItem("ASU_CONTENT");
   const { item: asuContentInItem } = useTaskItem("ASUCONTENTIN");
+  const { item: hklinItem } = useTaskItem("HKLIN");
 
-  // File digest for HKLIN (used for Matthews calculation)
-  const { data: HKLINDigest } = useFileDigest(
+  // State to hold HKLIN digest (fetched imperatively on file change)
+  const [hklinDigest, setHklinDigest] = useState<any>(null);
+
+  // File digest for HKLIN (used for Matthews calculation) - also use SWR for initial load
+  const { data: HKLINDigestSWR } = useFileDigest(
     `ProvideAsuContents.inputData.HKLIN`
   );
+
+  // Use imperatively fetched digest if available, otherwise fall back to SWR data
+  const HKLINDigest = hklinDigest || HKLINDigestSWR;
+
+  /**
+   * Handle HKLIN file change - fetch digest for Matthews calculation.
+   */
+  const handleHKLINChange = useCallback(async () => {
+    console.log("handleHKLINChange called, hklinItem:", hklinItem?._objectPath);
+    if (!hklinItem?._objectPath) {
+      console.log("handleHKLINChange: no objectPath, returning early");
+      return;
+    }
+
+    console.log("handleHKLINChange: fetching digest for", hklinItem._objectPath);
+    const digestData = await fetchDigest(hklinItem._objectPath);
+    console.log("handleHKLINChange: got digest data:", digestData);
+    setHklinDigest(digestData ? { data: digestData } : null);
+  }, [hklinItem?._objectPath, fetchDigest]);
 
   /**
    * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
@@ -55,19 +78,31 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     }
   }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent]);
 
-  // Check if ASU_CONTENT has any sequences defined
-  const hasAsuContent = useMemo(() => {
-    const content = asuContentItem?._value;
-    return Array.isArray(content) && content.length > 0;
-  }, [asuContentItem?._value]);
+  /**
+   * Fetch ASU content validity from the backend.
+   * This calls the validity() method on CAsuContentSeqList which checks:
+   * - At least one sequence entry
+   * - Each entry has valid polymerType, name, nCopies > 0, sequence length > 1
+   */
+  const { data: asuValidity, mutate: mutateAsuValidity } = useSWR(
+    [`jobs/${job.id}/object_method`, "validity", "ASU_CONTENT"],
+    ([url]) =>
+      apiPost(url, {
+        object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
+        method_name: "validity",
+      })
+  );
+
+  // ASU content is valid when the backend validity check passes
+  // API response format: {success: true, data: {result: {...}}}
+  const isAsuContentValid = asuValidity?.data?.result?.valid === true;
 
   /**
    * Fetches the molecular weight for the current job's ASU content using SWR.
-   * Only fetches when ASU_CONTENT has data (sequences defined).
+   * Only fetches when ASU_CONTENT is valid (passes all validation checks).
    */
   const { data: molWeight, mutate: mutateMolWeight } = useSWR(
-    // Only fetch when we have ASU content data
-    hasAsuContent ? [`jobs/${job.id}/object_method`, "molecularWeight"] : null,
+    isAsuContentValid ? [`jobs/${job.id}/object_method`, "molecularWeight"] : null,
     ([url]) =>
       apiPost(url, {
         object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
@@ -81,11 +116,12 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
    */
   const { data: matthewsAnalysis } = useSWR(
     // Only fetch when we have molecular weight AND HKLIN digest
-    molWeight?.result && HKLINDigest?.data
+    // API response format: {success: true, data: {result: <value>}}
+    molWeight?.data?.result && HKLINDigest?.data
       ? [
           `jobs/${job.id}/object_method`,
           "matthewsCoeff",
-          molWeight.result,
+          molWeight.data.result,
           HKLINDigest.data,
         ]
       : null,
@@ -134,13 +170,19 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             itemName="ASU_CONTENT"
             qualifiers={{ guiLabel: "ASU contents" }}
             onChange={() => {
+              // Re-check validity and molecular weight when ASU content changes
+              mutateAsuValidity();
               mutateMolWeight();
             }}
           />
         </CCP4i2ContainerElement>
         <Typography>
           Molecular weight:{" "}
-          {molWeight?.result ? molWeight.result?.toFixed(2) : ""}
+          {molWeight?.data?.result
+            ? molWeight.data.result?.toFixed(2)
+            : isAsuContentValid
+              ? "(calculating...)"
+              : asuValidity?.data?.result?.message || "(no valid sequences)"}
         </Typography>
         <CCP4i2ContainerElement
           {...props}
@@ -155,8 +197,21 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               <CCP4i2TaskElement
                 {...props}
                 itemName="HKLIN"
-                qualifiers={{ guiLabel: "MTZFile (for Matthews volumne calc)" }}
+                qualifiers={{ guiLabel: "MTZFile (for Matthews volume calc)" }}
+                onChange={handleHKLINChange}
               />
+              {/* Show MTZ file info when digest is available */}
+              {HKLINDigest?.data && (
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  <BaseSpacegroupCellElement data={HKLINDigest.data} />
+                  {/* Warning if no wavelengths (e.g., FreeR-only file) */}
+                  {HKLINDigest.data.cell && (!HKLINDigest.data.wavelengths || HKLINDigest.data.wavelengths.length === 0) && (
+                    <Alert severity="info" sx={{ py: 0 }}>
+                      No wavelength information in this MTZ file
+                    </Alert>
+                  )}
+                </Stack>
+              )}
             </Grid2>
             <Grid2 size={{ xs: 12, sm: 4 }}>
               {matthewsAnalysis?.success && matthewsAnalysis?.data?.result ? (
