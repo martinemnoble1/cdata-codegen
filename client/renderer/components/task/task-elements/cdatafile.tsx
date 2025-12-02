@@ -206,7 +206,12 @@ export const CDataFileElement: React.FC<CCP4i2DataFileElementProps> = ({
 
       try {
         const result = await setParameter(parameterArg);
-        if (result?.success && result.data?.updated_item) onChange?.(result.data.updated_item);
+        // Call onChange on success - pass updated_item if available (from upload_file_param),
+        // otherwise pass the result.data (from set_parameter) with the objectPath added
+        if (result?.success) {
+          const updatedItem = result.data?.updated_item ?? { ...result.data, _objectPath: objectPath };
+          onChange?.(updatedItem);
+        }
       } catch (error) {
         console.error("Error setting parameter:", error);
         alert(`Error: ${error}`);

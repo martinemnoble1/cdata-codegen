@@ -57,12 +57,17 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   /**
    * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
    * Uses imperative fetchDigest for deterministic, race-condition-free behavior.
+   *
+   * @param updatedItem - The updated file item passed from onChange (has fresh _objectPath)
    */
-  const handleAsuContentInChange = useCallback(async () => {
-    if (!asuContentInItem?._objectPath) return;
+  const handleAsuContentInChange = useCallback(async (updatedItem?: any) => {
+    // Use the updated item's path if provided (from onChange), otherwise fall back to current state
+    // This is important because when selecting from pulldown, the container hasn't mutated yet
+    const objectPath = updatedItem?._objectPath || asuContentInItem?._objectPath;
+    if (!objectPath) return;
 
     // Fetch the digest for the newly uploaded/selected file
-    const digestData = await fetchDigest(asuContentInItem._objectPath);
+    const digestData = await fetchDigest(objectPath);
 
     // Extract seqList and populate ASU_CONTENT
     if (digestData?.seqList && Array.isArray(digestData.seqList)) {
