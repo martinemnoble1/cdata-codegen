@@ -276,8 +276,7 @@ export const CDataFileElement: React.FC<CCP4i2DataFileElementProps> = ({
         backgroundColor,
         borderRadius: "0.5rem",
         mx: FIELD_SPACING.marginLeft,
-        mt: FIELD_SPACING.marginTop,
-        mb: 0.5,
+        my: 0.5,
       }}
       direction="column"
     >

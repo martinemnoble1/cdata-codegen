@@ -131,7 +131,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           }}
           containerHint="BlockLevel"
           initiallyOpen={true}
-          size={{ xs: 12 }}
         >
           <CCP4i2TaskElement
             {...props}
@@ -149,7 +148,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           }}
           containerHint="FolderLevel"
           initiallyOpen={true}
-          size={{ xs: 12 }}
         >
           <CCP4i2TaskElement
             {...props}
@@ -178,7 +176,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           qualifiers={{ guiLabel: "Solvent analysis" }}
           containerHint="BlockLevel"
           initiallyOpen={true}
-          size={{ xs: 12 }}
         >
           <Grid2 container spacing={2}>
             <Grid2 size={{ xs: 12, sm: 8 }}>

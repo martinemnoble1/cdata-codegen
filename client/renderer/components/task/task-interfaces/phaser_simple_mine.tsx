@@ -82,7 +82,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             itemName=""
             qualifiers={{ guiLabel: "Resolution" }}
             containerHint="BlockLevel"
-            size={{ xs: 6 }}
             initiallyOpen={true}
           >
             <CCP4i2TaskElement
@@ -102,7 +101,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             qualifiers={{ guiLabel: "Extra steps" }}
             containerHint="BlockLevel"
             initiallyOpen={true}
-            size={{ xs: 4 }}
           >
             <CCP4i2TaskElement
               {...props}

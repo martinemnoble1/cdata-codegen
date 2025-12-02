@@ -150,6 +150,10 @@ export const CSimpleAutocompleteElement: React.FC<
   const calculatedSx = useMemo(
     () => ({
       ...getFieldSizeStyles(fieldSize),
+      // Ensure Autocomplete aligns with TextField in grid/flex layouts
+      // MUI Autocomplete adds extra wrapper that can cause vertical offset
+      marginTop: 0,
+      verticalAlign: "top",
       ...sx,
     }),
     [fieldSize, sx]

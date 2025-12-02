@@ -1,6 +1,6 @@
 import { CCP4i2TaskElement, CCP4i2TaskElementProps } from "./task-element";
 import { CCP4i2ContainerElement } from "./ccontainer";
-import { Stack, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 
 export const CRangeElement: React.FC<CCP4i2TaskElementProps> = (props) => (
   <CCP4i2ContainerElement
@@ -8,8 +8,6 @@ export const CRangeElement: React.FC<CCP4i2TaskElementProps> = (props) => (
     itemName=""
     qualifiers={props.qualifiers}
     containerHint="RowLevel"
-    size={{ xs: 12 }}
-    sx={{ minWidth: "100%" }}
   >
     <Typography variant="body2">Resolution</Typography>
     <CCP4i2TaskElement job={props.job} itemName={`${props.itemName}.start`} />

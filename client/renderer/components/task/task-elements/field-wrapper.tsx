@@ -1,12 +1,7 @@
 import React, { PropsWithChildren } from "react";
-import { Stack, SxProps, Theme } from "@mui/material";
-import { FIELD_SPACING } from "./field-sizes";
+import { Box, SxProps, Theme } from "@mui/material";
 
 interface FieldWrapperProps {
-  /** Custom margin top override */
-  mt?: number;
-  /** Custom margin left override */
-  ml?: number;
   /** Additional sx props */
   sx?: SxProps<Theme>;
   /** ARIA label for accessibility */
@@ -14,23 +9,19 @@ interface FieldWrapperProps {
 }
 
 /**
- * Consistent wrapper for form field components.
+ * Minimal wrapper for form field components.
  *
- * Provides standardized spacing and layout for all field types,
- * ensuring visual consistency across task interfaces.
+ * Spacing is handled by the parent container's gap properties,
+ * so this wrapper just provides alignment and accessibility.
  */
 export const FieldWrapper: React.FC<PropsWithChildren<FieldWrapperProps>> = ({
   children,
-  mt = FIELD_SPACING.marginTop,
-  ml = FIELD_SPACING.marginLeft,
   sx,
   ariaLabel,
 }) => (
-  <Stack
-    direction="row"
+  <Box
     sx={{
-      mt,
-      ml,
+      display: "flex",
       alignItems: "flex-start",
       ...sx,
     }}
@@ -38,7 +29,7 @@ export const FieldWrapper: React.FC<PropsWithChildren<FieldWrapperProps>> = ({
     aria-label={ariaLabel}
   >
     {children}
-  </Stack>
+  </Box>
 );
 
 export default FieldWrapper;

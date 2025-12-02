@@ -28,12 +28,12 @@ export type FieldSize = keyof typeof FIELD_SIZES;
  * Ensures consistent margins between fields.
  */
 export const FIELD_SPACING = {
-  /** Margin top for fields */
-  marginTop: 1.5,
-  /** Margin left for fields within containers */
+  /** Vertical gap between rows of fields (MUI spacing units: 1 = 8px) */
+  rowGap: 1,
+  /** Horizontal gap between fields in a row */
+  columnGap: 2,
+  /** Left margin for fields (indentation from container edge) */
   marginLeft: 2,
-  /** Gap between fields in a row */
-  gap: 2,
 } as const;
 
 /**

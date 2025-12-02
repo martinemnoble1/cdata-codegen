@@ -13,7 +13,7 @@ export const CReindexOperatorElement: React.FC<CCP4i2TaskElementProps> = (
   <CCP4i2ContainerElement
     {...props}
     qualifiers={props.qualifiers}
-    size={{ xs: 4 }}
-    elementSx={{ my: 0, py: 0, minWidth: "5rem" }}
+    containerHint="RowLevel"
+    elementSx={{ width: "5rem" }}
   />
 );

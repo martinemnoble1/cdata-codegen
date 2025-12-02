@@ -4,34 +4,50 @@ import {
   CardContent,
   CardHeader,
   Collapse,
-  Grid2,
-  GridSize,
   Stack,
   SxProps,
   Typography,
 } from "@mui/material";
-import React, { PropsWithChildren, useMemo, useRef, useState } from "react";
+import React, { PropsWithChildren, useMemo, useState } from "react";
 import { CCP4i2TaskElement, CCP4i2TaskElementProps } from "./task-element";
 import { useJob } from "../../../utils";
 import { ErrorInfo } from "./error-info";
 import { MyExpandMore } from "../../expand-more";
 import { ExpandMore } from "@mui/icons-material";
-
-interface SizeProps {
-  xs?: GridSize | null;
-  sm?: GridSize | null;
-  md?: GridSize | null;
-  lg?: GridSize | null;
-  xl?: GridSize | null;
-}
+import { FIELD_SPACING } from "./field-sizes";
 
 interface CCP4i2ContainerElementProps extends CCP4i2TaskElementProps {
-  size?: SizeProps;
   initiallyOpen?: boolean;
   containerHint?: "FolderLevel" | "BlockLevel" | "RowLevel";
   elementSx?: SxProps;
   excludeItems?: string[];
 }
+
+/**
+ * Vertical stacking container - each field gets its own line.
+ * This is the default layout for FolderLevel and BlockLevel containers.
+ */
+const COLUMN_CONTAINER_SX = {
+  display: "flex",
+  flexDirection: "column",
+  gap: FIELD_SPACING.rowGap,
+  alignItems: "stretch",
+  py: 1,
+} as const;
+
+/**
+ * Horizontal row container - fields flow in a row with wrapping.
+ * Used for RowLevel containers where fields should be side-by-side.
+ */
+const ROW_CONTAINER_SX = {
+  display: "flex",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: FIELD_SPACING.columnGap,
+  alignItems: "center",
+  pl: FIELD_SPACING.marginLeft,
+  py: 1,
+} as const;
 
 export const CCP4i2ContainerElement: React.FC<
   PropsWithChildren<CCP4i2ContainerElementProps>
@@ -44,14 +60,11 @@ export const CCP4i2ContainerElement: React.FC<
     initiallyOpen = true,
     visibility,
     qualifiers,
-    size = { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
     elementSx,
   } = props;
 
   const { useTaskItem, getValidationColor } = useJob(job.id);
   const { item } = useTaskItem(itemName);
-  const [visibilityPrompt, setVisibilityPrompt] = useState<number>(0);
-  const visibilityPromptRef = useRef<number>(0);
   const [open, setOpen] = useState(initiallyOpen);
 
   const inferredVisibility = useMemo(() => {
@@ -67,7 +80,7 @@ export const CCP4i2ContainerElement: React.FC<
     if (itemName && item) {
       return getValidationColor(item);
     }
-    return "divider"; // Default border color
+    return "divider";
   }, [itemName, item, getValidationColor]);
 
   const childNames = useMemo(() => {
@@ -93,84 +106,71 @@ export const CCP4i2ContainerElement: React.FC<
     return [];
   }, [item, props.excludeItems]);
 
-  // Helper function to determine if an item should be full width
-  const shouldBeFullWidth = useMemo(() => {
-    return (childItem: any): boolean => {
-      const itemClass = childItem?._class;
-      const baseClass = childItem?._baseClass;
-
-      return (
-        itemClass === "CList" ||
-        itemClass === "CUnmergedDataFileList" ||
-        baseClass === "CDataFile"
-      );
-    };
-  }, []);
-
-  const calculatedContent = useMemo(() => {
+  // Generate content for column layout (default - each field on its own line)
+  const columnContent = useMemo(() => {
     return item ? (
-      <Grid2 container spacing={0} key={item._objectPath}>
+      <Box sx={COLUMN_CONTAINER_SX} key={item._objectPath}>
         {childNames.map((childName: string) => {
           const childObjectPath = `${item._objectPath}.${childName}`;
           const { item: childItem } = useTaskItem(childObjectPath);
 
-          // Determine grid size based on item class/baseClass
-          const gridSize = shouldBeFullWidth(childItem)
-            ? { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 } // Full width for all breakpoints
-            : size;
-
-          console.log(
-            childItem._objectPath,
-            childItem._baseClass,
-            gridSize,
-            size,
-            elementSx
-          );
-
           return (
-            <Grid2 key={childObjectPath} size={gridSize}>
-              <CCP4i2TaskElement
-                key={childObjectPath}
-                {...props}
-                sx={elementSx}
-                itemName={childObjectPath}
-                qualifiers={{ ...childItem._qualifiers }}
-              />
-            </Grid2>
+            <CCP4i2TaskElement
+              key={childObjectPath}
+              {...props}
+              sx={elementSx}
+              itemName={childObjectPath}
+              qualifiers={{ ...childItem._qualifiers }}
+            />
           );
         })}
-      </Grid2>
+      </Box>
     ) : null;
-  }, [
-    item,
-    elementSx,
-    childNames,
-    useTaskItem,
-    props,
-    size,
-    shouldBeFullWidth,
-  ]);
+  }, [item, elementSx, childNames, useTaskItem, props]);
 
-  const griddedChildren = useMemo(() => {
+  // Generate content for row layout (RowLevel - fields side-by-side)
+  const rowContent = useMemo(() => {
+    return item ? (
+      <Box sx={ROW_CONTAINER_SX} key={item._objectPath}>
+        {childNames.map((childName: string) => {
+          const childObjectPath = `${item._objectPath}.${childName}`;
+          const { item: childItem } = useTaskItem(childObjectPath);
+
+          return (
+            <CCP4i2TaskElement
+              key={childObjectPath}
+              {...props}
+              sx={elementSx}
+              itemName={childObjectPath}
+              qualifiers={{ ...childItem._qualifiers }}
+            />
+          );
+        })}
+      </Box>
+    ) : null;
+  }, [item, elementSx, childNames, useTaskItem, props]);
+
+  const columnChildren = useMemo(() => {
     if (children) {
-      return (
-        <Grid2 container spacing={0} sx={{ mt: 1 }}>
-          {React.Children.map(children, (child) => {
-            return <Grid2 size={size}>{child}</Grid2>;
-          })}
-        </Grid2>
-      );
+      return <Box sx={COLUMN_CONTAINER_SX}>{children}</Box>;
     }
     return null;
-  }, [children, size]);
+  }, [children]);
+
+  const rowChildren = useMemo(() => {
+    if (children) {
+      return <Box sx={ROW_CONTAINER_SX}>{children}</Box>;
+    }
+    return null;
+  }, [children]);
 
   // Subtle border container styling with validation color
   const subtleBorderContainerSx = useMemo(
     () => ({
       mx: 2,
-      px: 2,
-      py: 1.5,
-      border: 2, // Slightly thicker border to make validation colors more visible
+      px: 0,
+      py: 1,
+      border: 2,
       borderColor: validationBorderColor,
       borderRadius: 1,
       backgroundColor: "background.paper",
@@ -188,33 +188,37 @@ export const CCP4i2ContainerElement: React.FC<
   const cardSx = useMemo(
     () => ({
       mx: 2,
-      px: 0,
       border: 2,
       borderColor: validationBorderColor,
     }),
     [validationBorderColor]
   );
 
-  // Stack styling with validation color for RowLevel
-  const stackSx = useMemo(
+  // Row-level styling - horizontal flow with tighter spacing
+  const rowSx = useMemo(
     () => ({
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: 1,
       mx: 2,
       px: 2,
       py: 1,
-      pb: 3,
       border: 2,
       borderColor: validationBorderColor,
       borderRadius: 1,
     }),
-    [itemName, validationBorderColor]
+    [validationBorderColor]
   );
 
-  return containerHint === "FolderLevel" ? (
-    inferredVisibility ? (
+  if (!inferredVisibility) return null;
+
+  if (containerHint === "FolderLevel") {
+    return (
       <Card sx={cardSx}>
         <CardHeader
           sx={{ py: 1 }}
-          title={qualifiers.guiLabel}
+          title={qualifiers?.guiLabel}
           onClick={(ev) => {
             ev.stopPropagation();
             setOpen(!open);
@@ -227,50 +231,57 @@ export const CCP4i2ContainerElement: React.FC<
                 aria-expanded={open}
                 aria-label="show more"
               >
-                <ExpandMore sx={{ color: "text.primary" }} />{" "}
-                {/* Change icon color to black */}
+                <ExpandMore sx={{ color: "text.primary" }} />
               </MyExpandMore>
               {item && <ErrorInfo {...props} />}
             </Stack>
           }
         />
-        <CardContent sx={{ px: 0, pt: 0 }}>
+        <CardContent sx={{ px: 0, pt: 0, "&:last-child": { pb: 1 } }}>
           <Collapse in={open} timeout="auto" unmountOnExit>
-            {calculatedContent}
-            {griddedChildren}
+            {columnContent}
+            {columnChildren}
           </Collapse>
         </CardContent>
       </Card>
-    ) : null
-  ) : containerHint === "BlockLevel" ? (
-    inferredVisibility ? (
+    );
+  }
+
+  if (containerHint === "BlockLevel") {
+    return (
       <Box sx={subtleBorderContainerSx}>
         <Typography
           variant="body1"
           component="div"
           sx={{
-            mb: 1,
+            pl: FIELD_SPACING.marginLeft,
+            mb: 0.5,
             fontWeight: 500,
             color: "text.primary",
           }}
         >
-          {qualifiers.guiLabel}
+          {qualifiers?.guiLabel}
         </Typography>
-        {calculatedContent}
-        {griddedChildren}
+        {columnContent}
+        {columnChildren}
       </Box>
-    ) : null
-  ) : containerHint == "RowLevel" ? (
-    inferredVisibility ? (
-      <Stack direction="row" sx={stackSx}>
-        {calculatedContent}
-        {griddedChildren}
-      </Stack>
-    ) : null
-  ) : inferredVisibility ? (
-    <div>
-      {calculatedContent}
-      {griddedChildren}
-    </div>
-  ) : null;
+    );
+  }
+
+  if (containerHint === "RowLevel") {
+    return (
+      <Box sx={rowSx}>
+        {rowContent}
+        {rowChildren}
+      </Box>
+    );
+  }
+
+  // Default: no container chrome, use column layout
+  return (
+    <>
+      {columnContent}
+      {columnChildren}
+    </>
+  );
 };

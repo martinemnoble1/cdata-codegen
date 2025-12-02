@@ -34,7 +34,6 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           qualifiers={{ guiLabel: "Key files" }}
           containerHint="FolderLevel"
           initiallyOpen={true}
-          size={{ xs: 12 }}
         >
           <CCP4i2TaskElement
             {...props}
