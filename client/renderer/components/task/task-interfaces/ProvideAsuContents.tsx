@@ -14,7 +14,7 @@ import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import useSWR from "swr";
 import { apiPost } from "../../../api-fetch";
 import { BaseSpacegroupCellElement } from "../task-elements/base-spacegroup-cell-element";
@@ -24,40 +24,14 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   const { useTaskItem, useFileDigest, fetchDigest, getErrors, mutateValidation } = useJob(job.id);
   const { update: setAsuContent } = useTaskItem("ASU_CONTENT");
   const { item: asuContentInItem } = useTaskItem("ASUCONTENTIN");
-  const { item: hklinItem } = useTaskItem("HKLIN");
   const { item: asuContentItem } = useTaskItem("ASU_CONTENT");
 
-  // State to hold HKLIN digest (fetched imperatively on file change)
-  const [hklinDigest, setHklinDigest] = useState<any>(null);
-
-  // File digest for HKLIN (used for Matthews calculation) - also use SWR for initial load
-  const { data: HKLINDigestSWR } = useFileDigest(
+  // File digest for HKLIN (used for Matthews calculation)
+  // Uses SWR for automatic caching and revalidation - works on initial load
+  // and when returning to a previously configured interface
+  const { data: HKLINDigest, mutate: mutateHKLINDigest } = useFileDigest(
     `ProvideAsuContents.inputData.HKLIN`
   );
-
-  // Use imperatively fetched digest if available, otherwise fall back to SWR data
-  const HKLINDigest = hklinDigest || HKLINDigestSWR;
-
-  /**
-   * Handle HKLIN file change - fetch digest for Matthews calculation.
-   *
-   * @param updatedItem - The updated file item passed from onChange (has fresh _objectPath)
-   */
-  const handleHKLINChange = useCallback(async (updatedItem?: any) => {
-    // Use the updated item's path if provided (from onChange), otherwise fall back to current state
-    // This is important because when selecting from pulldown, the container hasn't mutated yet
-    const objectPath = updatedItem?._objectPath || hklinItem?._objectPath;
-    console.log("handleHKLINChange called, objectPath:", objectPath);
-    if (!objectPath) {
-      console.log("handleHKLINChange: no objectPath, returning early");
-      return;
-    }
-
-    console.log("handleHKLINChange: fetching digest for", objectPath);
-    const digestData = await fetchDigest(objectPath);
-    console.log("handleHKLINChange: got digest data:", digestData);
-    setHklinDigest(digestData ? { data: digestData } : null);
-  }, [hklinItem?._objectPath, fetchDigest]);
 
   /**
    * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
@@ -195,7 +169,7 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
                 {...props}
                 itemName="HKLIN"
                 qualifiers={{ guiLabel: "MTZFile (for Matthews volume calc)" }}
-                onChange={handleHKLINChange}
+                onChange={() => mutateHKLINDigest()}
               />
               {/* Show MTZ file info when digest is available */}
               {HKLINDigest?.data && (
