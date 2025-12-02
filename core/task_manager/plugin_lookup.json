@@ -181,6 +181,41 @@
       }
     }
   },
+  "adding_stats_to_mmcif_i2": {
+    "module": "wrappers.adding_stats_to_mmcif_i2.script.adding_stats_to_mmcif_i2",
+    "class": "adding_stats_to_mmcif_i2",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "adding_stats_to_mmcif_i2",
+    "TASKVERSION": 0.1,
+    "ASYNCHRONOUS": false,
+    "RUNEXTERNALPROCESS": false,
+    "PURGESEARCHLIST": [
+      [
+        "hklin.mtz",
+        0
+      ],
+      [
+        "log_mtzjoin.txt",
+        0
+      ]
+    ],
+    "ERROR_CODES": {
+      "201": {
+        "description": "Failed to analyse output files"
+      },
+      "202": {
+        "description": "Failed applying selection ot PDB file"
+      },
+      "203": {
+        "description": "Input XML file contains neither AIMLESS nor AIMLESS_PIPE nodes"
+      },
+      "204": {
+        "description": "Failed with adding_stats_to_mmcif"
+      }
+    }
+  },
   "cif2mtz": {
     "module": "wrappers.cif2mtz.script.cif2mtz",
     "class": "cif2mtz",
@@ -860,6 +895,43 @@
       },
       "304": {
         "description": "Error splitting MTZ file"
+      }
+    }
+  },
+  "coot1": {
+    "module": "wrappers.coot1.script.coot1",
+    "class": "coot1",
+    "COMTEMPLATE": null,
+    "TASKMODULE": "model_building",
+    "TASKTITLE": "Coot 1",
+    "TASKNAME": "coot1",
+    "TASKVERSION": 0.1,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "coot_rebuild",
+      "modelcraft"
+    ],
+    "ASYNCHRONOUS": true,
+    "TIMEOUT_PERIOD": 9999999.9,
+    "ERROR_CODES": {}
+  },
+  "AMPLE": {
+    "module": "wrappers.AMPLE.script.AMPLE",
+    "class": "AMPLE",
+    "COMTEMPLATE": null,
+    "TASKMODULE": null,
+    "TASKTITLE": null,
+    "TASKNAME": "AMPLE",
+    "TASKVERSION": 0.1,
+    "WHATNEXT": [
+      "prosmart_refmac",
+      "modelcraft",
+      "coot_rebuild"
+    ],
+    "ASYNCHRONOUS": false,
+    "ERROR_CODES": {
+      "1": {
+        "description": "Something not very good has happened."
       }
     }
   },

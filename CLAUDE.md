@@ -42,7 +42,7 @@ export CCP4I2_ROOT=/Users/nmemn/Developer/cdata-codegen
 ```
 
 **Important Notes:**
-- The registry contains ~145 plugins that can be successfully imported
+- The registry contains ~172 plugins that can be successfully imported
 - Legacy ccp4-python dependencies (`ccp4mg`, `mmdb2`, `ccp4srs`) are provided as minimal stubs in `stubs/` directory
 - Plugins requiring Qt GUI components (`qtgui`) are skipped during import
 - The registry automatically handles module paths relative to CCP4I2_ROOT
@@ -110,6 +110,11 @@ ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions
 # Symlink mmut stub from project stubs directory
 # Required for phaser pipelines that import mmut (mmCIF utilities)
 ln -sf /Users/nmemn/Developer/cdata-codegen/stubs/mmut.py.stub .venv/lib/python3.11/site-packages/mmut.py
+
+# Symlink ample and pyjob from CCP4 distribution
+# Required for AMPLE plugin (ab initio structure prediction)
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/ample .venv/lib/python3.11/site-packages/ample
+ln -sf /Users/nmemn/Developer/ccp4-20251105/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/pyjob .venv/lib/python3.11/site-packages/pyjob
 ```
 
 **Initial Setup for Python 3.9:**
@@ -131,6 +136,11 @@ ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3
 # Symlink mmut stub from project stubs directory
 # Required for phaser pipelines that import mmut (mmCIF utilities)
 ln -sf /Users/nmemn/Developer/cdata-codegen/stubs/mmut.py.stub .venv.old-py39/lib/python3.9/site-packages/mmut.py
+
+# Symlink ample and pyjob from CCP4-9
+# Required for AMPLE plugin (ab initio structure prediction)
+ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/ample .venv.old-py39/lib/python3.9/site-packages/ample
+ln -sf /Applications/ccp4-9/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/pyjob .venv.old-py39/lib/python3.9/site-packages/pyjob
 ```
 
 **Why Multiple Environments?**
