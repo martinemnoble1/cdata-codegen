@@ -125,19 +125,32 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
               />
             </Grid2>
           )}
-          {item &&
-            ["polymerType", "name"].map((key) => (
-              <Grid2 key={key} size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  sx={{ my: 0, py: 0, minWidth: "10rem" }}
-                  itemName={`${item._objectPath}.${key}`}
-                  qualifiers={{
-                    guiLabel: key,
-                  }}
-                />
-              </Grid2>
-            ))}
+          {item && (
+            <Grid2 size={{ xs: 4 }}>
+              <CCP4i2TaskElement
+                {...props}
+                sx={{ my: 0, py: 0, minWidth: "10rem" }}
+                itemName={`${item._objectPath}.polymerType`}
+                qualifiers={{
+                  guiLabel: "polymerType",
+                  enumerators: ["PROTEIN", "RNA", "DNA"],
+                  onlyEnumerators: true,
+                }}
+              />
+            </Grid2>
+          )}
+          {item && (
+            <Grid2 size={{ xs: 4 }}>
+              <CCP4i2TaskElement
+                {...props}
+                sx={{ my: 0, py: 0, minWidth: "10rem" }}
+                itemName={`${item._objectPath}.name`}
+                qualifiers={{
+                  guiLabel: "name",
+                }}
+              />
+            </Grid2>
+          )}
           {["description", "sequence"].map((key) => (
             <Grid2 key={key} size={{ xs: 12 }}>
               <CCP4i2TaskElement
