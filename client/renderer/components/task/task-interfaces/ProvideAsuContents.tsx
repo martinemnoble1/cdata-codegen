@@ -33,6 +33,25 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
     `ProvideAsuContents.inputData.HKLIN`
   );
 
+  // ASU content is valid when there are no validation errors for it
+  // Uses the existing validation infrastructure from useJob().getErrors()
+  // which fetches from /api/jobs/{id}/validation/ endpoint
+  const asuContentErrors = getErrors(asuContentItem);
+  const isAsuContentValid = asuContentErrors.length === 0 && (asuContentItem?._value?.length ?? 0) > 0;
+
+  /**
+   * Fetches the molecular weight for the current job's ASU content using SWR.
+   * Only fetches when ASU_CONTENT is valid (passes all validation checks).
+   */
+  const { data: molWeight, mutate: mutateMolWeight } = useSWR(
+    isAsuContentValid ? [`jobs/${job.id}/object_method`, "molecularWeight"] : null,
+    ([url]) =>
+      apiPost(url, {
+        object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
+        method_name: "molecularWeight",
+      })
+  );
+
   /**
    * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
    * Uses imperative fetchDigest for deterministic, race-condition-free behavior.
@@ -58,29 +77,11 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         nCopies: seq.nCopies ?? 1,  // Default to 1 if not provided
       }));
       await setAsuContent(seqList);
-      // Refresh validation so isAsuContentValid updates, which triggers molWeight fetch
+      // Refresh validation and molecular weight after updating ASU content
       mutateValidation();
+      mutateMolWeight();
     }
-  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent, mutateValidation]);
-
-  // ASU content is valid when there are no validation errors for it
-  // Uses the existing validation infrastructure from useJob().getErrors()
-  // which fetches from /api/jobs/{id}/validation/ endpoint
-  const asuContentErrors = getErrors(asuContentItem);
-  const isAsuContentValid = asuContentErrors.length === 0 && (asuContentItem?._value?.length ?? 0) > 0;
-
-  /**
-   * Fetches the molecular weight for the current job's ASU content using SWR.
-   * Only fetches when ASU_CONTENT is valid (passes all validation checks).
-   */
-  const { data: molWeight, mutate: mutateMolWeight } = useSWR(
-    isAsuContentValid ? [`jobs/${job.id}/object_method`, "molecularWeight"] : null,
-    ([url]) =>
-      apiPost(url, {
-        object_path: "ProvideAsuContents.inputData.ASU_CONTENT",
-        method_name: "molecularWeight",
-      })
-  );
+  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent, mutateValidation, mutateMolWeight]);
 
   /**
    * Fetches and caches the Matthews coefficient analysis for the current job using SWR.
