@@ -133,8 +133,6 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
                 itemName={`${item._objectPath}.polymerType`}
                 qualifiers={{
                   guiLabel: "polymerType",
-                  enumerators: ["PROTEIN", "RNA", "DNA"],
-                  onlyEnumerators: true,
                 }}
               />
             </Grid2>
