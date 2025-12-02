@@ -771,14 +771,20 @@ class CContainer(CData):
             # It's a fundamental type (CInt, CFloat, CString, CBoolean)
             logger.debug("Setting via .value attribute")
             target_obj.value = value
+        elif hasattr(target_obj, 'update') and isinstance(value, dict):
+            # IMPORTANT: For dict values, use update() which only modifies specified keys.
+            # This MUST come before the .set() check because:
+            # - All CData objects have both .set() and .update()
+            # - .set() has "set these fields, unset others" semantics
+            # - .update() has "only update specified fields" semantics (sparse update)
+            # Using .set() with a sparse dict would unset fields not in the dict!
+            logger.debug("Setting via .update() method (sparse dict update)")
+            target_obj.update(value)
         elif hasattr(target_obj, 'set'):
             # It's an object with a set() method (like CDataFile)
+            # Used for non-dict values where we want full replacement semantics
             logger.debug("Setting via .set() method")
             target_obj.set(value)
-        elif hasattr(target_obj, 'update') and isinstance(value, dict):
-            # It's a container-like object that can be updated from a dict
-            logger.debug("Setting via .update() method")
-            target_obj.update(value)
         else:
             # Target object is NOT a CData type - this is a problem
             # We should only allow setting values on existing CData wrappers,
