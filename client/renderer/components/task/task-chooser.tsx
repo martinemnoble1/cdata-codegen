@@ -189,8 +189,9 @@ const CCP4i2TaskTreeFolder: React.FC<CCP4i2TaskTreeFolderProps> = ({
             <Box
               sx={{
                 display: "grid",
+                // 4 cards per row on wide screens, falling back to 3, 2, 1
                 gridTemplateColumns:
-                  "repeat(auto-fill, minmax(min(24ch, 100%), 1fr))",
+                  "repeat(auto-fill, minmax(min(280px, 100%), 1fr))",
                 gap: 2,
                 p: 1,
               }}
@@ -231,13 +232,29 @@ const CCP4i2TaskCard: React.FC<CCP4i2TaskCardProps> = ({
   //useEffect(() => { console.log(task) }, [])
   return latestVersion ? (
     <Card
-      sx={{
-        minHeight: "18rem",
-        maxHeight: "18rem",
+      sx={(theme) => ({
+        minHeight: "14rem",
+        maxHeight: "24rem",
         overflowY: "auto",
         ":hover": { boxShadow: 24 },
-        minWidth: "24ch",
-      }}
+        minWidth: "280px",
+        // Theme-aware scrollbar styling
+        scrollbarColor: `${theme.palette.action.disabled} transparent`,
+        scrollbarWidth: "thin",
+        "&::-webkit-scrollbar": {
+          width: "8px",
+        },
+        "&::-webkit-scrollbar-track": {
+          background: "transparent",
+        },
+        "&::-webkit-scrollbar-thumb": {
+          backgroundColor: theme.palette.action.disabled,
+          borderRadius: "4px",
+          "&:hover": {
+            backgroundColor: theme.palette.action.active,
+          },
+        },
+      })}
       onClick={handleTaskSelect}
     >
       <CardHeader
