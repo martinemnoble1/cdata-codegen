@@ -4,7 +4,7 @@ import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { useApi } from "../../../api";
 import { useJob } from "../../../utils";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
-import { Button, Grid2 } from "@mui/material";
+import { Button } from "@mui/material";
 import { useRunCheck } from "../../../providers/run-check-provider";
 import { useCallback, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -135,54 +135,36 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
           containerHint="FolderLevel"
           initiallyOpen={true}
         >
-          <Grid2 container>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="CYCLES"
-                qualifiers={{ guiLabel: "Number of cycles" }}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="ANISOTROPY_CORRECTION"
-                qualifiers={{ guiLabel: "Apply anisotropy correction" }}
-              />
-            </Grid2>
-          </Grid2>
-          <Grid2 container>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="RESOLUTION"
-                qualifiers={{ guiLabel: "Maximum resolution" }}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="SOLVENT_CONTENT"
-                qualifiers={{ guiLabel: "Estimated solvent content" }}
-              />
-            </Grid2>
-          </Grid2>
-          <Grid2 container>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="NCS_MASK_FILTER_RADIUS"
-                qualifiers={{ guiLabel: "Filter radius to define NCS mask" }}
-              />
-            </Grid2>
-            <Grid2 size={{ xs: 12 }}>
-              <CCP4i2TaskElement
-                {...props}
-                itemName="VERBOSE"
-                qualifiers={{ guiLabel: "Verbosity of log file" }}
-              />
-            </Grid2>
-          </Grid2>
+          <CCP4i2TaskElement
+            {...props}
+            itemName="CYCLES"
+            qualifiers={{ guiLabel: "Number of cycles" }}
+          />
+          <CCP4i2TaskElement
+            {...props}
+            itemName="ANISOTROPY_CORRECTION"
+            qualifiers={{ guiLabel: "Apply anisotropy correction" }}
+          />
+          <CCP4i2TaskElement
+            {...props}
+            itemName="RESOLUTION"
+            qualifiers={{ guiLabel: "Maximum resolution" }}
+          />
+          <CCP4i2TaskElement
+            {...props}
+            itemName="SOLVENT_CONTENT"
+            qualifiers={{ guiLabel: "Estimated solvent content" }}
+          />
+          <CCP4i2TaskElement
+            {...props}
+            itemName="NCS_MASK_FILTER_RADIUS"
+            qualifiers={{ guiLabel: "Filter radius to define NCS mask" }}
+          />
+          <CCP4i2TaskElement
+            {...props}
+            itemName="VERBOSE"
+            qualifiers={{ guiLabel: "Verbosity of log file" }}
+          />
         </CCP4i2ContainerElement>
       </CCP4i2Tab>
       <CCP4i2Tab label="Reference structures" key="2">

@@ -1,9 +1,10 @@
 import React, { useCallback } from "react";
-import { Paper, Grid2 } from "@mui/material";
+import { Paper } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
+import { FieldRow } from "../task-elements/field-row";
 import { useJob } from "../../../utils";
 
 /**
@@ -147,29 +148,25 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               containerHint="BlockLevel"
               visibility={visibility.showAnomalousSignal}
             >
-              <Grid2 container spacing={2}>
-                <Grid2 size={{ xs: 6 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="USEANOMALOUS"
-                    qualifiers={{
-                      guiLabel: "Use anomalous",
-                      toolTip: "Use anomalous differences in refinement",
-                    }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 6 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="USEANOMALOUSFOR"
-                    qualifiers={{
-                      guiLabel: "Use for",
-                      toolTip: "How to use anomalous differences",
-                    }}
-                    visibility={visibility.showUseAnomalousFor}
-                  />
-                </Grid2>
-              </Grid2>
+              <FieldRow>
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="USEANOMALOUS"
+                  qualifiers={{
+                    guiLabel: "Use anomalous",
+                    toolTip: "Use anomalous differences in refinement",
+                  }}
+                />
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="USEANOMALOUSFOR"
+                  qualifiers={{
+                    guiLabel: "Use for",
+                    toolTip: "How to use anomalous differences",
+                  }}
+                  visibility={visibility.showUseAnomalousFor}
+                />
+              </FieldRow>
             </CCP4i2ContainerElement>
 
             <CCP4i2TaskElement
@@ -220,30 +217,25 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
             />
 
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="HYDR_USE"
-                  qualifiers={{
-                    guiLabel: "Use hydrogens during refinement",
-                    toolTip:
-                      "Include hydrogen atoms in refinement calculations",
-                  }}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="HYDR_ALL"
-                  qualifiers={{
-                    guiLabel: " ",
-                    toolTip: "Use all hydrogen atoms",
-                  }}
-                  visibility={visibility.showHydrogenOptions}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="HYDR_USE"
+                qualifiers={{
+                  guiLabel: "Use hydrogens during refinement",
+                  toolTip: "Include hydrogen atoms in refinement calculations",
+                }}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="HYDR_ALL"
+                qualifiers={{
+                  guiLabel: "Hydrogen type",
+                  toolTip: "Use all hydrogen atoms",
+                }}
+                visibility={visibility.showHydrogenOptions}
+              />
+            </FieldRow>
 
             <CCP4i2TaskElement
               {...props}
@@ -294,28 +286,24 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             }}
             containerHint="BlockLevel"
           >
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="SCALE_TYPE"
-                  qualifiers={{
-                    guiLabel: "Use ",
-                    toolTip: "Scaling type for structure factors",
-                  }}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="SOLVENT_MASK_TYPE"
-                  qualifiers={{
-                    guiLabel: "solvent scaling, with mask type",
-                    toolTip: "Type of solvent mask for bulk solvent correction",
-                  }}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="SCALE_TYPE"
+                qualifiers={{
+                  guiLabel: "Use ",
+                  toolTip: "Scaling type for structure factors",
+                }}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="SOLVENT_MASK_TYPE"
+                qualifiers={{
+                  guiLabel: "solvent scaling, with mask type",
+                  toolTip: "Type of solvent mask for bulk solvent correction",
+                }}
+              />
+            </FieldRow>
 
             <CCP4i2TaskElement
               {...props}
@@ -415,30 +403,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
                 visibility={visibility.showTLSFile}
               />
 
-              <Grid2 container spacing={2}>
-                <Grid2 size={{ xs: 8 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="BFACSETUSE"
-                    qualifiers={{
-                      guiLabel: "Reset all B-factors at start ",
-                      toolTip:
-                        "Reset all B-factors to a fixed value before TLS refinement",
-                    }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 4 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="BFACSET"
-                    qualifiers={{
-                      guiLabel: "...to a value of",
-                      toolTip: "B-factor value for reset",
-                    }}
-                    visibility={visibility.showBFactorReset}
-                  />
-                </Grid2>
-              </Grid2>
+              <FieldRow>
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="BFACSETUSE"
+                  qualifiers={{
+                    guiLabel: "Reset all B-factors at start ",
+                    toolTip:
+                      "Reset all B-factors to a fixed value before TLS refinement",
+                  }}
+                />
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="BFACSET"
+                  qualifiers={{
+                    guiLabel: "...to a value of",
+                    toolTip: "B-factor value for reset",
+                  }}
+                  visibility={visibility.showBFactorReset}
+                />
+              </FieldRow>
 
               <CCP4i2TaskElement
                 {...props}
@@ -463,31 +447,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             }}
             containerHint="BlockLevel"
           >
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 8 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="WEIGHT_OPT"
-                  qualifiers={{
-                    guiLabel:
-                      "Weight restraints versus experimental data using",
-                    toolTip:
-                      "Method for weighting geometric restraints against experimental data",
-                  }}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="controlParameters.WEIGHT"
-                  qualifiers={{
-                    guiLabel: "Weight",
-                    toolTip: "Manual weight value",
-                  }}
-                  visibility={visibility.showManualWeight}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="WEIGHT_OPT"
+                qualifiers={{
+                  guiLabel: "Weight restraints versus experimental data using",
+                  toolTip:
+                    "Method for weighting geometric restraints against experimental data",
+                }}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="controlParameters.WEIGHT"
+                qualifiers={{
+                  guiLabel: "Weight",
+                  toolTip: "Manual weight value",
+                }}
+                visibility={visibility.showManualWeight}
+              />
+            </FieldRow>
           </CCP4i2ContainerElement>
 
           <CCP4i2ContainerElement
@@ -636,30 +615,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
             />
 
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 8 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="MAP_SHARP_CUSTOM"
-                  qualifiers={{
-                    guiLabel: "Use custom sharpening parameter (B-factor)",
-                    toolTip: "Specify custom B-factor for map sharpening",
-                  }}
-                  visibility={visibility.showMapSharpening}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="BSHARP"
-                  qualifiers={{
-                    guiLabel: " ",
-                    toolTip: "B-factor value for custom map sharpening",
-                  }}
-                  visibility={visibility.showCustomBFactor}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="MAP_SHARP_CUSTOM"
+                qualifiers={{
+                  guiLabel: "Use custom sharpening parameter (B-factor)",
+                  toolTip: "Specify custom B-factor for map sharpening",
+                }}
+                visibility={visibility.showMapSharpening}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="BSHARP"
+                qualifiers={{
+                  guiLabel: "B-factor",
+                  toolTip: "B-factor value for custom map sharpening",
+                }}
+                visibility={visibility.showCustomBFactor}
+              />
+            </FieldRow>
           </CCP4i2ContainerElement>
 
           <CCP4i2ContainerElement
@@ -750,30 +725,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
             />
 
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="RES_MIN"
-                  qualifiers={{
-                    guiLabel: "min",
-                    toolTip: "Minimum resolution limit",
-                  }}
-                  visibility={visibility.showCustomResolution}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="RES_MAX"
-                  qualifiers={{
-                    guiLabel: "max",
-                    toolTip: "Maximum resolution limit",
-                  }}
-                  visibility={visibility.showCustomResolution}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="RES_MIN"
+                qualifiers={{
+                  guiLabel: "min",
+                  toolTip: "Minimum resolution limit",
+                }}
+                visibility={visibility.showCustomResolution}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="RES_MAX"
+                qualifiers={{
+                  guiLabel: "max",
+                  toolTip: "Maximum resolution limit",
+                }}
+                visibility={visibility.showCustomResolution}
+              />
+            </FieldRow>
           </CCP4i2ContainerElement>
 
           <CCP4i2ContainerElement

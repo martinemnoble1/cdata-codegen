@@ -1,4 +1,4 @@
-import { Grid2, LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import { LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";

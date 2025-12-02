@@ -1,9 +1,10 @@
 import React, { useCallback, useRef, useEffect } from "react";
-import { Paper, Grid2 } from "@mui/material";
+import { Paper } from "@mui/material";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
+import { FieldRow } from "../task-elements/field-row";
 import { useJob } from "../../../utils";
 
 /**
@@ -202,28 +203,24 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
               containerHint="RowLevel"
             >
-              <Grid2 container spacing={2}>
-                <Grid2 size={{ xs: 6 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="RESOLUTION_LOW"
-                    qualifiers={{
-                      guiLabel: "Low resolution limit",
-                      toolTip: "Low resolution cutoff in Angstroms",
-                    }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 6 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="RESOLUTION_HIGH"
-                    qualifiers={{
-                      guiLabel: "High resolution limit",
-                      toolTip: "High resolution cutoff in Angstroms",
-                    }}
-                  />
-                </Grid2>
-              </Grid2>
+              <FieldRow>
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="RESOLUTION_LOW"
+                  qualifiers={{
+                    guiLabel: "Low resolution limit",
+                    toolTip: "Low resolution cutoff in Angstroms",
+                  }}
+                />
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="RESOLUTION_HIGH"
+                  qualifiers={{
+                    guiLabel: "High resolution limit",
+                    toolTip: "High resolution cutoff in Angstroms",
+                  }}
+                />
+              </FieldRow>
             </CCP4i2ContainerElement>
 
             <CCP4i2ContainerElement
@@ -235,39 +232,33 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
               containerHint="BlockLevel"
             >
-              <Grid2 container spacing={2}>
-                <Grid2 size={{ xs: 4 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="RUNSHEETBEND"
-                    qualifiers={{
-                      guiLabel: "Sheet bend",
-                      toolTip: "Run sheet bend correction",
-                    }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 4 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="RUNREFMAC"
-                    qualifiers={{
-                      guiLabel: "Refmac",
-                      toolTip:
-                        "Run Refmac refinement after molecular replacement",
-                    }}
-                  />
-                </Grid2>
-                <Grid2 size={{ xs: 4 }}>
-                  <CCP4i2TaskElement
-                    {...props}
-                    itemName="RUNCOOT"
-                    qualifiers={{
-                      guiLabel: "Coot add-waters",
-                      toolTip: "Run Coot to add water molecules",
-                    }}
-                  />
-                </Grid2>
-              </Grid2>
+              <FieldRow>
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="RUNSHEETBEND"
+                  qualifiers={{
+                    guiLabel: "Sheet bend",
+                    toolTip: "Run sheet bend correction",
+                  }}
+                />
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="RUNREFMAC"
+                  qualifiers={{
+                    guiLabel: "Refmac",
+                    toolTip:
+                      "Run Refmac refinement after molecular replacement",
+                  }}
+                />
+                <CCP4i2TaskElement
+                  {...props}
+                  itemName="RUNCOOT"
+                  qualifiers={{
+                    guiLabel: "Coot add-waters",
+                    toolTip: "Run Coot to add water molecules",
+                  }}
+                />
+              </FieldRow>
             </CCP4i2ContainerElement>
           </CCP4i2ContainerElement>
 

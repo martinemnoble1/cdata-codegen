@@ -1,9 +1,9 @@
 /**
  * Centralized field sizing system for task interface widgets.
  *
- * This provides consistent, predictable widths for form fields across
- * all task interfaces. Fields use fixed widths (not minWidth) to ensure
- * alignment when multiple fields appear on the same row.
+ * This provides consistent, responsive widths for form fields across
+ * all task interfaces. Fields use maxWidth constraints so they can
+ * shrink on narrow screens while maintaining alignment on wider screens.
  */
 
 export const FIELD_SIZES = {
@@ -107,7 +107,8 @@ export function inferFieldSize(item: any, qualifiers: any): FieldSize {
 
 /**
  * Get the CSS properties for a given field size.
- * Uses fixed width with flexShrink: 0 to prevent shrinking.
+ * Uses maxWidth constraints so fields can shrink on narrow screens
+ * while maintaining consistent sizing on wider screens.
  *
  * @param size - The FieldSize to get styles for
  * @returns CSS properties object
@@ -117,7 +118,7 @@ export function getFieldSizeStyles(size: FieldSize) {
   if (size === 'auto') {
     return {
       width: 'auto',
-      flexShrink: 0,
+      minWidth: 0, // Allow shrinking in flex containers
     };
   }
 
@@ -126,14 +127,18 @@ export function getFieldSizeStyles(size: FieldSize) {
     return {
       width: '100%',
       flexGrow: 1,
+      minWidth: 0, // Allow shrinking in flex containers
     };
   }
 
-  // Fixed sizes: apply width and maxWidth
-  const width = FIELD_SIZES[size];
+  // Responsive sizes: fill available space up to maxWidth
+  // This allows fields to shrink on narrow screens while
+  // maintaining consistent max widths on wider screens
+  const maxWidth = FIELD_SIZES[size];
   return {
-    width,
-    maxWidth: width,
-    flexShrink: 0,
+    width: '100%',
+    maxWidth,
+    minWidth: 0, // Allow shrinking below content width in flex containers
+    flexShrink: 1, // Allow shrinking when container is narrow
   };
 }

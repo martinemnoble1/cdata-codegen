@@ -5,12 +5,13 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { Button, Grid2, Paper, Typography } from "@mui/material";
+import { Button, Paper, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { CCP4i2TaskInterfaceProps } from "./task-container";
 import { CCP4i2TaskElement } from "../task-elements/task-element";
 import { CCP4i2Tab, CCP4i2Tabs } from "../task-elements/tabs";
 import { CCP4i2ContainerElement } from "../task-elements/ccontainer";
+import { FieldRow } from "../task-elements/field-row";
 import { useJob } from "../../../utils";
 import {
   CCP4i2ErrorReport,
@@ -329,30 +330,26 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
               }}
             />
 
-            <Grid2 container spacing={2} sx={{ mt: 1 }}>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="MAP_SHARP_CUSTOM"
-                  qualifiers={{
-                    guiLabel: "Use custom sharpening parameter (B-factor)",
-                    toolTip: "Specify custom B-factor for map sharpening",
-                  }}
-                  visibility={visibility.showMapSharpening}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 6 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="BSHARP"
-                  qualifiers={{
-                    guiLabel: "B factor to use",
-                    toolTip: "B-factor value for custom map sharpening",
-                  }}
-                  visibility={visibility.showCustomBFactor}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow sx={{ mt: 1 }}>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="MAP_SHARP_CUSTOM"
+                qualifiers={{
+                  guiLabel: "Use custom sharpening parameter (B-factor)",
+                  toolTip: "Specify custom B-factor for map sharpening",
+                }}
+                visibility={visibility.showMapSharpening}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="BSHARP"
+                qualifiers={{
+                  guiLabel: "B factor to use",
+                  toolTip: "B-factor value for custom map sharpening",
+                }}
+                visibility={visibility.showCustomBFactor}
+              />
+            </FieldRow>
           </CCP4i2ContainerElement>
 
           <CCP4i2ContainerElement
@@ -364,39 +361,33 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             }}
             containerHint="FolderLevel"
           >
-            <Grid2 container spacing={2}>
-              <Grid2 size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="VALIDATE_BAVERAGE"
-                  qualifiers={{
-                    guiLabel: "Analyse B-factor distributions",
-                    toolTip: "Generate B-factor distribution analysis",
-                  }}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="VALIDATE_RAMACHANDRAN"
-                  qualifiers={{
-                    guiLabel: "Calculate Ramachandran plots",
-                    toolTip: "Generate Ramachandran plot validation",
-                  }}
-                />
-              </Grid2>
-              <Grid2 size={{ xs: 4 }}>
-                <CCP4i2TaskElement
-                  {...props}
-                  itemName="VALIDATE_MOLPROBITY"
-                  qualifiers={{
-                    guiLabel: "Run MolProbity to analyse geometry",
-                    toolTip:
-                      "Perform comprehensive geometry validation with MolProbity",
-                  }}
-                />
-              </Grid2>
-            </Grid2>
+            <FieldRow>
+              <CCP4i2TaskElement
+                {...props}
+                itemName="VALIDATE_BAVERAGE"
+                qualifiers={{
+                  guiLabel: "Analyse B-factor distributions",
+                  toolTip: "Generate B-factor distribution analysis",
+                }}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="VALIDATE_RAMACHANDRAN"
+                qualifiers={{
+                  guiLabel: "Calculate Ramachandran plots",
+                  toolTip: "Generate Ramachandran plot validation",
+                }}
+              />
+              <CCP4i2TaskElement
+                {...props}
+                itemName="VALIDATE_MOLPROBITY"
+                qualifiers={{
+                  guiLabel: "Run MolProbity to analyse geometry",
+                  toolTip:
+                    "Perform comprehensive geometry validation with MolProbity",
+                }}
+              />
+            </FieldRow>
           </CCP4i2ContainerElement>
         </CCP4i2Tab>
       </CCP4i2Tabs>
