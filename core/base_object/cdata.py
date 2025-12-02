@@ -668,12 +668,26 @@ class CData(HierarchicalObject):
         qualifiers (min, max, enumerators, etc.). It also recursively
         validates all children in the hierarchy.
 
+        If this object has allowUndefined=True and is not set, child validation
+        errors are downgraded to warnings (they should not block execution).
+
         Returns:
             CErrorReport containing any validation errors/warnings
         """
         from .error_reporting import CErrorReport, SEVERITY_ERROR
 
         report = CErrorReport()
+
+        # Check if this object is optional and not set
+        # If so, child validation errors should be warnings, not errors
+        # Note: allowUndefined=None (not explicitly set) is treated as True (optional)
+        # Only allowUndefined=False explicitly marks a field as required
+        allow_undefined = self.get_qualifier('allowUndefined')
+        is_optional = allow_undefined is None or allow_undefined is True
+        is_optional_and_unset = (
+            is_optional and
+            not self.isSet(allowUndefined=False, allowDefault=False)
+        )
 
         # Base CData validation - can be extended by subclasses
         # Check if object has required qualifiers
@@ -691,6 +705,10 @@ class CData(HierarchicalObject):
                     try:
                         child_report = child.validity()
                         if child_report:
+                            # If this object is optional and not set, downgrade
+                            # child errors to warnings (they should not block execution)
+                            if is_optional_and_unset:
+                                child_report.downgrade_to_warnings()
                             report.extend(child_report)
                     except Exception:
                         # Don't let one child's validation failure stop others

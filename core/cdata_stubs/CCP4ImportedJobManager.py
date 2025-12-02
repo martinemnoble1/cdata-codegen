@@ -20,6 +20,73 @@ from core.cdata_stubs.CCP4Data import CI2DataTypeStub, COneWordStub
 
 
 @cdata_class(
+    error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 1,
+    },
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+    },
+)
+class CImportedJobDataListStub(CList):
+    """
+    A list with all items of one CData sub-class
+
+    This is a pure data class stub. Extend it in core/CImportedJobDataList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CImportedJobDataListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
     attributes={
         "name": attribute(AttributeType.CUSTOM, custom_class="COneWordStub"),
         "dataType": attribute(AttributeType.CUSTOM, custom_class="CI2DataTypeStub"),
@@ -177,73 +244,6 @@ class CImportedJobDataStub(CData):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CImportedJobDataStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "List shorter than required minimum length"
-        },
-        "102": {
-            "description": "List longer than required maximum length"
-        },
-        "103": {
-            "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-            "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-            "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-            "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-            "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-            "description": "Invalid item class"
-        },
-        "110": {
-            "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-            "description": "No list item object set for list"
-        }
-    },
-    qualifiers={
-        "listMinLength": 1,
-    },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-    },
-)
-class CImportedJobDataListStub(CList):
-    """
-    A list with all items of one CData sub-class
-
-    This is a pure data class stub. Extend it in core/CImportedJobDataList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CImportedJobDataListStub.
 
         Args:
             parent: Parent object in hierarchy

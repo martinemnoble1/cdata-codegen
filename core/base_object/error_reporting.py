@@ -76,6 +76,16 @@ class CErrorReport:
         if isinstance(other, CErrorReport):
             self._errors.extend(other._errors)
 
+    def downgrade_to_warnings(self):
+        """Downgrade all errors with severity > WARNING to WARNING.
+
+        This is used when child validation errors should not block execution
+        because the parent object is optional and not set.
+        """
+        for error in self._errors:
+            if error['severity'] > SEVERITY_WARNING:
+                error['severity'] = SEVERITY_WARNING
+
     def count(self, cls=None, code=None) -> int:
         """Return the number of errors in this report.
 

@@ -1,6 +1,25 @@
-import { Menu, MenuItem } from "electron";
+import { Menu, MenuItem, BrowserWindow } from "electron";
 import { createWindow } from "./ccp4i2-create-window";
 import { store } from "./ccp4i2-master";
+
+// Function to toggle theme and notify all renderer windows
+function toggleTheme() {
+  const currentTheme = store.get("theme") as string;
+  const newTheme = currentTheme === "light" ? "dark" : "light";
+  store.set("theme", newTheme);
+  console.log("Theme toggled to", newTheme);
+
+  // Notify all windows of the theme change
+  BrowserWindow.getAllWindows().forEach((win) => {
+    win.webContents.send("message-from-main", {
+      message: "theme-changed",
+      theme: newTheme,
+    });
+  });
+
+  // Rebuild menu to update the checkmark
+  return newTheme;
+}
 
 // Function to add "New Window" item to the default menu
 export function addNewWindowMenuItem(NEXT_PORT: number, DJANGO_PORT: number) {
@@ -33,5 +52,21 @@ export function addNewWindowMenuItem(NEXT_PORT: number, DJANGO_PORT: number) {
       })
     );
   }
+
+  // Find the View menu and add theme toggle
+  const viewMenu = menu.items.find((item) => item.label === "View");
+  if (viewMenu && viewMenu.submenu) {
+    viewMenu.submenu.append(new MenuItem({ type: "separator" }));
+    viewMenu.submenu.append(
+      new MenuItem({
+        label: "Toggle Dark Mode",
+        accelerator: "CmdOrCtrl+Shift+D",
+        click: () => {
+          toggleTheme();
+        },
+      })
+    );
+  }
+
   Menu.setApplicationMenu(menu);
 }

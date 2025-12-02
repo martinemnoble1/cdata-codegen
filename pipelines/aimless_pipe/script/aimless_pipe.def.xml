@@ -716,7 +716,7 @@
       <content id="SDCORRECTION_OVERRIDE">
         <className>CBoolean</className>
         <qualifiers>
-          <allowUndefined>False</allowUndefined>
+          <allowUndefined>True</allowUndefined>
           <toolTip>Override default SDcorrection</toolTip>
         </qualifiers>
       </content>
@@ -949,6 +949,7 @@
         <qualifiers>
           <max>8</max>
           <min>1</min>
+          <allowUndefined>True</allowUndefined>
           <toolTip>number of processors to use</toolTip>
           <charWidth>5</charWidth>
         </qualifiers>

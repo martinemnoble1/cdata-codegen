@@ -198,7 +198,7 @@ const ErrorAwareRunDialog: React.FC<ErrorAwareRunDialogProps> = ({
           <pre style={{ color: "red" }}>
             {Object.entries(seriousIssues).map(([key, issueSet], index) =>
               issueSet.messages.map((issue, issueIndex) => (
-                <div key={`${key}_${issueIndex}`}>{issue}</div>
+                <div key={`${key}_${issueIndex}`}>{key}: {issue}</div>
               ))
             )}
           </pre>

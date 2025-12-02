@@ -63,6 +63,21 @@ export const CCP4i2ThemeProvider: React.FC<CCP4i2ThemeProviderProps> = ({
     localStorage.setItem("ccp4i2-theme", mode);
   }, [mode]);
 
+  // Listen for theme changes from Electron native menu
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.electronAPI) {
+      const handleMessage = (event: any, data: any) => {
+        if (
+          data.message === "theme-changed" &&
+          (data.theme === "light" || data.theme === "dark")
+        ) {
+          setMode(data.theme);
+        }
+      };
+      window.electronAPI.onMessage("message-from-main", handleMessage);
+    }
+  }, []);
+
   const toggleTheme = () => {
     setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
   };

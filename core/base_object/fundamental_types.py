@@ -359,6 +359,13 @@ class CInt(CData):
             )
             return report  # No point checking other constraints if not set
 
+        # If optional (allowUndefined is True or None) and not explicitly set,
+        # skip min/max validation. The script will check isSet() and not write
+        # anything for this parameter if it's not set.
+        is_optional = allow_undefined is None or allow_undefined is True
+        if is_optional and not self.isSet():
+            return report
+
         val = self.value
 
         # Check min/max constraints
@@ -775,6 +782,13 @@ class CFloat(CData):
             )
             return report  # No point checking other constraints if not set
 
+        # If optional (allowUndefined is True or None) and not explicitly set,
+        # skip min/max validation. The script will check isSet() and not write
+        # anything for this parameter if it's not set.
+        is_optional = allow_undefined is None or allow_undefined is True
+        if is_optional and not self.isSet():
+            return report
+
         val = self.value
 
         # Check min/max constraints
@@ -1027,6 +1041,13 @@ class CString(CData):
                 obj_path, SEVERITY_ERROR
             )
             return report  # No point checking other constraints if not set
+
+        # If optional (allowUndefined is True or None) and not explicitly set,
+        # skip minLength/maxLength validation. The script will check isSet()
+        # and not write anything for this parameter if it's not set.
+        is_optional = allow_undefined is None or allow_undefined is True
+        if is_optional and not self.isSet():
+            return report
 
         val = self.value
 

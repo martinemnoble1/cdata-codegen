@@ -26110,7 +26110,7 @@
       "CONTENTS": {},
       "CONTENTS_ORDER": [],
       "QUALIFIERS": {
-        "listMinLength": 1
+        "listMinLength": 0
       },
       "QUALIFIERS_ORDER": [
         "listMinLength",

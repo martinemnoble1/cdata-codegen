@@ -18,6 +18,144 @@ from core.base_object.fundamental_types import CBoolean, CFloat, CInt, CList, CS
 
 @cdata_class(
     attributes={
+        "pmid": attribute(AttributeType.INT),
+        "title": attribute(AttributeType.STRING),
+        "authorList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+        "source": attribute(AttributeType.STRING),
+        "url": attribute(AttributeType.STRING),
+        "selected": attribute(AttributeType.BOOLEAN),
+    },
+    error_codes={
+        "101": {
+            "description": "Failed to load Medline data"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=[
+        'pmid',
+        'title',
+        'authorList',
+        'source',
+        'url',
+        'selected'],
+)
+class CBibReferenceStub(CData):
+    """
+    Bibliographic reference
+
+    This is a pure data class stub. Extend it in core/CBibReference.py
+    to add methods and implementation-specific functionality.
+    """
+
+    pmid: Optional[CInt] = None
+    title: Optional[CString] = None
+    authorList: Optional[CList] = None
+    source: Optional[CString] = None
+    url: Optional[CString] = None
+    selected: Optional[CBoolean] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CBibReferenceStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "taskName": attribute(AttributeType.STRING),
+        "version": attribute(AttributeType.STRING),
+        "title": attribute(AttributeType.STRING),
+        "references": attribute(AttributeType.CUSTOM, custom_class="CList"),
+    },
+    error_codes={
+        "100": {
+            "description": "Failed attempting to load MedLine file - file not found"
+        },
+        "101": {
+            "description": "Failed attempting to find references file"
+        },
+        "102": {
+            "description": "Error copying file"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['taskName', 'version', 'title', 'references'],
+)
+class CBibReferenceGroupStub(CData):
+    """
+    Set of bibliographic references for a task
+
+    This is a pure data class stub. Extend it in core/CBibReferenceGroup.py
+    to add methods and implementation-specific functionality.
+    """
+
+    taskName: Optional[CString] = None
+    version: Optional[CString] = None
+    title: Optional[CString] = None
+    references: Optional[CList] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CBibReferenceGroupStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
         "family": attribute(AttributeType.STRING),
         "style": attribute(AttributeType.INT),
         "pointSize": attribute(AttributeType.INT),
@@ -186,63 +324,298 @@ class CFontStub(CData):
 
 
 @cdata_class(
-    attributes={
-        "taskName": attribute(AttributeType.STRING),
-        "version": attribute(AttributeType.STRING),
-        "title": attribute(AttributeType.STRING),
-        "references": attribute(AttributeType.CUSTOM, custom_class="CList"),
-    },
     error_codes={
-        "100": {
-            "description": "Failed attempting to load MedLine file - file not found"
-        },
         "101": {
-            "description": "Failed attempting to find references file"
+            "description": "String too short"
         },
         "102": {
-            "description": "Error copying file"
+            "description": "String too long"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        },
+        "104": {
+            "description": "Contains disallowed characters"
         }
     },
     qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
+        "label": 'User id',
+        "toolTip": 'User id as me@myplace.ac.uk',
     },
     qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['taskName', 'version', 'title', 'references'],
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
 )
-class CBibReferenceGroupStub(CData):
+class CUserIdStub(CString):
     """
-    Set of bibliographic references for a task
+    A user ID
 
-    This is a pure data class stub. Extend it in core/CBibReferenceGroup.py
+    This is a pure data class stub. Extend it in core/CUserId.py
     to add methods and implementation-specific functionality.
     """
 
-    taskName: Optional[CString] = None
-    version: Optional[CString] = None
-    title: Optional[CString] = None
-    references: Optional[CList] = None
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CUserIdStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "below minimum"
+        },
+        "102": {
+            "description": "above maximum"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        }
+    },
+    qualifiers={
+        "min": 0,
+        "label": 'Time',
+        "toolTip": 'Time and date as hh:mm dd/mm/yyyy',
+        "format": '%H:%M %d/%b/%y',
+    },
+    qualifiers_order=['format'],
+    qualifiers_definition={
+        "format": {'type': 'str', 'description': 'Argument to Python time.strftime to display time in human readable format'},
+    },
+)
+class CTimeStub(CInt):
+    """
+    The time. Uses Python time module
+
+    This is a pure data class stub. Extend it in core/CTime.py
+    to add methods and implementation-specific functionality.
+    """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CBibReferenceGroupStub.
+        Initialize CTimeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 0,
+    },
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+    },
+)
+class CAnnotationListStub(CList):
+    """
+    A list of annotation
+
+    This is a pure data class stub. Extend it in core/CAnnotationList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CAnnotationListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "tag": attribute(AttributeType.STRING),
+    },
+    error_codes={
+        "0": {
+            "severity": 0,
+            "description": "OK"
+        },
+        "1": {
+            "severity": 1,
+            "description": "Data has undefined value"
+        },
+        "2": {
+            "severity": 3,
+            "description": "Data has undefined value"
+        },
+        "3": {
+            "severity": 2,
+            "description": "Missing data"
+        },
+        "4": {
+            "description": "Missing data"
+        },
+        "5": {
+            "description": "Attempting to set data of wrong type"
+        },
+        "6": {
+            "description": "Default value does not satisfy validity check"
+        },
+        "7": {
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
+        },
+        "8": {
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
+        },
+        "9": {
+            "description": "Failed to get property"
+        },
+        "10": {
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
+        },
+        "11": {
+            "description": "Failed to set property:"
+        },
+        "12": {
+            "description": "Undetermined error setting value from XML"
+        },
+        "13": {
+            "description": "Unrecognised class name in qualifier"
+        },
+        "14": {
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
+        },
+        "15": {
+            "description": "Error saving qualifier to XML"
+        },
+        "16": {
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
+        },
+        "17": {
+            "description": "Attempting to set unrecognised qualifier"
+        },
+        "18": {
+            "description": "Attempting to set qualifier with wrong type"
+        },
+        "19": {
+            "description": "Attempting to set qualifier with wrong list item type"
+        },
+        "20": {
+            "description": "Error creating a list/dict item object"
+        },
+        "21": {
+            "description": "Unknown error setting qualifiers from Xml file"
+        },
+        "22": {
+            "description": "Unknown error testing validity"
+        },
+        "23": {
+            "description": "Error saving data object to XML"
+        },
+        "24": {
+            "description": "Unable to test validity of default",
+            "severity": 2
+        },
+        "300": {
+            "description": "Compared objects are the same",
+            "severity": 0
+        },
+        "315": {
+            "description": "Both compared objects are null",
+            "severity": 0
+        },
+        "301": {
+            "description": "Unable to compare this class of data",
+            "severity": 2
+        },
+        "302": {
+            "description": "Other data has null value"
+        },
+        "303": {
+            "description": "My data has null value"
+        },
+        "304": {
+            "description": "Data has different values"
+        }
+    },
+    qualifiers={
+        "enumeratorsFunction": None,
+        "addEnumeratorFunction": None,
+    },
+    qualifiers_order=['enumeratorsFunction', 'addEnumeratorFunction'],
+    qualifiers_definition={
+        "enumeratorsFunction": {'type': '"method"', 'definition': 'Function returning list of enumerators'},
+        "addEnumeratorFunction": {'type': '"method"', 'definition': 'Function to add to list of enumerators'},
+    },
+    contents_order=['tag'],
+)
+class CMetaDataTagStub(CData):
+    """
+    This class will extend list of enumerators if new value for string is entered
+
+    This is a pure data class stub. Extend it in core/CMetaDataTag.py
+    to add methods and implementation-specific functionality.
+    """
+
+    tag: Optional[CString] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CMetaDataTagStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -435,255 +808,57 @@ class CDateRangeStub(CData):
 
 
 @cdata_class(
-    attributes={
-        "pmid": attribute(AttributeType.INT),
-        "title": attribute(AttributeType.STRING),
-        "authorList": attribute(AttributeType.CUSTOM, custom_class="CList"),
-        "source": attribute(AttributeType.STRING),
-        "url": attribute(AttributeType.STRING),
-        "selected": attribute(AttributeType.BOOLEAN),
-    },
     error_codes={
         "101": {
-            "description": "Failed to load Medline data"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=[
-        'pmid',
-        'title',
-        'authorList',
-        'source',
-        'url',
-        'selected'],
-)
-class CBibReferenceStub(CData):
-    """
-    Bibliographic reference
-
-    This is a pure data class stub. Extend it in core/CBibReference.py
-    to add methods and implementation-specific functionality.
-    """
-
-    pmid: Optional[CInt] = None
-    title: Optional[CString] = None
-    authorList: Optional[CList] = None
-    source: Optional[CString] = None
-    url: Optional[CString] = None
-    selected: Optional[CBoolean] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CBibReferenceStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "tag": attribute(AttributeType.STRING),
-    },
-    error_codes={
-        "0": {
-            "severity": 0,
-            "description": "OK"
-        },
-        "1": {
-            "severity": 1,
-            "description": "Data has undefined value"
-        },
-        "2": {
-            "severity": 3,
-            "description": "Data has undefined value"
-        },
-        "3": {
-            "severity": 2,
-            "description": "Missing data"
-        },
-        "4": {
-            "description": "Missing data"
-        },
-        "5": {
-            "description": "Attempting to set data of wrong type"
-        },
-        "6": {
-            "description": "Default value does not satisfy validity check"
-        },
-        "7": {
-            "severity": 2,
-            "description": "Unrecognised qualifier in data input"
-        },
-        "8": {
-            "severity": 2,
-            "description": "Attempting to get inaccessible attribute:"
-        },
-        "9": {
-            "description": "Failed to get property"
-        },
-        "10": {
-            "severity": 2,
-            "description": "Attempting to set inaccessible attribute:"
-        },
-        "11": {
-            "description": "Failed to set property:"
-        },
-        "12": {
-            "description": "Undetermined error setting value from XML"
-        },
-        "13": {
-            "description": "Unrecognised class name in qualifier"
-        },
-        "14": {
-            "severity": 2,
-            "description": "No object name when saving qualifiers to XML"
-        },
-        "15": {
-            "description": "Error saving qualifier to XML"
-        },
-        "16": {
-            "severity": 2,
-            "description": "Unrecognised item in XML data file"
-        },
-        "17": {
-            "description": "Attempting to set unrecognised qualifier"
-        },
-        "18": {
-            "description": "Attempting to set qualifier with wrong type"
-        },
-        "19": {
-            "description": "Attempting to set qualifier with wrong list item type"
-        },
-        "20": {
-            "description": "Error creating a list/dict item object"
-        },
-        "21": {
-            "description": "Unknown error setting qualifiers from Xml file"
-        },
-        "22": {
-            "description": "Unknown error testing validity"
-        },
-        "23": {
-            "description": "Error saving data object to XML"
-        },
-        "24": {
-            "description": "Unable to test validity of default",
-            "severity": 2
-        },
-        "300": {
-            "description": "Compared objects are the same",
-            "severity": 0
-        },
-        "315": {
-            "description": "Both compared objects are null",
-            "severity": 0
-        },
-        "301": {
-            "description": "Unable to compare this class of data",
-            "severity": 2
-        },
-        "302": {
-            "description": "Other data has null value"
-        },
-        "303": {
-            "description": "My data has null value"
-        },
-        "304": {
-            "description": "Data has different values"
-        }
-    },
-    qualifiers={
-        "enumeratorsFunction": None,
-        "addEnumeratorFunction": None,
-    },
-    qualifiers_order=['enumeratorsFunction', 'addEnumeratorFunction'],
-    qualifiers_definition={
-        "enumeratorsFunction": {'type': '"method"', 'definition': 'Function returning list of enumerators'},
-        "addEnumeratorFunction": {'type': '"method"', 'definition': 'Function to add to list of enumerators'},
-    },
-    contents_order=['tag'],
-)
-class CMetaDataTagStub(CData):
-    """
-    This class will extend list of enumerators if new value for string is entered
-
-    This is a pure data class stub. Extend it in core/CMetaDataTag.py
-    to add methods and implementation-specific functionality.
-    """
-
-    tag: Optional[CString] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CMetaDataTagStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "below minimum"
+            "description": "String too short"
         },
         "102": {
-            "description": "above maximum"
+            "description": "String too long"
         },
         "103": {
             "description": "not one of limited allowed values"
+        },
+        "104": {
+            "description": "Contains disallowed characters"
         }
     },
     qualifiers={
-        "min": 0,
-        "label": 'Time',
-        "toolTip": 'Time and date as hh:mm dd/mm/yyyy',
-        "format": '%H:%M %d/%b/%y',
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0,
     },
-    qualifiers_order=['format'],
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
     qualifiers_definition={
-        "format": {'type': 'str', 'description': 'Argument to Python time.strftime to display time in human readable format'},
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
     },
 )
-class CTimeStub(CInt):
+class CAuthorStub(CString):
     """
-    The time. Uses Python time module
+    Placeholder for bibliographic author
 
-    This is a pure data class stub. Extend it in core/CTime.py
+    This is a pure data class stub. Extend it in core/CAuthor.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CTimeStub.
+        Initialize CAuthorStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -709,8 +884,8 @@ class CTimeStub(CInt):
         }
     },
     qualifiers={
-        "label": 'User id',
-        "toolTip": 'User id as me@myplace.ac.uk',
+        "label": 'Machine name',
+        "toolTip": 'Hostname as mycomputer.myplace.ac.uk',
     },
     qualifiers_order=[
         'minLength',
@@ -719,18 +894,94 @@ class CTimeStub(CInt):
         'enumerators',
         'menuText',
         'allowedCharsCode'],
+    qualifiers_definition={
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+    },
 )
-class CUserIdStub(CString):
+class CHostNameStub(CString):
     """
-    A user ID
+    Computer name
 
-    This is a pure data class stub. Extend it in core/CUserId.py
+    This is a pure data class stub. Extend it in core/CHostName.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CUserIdStub.
+        Initialize CHostNameStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "List shorter than required minimum length"
+        },
+        "102": {
+            "description": "List longer than required maximum length"
+        },
+        "103": {
+            "description": "Consecutive values in list fail comparison test"
+        },
+        "104": {
+            "description": "Attempting to add object of wrong type"
+        },
+        "105": {
+            "description": "Attempting to add object of correct type but wrong qualifiers"
+        },
+        "106": {
+            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
+        },
+        "107": {
+            "description": "Deleting item will reduce list below minimum length"
+        },
+        "108": {
+            "description": "Adding item will extend list beyond maximum length"
+        },
+        "109": {
+            "description": "Invalid item class"
+        },
+        "110": {
+            "description": "etree (XML) list item of wrong type"
+        },
+        "112": {
+            "description": "No list item object set for list"
+        }
+    },
+    qualifiers={
+        "listMinLength": 1,
+    },
+    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
+    qualifiers_definition={
+        "default": {'type': 'list'},
+        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
+        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
+        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
+    },
+)
+class CMetaDataTagListStub(CList):
+    """
+    A list with all items of one CData sub-class
+
+    This is a pure data class stub. Extend it in core/CMetaDataTagList.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CMetaDataTagListStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -937,257 +1188,6 @@ class CServerGroupStub(CData):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CServerGroupStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "String too short"
-        },
-        "102": {
-            "description": "String too long"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        },
-        "104": {
-            "description": "Contains disallowed characters"
-        }
-    },
-    qualifiers={
-        "label": 'Machine name',
-        "toolTip": 'Hostname as mycomputer.myplace.ac.uk',
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
-    qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
-    },
-)
-class CHostNameStub(CString):
-    """
-    Computer name
-
-    This is a pure data class stub. Extend it in core/CHostName.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CHostNameStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "List shorter than required minimum length"
-        },
-        "102": {
-            "description": "List longer than required maximum length"
-        },
-        "103": {
-            "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-            "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-            "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-            "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-            "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-            "description": "Invalid item class"
-        },
-        "110": {
-            "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-            "description": "No list item object set for list"
-        }
-    },
-    qualifiers={
-        "listMinLength": 1,
-    },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-    },
-)
-class CMetaDataTagListStub(CList):
-    """
-    A list with all items of one CData sub-class
-
-    This is a pure data class stub. Extend it in core/CMetaDataTagList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CMetaDataTagListStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "List shorter than required minimum length"
-        },
-        "102": {
-            "description": "List longer than required maximum length"
-        },
-        "103": {
-            "description": "Consecutive values in list fail comparison test"
-        },
-        "104": {
-            "description": "Attempting to add object of wrong type"
-        },
-        "105": {
-            "description": "Attempting to add object of correct type but wrong qualifiers"
-        },
-        "106": {
-            "description": "Attempting to add data which does not satisfy the qualifiers for a list item"
-        },
-        "107": {
-            "description": "Deleting item will reduce list below minimum length"
-        },
-        "108": {
-            "description": "Adding item will extend list beyond maximum length"
-        },
-        "109": {
-            "description": "Invalid item class"
-        },
-        "110": {
-            "description": "etree (XML) list item of wrong type"
-        },
-        "112": {
-            "description": "No list item object set for list"
-        }
-    },
-    qualifiers={
-        "listMinLength": 0,
-    },
-    qualifiers_order=['listMinLength', 'listMaxLength', 'listCompare'],
-    qualifiers_definition={
-        "default": {'type': 'list'},
-        "listMaxLength": {'type': 'int', 'description': 'Inclusive maximum length of list'},
-        "listMinLength": {'type': 'int', 'description': 'Inclusive minimum length of list'},
-        "listCompare": {'type': 'int', 'description': 'If has value 1/-1 consecutive items in list must be greater/less than preceeding item. The list item class must have a __cmp__() method.'},
-    },
-)
-class CAnnotationListStub(CList):
-    """
-    A list of annotation
-
-    This is a pure data class stub. Extend it in core/CAnnotationList.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CAnnotationListStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "String too short"
-        },
-        "102": {
-            "description": "String too long"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        },
-        "104": {
-            "description": "Contains disallowed characters"
-        }
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0,
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
-    qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
-    },
-)
-class CAuthorStub(CString):
-    """
-    Placeholder for bibliographic author
-
-    This is a pure data class stub. Extend it in core/CAuthor.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CAuthorStub.
 
         Args:
             parent: Parent object in hierarchy
