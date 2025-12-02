@@ -50,6 +50,7 @@ class ClassMetadata:
     contents_order: Optional[List[str]] = None
     qualifiers_order: Optional[List[str]] = None
     qualifiers_definition: Optional[Dict[str, Any]] = None
+    content_qualifiers: Optional[Dict[str, Dict[str, Any]]] = None  # Per-field qualifiers
 
 
 # Global registry of class metadata
@@ -87,6 +88,7 @@ def cdata_class(
     contents_order: Optional[List[str]] = None,
     qualifiers_order: Optional[List[str]] = None,
     qualifiers_definition: Optional[Dict[str, Any]] = None,
+    content_qualifiers: Optional[Dict[str, Dict[str, Any]]] = None,
 ):
     """Class decorator to add metadata to CData classes.
 
@@ -100,6 +102,7 @@ def cdata_class(
         contents_order: List specifying display order of attributes in UI
         qualifiers_order: List specifying display order of qualifiers
         qualifiers_definition: Dictionary of qualifier type definitions
+        content_qualifiers: Per-field qualifiers for child attributes (from CONTENTS)
 
     Example:
         @cdata_class(
@@ -129,6 +132,7 @@ def cdata_class(
             contents_order=contents_order,
             qualifiers_order=qualifiers_order,
             qualifiers_definition=qualifiers_definition,
+            content_qualifiers=content_qualifiers,
         )
 
         # Store in global registry
@@ -416,9 +420,10 @@ def apply_metadata_to_instance(instance):
     Args:
         instance: The instance to apply metadata to
     """
-    # Collect attributes from all ancestor classes with metadata
+    # Collect attributes and content_qualifiers from all ancestor classes with metadata
     # Walk MRO in REVERSE order so that child classes override parent classes
     merged_attributes = {}
+    merged_content_qualifiers = {}
     for cls in reversed(instance.__class__.__mro__):
         if cls is object:
             continue
@@ -427,6 +432,9 @@ def apply_metadata_to_instance(instance):
             # Parent attributes are added first (because we're in reverse),
             # then child overrides them
             merged_attributes.update(metadata.attributes)
+            # Same for content_qualifiers (per-field qualifiers from CONTENTS)
+            if metadata.content_qualifiers:
+                merged_content_qualifiers.update(metadata.content_qualifiers)
 
     # Create attributes from merged metadata
     for attr_name, attr_def in merged_attributes.items():
@@ -439,6 +447,13 @@ def apply_metadata_to_instance(instance):
                 attr_name, attr_def, instance
             )
             instance.__dict__[attr_name] = attr_obj
+
+            # Apply per-field qualifiers from content_qualifiers
+            if attr_name in merged_content_qualifiers and attr_obj is not None:
+                field_qualifiers = merged_content_qualifiers[attr_name]
+                if hasattr(attr_obj, 'set_qualifier'):
+                    for qual_name, qual_value in field_qualifiers.items():
+                        attr_obj.set_qualifier(qual_name, qual_value)
 
             if hasattr(instance, "_value_states"):
                 from .base_classes import ValueState

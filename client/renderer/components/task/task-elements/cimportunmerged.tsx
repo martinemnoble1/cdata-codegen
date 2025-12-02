@@ -20,62 +20,60 @@ export const CImportUnmergedElement: React.FC<CCP4i2TaskElementProps> = (
   } = useJob(job.id);
 
   const { item } = useTaskItem(itemName);
-  const { value: cell, update: updateCell } = useTaskItem(`${itemName}.cell`);
-  const { value: wavelength, update: updateWavelength } = useTaskItem(
-    `${itemName}.wavelength`
-  );
-  const { value: crystalName, update: updateCrystalName } = useTaskItem(
-    `${itemName}.crystalName`
-  );
-  const { value: dataset, update: updateDataset } = useTaskItem(
-    `${itemName}.dataset`
-  );
+  // Get current values for comparison (no update functions needed - we use sparse dict)
+  const { value: cell } = useTaskItem(`${itemName}.cell`);
+  const { value: wavelength } = useTaskItem(`${itemName}.wavelength`);
+  const { value: crystalName } = useTaskItem(`${itemName}.crystalName`);
+  const { value: dataset } = useTaskItem(`${itemName}.dataset`);
 
   const fileObjectPath = useMemo(
     () => (item?._objectPath ? `${item._objectPath}.file` : null),
     [item]
   );
-  const { data: fileDigest, mutate: mutateFileDigest } = useFileDigest(
-    fileObjectPath || ""
-  );
+  // fileDigest used only for declarative presentation (batch display)
+  const { data: fileDigest } = useFileDigest(fileObjectPath || "");
 
+  /**
+   * Imperative handler: only called when user explicitly changes the file.
+   * Fetches fresh digest and updates all changed fields in a single API call
+   * using a sparse dict (only includes fields that actually changed).
+   */
   const handleChange = useCallback(
     async (updated: any) => {
       if (!item || !setParameterNoMutate || !updated) return;
+
       const updatedValue = valueOfItem(updated);
       const digestResponse = await apiGet(
         `files/${updatedValue.dbFileId}/digest_by_uuid`
       );
-      // API returns {success: true, data: {...}} - extract the data
       const digestData = digestResponse?.data;
-      const updates: Promise<any>[] = [];
+      if (!digestData) return;
+
+      // Build sparse update dict - only include fields that changed
+      const updates: Record<string, any> = {};
+
       if (
-        digestData?.cell &&
-        JSON.stringify(digestData?.cell) !== JSON.stringify(cell)
+        digestData.cell &&
+        JSON.stringify(digestData.cell) !== JSON.stringify(cell)
       ) {
-        updates.push(updateCell(digestData?.cell));
+        updates.cell = digestData.cell;
       }
-      if (
-        digestData?.wavelength &&
-        JSON.stringify(digestData?.wavelength) !== JSON.stringify(wavelength)
-      ) {
-        updates.push(updateWavelength(digestData?.wavelength));
+      if (digestData.wavelength && digestData.wavelength !== wavelength) {
+        updates.wavelength = digestData.wavelength;
       }
-      if (
-        digestData?.crystalName &&
-        JSON.stringify(digestData?.crystalName) !== JSON.stringify(crystalName)
-      ) {
-        updates.push(updateCrystalName(digestData?.crystalName));
+      if (digestData.crystalName && digestData.crystalName !== crystalName) {
+        updates.crystalName = digestData.crystalName;
       }
-      if (
-        digestData?.crystalName &&
-        JSON.stringify(digestData?.datasetName) !== JSON.stringify(dataset)
-      ) {
-        updates.push(updateDataset(digestData?.datasetName));
+      if (digestData.datasetName && digestData.datasetName !== dataset) {
+        updates.dataset = digestData.datasetName;
       }
 
-      if (updates.length > 0) {
-        await Promise.all(updates);
+      // Single API call with sparse dict (server's update() handles it)
+      if (Object.keys(updates).length > 0) {
+        await setParameterNoMutate({
+          object_path: item._objectPath,
+          value: updates,
+        });
         await Promise.all([
           mutateContainer(),
           mutateValidation(),
@@ -85,13 +83,14 @@ export const CImportUnmergedElement: React.FC<CCP4i2TaskElementProps> = (
     },
     [
       item,
-      fileDigest,
       setParameterNoMutate,
       cell,
       wavelength,
       crystalName,
       dataset,
       mutateContainer,
+      mutateValidation,
+      mutateParams_xml,
     ]
   );
 

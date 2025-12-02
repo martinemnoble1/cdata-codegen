@@ -299,12 +299,12 @@ class CPluginScript(CData):
             except AttributeError:
                 # Container doesn't exist - create it
                 logger.info(f"[DEBUG _ensure_standard_containers] Creating new {container_name} container")
-                # Store in __dict__ to avoid __setattr__ while keeping references
                 container = CContainer(
                     parent=self.container,
                     name=container_name
                 )
-                self.container.__dict__[container_name] = container
+                # Use setattr to properly register in _data_order for serialization
+                setattr(self.container, container_name, container)
 
             # Add standard fields to guiAdmin
             if container_name == 'guiAdmin':
@@ -324,7 +324,8 @@ class CPluginScript(CData):
                         except Exception:
                             # If we can't get job name from DB, leave it unset
                             pass
-                    container.__dict__['jobTitle'] = job_title
+                    # Use setattr to properly register in _data_order for serialization
+                    setattr(container, 'jobTitle', job_title)
 
                 # Ensure jobStatus exists (stores job completion status)
                 # Values: 0=Pending, 1=Running, 2=Finished, 3=Failed, etc.
@@ -334,7 +335,8 @@ class CPluginScript(CData):
                         name='jobStatus'
                     )
                     job_status.value = 0  # Default: Pending
-                    container.__dict__['jobStatus'] = job_status
+                    # Use setattr to properly register in _data_order for serialization
+                    setattr(container, 'jobStatus', job_status)
 
     def _set_container_order(self):
         """
@@ -2313,6 +2315,54 @@ class CPluginScript(CData):
             value: Job ID to set
         """
         self._dbJobId = value
+
+    @property
+    def jobTitle(self):
+        """Get job title from guiAdmin container.
+
+        Returns:
+            Job title string, or empty string if not set
+        """
+        try:
+            return str(self.container.guiAdmin.jobTitle) if self.container.guiAdmin.jobTitle.isSet() else ''
+        except AttributeError:
+            return ''
+
+    @jobTitle.setter
+    def jobTitle(self, value):
+        """Set job title in guiAdmin container.
+
+        Args:
+            value: Job title string to set
+        """
+        try:
+            self.container.guiAdmin.jobTitle.value = str(value) if value else ''
+        except AttributeError:
+            logger.warning("Cannot set jobTitle: guiAdmin container not available")
+
+    @property
+    def jobStatus(self):
+        """Get job status from guiAdmin container.
+
+        Returns:
+            Job status integer (0=Pending, 1=Running, 2=Finished, 3=Failed, etc.)
+        """
+        try:
+            return self.container.guiAdmin.jobStatus.value if self.container.guiAdmin.jobStatus.isSet() else 0
+        except AttributeError:
+            return 0
+
+    @jobStatus.setter
+    def jobStatus(self, value):
+        """Set job status in guiAdmin container.
+
+        Args:
+            value: Job status integer to set
+        """
+        try:
+            self.container.guiAdmin.jobStatus.value = int(value)
+        except AttributeError:
+            logger.warning("Cannot set jobStatus: guiAdmin container not available")
 
     def getJobNumber(self):
         """Get the database job number.

@@ -17,6 +17,70 @@ from core.base_object.fundamental_types import CFloat
 
 
 @cdata_class(
+    attributes={
+        "x": attribute(AttributeType.FLOAT),
+        "y": attribute(AttributeType.FLOAT),
+        "z": attribute(AttributeType.FLOAT),
+    },
+    error_codes={
+        "201": {
+            "description": "Attempting arithmetic with inappropriate data type"
+        },
+        "202": {
+            "description": "Attempting arithmetic in unset data object"
+        },
+        "203": {
+            "description": "Attempting arithmetic with unset data object as argument"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+)
+class CXyzStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CXyz.py
+    to add methods and implementation-specific functionality.
+    """
+
+    x: Optional[CFloat] = None
+    y: Optional[CFloat] = None
+    z: Optional[CFloat] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CXyzStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
     error_codes={
         "0": {
             "severity": 0,
@@ -169,70 +233,6 @@ class CMatrix33Stub(CData):
 
 
 @cdata_class(
-    attributes={
-        "xMin": attribute(AttributeType.FLOAT),
-        "yMin": attribute(AttributeType.FLOAT),
-        "zMin": attribute(AttributeType.FLOAT),
-        "xMax": attribute(AttributeType.FLOAT),
-        "yMax": attribute(AttributeType.FLOAT),
-        "zMax": attribute(AttributeType.FLOAT),
-    },
-    error_codes={
-        "201": {
-            "description": "Maximum x,y or z value less than minimum"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CXyzBoxStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CXyzBox.py
-    to add methods and implementation-specific functionality.
-    """
-
-    xMin: Optional[CFloat] = None
-    yMin: Optional[CFloat] = None
-    zMin: Optional[CFloat] = None
-    xMax: Optional[CFloat] = None
-    yMax: Optional[CFloat] = None
-    zMax: Optional[CFloat] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CXyzBoxStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
     error_codes={
         "101": {
             "description": "below minimum"
@@ -288,19 +288,16 @@ class CAngleStub(CFloat):
 
 @cdata_class(
     attributes={
-        "x": attribute(AttributeType.FLOAT),
-        "y": attribute(AttributeType.FLOAT),
-        "z": attribute(AttributeType.FLOAT),
+        "xMin": attribute(AttributeType.FLOAT),
+        "yMin": attribute(AttributeType.FLOAT),
+        "zMin": attribute(AttributeType.FLOAT),
+        "xMax": attribute(AttributeType.FLOAT),
+        "yMax": attribute(AttributeType.FLOAT),
+        "zMax": attribute(AttributeType.FLOAT),
     },
     error_codes={
         "201": {
-            "description": "Attempting arithmetic with inappropriate data type"
-        },
-        "202": {
-            "description": "Attempting arithmetic in unset data object"
-        },
-        "203": {
-            "description": "Attempting arithmetic with unset data object as argument"
+            "description": "Maximum x,y or z value less than minimum"
         }
     },
     qualifiers={
@@ -326,21 +323,24 @@ class CAngleStub(CFloat):
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
 )
-class CXyzStub(CData):
+class CXyzBoxStub(CData):
     """
     QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
 
-    This is a pure data class stub. Extend it in core/CXyz.py
+    This is a pure data class stub. Extend it in core/CXyzBox.py
     to add methods and implementation-specific functionality.
     """
 
-    x: Optional[CFloat] = None
-    y: Optional[CFloat] = None
-    z: Optional[CFloat] = None
+    xMin: Optional[CFloat] = None
+    yMin: Optional[CFloat] = None
+    zMin: Optional[CFloat] = None
+    xMax: Optional[CFloat] = None
+    yMax: Optional[CFloat] = None
+    zMax: Optional[CFloat] = None
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CXyzStub.
+        Initialize CXyzBoxStub.
 
         Args:
             parent: Parent object in hierarchy

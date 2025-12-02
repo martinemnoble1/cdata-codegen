@@ -665,8 +665,8 @@ class CData(HierarchicalObject):
         """Validate this object and return an error report.
 
         This method checks the object's state and validates it against
-        qualifiers (min, max, enumerators, etc.). Subclasses should
-        override this to add custom validation logic.
+        qualifiers (min, max, enumerators, etc.). It also recursively
+        validates all children in the hierarchy.
 
         Returns:
             CErrorReport containing any validation errors/warnings
@@ -681,6 +681,20 @@ class CData(HierarchicalObject):
             # Basic validation is done here
             # Subclasses will add their own validation
             pass
+
+        # Recursively validate all children in the hierarchy
+        # This ensures that CData subclasses with child fields (like CImportUnmerged
+        # with cell, wavelength, file, etc.) have their children validated
+        if hasattr(self, 'children'):
+            for child in self.children():
+                if hasattr(child, 'validity'):
+                    try:
+                        child_report = child.validity()
+                        if child_report:
+                            report.extend(child_report)
+                    except Exception:
+                        # Don't let one child's validation failure stop others
+                        pass
 
         return report
 

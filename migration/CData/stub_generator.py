@@ -258,6 +258,19 @@ class StubCodeGenerator:
         if contents_order:
             lines.append(f'    contents_order={repr(contents_order)},')
 
+        # Render content_qualifiers (per-field qualifiers from CONTENTS)
+        # This captures qualifiers like allowUndefined=false, mustExist=true for specific fields
+        content_qualifiers = {}
+        for attr_name, attr_info in attributes.items():
+            field_qualifiers = attr_info.get('qualifiers', {})
+            if field_qualifiers:
+                content_qualifiers[attr_name] = field_qualifiers
+        if content_qualifiers:
+            lines.append('    content_qualifiers={')
+            for field_name, field_quals in content_qualifiers.items():
+                lines.append(f'        "{field_name}": {repr(field_quals)},')
+            lines.append('    },')
+
         # Render gui_label
         gui_label = class_data.get('gui_label', '')
         if gui_label:

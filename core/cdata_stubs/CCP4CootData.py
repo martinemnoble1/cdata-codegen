@@ -122,6 +122,10 @@ from core.cdata_stubs.CCP4File import CFilePathStub, CProjectIdStub
         "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
+    content_qualifiers={
+        "subType": {'default': 2, 'enumerators': [1, 2], 'onlyEnumerators': True, 'menuText': ['Coot 0-state.scm', 'Coot history.scm']},
+        "contentFlag": {'min': 0, 'default': None},
+    },
 )
 class CCootHistoryDataFileStub(CDataFile):
     """

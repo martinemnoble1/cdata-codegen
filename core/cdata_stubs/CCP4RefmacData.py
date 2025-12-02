@@ -22,165 +22,6 @@ from core.cdata_stubs.CCP4File import CFilePathStub, CProjectIdStub
 
 @cdata_class(
     attributes={
-        "rigid_group_id": attribute(AttributeType.STRING),
-        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
-    },
-    error_codes={
-        "0": {
-            "severity": 0,
-            "description": "OK"
-        },
-        "1": {
-            "severity": 1,
-            "description": "Data has undefined value"
-        },
-        "2": {
-            "severity": 3,
-            "description": "Data has undefined value"
-        },
-        "3": {
-            "severity": 2,
-            "description": "Missing data"
-        },
-        "4": {
-            "description": "Missing data"
-        },
-        "5": {
-            "description": "Attempting to set data of wrong type"
-        },
-        "6": {
-            "description": "Default value does not satisfy validity check"
-        },
-        "7": {
-            "severity": 2,
-            "description": "Unrecognised qualifier in data input"
-        },
-        "8": {
-            "severity": 2,
-            "description": "Attempting to get inaccessible attribute:"
-        },
-        "9": {
-            "description": "Failed to get property"
-        },
-        "10": {
-            "severity": 2,
-            "description": "Attempting to set inaccessible attribute:"
-        },
-        "11": {
-            "description": "Failed to set property:"
-        },
-        "12": {
-            "description": "Undetermined error setting value from XML"
-        },
-        "13": {
-            "description": "Unrecognised class name in qualifier"
-        },
-        "14": {
-            "severity": 2,
-            "description": "No object name when saving qualifiers to XML"
-        },
-        "15": {
-            "description": "Error saving qualifier to XML"
-        },
-        "16": {
-            "severity": 2,
-            "description": "Unrecognised item in XML data file"
-        },
-        "17": {
-            "description": "Attempting to set unrecognised qualifier"
-        },
-        "18": {
-            "description": "Attempting to set qualifier with wrong type"
-        },
-        "19": {
-            "description": "Attempting to set qualifier with wrong list item type"
-        },
-        "20": {
-            "description": "Error creating a list/dict item object"
-        },
-        "21": {
-            "description": "Unknown error setting qualifiers from Xml file"
-        },
-        "22": {
-            "description": "Unknown error testing validity"
-        },
-        "23": {
-            "description": "Error saving data object to XML"
-        },
-        "24": {
-            "description": "Unable to test validity of default",
-            "severity": 2
-        },
-        "300": {
-            "description": "Compared objects are the same",
-            "severity": 0
-        },
-        "315": {
-            "description": "Both compared objects are null",
-            "severity": 0
-        },
-        "301": {
-            "description": "Unable to compare this class of data",
-            "severity": 2
-        },
-        "302": {
-            "description": "Other data has null value"
-        },
-        "303": {
-            "description": "My data has null value"
-        },
-        "304": {
-            "description": "Data has different values"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-)
-class CRefmacRigidGroupItemStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CRefmacRigidGroupItem.py
-    to add methods and implementation-specific functionality.
-    """
-
-    rigid_group_id: Optional[CString] = None
-    segmentList: Optional[CList] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRefmacRigidGroupItemStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
         "atomType": attribute(AttributeType.STRING),
         "Fp": attribute(AttributeType.FLOAT),
         "Fpp": attribute(AttributeType.FLOAT),
@@ -315,6 +156,11 @@ class CRefmacRigidGroupItemStub(CData):
         "helpFile": {'type': 'str'},
         "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
+    content_qualifiers={
+        "atomType": {'charWidth': 5, 'toolTip': 'Element name as in PDB file'},
+        "Fp": {'toolTip': "Form factor f' for element at given wavelength"},
+        "Fpp": {'toolTip': "Form factor f'' for element at given wavelength"},
+    },
 )
 class CRefmacAnomalousAtomStub(CData):
     """
@@ -331,6 +177,168 @@ class CRefmacAnomalousAtomStub(CData):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRefmacAnomalousAtomStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "rigid_group_id": attribute(AttributeType.STRING),
+        "segmentList": attribute(AttributeType.CUSTOM, custom_class="CList"),
+    },
+    error_codes={
+        "0": {
+            "severity": 0,
+            "description": "OK"
+        },
+        "1": {
+            "severity": 1,
+            "description": "Data has undefined value"
+        },
+        "2": {
+            "severity": 3,
+            "description": "Data has undefined value"
+        },
+        "3": {
+            "severity": 2,
+            "description": "Missing data"
+        },
+        "4": {
+            "description": "Missing data"
+        },
+        "5": {
+            "description": "Attempting to set data of wrong type"
+        },
+        "6": {
+            "description": "Default value does not satisfy validity check"
+        },
+        "7": {
+            "severity": 2,
+            "description": "Unrecognised qualifier in data input"
+        },
+        "8": {
+            "severity": 2,
+            "description": "Attempting to get inaccessible attribute:"
+        },
+        "9": {
+            "description": "Failed to get property"
+        },
+        "10": {
+            "severity": 2,
+            "description": "Attempting to set inaccessible attribute:"
+        },
+        "11": {
+            "description": "Failed to set property:"
+        },
+        "12": {
+            "description": "Undetermined error setting value from XML"
+        },
+        "13": {
+            "description": "Unrecognised class name in qualifier"
+        },
+        "14": {
+            "severity": 2,
+            "description": "No object name when saving qualifiers to XML"
+        },
+        "15": {
+            "description": "Error saving qualifier to XML"
+        },
+        "16": {
+            "severity": 2,
+            "description": "Unrecognised item in XML data file"
+        },
+        "17": {
+            "description": "Attempting to set unrecognised qualifier"
+        },
+        "18": {
+            "description": "Attempting to set qualifier with wrong type"
+        },
+        "19": {
+            "description": "Attempting to set qualifier with wrong list item type"
+        },
+        "20": {
+            "description": "Error creating a list/dict item object"
+        },
+        "21": {
+            "description": "Unknown error setting qualifiers from Xml file"
+        },
+        "22": {
+            "description": "Unknown error testing validity"
+        },
+        "23": {
+            "description": "Error saving data object to XML"
+        },
+        "24": {
+            "description": "Unable to test validity of default",
+            "severity": 2
+        },
+        "300": {
+            "description": "Compared objects are the same",
+            "severity": 0
+        },
+        "315": {
+            "description": "Both compared objects are null",
+            "severity": 0
+        },
+        "301": {
+            "description": "Unable to compare this class of data",
+            "severity": 2
+        },
+        "302": {
+            "description": "Other data has null value"
+        },
+        "303": {
+            "description": "My data has null value"
+        },
+        "304": {
+            "description": "Data has different values"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    content_qualifiers={
+        "segmentList": {'listMinLength': 1},
+    },
+)
+class CRefmacRigidGroupItemStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CRefmacRigidGroupItem.py
+    to add methods and implementation-specific functionality.
+    """
+
+    rigid_group_id: Optional[CString] = None
+    segmentList: Optional[CList] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRefmacRigidGroupItemStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -398,6 +406,70 @@ class CRefmacRigidGroupListStub(CList):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRefmacRigidGroupListStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    attributes={
+        "chain_id": attribute(AttributeType.STRING),
+        "residue_1": attribute(AttributeType.INT),
+        "residue_2": attribute(AttributeType.INT),
+    },
+    error_codes={
+        "101": {
+            "description": "No sequence identity or structure RMS to target set"
+        }
+    },
+    qualifiers={
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
+    },
+    qualifiers_order=[
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
+    qualifiers_definition={
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+    },
+    contents_order=['chain_id', 'residue_1', 'residue_2'],
+    content_qualifiers={
+        "chain_id": {'charWidth': 1, 'allowUndefined': False, 'mustExist': True},
+        "residue_1": {'mustExist': True, 'allowUndefined': False},
+        "residue_2": {'mustExist': True, 'allowUndefined': False},
+    },
+)
+class CRefmacRigidGroupSegmentStub(CData):
+    """
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+
+    This is a pure data class stub. Extend it in core/CRefmacRigidGroupSegment.py
+    to add methods and implementation-specific functionality.
+    """
+
+    chain_id: Optional[CString] = None
+    residue_1: Optional[CInt] = None
+    residue_2: Optional[CInt] = None
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRefmacRigidGroupSegmentStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -507,6 +579,10 @@ class CRefmacRigidGroupListStub(CList):
         "requiredSubType": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed sub types'},
         "requiredContentFlag": {'type': 'list', 'listItemType': "<class 'int'>", 'description': 'A list of allowed content flags'},
     },
+    content_qualifiers={
+        "subType": {'default': None},
+        "contentFlag": {'min': 0, 'default': None},
+    },
 )
 class CRefmacRestraintsDataFileStub(CDataFile):
     """
@@ -527,65 +603,6 @@ class CRefmacRestraintsDataFileStub(CDataFile):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRefmacRestraintsDataFileStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    attributes={
-        "chain_id": attribute(AttributeType.STRING),
-        "residue_1": attribute(AttributeType.INT),
-        "residue_2": attribute(AttributeType.INT),
-    },
-    error_codes={
-        "101": {
-            "description": "No sequence identity or structure RMS to target set"
-        }
-    },
-    qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
-    },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
-    qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
-    },
-    contents_order=['chain_id', 'residue_1', 'residue_2'],
-)
-class CRefmacRigidGroupSegmentStub(CData):
-    """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-
-    This is a pure data class stub. Extend it in core/CRefmacRigidGroupSegment.py
-    to add methods and implementation-specific functionality.
-    """
-
-    chain_id: Optional[CString] = None
-    residue_1: Optional[CInt] = None
-    residue_2: Optional[CInt] = None
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRefmacRigidGroupSegmentStub.
 
         Args:
             parent: Parent object in hierarchy

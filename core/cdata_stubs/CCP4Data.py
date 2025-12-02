@@ -70,6 +70,41 @@ class COneWordStub(CString):
 
 @cdata_class(
     error_codes={
+        "101": {
+            "description": "End of range less than start"
+        },
+        "102": {
+            "description": "End of range greater than start"
+        }
+    },
+    qualifiers_order=['compare'],
+    qualifiers_definition={
+        "compare": {'type': 'int', 'description': 'If value is  1/-1 the end value must be greater/less than start.'},
+    },
+    contents_order=['start', 'end'],
+)
+class CRangeStub(CData):
+    """
+    Base class for CIntRange and CFloatRange
+
+    This is a pure data class stub. Extend it in core/CRange.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CRangeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
         "201": {
             "description": "Range selection contains invalid character"
         },
@@ -114,67 +149,6 @@ class CRangeSelectionStub(CString):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CRangeSelectionStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "String too short"
-        },
-        "102": {
-            "description": "String too long"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        },
-        "104": {
-            "description": "Contains disallowed characters"
-        }
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0,
-    },
-    qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
-    qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
-    },
-)
-class CJobTitleStub(CString):
-    """
-    A string
-
-    This is a pure data class stub. Extend it in core/CJobTitle.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CJobTitleStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -407,41 +381,6 @@ class CPatchSelectionStub(CData):
 
 @cdata_class(
     error_codes={
-        "101": {
-            "description": "End of range less than start"
-        },
-        "102": {
-            "description": "End of range greater than start"
-        }
-    },
-    qualifiers_order=['compare'],
-    qualifiers_definition={
-        "compare": {'type': 'int', 'description': 'If value is  1/-1 the end value must be greater/less than start.'},
-    },
-    contents_order=['start', 'end'],
-)
-class CRangeStub(CData):
-    """
-    Base class for CIntRange and CFloatRange
-
-    This is a pure data class stub. Extend it in core/CRange.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CRangeStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
         "0": {
             "severity": 0,
             "description": "OK"
@@ -550,39 +489,24 @@ class CRangeStub(CData):
         }
     },
     qualifiers={
-        "allowUndefined": True,
-        "guiDefinition": {},
-        "saveToDb": False,
+        "charWidth": 10,
     },
-    qualifiers_order=[
-        'allowUndefined',
-        'default',
-        'toolTip',
-        'guiLabel',
-        'guiDefinition',
-        'helpFile',
-        'saveToDb'],
+    qualifiers_order=['charWidth'],
     qualifiers_definition={
-        "allowUndefined": {'type': 'bool'},
-        "default": {'type': 'dict'},
-        "toolTip": {'type': 'str'},
-        "guiLabel": {'type': 'str'},
-        "guiDefinition": {'type': 'dict'},
-        "helpFile": {'type': 'str'},
-        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
+        "charWidth": {'type': 'int'},
     },
 )
-class CCollectionStub(CData):
+class CBaseDataStub(CData):
     """
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
+    Base class for simple classes
 
-    This is a pure data class stub. Extend it in core/CCollection.py
+    This is a pure data class stub. Extend it in core/CBaseData.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CCollectionStub.
+        Initialize CBaseDataStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -639,6 +563,67 @@ class CI2DataTypeStub(CString):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CI2DataTypeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "String too short"
+        },
+        "102": {
+            "description": "String too long"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        },
+        "104": {
+            "description": "Contains disallowed characters"
+        }
+    },
+    qualifiers={
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0,
+    },
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
+    qualifiers_definition={
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+    },
+)
+class CJobTitleStub(CString):
+    """
+    A string
+
+    This is a pure data class stub. Extend it in core/CJobTitle.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CJobTitleStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -885,85 +870,39 @@ class CJobStatusStub(CInt):
         }
     },
     qualifiers={
-        "charWidth": 10,
-    },
-    qualifiers_order=['charWidth'],
-    qualifiers_definition={
-        "charWidth": {'type': 'int'},
-    },
-)
-class CBaseDataStub(CData):
-    """
-    Base class for simple classes
-
-    This is a pure data class stub. Extend it in core/CBaseData.py
-    to add methods and implementation-specific functionality.
-    """
-
-    def __init__(self, parent=None, name=None, **kwargs):
-        """
-        Initialize CBaseDataStub.
-
-        Args:
-            parent: Parent object in hierarchy
-            name: Object name
-            **kwargs: Additional keyword arguments
-        """
-        super().__init__(parent=parent, name=name, **kwargs)
-
-
-@cdata_class(
-    error_codes={
-        "101": {
-            "description": "String too short"
-        },
-        "102": {
-            "description": "String too long"
-        },
-        "103": {
-            "description": "not one of limited allowed values"
-        },
-        "104": {
-            "description": "Contains disallowed characters"
-        }
-    },
-    qualifiers={
-        "minLength": None,
-        "maxLength": None,
-        "enumerators": [],
-        "menuText": [],
-        "onlyEnumerators": False,
-        "charWidth": -1,
-        "allowedCharsCode": 0,
+        "allowUndefined": True,
+        "guiDefinition": {},
+        "saveToDb": False,
     },
     qualifiers_order=[
-        'minLength',
-        'maxLength',
-        'onlyEnumerators',
-        'enumerators',
-        'menuText',
-        'allowedCharsCode'],
+        'allowUndefined',
+        'default',
+        'toolTip',
+        'guiLabel',
+        'guiDefinition',
+        'helpFile',
+        'saveToDb'],
     qualifiers_definition={
-        "default": {'type': 'str'},
-        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
-        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
-        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
-        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
-        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
-        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+        "allowUndefined": {'type': 'bool'},
+        "default": {'type': 'dict'},
+        "toolTip": {'type': 'str'},
+        "guiLabel": {'type': 'str'},
+        "guiDefinition": {'type': 'dict'},
+        "helpFile": {'type': 'str'},
+        "saveToDb": {'type': 'bool', 'description': 'Save this data in the database'},
     },
 )
-class CFollowFromJobStub(CUUIDStub):
+class CCollectionStub(CData):
     """
-    A string
+    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
 
-    This is a pure data class stub. Extend it in core/CFollowFromJob.py
+    This is a pure data class stub. Extend it in core/CCollection.py
     to add methods and implementation-specific functionality.
     """
 
     def __init__(self, parent=None, name=None, **kwargs):
         """
-        Initialize CFollowFromJobStub.
+        Initialize CCollectionStub.
 
         Args:
             parent: Parent object in hierarchy
@@ -1048,6 +987,67 @@ class CIntRangeStub(CRangeStub):
     def __init__(self, parent=None, name=None, **kwargs):
         """
         Initialize CIntRangeStub.
+
+        Args:
+            parent: Parent object in hierarchy
+            name: Object name
+            **kwargs: Additional keyword arguments
+        """
+        super().__init__(parent=parent, name=name, **kwargs)
+
+
+@cdata_class(
+    error_codes={
+        "101": {
+            "description": "String too short"
+        },
+        "102": {
+            "description": "String too long"
+        },
+        "103": {
+            "description": "not one of limited allowed values"
+        },
+        "104": {
+            "description": "Contains disallowed characters"
+        }
+    },
+    qualifiers={
+        "minLength": None,
+        "maxLength": None,
+        "enumerators": [],
+        "menuText": [],
+        "onlyEnumerators": False,
+        "charWidth": -1,
+        "allowedCharsCode": 0,
+    },
+    qualifiers_order=[
+        'minLength',
+        'maxLength',
+        'onlyEnumerators',
+        'enumerators',
+        'menuText',
+        'allowedCharsCode'],
+    qualifiers_definition={
+        "default": {'type': 'str'},
+        "maxLength": {'type': 'int', 'description': 'Maximum length of string'},
+        "minLength": {'type': 'int', 'description': 'Minimum length of string'},
+        "enumerators": {'type': 'list', 'description': 'A list of allowed or recommended values for string'},
+        "menuText": {'type': 'list', 'description': 'A list of strings equivalent to the enumerators that will appear in the GUI'},
+        "onlyEnumerators": {'type': 'bool', 'description': 'If this is true then the enumerators are obligatory - otherwise they are treated as recommended values'},
+        "allowedCharsCode": {'type': 'int', 'description': 'Flag if the text is limited to set of allowed characters'},
+    },
+)
+class CFollowFromJobStub(CUUIDStub):
+    """
+    A string
+
+    This is a pure data class stub. Extend it in core/CFollowFromJob.py
+    to add methods and implementation-specific functionality.
+    """
+
+    def __init__(self, parent=None, name=None, **kwargs):
+        """
+        Initialize CFollowFromJobStub.
 
         Args:
             parent: Parent object in hierarchy

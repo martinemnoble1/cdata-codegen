@@ -348,6 +348,17 @@ class CInt(CData):
                                       SEVERITY_WARNING)
 
         report = CErrorReport()
+
+        # Check allowUndefined - if False and value not set, it's an error
+        allow_undefined = self.get_qualifier('allowUndefined')
+        if allow_undefined is False and not self.isSet():
+            obj_path = self.object_path() if hasattr(self, 'object_path') else self.objectName()
+            report.append(
+                "CInt", 100, f"Required value not set: {obj_path}",
+                obj_path, SEVERITY_ERROR
+            )
+            return report  # No point checking other constraints if not set
+
         val = self.value
 
         # Check min/max constraints
@@ -753,6 +764,17 @@ class CFloat(CData):
                                       SEVERITY_WARNING)
 
         report = CErrorReport()
+
+        # Check allowUndefined - if False and value not set, it's an error
+        allow_undefined = self.get_qualifier('allowUndefined')
+        if allow_undefined is False and not self.isSet():
+            obj_path = self.object_path() if hasattr(self, 'object_path') else self.objectName()
+            report.append(
+                "CFloat", 100, f"Required value not set: {obj_path}",
+                obj_path, SEVERITY_ERROR
+            )
+            return report  # No point checking other constraints if not set
+
         val = self.value
 
         # Check min/max constraints
@@ -995,6 +1017,17 @@ class CString(CData):
                                       SEVERITY_WARNING)
 
         report = CErrorReport()
+
+        # Check allowUndefined - if False and value not set, it's an error
+        allow_undefined = self.get_qualifier('allowUndefined')
+        if allow_undefined is False and not self.isSet():
+            obj_path = self.object_path() if hasattr(self, 'object_path') else self.objectName()
+            report.append(
+                "CString", 100, f"Required value not set: {obj_path}",
+                obj_path, SEVERITY_ERROR
+            )
+            return report  # No point checking other constraints if not set
+
         val = self.value
 
         # Check minLength constraint
@@ -1341,10 +1374,19 @@ class CBoolean(CData):
         Returns:
             CErrorReport containing validation errors/warnings
         """
-        from .error_reporting import CErrorReport
+        from .error_reporting import CErrorReport, SEVERITY_ERROR
 
-        # Boolean values are always valid
         report = CErrorReport()
+
+        # Check allowUndefined - if False and value not set, it's an error
+        allow_undefined = self.get_qualifier('allowUndefined')
+        if allow_undefined is False and not self.isSet():
+            obj_path = self.object_path() if hasattr(self, 'object_path') else self.objectName()
+            report.append(
+                "CBoolean", 100, f"Required value not set: {obj_path}",
+                obj_path, SEVERITY_ERROR
+            )
+
         return report
 
 
@@ -1637,10 +1679,17 @@ class CList(CData):
         For CList, we create a container element with child elements for each item.
         The child element tags are the class names of the items (CCP4i2 convention).
 
+        IMPORTANT: For list items, presence in the list IS the explicit state.
+        When a user adds an empty item to a list, that's an explicit action.
+        We do NOT filter out items based on whether their fields are set -
+        the list membership itself is the "set" state that must be preserved.
+        The excludeUnset/allSet flags are passed to child getEtree() calls
+        to filter the item's FIELDS, not the items themselves.
+
         Args:
             name: Optional element name (not used for CList, uses objectName instead)
-            excludeUnset: If True, pass this flag to item's getEtree() calls
-            allSet: If True, only serialize items where all registered attributes are set
+            excludeUnset: If True, pass this flag to item's getEtree() calls (for field filtering)
+            allSet: If True, pass this flag to item's getEtree() calls (for field filtering)
 
         Returns:
             ET.Element with list items as children
@@ -1664,33 +1713,25 @@ class CList(CData):
         container_elem = ET.Element(list_name)
 
         # Add each item as a child element
+        # NOTE: We always include ALL items in the list - do not filter based on
+        # excludeUnset/allSet at the item level. The list membership itself is
+        # the explicit user action. These flags only affect field-level filtering
+        # within each item's getEtree() call.
         for item in self._items:
             # Use the item's class name as the XML tag (CCP4i2 convention)
             item_class_name = type(item).__name__
 
             if isinstance(item, CData):
-                # Check if item should be excluded based on excludeUnset
-                if excludeUnset and hasattr(item, 'isSet'):
-                    if not item.isSet(allowDefault=False):
-                        continue  # Skip unset items
-
-                # Check allSet condition for the item
-                if allSet and hasattr(item, '_check_all_registered_attributes_set'):
-                    if not item._check_all_registered_attributes_set():
-                        continue  # Skip items that don't have all attributes set
-
                 # If item is CData, recursively get its etree
-                # But we need to change the root tag to the class name
+                # Pass excludeUnset/allSet to filter FIELDS within the item
                 if hasattr(item, 'getEtree'):
                     item_etree = item.getEtree(excludeUnset=excludeUnset, allSet=allSet)
                     # Change the tag to the class name
                     item_etree.tag = item_class_name
-                    # Only append if element has content when filtering
-                    if excludeUnset or allSet:
-                        if item_etree.text or len(item_etree) > 0:
-                            container_elem.append(item_etree)
-                    else:
-                        container_elem.append(item_etree)
+                    # Always append - the item exists in the list, so serialize it
+                    # Even an empty <CImportUnmerged /> is valid - it represents
+                    # a list slot the user created that they may fill in later
+                    container_elem.append(item_etree)
                 else:
                     # Fallback: create element with item's string representation
                     item_elem = ET.Element(item_class_name)
