@@ -108,7 +108,6 @@ export const CAsuContentSeqElement: React.FC<CCP4i2TaskElementProps> = (
     <Card sx={{ border: "3px solid", borderColor: getValidationColor(item) }}>
       <CardHeader
         title={item._qualifiers.guiLabel}
-        sx={{ backgroundColor: getValidationColor(item) }}
         action={<ErrorInfo {...props} />}
       />
       <CardContent sx={{ my: 0, py: 0, pt: 2 }}>

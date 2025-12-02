@@ -161,17 +161,13 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
                   key={`${iElement}`}
                   onClick={() => handleOpenDialog(iElement)}
                   sx={{
-                    transition: "box-shadow 0.2s, background 0.2s",
+                    transition: "box-shadow 0.2s",
                     cursor: "pointer",
-                    // Apply row background color based on validation status
-                    backgroundColor: rowValidationColor,
+                    // Apply left border based on row validation status
+                    borderLeft: rowValidationColor !== "inherit" ? `4px solid ${rowValidationColor}` : undefined,
                     "&:hover": {
                       boxShadow: 3,
-                      // Darken hover color slightly when there's a validation color
-                      backgroundColor: rowValidationColor !== "inherit"
-                        ? rowValidationColor
-                        : "rgba(0, 0, 0, 0.04)",
-                      filter: rowValidationColor !== "inherit" ? "brightness(0.95)" : undefined,
+                      backgroundColor: "rgba(0, 0, 0, 0.04)",
                     },
                   }}
                 >
@@ -197,8 +193,10 @@ export const CAsuContentSeqListElement: React.FC<CCP4i2TaskElementProps> = (
                               : property === "sequence"
                                 ? "20rem"
                                 : undefined,
-                          // Apply cell background color if field has validation error
-                          backgroundColor: cellValidationColor !== "inherit" ? cellValidationColor : undefined,
+                          // Apply bottom border if field has validation error
+                          borderBottom: cellValidationColor !== "inherit"
+                            ? `3px solid ${cellValidationColor}`
+                            : undefined,
                         }}
                       >
                         <div
