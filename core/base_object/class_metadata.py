@@ -455,6 +455,20 @@ def apply_metadata_to_instance(instance):
                     for qual_name, qual_value in field_qualifiers.items():
                         attr_obj.set_qualifier(qual_name, qual_value)
 
+                # If there's a default value, apply it to the attribute's value
+                # This ensures the UI shows the correct default (e.g., polymerType = "PROTEIN")
+                # and the value is properly initialized for validation
+                if 'default' in field_qualifiers and hasattr(attr_obj, 'value'):
+                    default_value = field_qualifiers['default']
+                    if default_value is not None:
+                        # Set value but mark as DEFAULT state, not EXPLICITLY_SET
+                        # This allows isSet(allowDefault=False) to correctly identify
+                        # fields that haven't been user-modified
+                        attr_obj._value = default_value if hasattr(attr_obj, '_value') else None
+                        if hasattr(attr_obj, '_value_states'):
+                            from .base_classes import ValueState
+                            attr_obj._value_states['value'] = ValueState.DEFAULT
+
             if hasattr(instance, "_value_states"):
                 from .base_classes import ValueState
 
