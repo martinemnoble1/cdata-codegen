@@ -11,7 +11,6 @@ import {
   FormControlLabel,
   Radio,
   RadioGroup,
-  Stack,
   TextField,
 } from "@mui/material";
 
@@ -21,25 +20,24 @@ import { ErrorTrigger } from "./error-info";
 import { useTaskInterface } from "../../../providers/task-provider";
 import { usePopcorn } from "../../../providers/popcorn-provider";
 import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
+import { inferFieldSize, getFieldSizeStyles } from "./field-sizes";
+import { FieldWrapper } from "./field-wrapper";
 
 type OptionValue = string | number;
 type GuiMode = "multiLineRadio" | "radio" | "autocomplete";
-
-// Default minimum width for the component
-const DEFAULT_MIN_WIDTH = "15rem";
 
 export const CSimpleAutocompleteElement: React.FC<
   CCP4i2CSimpleElementProps
 > = ({
   itemName,
   job,
-  type,
   sx,
   qualifiers,
   onChange,
   visibility,
   disabled: disabledProp,
   suppressMutations = false,
+  size: sizeProp,
 }) => {
   const {
     useTaskItem,
@@ -141,6 +139,20 @@ export const CSimpleAutocompleteElement: React.FC<
   const isRadioMode = useMemo(
     () => guiMode === "multiLineRadio" || guiMode === "radio",
     [guiMode]
+  );
+
+  // Calculate field size - use explicit prop or infer from item/qualifiers
+  const fieldSize = useMemo(
+    () => sizeProp || inferFieldSize(item, qualifiers),
+    [sizeProp, item, qualifiers]
+  );
+
+  const calculatedSx = useMemo(
+    () => ({
+      ...getFieldSizeStyles(fieldSize),
+      ...sx,
+    }),
+    [fieldSize, sx]
   );
 
   // Parameter update handler
@@ -262,21 +274,12 @@ export const CSimpleAutocompleteElement: React.FC<
   // Render radio group
   if (isRadioMode) {
     return (
-      <Stack
-        direction="row"
-        sx={{ mt: 1 }}
-        role="group"
-        aria-label={`${guiLabel} selection`}
-      >
+      <FieldWrapper ariaLabel={`${guiLabel} selection`}>
         <RadioGroup
           row={guiMode === "radio"}
           value={localValue}
           onChange={handleRadioChange}
-          sx={{
-            minWidth: DEFAULT_MIN_WIDTH,
-            ml: 2,
-            ...sx,
-          }}
+          sx={calculatedSx}
           name={`radio-group-${itemName}`}
         >
           <FormControlLabel control={<></>} label={guiLabel} sx={{ mr: 2 }} />
@@ -296,28 +299,19 @@ export const CSimpleAutocompleteElement: React.FC<
           ))}
         </RadioGroup>
         <ErrorTrigger item={item} job={job} />
-      </Stack>
+      </FieldWrapper>
     );
   }
 
   // Render autocomplete
   return (
-    <Stack
-      direction="row"
-      sx={{ mt: 1 }}
-      role="group"
-      aria-label={`${guiLabel} selection`}
-    >
+    <FieldWrapper ariaLabel={`${guiLabel} selection`}>
       <Autocomplete
         disabled={isDisabled}
-        sx={{
-          minWidth: DEFAULT_MIN_WIDTH,
-          ml: 2,
-          ...sx,
-        }}
+        sx={calculatedSx}
         value={localValue}
         onChange={handleAutocompleteChange}
-        onInputChange={(event, newInputValue, reason) => {
+        onInputChange={(_event, newInputValue, reason) => {
           // Handle free text input only if not restricted to enumerators
           if (
             reason === "input" &&
@@ -368,6 +362,6 @@ export const CSimpleAutocompleteElement: React.FC<
         )}
       />
       <ErrorTrigger item={item} job={job} />
-    </Stack>
+    </FieldWrapper>
   );
 };

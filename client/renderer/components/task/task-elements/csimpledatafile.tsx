@@ -1,4 +1,3 @@
-import { Stack } from "@mui/material";
 import { CDataFileElement } from "./cdatafile";
 import { CCP4i2TaskElementProps } from "./task-element";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -71,9 +70,5 @@ export const CSimpleDataFileElement: React.FC<CSimpleDataFileElementProps> = (
 
   if (!isVisible) return null;
 
-  return (
-    <Stack direction="column" spacing={0} useFlexGap>
-      <CDataFileElement {...props} setFiles={setSelectedFiles} />
-    </Stack>
-  );
+  return <CDataFileElement {...props} setFiles={setSelectedFiles} />;
 };

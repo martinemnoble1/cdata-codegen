@@ -4,10 +4,13 @@ import { CCP4i2TaskElementProps } from "./task-element";
 import { CSimpleTextFieldElement } from "./csimple-textfield";
 import { CSimpleAutocompleteElement } from "./csimple-autocomplete";
 import { useJob } from "../../../utils";
+import { FieldSize } from "./field-sizes";
 
 // Types
 export interface CCP4i2CSimpleElementProps extends CCP4i2TaskElementProps {
   type: "int" | "float" | "text" | "checkbox";
+  /** Optional explicit field size. If not provided, size is inferred from item type/qualifiers. */
+  size?: FieldSize;
 }
 
 interface ProcessedQualifiers {

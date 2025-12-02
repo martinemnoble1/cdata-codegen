@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Stack, TextField } from "@mui/material";
+import { TextField } from "@mui/material";
 
 import { CCP4i2CSimpleElementProps } from "./csimple";
 import { useJob, SetParameterResponse } from "../../../utils";
@@ -15,6 +15,8 @@ import { ErrorTrigger } from "./error-info";
 import { useTaskInterface } from "../../../providers/task-provider";
 import { usePopcorn } from "../../../providers/popcorn-provider";
 import { useParameterChangeIntent } from "../../../providers/parameter-change-intent-provider";
+import { inferFieldSize, getFieldSizeStyles } from "./field-sizes";
+import { FieldWrapper } from "./field-wrapper";
 
 // Types
 type InputValue = string | number | boolean;
@@ -29,7 +31,6 @@ interface ProcessedItem {
 }
 
 // Constants
-const DEFAULT_MIN_WIDTH = "15rem";
 const DEBOUNCE_DELAY = 1000;
 const INPUT_TYPES = {
   TEXT: "text",
@@ -158,6 +159,7 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
   visibility,
   disabled: disabledProp,
   suppressMutations = false,
+  size: sizeProp,
 }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -199,13 +201,18 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
     return disabledProp || inFlight || isSubmitting || job.status !== 1;
   }, [disabledProp, inFlight, isSubmitting, job.status]);
 
+  // Calculate field size - use explicit prop or infer from item/qualifiers
+  const fieldSize = useMemo(
+    () => sizeProp || inferFieldSize(item, qualifiers),
+    [sizeProp, item, qualifiers]
+  );
+
   const calculatedSx = useMemo(
     () => ({
-      minWidth: DEFAULT_MIN_WIDTH,
-      ml: 2,
+      ...getFieldSizeStyles(fieldSize),
       ...sx,
     }),
-    [sx]
+    [fieldSize, sx]
   );
 
   const validationColor = useMemo(
@@ -399,12 +406,7 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
   }
 
   return (
-    <Stack
-      direction="row"
-      sx={{ mt: 2 }}
-      role="group"
-      aria-label={`${processedItem.guiLabel} input`}
-    >
+    <FieldWrapper ariaLabel={`${processedItem.guiLabel} input`}>
       <TextField
         inputRef={inputRef}
         disabled={isDisabled}
@@ -426,6 +428,6 @@ export const CSimpleTextFieldElement: React.FC<CCP4i2CSimpleElementProps> = ({
         }}
       />
       <ErrorTrigger item={item} job={job} />
-    </Stack>
+    </FieldWrapper>
   );
 };

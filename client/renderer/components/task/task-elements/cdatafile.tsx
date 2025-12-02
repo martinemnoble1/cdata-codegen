@@ -36,6 +36,7 @@ import { useFileMenu } from "../../../providers/file-context-menu";
 import { ErrorTrigger } from "./error-info";
 import { InputFileFetch } from "./input-file-fetch";
 import { InputFileUpload } from "./input-file-upload";
+import { FIELD_SPACING } from "./field-sizes";
 
 const BORDER_RADIUS_STYLES = {
   none: { borderRadius: 0 },
@@ -274,8 +275,9 @@ export const CDataFileElement: React.FC<CCP4i2DataFileElementProps> = ({
         borderColor,
         backgroundColor,
         borderRadius: "0.5rem",
-        mx: 2,
-        my: 1,
+        mx: FIELD_SPACING.marginLeft,
+        mt: FIELD_SPACING.marginTop,
+        mb: 0.5,
       }}
       direction="column"
     >
@@ -287,7 +289,7 @@ export const CDataFileElement: React.FC<CCP4i2DataFileElementProps> = ({
 
         <Autocomplete
           disabled={isDisabled}
-          sx={{ m: 1, width: "80rem", maxWidth: "80rem", ...sx }}
+          sx={{ m: 1, flex: 1, minWidth: 0, ...sx }}
           size="small"
           value={value}
           onChange={handleFileSelect}
