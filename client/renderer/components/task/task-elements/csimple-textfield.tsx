@@ -81,7 +81,9 @@ const useFormState = (
   // Sync with prop changes - but skip if user recently edited this field
   useEffect(() => {
     // Don't overwrite local state if user just edited this field
-    if (objectPath && wasRecentlyChanged(objectPath)) {
+    // Use a longer timeout (10 seconds) to account for API latency,
+    // container mutation, and SWR revalidation
+    if (objectPath && wasRecentlyChanged(objectPath, 10000)) {
       return;
     }
     setValue(initialValue);

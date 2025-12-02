@@ -62,7 +62,11 @@ export const CSimpleAutocompleteElement: React.FC<
   useEffect(() => {
     if (item?._value !== undefined) {
       // Don't overwrite local state if user just edited this field
-      if (objectPath && wasRecentlyChanged(objectPath)) {
+      // Use a longer timeout (10 seconds) to account for:
+      // - API call latency
+      // - Container mutation and SWR revalidation
+      // - Multiple cascading updates from parent components
+      if (objectPath && wasRecentlyChanged(objectPath, 10000)) {
         return;
       }
       setLocalValue(item._value);
@@ -196,11 +200,11 @@ export const CSimpleAutocompleteElement: React.FC<
           setLocalValue(item._value); // Revert to original value
           clearIntentForPath(objectPath);
         } else if (result?.success && result.data?.updated_item && onChange) {
-          clearIntentForPath(objectPath);
+          // Don't clear intent here - let the timeout handle cleanup
+          // This prevents bounce-back when container mutation triggers re-render
           await onChange(result.data.updated_item);
-        } else if (result?.success) {
-          clearIntentForPath(objectPath);
         }
+        // On success without onChange, don't clear intent - let timeout handle it
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
