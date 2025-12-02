@@ -53,6 +53,30 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
   );
 
   /**
+   * Fetches and caches the Matthews coefficient analysis for the current job using SWR.
+   * Only fetches when we have both a valid molecular weight result AND an HKLIN file.
+   */
+  const { data: matthewsAnalysis, mutate: mutateMatthews } = useSWR(
+    // Only fetch when we have molecular weight AND HKLIN digest
+    // API response format: {success: true, data: {result: <value>}}
+    molWeight?.data?.result && HKLINDigest?.data
+      ? [
+          `jobs/${job.id}/object_method`,
+          "matthewsCoeff",
+          molWeight.data.result,
+          HKLINDigest.data,
+        ]
+      : null,
+    ([url, , molWeightResult]) =>
+      apiPost(url, {
+        object_path: "ProvideAsuContents.inputData.HKLIN.fileContent",
+        method_name: "matthewsCoeff",
+        kwargs: { molWt: molWeightResult },
+      }),
+    { keepPreviousData: true }
+  );
+
+  /**
    * Handle ASUCONTENTIN file change - explicitly fetch digest and populate ASU_CONTENT.
    * Uses imperative fetchDigest for deterministic, race-condition-free behavior.
    *
@@ -77,35 +101,13 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         nCopies: seq.nCopies ?? 1,  // Default to 1 if not provided
       }));
       await setAsuContent(seqList);
-      // Refresh validation and molecular weight after updating ASU content
+      // Refresh validation, molecular weight, and Matthews after updating ASU content
+      // Must await molWeight mutation so the new value is available for Matthews calculation
       mutateValidation();
-      mutateMolWeight();
+      await mutateMolWeight();
+      mutateMatthews();
     }
-  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent, mutateValidation, mutateMolWeight]);
-
-  /**
-   * Fetches and caches the Matthews coefficient analysis for the current job using SWR.
-   * Only fetches when we have both a valid molecular weight result AND an HKLIN file.
-   */
-  const { data: matthewsAnalysis } = useSWR(
-    // Only fetch when we have molecular weight AND HKLIN digest
-    // API response format: {success: true, data: {result: <value>}}
-    molWeight?.data?.result && HKLINDigest?.data
-      ? [
-          `jobs/${job.id}/object_method`,
-          "matthewsCoeff",
-          molWeight.data.result,
-          HKLINDigest.data,
-        ]
-      : null,
-    ([url, , molWeightResult]) =>
-      apiPost(url, {
-        object_path: "ProvideAsuContents.inputData.HKLIN.fileContent",
-        method_name: "matthewsCoeff",
-        kwargs: { molWt: molWeightResult },
-      }),
-    { keepPreviousData: true }
-  );
+  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent, mutateValidation, mutateMolWeight, mutateMatthews]);
 
   return (
     <CCP4i2Tabs {...props}>
@@ -140,10 +142,11 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
             {...props}
             itemName="ASU_CONTENT"
             qualifiers={{ guiLabel: "ASU contents" }}
-            onChange={() => {
-              // Re-check validity and molecular weight when ASU content changes
+            onChange={async () => {
+              // Re-check validity, molecular weight, and Matthews when ASU content changes
               mutateValidation();
-              mutateMolWeight();
+              await mutateMolWeight();
+              mutateMatthews();
             }}
           />
         </CCP4i2ContainerElement>
