@@ -40,16 +40,21 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
 
   /**
    * Handle HKLIN file change - fetch digest for Matthews calculation.
+   *
+   * @param updatedItem - The updated file item passed from onChange (has fresh _objectPath)
    */
-  const handleHKLINChange = useCallback(async () => {
-    console.log("handleHKLINChange called, hklinItem:", hklinItem?._objectPath);
-    if (!hklinItem?._objectPath) {
+  const handleHKLINChange = useCallback(async (updatedItem?: any) => {
+    // Use the updated item's path if provided (from onChange), otherwise fall back to current state
+    // This is important because when selecting from pulldown, the container hasn't mutated yet
+    const objectPath = updatedItem?._objectPath || hklinItem?._objectPath;
+    console.log("handleHKLINChange called, objectPath:", objectPath);
+    if (!objectPath) {
       console.log("handleHKLINChange: no objectPath, returning early");
       return;
     }
 
-    console.log("handleHKLINChange: fetching digest for", hklinItem._objectPath);
-    const digestData = await fetchDigest(hklinItem._objectPath);
+    console.log("handleHKLINChange: fetching digest for", objectPath);
+    const digestData = await fetchDigest(objectPath);
     console.log("handleHKLINChange: got digest data:", digestData);
     setHklinDigest(digestData ? { data: digestData } : null);
   }, [hklinItem?._objectPath, fetchDigest]);
@@ -79,8 +84,10 @@ const TaskInterface: React.FC<CCP4i2TaskInterfaceProps> = (props) => {
         nCopies: seq.nCopies ?? 1,  // Default to 1 if not provided
       }));
       await setAsuContent(seqList);
+      // Refresh validation so isAsuContentValid updates, which triggers molWeight fetch
+      mutateValidation();
     }
-  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent]);
+  }, [asuContentInItem?._objectPath, fetchDigest, setAsuContent, mutateValidation]);
 
   // ASU content is valid when there are no validation errors for it
   // Uses the existing validation infrastructure from useJob().getErrors()
