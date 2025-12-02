@@ -419,7 +419,7 @@ def make_old_report(job: Job) -> ET.Element:
     output_xml = None
     if xml_path is not None:
         try:
-            output_xml = ET.parse(xml_path)
+            output_xml = ET.parse(xml_path).getroot()
             logger.debug("Parsed XML file: %s", xml_path)
         except ET.ParseError as err:
             logger.error("Failed to parse XML file %s: %s", xml_path, err)

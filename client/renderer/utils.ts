@@ -96,13 +96,27 @@ export type UploadFileParamResponse =
     };
 
 /**
+ * Column selection for multi-representation MTZ upload.
+ */
+export interface ColumnSelectorEntry {
+  signature: string;
+  columnSelector: string;
+  contentFlag: number;
+  fileSuffix: string;
+  isPrimary: boolean;
+}
+
+/**
  * Arguments for uploadFileParam function.
  */
 export interface UploadFileParamArg {
   objectPath: string;
   file: Blob;
   fileName: string;
+  /** Legacy single column selector (backward compatible) */
   columnSelector?: string;
+  /** Enhanced multi-selector format for multiple representations */
+  columnSelectors?: ColumnSelectorEntry[];
 }
 
 export interface JobData {
@@ -924,7 +938,7 @@ export const useJob = (jobId: number | null | undefined): JobData => {
         return undefined;
       }
 
-      const { objectPath, file, fileName, columnSelector } = uploadArg;
+      const { objectPath, file, fileName, columnSelector, columnSelectors } = uploadArg;
 
       // Record intent BEFORE making the API call
       // This prevents the container refetch from overwriting local state
@@ -945,6 +959,10 @@ export const useJob = (jobId: number | null | undefined): JobData => {
           formData.append("file", file, fileName);
           if (columnSelector?.trim()) {
             formData.append("column_selector", columnSelector);
+          }
+          // Enhanced multi-selector format for multiple representations
+          if (columnSelectors && columnSelectors.length > 0) {
+            formData.append("column_selectors", JSON.stringify(columnSelectors));
           }
 
           const result = await api.post<UploadFileParamResponse>(

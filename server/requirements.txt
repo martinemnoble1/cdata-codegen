@@ -34,6 +34,9 @@ biopython==1.85
 # Testing
 pytest==8.4.2
 
+# XML Processing
+lxml_html_clean==0.4.3  # Required by prosmart_refmac_report.py (lxml.html.clean moved to separate package)
+
 # Utilities
 requests==2.32.5
 requests-cache==1.2.1

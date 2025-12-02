@@ -176,12 +176,39 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
             CMtzDataFile,
         ),
     ):
+        # Check for enhanced multi-selector format first (JSON array)
+        column_selectors_json = request.POST.get("column_selectors", None)
         column_selector = request.POST.get("column_selector", None)
-        logger.info("MTZ path - column_selector: %s", column_selector)
-        imported_file_path = handle_reflections(
-            job, param_object, files[0].name, column_selector, downloaded_file_path
-        )
-        logger.info("handle_reflections returned: %s", imported_file_path)
+
+        if column_selectors_json:
+            # Enhanced multi-selector mode
+            try:
+                column_selectors = json.loads(column_selectors_json)
+                logger.info("MTZ path - multi-selector mode: %s", column_selectors)
+                multi_result = handle_reflections_multi(
+                    job, param_object, files[0].name, column_selectors, downloaded_file_path
+                )
+                imported_file_path = multi_result["primaryPath"]
+                additional_paths = multi_result.get("additionalPaths", [])
+                logger.info(
+                    "handle_reflections_multi returned: primary=%s, additional=%s",
+                    imported_file_path, additional_paths
+                )
+                # Note: additional_paths contains alternate representations
+                # These could be stored or returned to frontend in future enhancement
+            except json.JSONDecodeError as e:
+                logger.error("Failed to parse column_selectors JSON: %s", e)
+                # Fall back to single selector mode
+                imported_file_path = handle_reflections(
+                    job, param_object, files[0].name, column_selector, downloaded_file_path
+                )
+        else:
+            # Legacy single-selector mode
+            logger.info("MTZ path - column_selector: %s", column_selector)
+            imported_file_path = handle_reflections(
+                job, param_object, files[0].name, column_selector, downloaded_file_path
+            )
+            logger.info("handle_reflections returned: %s", imported_file_path)
     else:
         logger.info("Non-MTZ path - using downloaded file directly")
         imported_file_path = downloaded_file_path
@@ -307,6 +334,10 @@ def handle_reflections(
     column_selector: str,
     downloaded_file_path: pathlib.Path,
 ):
+    """
+    Handle single column selector (backward compatible).
+    Returns the path to the imported file.
+    """
     logger.info(
         "Dealing with a reflection object, class=%s, column_selector=%s",
         param_object.__class__.__name__,
@@ -353,6 +384,135 @@ def handle_reflections(
     logger.info("Preferred imported file destination is %s", dest)
     imported_file_path = gemmi_split_mtz(downloaded_file_path, column_selector, dest)
     return imported_file_path
+
+
+def handle_reflections_multi(
+    job: models.Job,
+    param_object: CMtzDataFile,
+    file_name: str,
+    column_selectors: list,
+    downloaded_file_path: pathlib.Path,
+):
+    """
+    Handle multiple column selectors for multi-representation MTZ import.
+
+    Args:
+        job: The job model
+        param_object: The CMtzDataFile parameter object
+        file_name: Original file name
+        column_selectors: List of dicts with structure:
+            [
+                {"signature": "KMKM", "columnSelector": "...", "contentFlag": 1,
+                 "fileSuffix": "_asIPAIR", "isPrimary": true},
+                {"signature": "FQ", "columnSelector": "...", "contentFlag": 4,
+                 "fileSuffix": "_asFMEAN", "isPrimary": false}
+            ]
+        downloaded_file_path: Path to the downloaded MTZ file
+
+    Returns:
+        dict with:
+            - primaryPath: Path to the primary file
+            - additionalPaths: List of dicts with {path, signature, contentFlag, fileSuffix}
+    """
+    logger.info(
+        "Handling multi-selector reflection import, class=%s, selectors=%s",
+        param_object.__class__.__name__,
+        column_selectors,
+    )
+
+    # Handle case where column_selectors is empty or None
+    if not column_selectors:
+        # Fall back to single-file behavior
+        primary_path = handle_reflections(
+            job, param_object, file_name, None, downloaded_file_path
+        )
+        return {"primaryPath": primary_path, "additionalPaths": []}
+
+    # CMtzDataFile without selectors: copy as-is
+    is_general_container = type(param_object).__name__ == "CMtzDataFile"
+    if is_general_container and len(column_selectors) == 0:
+        logger.info("CMtzDataFile with no selectors - copying file as-is")
+        dest = (
+            pathlib.Path(job.project.directory)
+            / "CCP4_IMPORTED_FILES"
+            / slugify(pathlib.Path(file_name).stem)
+        ).with_suffix(pathlib.Path(downloaded_file_path).suffix)
+        dest = available_file_name_based_on(dest)
+        import shutil
+        shutil.copy2(downloaded_file_path, dest)
+        return {"primaryPath": dest, "additionalPaths": []}
+
+    # Ensure the MTZ file is readable
+    try:
+        _ = gemmi.read_mtz_file(str(downloaded_file_path))
+    except RuntimeError as err:
+        logger.exception(
+            "Error reading MTZ file %s", downloaded_file_path, exc_info=err
+        )
+        # Convert from CIF if needed
+        downloaded_file_path, _ = gemmi_convert_to_mtz(
+            param_object, downloaded_file_path
+        )
+
+    # Sort selectors: primary first, then by content flag
+    sorted_selectors = sorted(
+        column_selectors,
+        key=lambda s: (not s.get("isPrimary", False), s.get("contentFlag", 99))
+    )
+
+    primary_path = None
+    additional_paths = []
+    base_stem = slugify(pathlib.Path(file_name).stem)
+    suffix = pathlib.Path(downloaded_file_path).suffix
+
+    for selector in sorted_selectors:
+        column_selector = selector.get("columnSelector")
+        file_suffix = selector.get("fileSuffix", "")
+        is_primary = selector.get("isPrimary", False)
+        signature = selector.get("signature", "")
+        content_flag = selector.get("contentFlag", 0)
+
+        if not column_selector:
+            logger.warning("Skipping selector with no columnSelector: %s", selector)
+            continue
+
+        # Build destination path
+        if is_primary:
+            dest_stem = base_stem
+        else:
+            dest_stem = f"{base_stem}{file_suffix}"
+
+        dest = (
+            pathlib.Path(job.project.directory)
+            / "CCP4_IMPORTED_FILES"
+            / dest_stem
+        ).with_suffix(suffix)
+        dest = available_file_name_based_on(dest)
+
+        logger.info(
+            "Processing selector: signature=%s, isPrimary=%s, dest=%s",
+            signature, is_primary, dest
+        )
+
+        # Extract columns
+        imported_path = gemmi_split_mtz(downloaded_file_path, column_selector, dest)
+
+        if is_primary:
+            primary_path = imported_path
+        else:
+            additional_paths.append({
+                "path": imported_path,
+                "signature": signature,
+                "contentFlag": content_flag,
+                "fileSuffix": file_suffix,
+            })
+
+    # If no primary was marked, use the first one
+    if primary_path is None and additional_paths:
+        first = additional_paths.pop(0)
+        primary_path = first["path"]
+
+    return {"primaryPath": primary_path, "additionalPaths": additional_paths}
 
 
 def gemmi_convert_to_mtz(dobj: CMtzDataFile, downloaded_file_path: pathlib.Path):

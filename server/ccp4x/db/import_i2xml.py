@@ -102,7 +102,7 @@ def import_ccp4_project_zip(zip_path: Path, relocate_path: Path = None):
 
     with zipfile.ZipFile(zip_path, "r") as zip_archive:
         with zip_archive.open("DATABASE.db.xml", "r") as database_file:
-            root_node = ET.parse(database_file)
+            root_node = ET.parse(database_file).getroot()
             import_i2xml_result = import_i2xml(root_node, relocate_path=relocate_path)
             # print(import_i2xml_result)
             all_archive_files = zip_archive.namelist()
@@ -219,7 +219,7 @@ def renumber_top_job(job_node: ET.Element, root_node: ET.Element):
 
 
 def import_i2xml_from_file(xml_path: Path, relocate_path: Path = None):
-    root_node = ET.parse(xml_path)
+    root_node = ET.parse(xml_path).getroot()
     import_i2xml(root_node, relocate_path=relocate_path)
 
 
