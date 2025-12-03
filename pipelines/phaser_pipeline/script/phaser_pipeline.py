@@ -27,7 +27,20 @@ class phaser_pipeline(CPluginScript):
     SEPARATEDATA=True
     INTERRUPTABLE=True
 
-    ERROR_CODES = {  200 : { 'description' : 'Phaser exited with error status' }, 202 : { 'description' : 'Failed in harvest operation' }, 203 : { 'description' : 'Columns not present' }, 204 : { 'description' : 'Failed in plugin:' },}
+    ERROR_CODES = {
+        200: {'description': 'Phaser exited with error status'},
+        201: {'description': 'Exception in phaser pipeline setup'},
+        202: {'description': 'Failed in harvest operation'},
+        203: {'description': 'Columns not present'},
+        204: {'description': 'Failed in plugin'},
+        205: {'description': 'Exception in pointless_reindexToMatch'},
+        206: {'description': 'Exception in csymmatch'},
+        207: {'description': 'No output files in list'},
+        208: {'description': 'Exception in coot_script_lines'},
+        209: {'description': 'Exception in sheetbend'},
+        210: {'description': 'Exception in refmac'},
+        211: {'description': 'Exception in harvestFile'},
+    }
     WHATNEXT = ['prosmart_refmac','modelcraft','coot_rebuild']
     
 
@@ -185,75 +198,74 @@ class phaser_pipeline(CPluginScript):
                 pointInp.FREERFLAG.set(self.container.inputData.FREERFLAG)
             rv = pointlessPlugin.process()
             if rv != CPluginScript.SUCCEEDED: self.reportStatus(rv)
-            
+
             pluginOutputs = pointlessPlugin.container.outputData
             pipelineOutputs = self.container.outputData
-            
+
             self.harvestFile(pluginOutputs.F_SIGF_OUT, pipelineOutputs.F_SIGF_OUT)
             if self.container.inputData.FREERFLAG.isSet():
                 self.harvestFile(pluginOutputs.FREERFLAG_OUT, pipelineOutputs.FREERFLAG_OUT)
-        except:
-            self.appendErrorReport(204,'pointless_reindexToMatch')
+        except Exception as e:
+            self.appendErrorReport(205, 'Exception in pointless_reindexToMatch: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
         return CPluginScript.SUCCEEDED
 
     def runCsymmatch(self):
         try:
             csymmatchPlugin = self.makePluginObject('csymmatch')
-            csymmatchInp.set(csymmatchPlugin.container.inputData)
+            csymmatchInp = csymmatchPlugin.container.inputData
             csymmatchInp.XYZIN_QUERY.set(self.container.outputData.XYZOUT[0])
             csymmatchInp.XYZIN_TARGET.set(self.container.inputData.XYZIN_TARGET)
             rv = csymmatchPlugin.process()
             if rv != CPluginScript.SUCCEEDED: self.reportStatus(rv)
-            
+
             pluginOutputs = csymmatchPlugin.container.outputData
             pipelineOutputs = self.container.outputData
 
             self.harvestFile(pluginOutputs.XYZOUT, pipelineOutputs.XYZOUT_CSYMMATCH)
             self.appendXML(csymmatchPlugin.makeFileName('PROGRAMXML'),'Csymmatch')
             pipelineOutputs.XYZOUT_CSYMMATCH.annotation.set('Coordinates moved to match reference structure')
-        except:
-            self.appendErrorReport(204,'csymmatch')
+        except Exception as e:
+            self.appendErrorReport(206, 'Exception in csymmatch: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
         return CPluginScript.SUCCEEDED
 
     def runCoot(self, MAPIN=None, XYZIN=None):
         try:
-            try:
-                cootPlugin = self.makePluginObject('coot_script_lines')
-                xyzinList = cootPlugin.container.inputData.XYZIN
-                xyzinList.append(xyzinList.makeItem())
-                xyzinList[-1].set(XYZIN)
-                fphiinList = cootPlugin.container.inputData.FPHIIN
-                fphiinList.append(fphiinList.makeItem())
-                fphiinList[-1].set(MAPIN)
-                cootPlugin.container.controlParameters.SCRIPT = '''fill_partial_residues(MolHandle_1)
+            cootPlugin = self.makePluginObject('coot_script_lines')
+            xyzinList = cootPlugin.container.inputData.XYZIN
+            xyzinList.append(xyzinList.makeItem())
+            xyzinList[-1].set(XYZIN)
+            fphiinList = cootPlugin.container.inputData.FPHIIN
+            fphiinList.append(fphiinList.makeItem())
+            fphiinList[-1].set(MAPIN)
+            cootPlugin.container.controlParameters.SCRIPT = '''fill_partial_residues(MolHandle_1)
 fit_protein(MolHandle_1)
 write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
 '''
-            except:
-                self.appendErrorReport(204,'coot_script_lines -setup')
-                self.reportStatus(CPluginScript.FAILED)
-            try:
-                cootPlugin.doAsync=False
-                rv = cootPlugin.process()
-                if rv != CPluginScript.SUCCEEDED: self.reportStatus(rv)
-            except:
-                self.appendErrorReport(204,'coot_script_lines -execute')
-                self.reportStatus(CPluginScript.FAILED)
-            try:
-                pluginOutputs = cootPlugin.container.outputData
-                pipelineOutputs = self.container.outputData
-
-                self.harvestFile(pluginOutputs.XYZOUT[0], pipelineOutputs.XYZOUT_COOT)
-                self.appendXML(cootPlugin.makeFileName('PROGRAMXML'),'coot_script_lines')
-                pipelineOutputs.XYZOUT_COOT.annotation.set('Coordinates filled and fitted by COOT')
-            except:
-                self.appendErrorReport(204,'coot_script_lines -postprocess')
-                self.reportStatus(CPluginScript.FAILED)
-        except:
-            self.appendErrorReport(204,'coot_script_lines')
+        except Exception as e:
+            self.appendErrorReport(208, 'Exception in coot_script_lines setup: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
+            return CPluginScript.FAILED
+        try:
+            cootPlugin.doAsync=False
+            rv = cootPlugin.process()
+            if rv != CPluginScript.SUCCEEDED: self.reportStatus(rv)
+        except Exception as e:
+            self.appendErrorReport(208, 'Exception in coot_script_lines execute: ' + str(e))
+            self.reportStatus(CPluginScript.FAILED)
+            return CPluginScript.FAILED
+        try:
+            pluginOutputs = cootPlugin.container.outputData
+            pipelineOutputs = self.container.outputData
+
+            self.harvestFile(pluginOutputs.XYZOUT[0], pipelineOutputs.XYZOUT_COOT)
+            self.appendXML(cootPlugin.makeFileName('PROGRAMXML'),'coot_script_lines')
+            pipelineOutputs.XYZOUT_COOT.annotation.set('Coordinates filled and fitted by COOT')
+        except Exception as e:
+            self.appendErrorReport(208, 'Exception in coot_script_lines postprocess: ' + str(e))
+            self.reportStatus(CPluginScript.FAILED)
+            return CPluginScript.FAILED
         return CPluginScript.SUCCEEDED
 
     def runSheetbend(self, F_SIGF=None, FREERFLAG=None, XYZIN=None):
@@ -300,22 +312,24 @@ write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
             self.refmacPlugin.doAsync = False
             rv = self.refmacPlugin.process()
             if rv == CPluginScript.FAILED: self.reportStatus(rv)
-            
+
             pluginOutputs=self.refmacPlugin.container.outputData
             pipelineOutputs = self.container.outputData
             self.harvestFile(pluginOutputs.FPHIOUT, pipelineOutputs.MAPOUT_REFMAC)
             self.harvestFile(pluginOutputs.DIFFPHIOUT, pipelineOutputs.DIFMAPOUT_REFMAC)
             self.harvestFile(pluginOutputs.XYZOUT, pipelineOutputs.XYZOUT_REFMAC)
-            
+
             self.appendXML(self.refmacPlugin.makeFileName('PROGRAMXML'),'REFMAC')
-        except:
-            self.appendErrorReport(204,'refmac Preamble')
+        except Exception as e:
+            self.appendErrorReport(210, 'Exception in refmac: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
+            return CPluginScript.FAILED
         try:
             self.container.outputData.PERFORMANCEINDICATOR.set(self.refmacPlugin.container.outputData.PERFORMANCEINDICATOR)
-        except:
-            self.appendErrorReport(204,'refmac PI')
+        except Exception as e:
+            self.appendErrorReport(210, 'Exception copying refmac performance indicator: ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
+            return CPluginScript.FAILED
         return CPluginScript.SUCCEEDED
 
     def harvestList(self, pluginOutputList, pipelineOutputList):
@@ -332,8 +346,8 @@ write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
             pipelineOutputItem.annotation.set(pluginOutputItem.annotation)
             pipelineOutputItem.contentFlag.set(pluginOutputItem.contentFlag)
             pipelineOutputItem.subType.set(pluginOutputItem.subType)
-        except:
-            self.appendErrorReport(202,str(pluginOutputItem.fullPath)+' '+str(pipelineOutputItem.fullPath))
+        except Exception as e:
+            self.appendErrorReport(211, 'Exception in harvestFile: ' + str(pluginOutputItem.fullPath) + ' -> ' + str(pipelineOutputItem.fullPath) + ': ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
 
     def appendXML(self, changedFile, replacingElementOfType=None):
@@ -367,8 +381,8 @@ write_pdb_file(MolHandle_1,os.path.join(dropDir,"output.pdb"))
             self.reportStatus(statusDict['finishStatus'])
         try:
             assert outputFile.exists(),'Entity provided is not CDataFile or does not exist'
-        except:
-            self.appendErrorReport(noFileErrCode,'Expected file: '+str(outputFile))
+        except Exception as e:
+            self.appendErrorReport(noFileErrCode,'Expected file: '+str(outputFile) + ' - ' + str(e))
             self.reportStatus(CPluginScript.FAILED)
 
     def checkSolutionsFound(self, statusDict, failedErrCode):
