@@ -95,8 +95,23 @@ class CDict(CDictStub, CCollection):
         """Return dictionary items."""
         return self._dict_data.items()
 
-    def get(self, key: str, default: Any = True) -> Any:
-        """Get value for key with default."""
+    def get(self, key: str = None, default: Any = True) -> Any:
+        """Get value for key with default, or return all data if no key specified.
+
+        When called with no arguments (for CData serialization), returns the
+        internal dictionary data. When called with a key argument (dict-style
+        access), returns the value for that key with the given default.
+
+        Args:
+            key: Optional key to look up. If None, returns all data.
+            default: Default value if key not found (default: True for "selected")
+
+        Returns:
+            Value for key, or dict of all data if no key specified.
+        """
+        if key is None:
+            # CData serialization - return all data
+            return self._dict_data.copy()
         return self._dict_data.get(key, default)
 
     def setdefault(self, key: str, default: Any = True) -> Any:
