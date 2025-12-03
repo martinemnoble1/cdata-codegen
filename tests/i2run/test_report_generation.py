@@ -28,11 +28,11 @@ def test_refmac_report_generation():
     from ccp4x.db import models
     from ccp4x.lib.utils.reporting.i2_report import make_old_report
 
-    # Run a simple refmac job
+    # Run a simple refmac job using gamma demo data
     args = [
         "refmac",
-        "--XYZIN", demoData("1bga.pdb"),
-        "--F_SIGF", demoData("1bga_hires.mtz:1bga_hires"),
+        "--XYZIN", demoData("gamma", "gamma_model.pdb"),
+        "--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz"),
     ]
 
     with i2run(args) as job_dir:
@@ -130,10 +130,10 @@ def test_import_merged_report_generation():
     from ccp4x.db import models
     from ccp4x.lib.utils.reporting.i2_report import make_old_report
 
+    # Use gamma merged intensities which exist
     args = [
         "import_merged",
-        "--HKLIN", demoData("1bga_hires.mtz"),
-        "--HKLIN_EXPECTED_CONTENTS", "F_SIGF",
+        "--HKLIN", demoData("gamma", "merged_intensities_Xe.mtz"),
     ]
 
     with i2run(args) as job_dir:

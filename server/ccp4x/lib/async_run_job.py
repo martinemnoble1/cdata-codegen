@@ -12,6 +12,7 @@ import asyncio
 import datetime
 import logging
 import uuid
+import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -121,16 +122,44 @@ async def run_job_async(job_uuid: uuid.UUID, project_uuid: Optional[uuid.UUID] =
             # (checkOutputData may or may not be called if plugin overrides process)
             result = await sync_to_async(plugin.process)()
 
+        # Write diagnostic.xml with error report (always, for debugging)
+        await write_diagnostic_xml(plugin, job.directory)
+
         logger.info(f"Job {job.number} completed successfully")
         return result
 
     except Exception as e:
         logger.exception(f"Job {job.number} failed: {e}")
 
+        # Write diagnostic.xml before updating status (critical for debugging failures)
+        await write_diagnostic_xml(plugin, job.directory)
+
         # Update status to FAILED
         await db_handler.update_job_status(job.uuid, models.Job.Status.FAILED)
 
         raise
+
+
+async def write_diagnostic_xml(plugin, job_directory):
+    """
+    Write diagnostic.xml with error report from the plugin.
+
+    This file contains debugging information collected during job execution,
+    including any errors, warnings, and status messages from the plugin.
+
+    Args:
+        plugin: CPluginScript instance with errorReport attribute
+        job_directory: Path to job directory where diagnostic.xml will be written
+    """
+    try:
+        diagnostic_path = Path(job_directory) / "diagnostic.xml"
+        error_report = plugin.errorReport.getEtree()
+        ET.indent(error_report, space="\t", level=0)
+        with open(diagnostic_path, "wb") as f:
+            f.write(ET.tostring(error_report, encoding="utf-8"))
+        logger.info(f"Wrote diagnostic.xml to {diagnostic_path}")
+    except Exception as err:
+        logger.warning(f"Failed to write diagnostic.xml: {err}")
 
 
 async def create_plugin_for_job(job, db_handler):

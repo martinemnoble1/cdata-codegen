@@ -6,6 +6,7 @@ error tracking, severity levels, and validation reporting capabilities.
 
 from typing import List, Optional, Dict, Any
 from enum import IntEnum
+import xml.etree.ElementTree as ET
 
 
 class Severity(IntEnum):
@@ -186,6 +187,64 @@ class CErrorReport:
     def clear(self):
         """Clear all errors from the report."""
         self._errors.clear()
+
+    def getEtree(self) -> ET.Element:
+        """Serialize error report to an XML ElementTree element.
+
+        Creates an XML structure compatible with CCP4i2 diagnostic.xml format.
+
+        Returns:
+            ET.Element: Root 'errorReportList' element containing 'errorReport' children
+
+        Example output:
+            <errorReportList>
+                <errorReport>
+                    <class>CInt</class>
+                    <code>101</code>
+                    <details>Value out of range</details>
+                    <name>myInt</name>
+                    <severity>4</severity>
+                </errorReport>
+            </errorReportList>
+        """
+        severity_names = {
+            SEVERITY_OK: "OK",
+            SEVERITY_UNDEFINED: "UNDEFINED",
+            SEVERITY_WARNING: "WARNING",
+            SEVERITY_UNDEFINED_ERROR: "UNDEFINED_ERROR",
+            SEVERITY_ERROR: "ERROR"
+        }
+
+        root = ET.Element("errorReportList")
+
+        for error in self._errors:
+            error_elem = ET.SubElement(root, "errorReport")
+
+            # Add class element
+            class_elem = ET.SubElement(error_elem, "class")
+            class_elem.text = str(error.get('class', ''))
+
+            # Add code element
+            code_elem = ET.SubElement(error_elem, "code")
+            code_elem.text = str(error.get('code', 0))
+
+            # Add details element
+            details_elem = ET.SubElement(error_elem, "details")
+            details_elem.text = str(error.get('details', ''))
+
+            # Add name element
+            name_elem = ET.SubElement(error_elem, "name")
+            name_elem.text = str(error.get('name', ''))
+
+            # Add severity element (both as number and name)
+            severity = error.get('severity', SEVERITY_OK)
+            severity_elem = ET.SubElement(error_elem, "severity")
+            severity_elem.text = str(severity)
+
+            severity_name_elem = ET.SubElement(error_elem, "severityName")
+            severity_name_elem.text = severity_names.get(severity, "UNKNOWN")
+
+        return root
 
     # ========================================================================
     # Legacy CCP4i2 Compatibility

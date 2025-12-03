@@ -42,18 +42,76 @@ class CCollection(CCollectionStub):
 
 class CDict(CDictStub, CCollection):
     """
-    
+    Dictionary-like CData type for key-value storage.
+
     Inherits from:
     - CDictStub: Metadata and structure
     - CCollection: Shared full-fat methods
-    QObject(self, parent: typing.Optional[PySide2.QtCore.QObject] = None) -> None
-    
-    Extends CDictStub with implementation-specific methods.
-    Add file I/O, validation, and business logic here.
+
+    Used for selection dictionaries in ASU files and similar key-value data.
+    Behaves like a Python dict with __getitem__, __setitem__, etc.
+
+    For unset keys, returns True by default (all items selected).
     """
 
-    # Add your methods here
-    pass
+    def __init__(self, parent=None, name=None, **kwargs):
+        """Initialize CDict with an empty internal dictionary."""
+        super().__init__(parent=parent, name=name, **kwargs)
+        self._dict_data: dict = {}
+
+    def __getitem__(self, key: str) -> Any:
+        """Get value for key. Returns True if key not found (default selected)."""
+        return self._dict_data.get(key, True)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Set value for key."""
+        self._dict_data[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        """Delete key from dictionary."""
+        del self._dict_data[key]
+
+    def __contains__(self, key: str) -> bool:
+        """Check if key exists in dictionary."""
+        return key in self._dict_data
+
+    def __len__(self) -> int:
+        """Return number of keys in dictionary."""
+        return len(self._dict_data)
+
+    def __iter__(self):
+        """Iterate over keys."""
+        return iter(self._dict_data)
+
+    def keys(self):
+        """Return dictionary keys."""
+        return self._dict_data.keys()
+
+    def values(self):
+        """Return dictionary values."""
+        return self._dict_data.values()
+
+    def items(self):
+        """Return dictionary items."""
+        return self._dict_data.items()
+
+    def get(self, key: str, default: Any = True) -> Any:
+        """Get value for key with default."""
+        return self._dict_data.get(key, default)
+
+    def setdefault(self, key: str, default: Any = True) -> Any:
+        """Set default value for key if not present."""
+        return self._dict_data.setdefault(key, default)
+
+    def update(self, other: dict = None, **kwargs) -> None:
+        """Update dictionary with another dict or keyword args."""
+        if other:
+            self._dict_data.update(other)
+        self._dict_data.update(kwargs)
+
+    def clear(self) -> None:
+        """Clear all items from dictionary."""
+        self._dict_data.clear()
 
 
 class CFloatRange(CFloatRangeStub):

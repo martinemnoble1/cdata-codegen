@@ -12,7 +12,11 @@ class phaser_EP(CPluginScript):
     COMTEMPLATE = None                                   # The program com file template
     COMTEMPLATEFILE = None                               # Name of file containing com file template
 
-    ERROR_CODES = {202:{'description':'Failed in harvest operation'},}
+    ERROR_CODES = {
+        201: {'description': 'ShelxCD sub-job failed'},
+        202: {'description': 'Failed in harvest operation'},
+        203: {'description': 'phaser_EP_AUTO sub-job failed'},
+    }
 
     def process(self):
         self.xmlroot = etree.Element('PhaserEP')
@@ -79,6 +83,7 @@ class phaser_EP(CPluginScript):
         self.shelxPlugin.doAsync = False
         rv = self.shelxPlugin.process()
         if rv == CPluginScript.FAILED:
+            self.appendErrorReport(201, 'ShelxCD sub-job failed in phaser_EP pipeline')
             self.reportStatus(rv)
             return CPluginScript.FAILED
         else:
@@ -98,6 +103,7 @@ class phaser_EP(CPluginScript):
         self.phaserPlugin.doAsync = False
         rv = self.phaserPlugin.process()
         if rv == CPluginScript.FAILED:
+            self.appendErrorReport(203, 'phaser_EP_AUTO sub-job failed in phaser_EP pipeline')
             self.reportStatus(rv)
             return CPluginScript.FAILED
         else:
