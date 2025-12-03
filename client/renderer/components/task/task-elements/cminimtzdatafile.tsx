@@ -109,11 +109,12 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
 
         // Read file and upload using centralized uploadFileParam (with intent tracking)
         const fileBuffer = await readFilePromise(file, "ArrayBuffer");
+        const fileBlob = new Blob([fileBuffer as ArrayBuffer], { type: "application/CCP4-mtz-file" });
 
         // Use enhanced columnSelectors if available, otherwise fall back to single columnSelector
         const uploadResult = await uploadFileParam({
           objectPath: item._objectPath,
-          file: new Blob([fileBuffer as ArrayBuffer], { type: "application/CCP4-mtz-file" }),
+          file: fileBlob,
           fileName: file.name,
           // Send both for backward compatibility
           columnSelector: result.columnSelector || undefined,
@@ -123,6 +124,23 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
         // Handle response
         if (uploadResult?.success && uploadResult.data?.updated_item) {
           onChange?.(uploadResult.data.updated_item);
+        }
+
+        // If FreeR was selected, upload to the sibling CFreeRDataFile input
+        if (result.freeRSelection) {
+          const freeRSibling = siblingInputs.find(
+            (sibling) => sibling.className === "CFreeRDataFile"
+          );
+
+          if (freeRSibling) {
+            console.log("Uploading FreeR to sibling:", freeRSibling.objectPath, result.freeRSelection);
+            await uploadFileParam({
+              objectPath: freeRSibling.objectPath,
+              file: fileBlob,
+              fileName: file.name,
+              columnSelector: result.freeRSelection.columnSelector,
+            });
+          }
         }
 
         // Trigger additional mutations not handled by uploadFileParam
