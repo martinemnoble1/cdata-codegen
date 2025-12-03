@@ -5,13 +5,22 @@ import { useCallback, useMemo } from "react";
 import { BaseSpacegroupCellElement } from "./base-spacegroup-cell-element";
 import { readFilePromise, useJob, useProject } from "../../../utils";
 import { useCCP4i2Window } from "../../../app-context";
-import { selectMtzColumns } from "./mtz-column-dialog";
+import { selectMtzColumnsEnhanced, SiblingInput } from "./mtz-column-dialog";
+
+/** MTZ-related class names that are siblings of interest */
+const MTZ_SIBLING_CLASSES = [
+  "CFreeRDataFile",
+  "CObsDataFile",
+  "CMapCoeffsDataFile",
+  "CMiniMtzDataFile",
+  "CMtzDataFile",
+];
 
 export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
   props
 ) => {
   const { job, itemName, onChange, visibility } = props;
-  const { useTaskItem, useFileDigest, uploadFileParam } = useJob(job.id);
+  const { useTaskItem, useFileDigest, uploadFileParam, container } = useJob(job.id);
   const { mutateJobs, mutateFiles } = useProject(job.project);
   const { item } = useTaskItem(itemName);
   const { cootModule } = useCCP4i2Window();
@@ -26,9 +35,49 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
   );
 
   /**
+   * Get sibling inputs from the same parent container.
+   * Siblings are items under the same inputData container (e.g., task.inputData.*)
+   * that are MTZ-related data files.
+   */
+  const getSiblingInputs = useCallback((): SiblingInput[] => {
+    if (!item?._objectPath || !container?.lookup) {
+      return [];
+    }
+
+    // Extract the parent path (e.g., "task.inputData" from "task.inputData.F_SIGF")
+    const parts = item._objectPath.split(".");
+    if (parts.length < 2) return [];
+
+    // Remove the last part to get the parent path
+    const parentPath = parts.slice(0, -1).join(".");
+
+    const siblings: SiblingInput[] = [];
+
+    // Search through container lookup for sibling items
+    for (const [objectPath, lookupItem] of Object.entries(container.lookup)) {
+      // Check if this item is a sibling (same parent, different item)
+      if (
+        objectPath.startsWith(parentPath + ".") &&
+        objectPath !== item._objectPath &&
+        lookupItem &&
+        typeof lookupItem === "object" &&
+        "_class" in lookupItem &&
+        MTZ_SIBLING_CLASSES.includes(lookupItem._class as string)
+      ) {
+        siblings.push({
+          objectPath,
+          className: lookupItem._class as string,
+        });
+      }
+    }
+
+    return siblings;
+  }, [item?._objectPath, container?.lookup]);
+
+  /**
    * Handle file selection from the file picker.
    * This is the single entry point for file uploads - it handles:
-   * 1. Showing the column selection dialog (for MTZ files)
+   * 1. Showing the column selection dialog (for MTZ files) with sibling awareness
    * 2. Uploading the file with the selected columns (with intent tracking)
    * 3. Updating the UI state
    */
@@ -41,26 +90,34 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
       const file = files[0];
 
       try {
-        // Show column selection dialog if needed (Promise-based, no component state)
-        const columnSelector = await selectMtzColumns({
+        // Get sibling inputs for context-aware dialog
+        const siblingInputs = getSiblingInputs();
+
+        // Show enhanced column selection dialog with sibling awareness
+        const result = await selectMtzColumnsEnhanced({
           file,
           item,
           cootModule,
+          siblingInputs,
+          multiSelectMode: false, // Single-select for now, can be enabled per-task
         });
 
         // User cancelled the dialog
-        if (columnSelector === null) {
+        if (result === null) {
           return;
         }
 
         // Read file and upload using centralized uploadFileParam (with intent tracking)
         const fileBuffer = await readFilePromise(file, "ArrayBuffer");
 
+        // Use enhanced columnSelectors if available, otherwise fall back to single columnSelector
         const uploadResult = await uploadFileParam({
           objectPath: item._objectPath,
           file: new Blob([fileBuffer as ArrayBuffer], { type: "application/CCP4-mtz-file" }),
           fileName: file.name,
-          columnSelector: columnSelector || undefined,
+          // Send both for backward compatibility
+          columnSelector: result.columnSelector || undefined,
+          columnSelectors: result.reflectionSelections,
         });
 
         // Handle response
@@ -79,7 +136,7 @@ export const CMiniMtzDataFileElement: React.FC<CCP4i2TaskElementProps> = (
         // Could show an error toast/snackbar here
       }
     },
-    [item, cootModule, onChange, uploadFileParam, mutateJobs, mutateFiles, mutateDigest]
+    [item, cootModule, getSiblingInputs, onChange, uploadFileParam, mutateJobs, mutateFiles, mutateDigest]
   );
 
   const isVisible = useMemo(
