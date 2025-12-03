@@ -438,15 +438,24 @@ def apply_metadata_to_instance(instance):
 
     # Create attributes from merged metadata
     for attr_name, attr_def in merged_attributes.items():
-        # Check if attribute exists in instance __dict__ (not class attributes)
+        # Check if attribute exists in hierarchy (via _children_by_name cache)
+        # NOT in __dict__ - CData children are stored in hierarchy, not __dict__
         # This is important because generated classes have type annotations like
         # `label: Optional[COneWord] = None` which creates a class attribute,
         # but we want to replace it with an actual COneWord instance
-        if attr_name not in instance.__dict__:
+        children_by_name = getattr(instance, '_children_by_name', {})
+        if attr_name not in children_by_name:
             attr_obj = MetadataAttributeFactory.create_attribute(
                 attr_name, attr_def, instance
             )
-            instance.__dict__[attr_name] = attr_obj
+            # Add to hierarchy via set_parent (populates _children_by_name for O(1) access)
+            # DON'T store in __dict__ - hierarchy is the single source of truth
+            if hasattr(attr_obj, 'set_parent'):
+                attr_obj._name = attr_name  # Set hierarchical name
+                attr_obj.set_parent(instance)  # This adds to _children_by_name
+            else:
+                # Fallback for non-CData objects (shouldn't happen for metadata attributes)
+                instance.__dict__[attr_name] = attr_obj
 
             # Apply per-field qualifiers from content_qualifiers
             if attr_name in merged_content_qualifiers and attr_obj is not None:

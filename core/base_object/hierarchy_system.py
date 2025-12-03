@@ -71,6 +71,8 @@ class HierarchicalObject(ABC):
     ):
         self._parent_ref: Optional[weakref.ReferenceType] = None
         self._children: Set[weakref.ReferenceType] = set()
+        self._children_by_name: Dict[str, weakref.ReferenceType] = {}  # O(1) name lookup cache
+        self._child_storage: Dict[str, Any] = {}  # Strong references to prevent GC of children
         self._name = name or f"{self.__class__.__name__}_{id(self)}"
         self._lock = threading.RLock()
         self._signal_manager = SignalManager()
@@ -208,6 +210,14 @@ class HierarchicalObject(ABC):
 
             child_ref = weakref.ref(child)
             self._children.add(child_ref)
+
+            # Add to name lookup cache for O(1) access
+            child_name = child._name
+            if child_name:
+                self._children_by_name[child_name] = child_ref
+                # Store strong reference to prevent GC
+                self._child_storage[child_name] = child
+
             # Guard against GC ordering issues
             if hasattr(self, 'child_added') and self.child_added is not None:
                 self.child_added.emit(child)
@@ -226,6 +236,17 @@ class HierarchicalObject(ABC):
 
             if to_remove:
                 self._children.remove(to_remove)
+
+                # Remove from name lookup cache and strong storage
+                child_name = child._name
+                if child_name and child_name in self._children_by_name:
+                    # Only remove if it's the same child (names can be reused)
+                    cached_ref = self._children_by_name.get(child_name)
+                    if cached_ref is not None and cached_ref() is child:
+                        del self._children_by_name[child_name]
+                        # Also remove from strong storage
+                        self._child_storage.pop(child_name, None)
+
                 # Guard against GC ordering issues - signal might be cleaned up already
                 if hasattr(self, 'child_removed') and self.child_removed is not None:
                     self.child_removed.emit(child)
@@ -237,6 +258,12 @@ class HierarchicalObject(ABC):
         """Remove weak references to destroyed children."""
         dead_refs = {ref for ref in self._children if ref() is None}
         self._children -= dead_refs
+
+        # Also clean up dead entries in name cache and strong storage
+        dead_names = [name for name, ref in self._children_by_name.items() if ref() is None]
+        for name in dead_names:
+            del self._children_by_name[name]
+            self._child_storage.pop(name, None)
 
     def children(self) -> List["HierarchicalObject"]:
         """Get list of all child objects."""
@@ -254,22 +281,26 @@ class HierarchicalObject(ABC):
     def find_child(
         self, name: str, recursive: bool = False
     ) -> Optional["HierarchicalObject"]:
-        """Find a child by name."""
-        children = self.children()
+        """Find a child by name. Uses O(1) cache lookup for direct children."""
+        with self._lock:
+            # O(1) lookup in name cache for direct children
+            child_ref = self._children_by_name.get(name)
+            if child_ref is not None:
+                child = child_ref()
+                if child is not None:
+                    return child
+                else:
+                    # Dead reference - clean it up
+                    del self._children_by_name[name]
 
-        # Direct children first
-        for child in children:
-            if child._name == name:
-                return child
+            # Recursive search if requested
+            if recursive:
+                for child in self.children():
+                    found = child.find_child(name, recursive=True)
+                    if found:
+                        return found
 
-        # Recursive search if requested
-        if recursive:
-            for child in children:
-                found = child.find_child(name, recursive=True)
-                if found:
-                    return found
-
-        return None
+            return None
 
     def find_children(
         self, object_type: Type[T] = None, recursive: bool = False
@@ -641,6 +672,8 @@ class HierarchicalObject(ABC):
         # Cleanup
         self._signal_manager.cleanup()
         self._children.clear()
+        self._children_by_name.clear()
+        self._child_storage.clear()  # Clear strong references to children
         self._properties.clear()
         self._event_handlers.clear()
 
@@ -733,6 +766,8 @@ class HierarchicalObject(ABC):
         containers to have a find() method for template variable substitution
         (e.g., $HKLIN expands by calling container.find("HKLIN")).
 
+        Uses O(1) cache lookup for immediate children when possible.
+
         Args:
             path: Object name or dotted path (e.g., "protein.XYZIN")
 
@@ -752,31 +787,25 @@ class HierarchicalObject(ABC):
         # Split path into components
         path_parts = path.split('.')
 
-        # If single name, check immediate children first
+        # If single name, check immediate children first using O(1) cache
         if len(path_parts) == 1:
             name = path_parts[0]
 
-            # Check immediate children by name attribute
-            # _children is a set, so convert to list for iteration
-            for child_ref in list(self._children):
-                child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
+            # O(1) lookup in name cache
+            child_ref = self._children_by_name.get(name)
+            if child_ref is not None:
+                child = child_ref()
                 if child is not None:
-                    # Skip destroyed objects
-                    if hasattr(child, '_state'):
-                        from .hierarchy_system import ObjectState
-                        if child.state == ObjectState.DESTROYED:
-                            continue
-                    # Check if name matches (check both 'name' attribute and objectName() method)
-                    child_name = None
-                    if hasattr(child, 'name') and child.name:
-                        child_name = child.name
-                    elif hasattr(child, 'objectName'):
-                        child_name = child.objectName()
-
-                    if child_name == name:
+                    # Verify not destroyed
+                    if hasattr(child, '_state') and child.state == ObjectState.DESTROYED:
+                        del self._children_by_name[name]
+                    else:
                         return child
+                else:
+                    # Dead reference - clean it up
+                    del self._children_by_name[name]
 
-            # Not found in immediate children - search recursively
+            # Not found in cache - search recursively in children
             for child_ref in list(self._children):
                 child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
                 if child is not None and hasattr(child, 'find'):
@@ -786,34 +815,21 @@ class HierarchicalObject(ABC):
 
             return None
 
-        # Multi-part path: navigate step by step
+        # Multi-part path: navigate step by step using O(1) lookup
         first_name = path_parts[0]
         remaining_path = '.'.join(path_parts[1:])
 
-        # Find the first component in immediate children
-        # _children is a set, so convert to list for iteration
-        for child_ref in list(self._children):
-            child = child_ref() if isinstance(child_ref, weakref.ReferenceType) else child_ref
+        # O(1) lookup for first component
+        child_ref = self._children_by_name.get(first_name)
+        if child_ref is not None:
+            child = child_ref()
             if child is not None:
-                # Skip destroyed objects
-                if hasattr(child, '_state'):
-                    from .hierarchy_system import ObjectState
-                    if child.state == ObjectState.DESTROYED:
-                        continue
-                # Check if name matches (check both 'name' attribute and objectName() method)
-                child_name = None
-                if hasattr(child, 'name') and child.name:
-                    child_name = child.name
-                elif hasattr(child, 'objectName'):
-                    child_name = child.objectName()
-
-                if child_name == first_name:
-                    # Found first component - recurse for remaining path
-                    if hasattr(child, 'find'):
-                        return child.find(remaining_path)
-                    else:
-                        # Child doesn't have find() - return None
-                        return None
+                if hasattr(child, '_state') and child.state == ObjectState.DESTROYED:
+                    del self._children_by_name[first_name]
+                elif hasattr(child, 'find'):
+                    return child.find(remaining_path)
+            else:
+                del self._children_by_name[first_name]
 
         return None
 

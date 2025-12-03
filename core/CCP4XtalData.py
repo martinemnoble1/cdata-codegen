@@ -1240,6 +1240,9 @@ class CMtzData(CMtzDataStub):
             # Extract column information as CMtzColumn objects
             # Skip H-type columns (Miller indices H, K, L)
             if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
+                # Clear existing columns before loading - prevents duplicates when
+                # loadFile() is called on content that already has columns from a copy
+                self.listOfColumns.clear()
                 # Create CMtzColumn objects with columnLabel and columnType
                 mtz_columns = []
                 for col in mtz.columns:
@@ -1255,7 +1258,9 @@ class CMtzData(CMtzDataStub):
                         mtz_col.dataset = col.dataset.dataset_name
                         mtz_col.groupIndex = col.dataset.id
                     mtz_columns.append(mtz_col)
-                self.listOfColumns = mtz_columns
+                # Populate the CList using append (direct assignment to CList is silently ignored)
+                for mtz_col in mtz_columns:
+                    self.listOfColumns.append(mtz_col)
 
             # Extract dataset information
             if hasattr(self, 'datasets') and self.datasets is not None:
@@ -2648,6 +2653,8 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
         # Extract column information as CMtzColumn objects
         # Skip H-type columns (Miller indices H, K, L)
         if hasattr(self, 'listOfColumns') and self.listOfColumns is not None:
+            # Clear existing columns to prevent duplication on re-load
+            self.listOfColumns.clear()
             # Create CMtzColumn objects with columnLabel and columnType
             mtz_columns = []
             for col in mtz.columns:
@@ -2663,7 +2670,9 @@ class CUnmergedDataContent(CUnmergedDataContentStub):
                     mtz_col.dataset = col.dataset.dataset_name
                     mtz_col.groupIndex = col.dataset.id
                 mtz_columns.append(mtz_col)
-            self.listOfColumns = mtz_columns
+            # Populate the CList using append (direct assignment to CList is silently ignored)
+            for mtz_col in mtz_columns:
+                self.listOfColumns.append(mtz_col)
 
         # Extract datasets, crystal names, and wavelengths lists
         if hasattr(self, 'datasets') and self.datasets is not None:

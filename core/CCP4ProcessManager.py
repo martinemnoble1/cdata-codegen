@@ -258,7 +258,7 @@ class CProcessManager:
         if inputFile is None and inputText is not None:
             try:
                 import tempfile
-                fd, tmpFile = tempfile.mkstemp(mode='w', suffix='.txt', text=True)
+                fd, tmpFile = tempfile.mkstemp(suffix='.com', text=True)
                 with os.fdopen(fd, 'w') as f:
                     f.write(inputText)
                 inputFile = tmpFile

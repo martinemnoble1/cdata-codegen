@@ -110,6 +110,18 @@ def load_nested_xml(src: ET.Element, dest: Optional[ET.Element] = None) -> ET.El
                     child_count = len(list(child_copy))
                     logger.info(f"[load_nested_xml] Merging container[@id='{child_id}'] with {child_count} children into existing container")
                     for subchild in child_copy:
+                        # Check if this is a content element that should be merged with existing
+                        subchild_id = subchild.get('id')
+                        if subchild.tag == 'content' and subchild_id:
+                            existing_content = None
+                            for ec in existing.findall(f"./content[@id='{subchild_id}']"):
+                                existing_content = ec
+                                break
+                            if existing_content is not None:
+                                # Merge qualifiers from subchild into existing content
+                                _merge_content_qualifiers(existing_content, subchild)
+                                logger.info(f"[load_nested_xml] Merged qualifiers for content[@id='{subchild_id}']")
+                                continue  # Don't append, we merged
                         existing.append(subchild)
                 else:
                     # No existing container with this id, append as new
@@ -248,11 +260,18 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
 
         logger.debug(f"Found {len(ccp4i2_body_nodes)} ccp4i2_body node(s)")
 
-        # Find or create ccp4i2_body in destination
-        # If dest_root is already a ccp4i2_body, use it directly (avoid nesting)
+        # Determine where to merge the included file's children
+        # - If dest_root is ccp4i2_body: use it directly
+        # - If dest_root is a container: merge directly into container (no nested ccp4i2_body)
+        # - Otherwise (e.g., top-level ccp4i2): find or create ccp4i2_body
         if dest_root.tag == "ccp4i2_body":
             dest_ccp4i2_body = dest_root
             logger.debug("Destination root is already ccp4i2_body, using it directly")
+        elif dest_root.tag == "container":
+            # When including a file inside a container, merge directly into the container
+            # This is critical for wrapper inclusion patterns like metalCoordWrapper
+            dest_ccp4i2_body = dest_root
+            logger.debug(f"Destination root is container[@id='{dest_root.get('id', '')}'], merging directly into it")
         else:
             dest_ccp4i2_body = _find_or_create_ccp4i2_body(dest_root)
 
@@ -314,6 +333,72 @@ def _parse_and_merge_xml_file(file_path: pathlib.Path, dest_root: ET.Element) ->
         logger.exception(f"File not found when parsing {file_path}: {e}")
     except Exception as e:
         logger.error(f"Unexpected error processing {file_path}: {e}")
+
+
+def _merge_content_qualifiers(existing_content: ET.Element, override_content: ET.Element) -> None:
+    """
+    Merge qualifier values from an override content element into an existing content element.
+
+    This function handles the case where a parent def.xml overrides qualifiers of a content
+    element from an included def.xml (via <file> node). The override content typically only
+    specifies the qualifiers to override, not the full content definition.
+
+    For example, servalcat_pipe.def.xml includes metalCoord.def.xml but overrides:
+        <content id="XYZIN">
+            <qualifiers>
+                <allowUndefined>True</allowUndefined>
+            </qualifiers>
+        </content>
+
+    This overrides the XYZIN's allowUndefined=False from metalCoord.def.xml.
+
+    Args:
+        existing_content: The content element from the included file (has className, full qualifiers)
+        override_content: The override content element (may only have qualifiers to override)
+
+    Algorithm:
+        1. Find <qualifiers> element in both existing and override content
+        2. If override has no qualifiers, nothing to merge
+        3. If existing has no qualifiers but override does, copy entire qualifiers element
+        4. Otherwise, merge individual qualifier children from override into existing
+           (override values take precedence)
+    """
+    # Find qualifiers elements
+    existing_qualifiers = existing_content.find('qualifiers')
+    override_qualifiers = override_content.find('qualifiers')
+
+    # Nothing to merge if override has no qualifiers
+    if override_qualifiers is None:
+        return
+
+    # If existing has no qualifiers, copy the entire qualifiers element from override
+    if existing_qualifiers is None:
+        existing_content.append(override_qualifiers)
+        logger.debug(f"Added new qualifiers element to content[@id='{existing_content.get('id')}']")
+        return
+
+    # Merge individual qualifier values from override into existing
+    for override_qualifier in override_qualifiers:
+        qualifier_tag = override_qualifier.tag
+
+        # Find matching qualifier in existing
+        existing_qualifier = existing_qualifiers.find(qualifier_tag)
+
+        if existing_qualifier is not None:
+            # Override the existing value
+            old_value = existing_qualifier.text
+            existing_qualifier.text = override_qualifier.text
+            logger.debug(
+                f"Override qualifier '{qualifier_tag}' in content[@id='{existing_content.get('id')}']: "
+                f"'{old_value}' -> '{override_qualifier.text}'"
+            )
+        else:
+            # Add the new qualifier
+            existing_qualifiers.append(override_qualifier)
+            logger.debug(
+                f"Added qualifier '{qualifier_tag}' to content[@id='{existing_content.get('id')}']: "
+                f"'{override_qualifier.text}'"
+            )
 
 
 def _apply_text_overrides(src: ET.Element, dest: ET.Element) -> None:

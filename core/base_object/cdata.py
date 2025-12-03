@@ -104,6 +104,39 @@ class CData(HierarchicalObject):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+    def __getattribute__(self, name: str):
+        """Override to check hierarchy first for CData children, then fall back to normal lookup.
+
+        This enables storing CData children in hierarchy only (not in __dict__),
+        providing O(1) access via _children_by_name cache while keeping a clean
+        separation between hierarchy and instance storage.
+        """
+        # Use object.__getattribute__ for internal/private attributes to avoid recursion
+        # Also skip for common attributes that are definitely in __dict__
+        if name.startswith('_') or name in ('parent', 'children', 'signals'):
+            return object.__getattribute__(self, name)
+
+        # Check if object is initialized enough to have hierarchy
+        try:
+            children_by_name = object.__getattribute__(self, '_children_by_name')
+        except AttributeError:
+            # Object not fully initialized yet
+            return object.__getattribute__(self, name)
+
+        # O(1) lookup in hierarchy cache for CData children
+        if name in children_by_name:
+            child_ref = children_by_name[name]
+            if child_ref is not None:
+                child = child_ref()
+                if child is not None:
+                    return child
+                else:
+                    # Dead reference - clean it up
+                    del children_by_name[name]
+
+        # Fall back to normal attribute lookup (checks __dict__, class, __getattr__)
+        return object.__getattribute__(self, name)
+
     def _load_default_values(self):
         """Load default values from qualifiers metadata."""
         # Try to get default values from metadata system
@@ -1156,8 +1189,17 @@ class CData(HierarchicalObject):
         if isinstance(self, CList) and isinstance(source, CList):
             self.clear()
             for source_item in source:
-                # Create a new item of the same type
-                new_item = self.makeItem()
+                # Create a new item of the SAME TYPE as the source item
+                # This is critical because makeItem() uses the destination's subItem
+                # qualifier which may default to CString, but the source may contain
+                # CMtzColumn or other specialized types
+                source_item_type = type(source_item)
+                try:
+                    new_item = source_item_type(parent=self, name="[?]")
+                except Exception:
+                    # Fallback to makeItem() if source type can't be instantiated
+                    new_item = self.makeItem()
+
                 if hasattr(new_item, '_deep_copy_from') and isinstance(source_item, CData):
                     new_item._deep_copy_from(source_item)
                 elif hasattr(source_item, 'value'):
@@ -1191,14 +1233,35 @@ class CData(HierarchicalObject):
 
         Only sets parent if not already set, respecting explicit parent assignments.
         Only sets name if not already set.
+
+        When an attribute name differs from the child's _name (e.g., self.pointless = plugin
+        where plugin._name = 'aimless_pipe_1'), this also adds an alias in the parent's
+        _children_by_name and _child_storage so the child can be found by the attribute name.
+
+        Also handles the case where a CData with an existing parent is assigned as a reference:
+        e.g., self.AUTOCUTOFF = self.container.controlParameters.AUTOCUTOFF
+        The original parent is kept, but we add a reference so it can be looked up by the key.
         """
         if isinstance(value, CData):
+            existing_parent = value.parent()
             # Only set parent if not already set (respect explicit parent assignment)
-            if value.parent() is None:
+            if existing_parent is None:
                 value.set_parent(self)
             # Only set hierarchical name if not already set
             if not value._name:
                 value._name = key
+
+            # Add a lookup reference if:
+            # 1. The attribute name differs from the child's _name (alias case), OR
+            # 2. The object has a different parent (reference/shortcut case)
+            # This handles both:
+            # - self.pointless = self.makePluginObject('pointless') where plugin._name differs
+            # - self.AUTOCUTOFF = self.container.controlParameters.AUTOCUTOFF (same name, different parent)
+            if value._name != key or (existing_parent is not None and existing_parent is not self):
+                import weakref
+                child_ref = weakref.ref(value)
+                self._children_by_name[key] = child_ref
+                self._child_storage[key] = value
         elif isinstance(value, list):
             # Handle list of CData objects
             for i, item in enumerate(value):
@@ -1390,9 +1453,21 @@ class CData(HierarchicalObject):
                         self._value_states[name] = ValueState.EXPLICITLY_SET
                     return  # Don't replace the object, just update its value
 
-        # For new attributes or non-smart assignment, handle hierarchy and set normally
+        # For new attributes or non-smart assignment, handle hierarchy
         self._setup_hierarchy_for_value(name, value)
-        super().__setattr__(name, value)
+
+        # IMPORTANT: CData children are stored ONLY in hierarchy (via set_parent),
+        # NOT in __dict__. This keeps hierarchy as the single source of truth.
+        # The __getattribute__ override provides O(1) access via _children_by_name.
+        # Non-CData values (primitives, lists of primitives) are stored in __dict__.
+        if isinstance(value, CData):
+            # CData children: already added to hierarchy via _setup_hierarchy_for_value
+            # Don't store in __dict__ - __getattribute__ will find it via _children_by_name
+            pass
+        else:
+            # Non-CData values: store normally in __dict__
+            super().__setattr__(name, value)
+
         # Track that this value has been explicitly set (unless it's internal)
         # IMPORTANT: Don't mark 'value' attribute here for types with @property setters
         # (CInt, CFloat, CBoolean) because those setters handle state tracking themselves.
@@ -1407,13 +1482,6 @@ class CData(HierarchicalObject):
         # Note: 'name' is NOT excluded - HierarchicalObject uses _name, so no collision
         exclusion_list = ["parent", "children", "signals"]
 
-        # DEBUG: Track name assignments
-        if name == "name":
-            print(f"[SETATTR DEBUG] Setting {name} on {self.__class__.__name__}")
-            print(f"[SETATTR DEBUG]   has _value_states: {hasattr(self, '_value_states')}")
-            print(f"[SETATTR DEBUG]   skip_value_tracking: {skip_value_tracking}")
-            print(f"[SETATTR DEBUG]   name in exclusion_list: {name in exclusion_list}")
-
         if (hasattr(self, "_value_states") and not name.startswith("_")
             and name not in exclusion_list
             and not skip_value_tracking):
@@ -1422,8 +1490,9 @@ class CData(HierarchicalObject):
     def __getattr__(self, name: str):
         """Auto-create metadata-defined attributes when accessed.
 
-        This is called when normal attribute lookup fails. If the attribute
-        is defined in metadata but hasn't been instantiated yet, create it.
+        This is called when normal attribute lookup fails (after __getattribute__).
+        If the attribute is defined in metadata but hasn't been instantiated yet,
+        create it and add to hierarchy via set_parent().
         """
         # Avoid infinite recursion - only process if object is fully initialized
         if name.startswith("_") or not hasattr(self, "_hierarchy_initialized"):
@@ -1437,8 +1506,15 @@ class CData(HierarchicalObject):
             attr_def = metadata.attributes[name]
             attr_obj = MetadataAttributeFactory.create_attribute(name, attr_def, self)
 
-            # Store it in __dict__ so subsequent access finds it directly
-            self.__dict__[name] = attr_obj
+            # Add to hierarchy via set_parent (populates _children_by_name for O(1) access)
+            # The __getattribute__ override will find it via _children_by_name
+            # DON'T store in __dict__ - hierarchy is the single source of truth for CData
+            if isinstance(attr_obj, CData):
+                attr_obj._name = name  # Set hierarchical name
+                attr_obj.set_parent(self)  # This adds to _children_by_name
+            else:
+                # Non-CData (shouldn't happen for metadata attributes, but handle gracefully)
+                self.__dict__[name] = attr_obj
 
             # Mark as NOT_SET initially (will be marked EXPLICITLY_SET when assigned)
             if hasattr(self, "_value_states"):
@@ -1448,6 +1524,42 @@ class CData(HierarchicalObject):
 
         # Not a metadata attribute - raise AttributeError
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __delattr__(self, name: str):
+        """Override delattr to handle hierarchy-stored children.
+
+        CData children are stored in the hierarchy (_children_by_name, _child_storage)
+        rather than __dict__. This method handles deletion from both locations.
+
+        Note: This silently succeeds if the attribute doesn't exist, to support
+        defensive deletion patterns in legacy code (e.g., container.deleteObject('MAYBE_EXISTS')).
+        """
+        found = False
+
+        # First try to remove from hierarchy (for CData children)
+        if name in self._children_by_name:
+            child_ref = self._children_by_name.pop(name, None)
+            self._child_storage.pop(name, None)
+            found = True
+
+            # If there's a live child, clean it up
+            if child_ref is not None:
+                child = child_ref()
+                if child is not None and child.parent() is self:
+                    # Remove from parent's _children set as well
+                    self._remove_child(child)
+                    # Note: don't call child.destroy() here - deleteObject already does that
+
+        # Also try to remove from __dict__ (for non-CData attributes)
+        if name in self.__dict__:
+            del self.__dict__[name]
+            found = True
+
+        # Silently succeed if not found - this supports defensive delete patterns
+        # Legacy code often does: container.deleteObject('SOMETHING') without checking first
+        # Note: We only raise if the attribute DEFINITELY should exist (internal names)
+        if not found and name.startswith('_'):
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def find_children_by_type(self, target_type):
         """Find all descendant objects of a specific type.

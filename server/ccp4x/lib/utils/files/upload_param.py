@@ -5,6 +5,9 @@ import gemmi
 import re
 from core.base_object.cdata_file import CDataFile
 from core.CCP4XtalData import CMtzDataFile
+# Import stub class for isinstance checks - subclasses like CObsDataFile inherit from
+# stubs (CMtzDataFileStub) not implementations (CMtzDataFile)
+from core.cdata_stubs.CCP4XtalData import CMtzDataFileStub
 from django.utils.text import slugify
 from django.http import HttpRequest
 from core import CCP4File
@@ -141,19 +144,14 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
 
     # Check MRO for debugging
     logger.info("param_object MRO: %s", [c.__name__ for c in type(param_object).__mro__])
-    logger.info("isinstance CMtzDataFile check: %s", isinstance(param_object, (CCP4XtalData.CMtzDataFile, CMtzDataFile)))
+    logger.info("isinstance CMtzDataFileStub check: %s", isinstance(param_object, CMtzDataFileStub))
 
-    # Reached here and confirmed that the param to which we are associatnig the file is
-    # based on CDataFile
+    # Reached here and confirmed that the param to which we are associating the file is
+    # based on CDataFile. Use CMtzDataFileStub for isinstance check because subclasses
+    # like CObsDataFile inherit from stubs, not implementation classes.
     initial_download_project_folder = (
         "CCP4_DOWNLOADED_FILES"
-        if isinstance(
-            param_object,
-            (
-                CCP4XtalData.CMtzDataFile,
-                CMtzDataFile,
-            ),
-        )
+        if isinstance(param_object, CMtzDataFileStub)
         else "CCP4_IMPORTED_FILES"
     )
     logger.info("initial_download_project_folder: %s", initial_download_project_folder)
@@ -169,13 +167,7 @@ def upload_file_param(job: models.Job, request: HttpRequest) -> dict:
         file_type,
     )
 
-    if isinstance(
-        param_object,
-        (
-            CCP4XtalData.CMtzDataFile,
-            CMtzDataFile,
-        ),
-    ):
+    if isinstance(param_object, CMtzDataFileStub):
         # Check for enhanced multi-selector format first (JSON array)
         column_selectors_json = request.POST.get("column_selectors", None)
         column_selector = request.POST.get("column_selector", None)

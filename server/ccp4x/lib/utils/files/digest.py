@@ -12,6 +12,9 @@ from core.base_object.cdata_file import CDataFile
 from core.base_object.cdata import CData
 from core.CCP4XtalData import CGenericReflDataFile, CMapDataFile, CMtzDataFile
 from core.CCP4ModelData import CPdbDataFile, CDictDataFile
+# Import stub class for isinstance checks - subclasses like CObsDataFile inherit from
+# stubs (CMtzDataFileStub) not implementations (CMtzDataFile)
+from core.cdata_stubs.CCP4XtalData import CMtzDataFileStub
 from pipelines.import_merged.script import mmcifutils
 from ..containers.find_objects import find_objects
 from ..containers.get_container import get_job_container
@@ -268,7 +271,8 @@ def digest_file_object(file_object: CDataFile):
     if isinstance(file_object, CCP4XtalData.CGenericReflDataFile):
         return digest_cgenericrefldatafile_file_object(file_object)
     # CMtzDataFile inherits from CDataFile, not CGenericReflDataFile, so check separately
-    if isinstance(file_object, (CCP4XtalData.CMtzDataFile, CMtzDataFile)):
+    # Use CMtzDataFileStub for isinstance check because subclasses inherit from stubs
+    if isinstance(file_object, CMtzDataFileStub):
         return digest_cmtzdatafile_file_object(file_object)
     if isinstance(file_object, CCP4ModelData.CSeqDataFile):
         return digest_cseqdata_file_object(file_object)

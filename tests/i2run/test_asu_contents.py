@@ -17,7 +17,7 @@ _BLIP_SEQ = (
     "STAGVTLSLSCFDVDGYSSTGFYRGSAHLWFTDGVLQGKRQWDLV"
 )
 
-_FAKE_PATH = os.path.join("$CCP4", "path", "to", "beta_blip")
+_FAKE_PATH = os.path.join("$CCP4I2_ROOT", "demo_data", "beta_blip")
 
 
 def test_beta_blip():

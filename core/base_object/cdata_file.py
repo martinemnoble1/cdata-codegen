@@ -597,15 +597,18 @@ class CDataFile(CData):
 
             if db_file_id:
                 db_handler = self._get_db_handler()
+                print(f"[DEBUG getFullPath] dbFileId={db_file_id}, db_handler={db_handler}")
                 if db_handler:
                     try:
                         import uuid
                         file_uuid = uuid.UUID(str(db_file_id))
                         path = db_handler.get_file_path_sync(file_uuid)
+                        print(f"[DEBUG getFullPath] db lookup returned path={path}")
                         if path:
                             logger.debug(f"Retrieved path from database via dbFileId: {path}")
                             return path
                     except Exception as e:
+                        print(f"[DEBUG getFullPath] db lookup exception: {e}")
                         logger.debug(f"Failed to retrieve path from database: {e}")
 
         # Standard path construction: workDirectory + relPath + baseName
@@ -620,8 +623,36 @@ class CDataFile(CData):
         if relpath_value:
             relpath_str = str(relpath_value).strip()
             if relpath_str:
+                # Handle environment variable expansion in relPath
+                # Patterns like "$CCP4/path/to/file" or "$CCP4I2_ROOT/demo_data/file"
+                # should expand the environment variable and construct the full path
+                import os
+                import re
+                env_var_match = re.match(r'^\$([A-Za-z_][A-Za-z0-9_]*)(.*)', relpath_str)
+                if env_var_match:
+                    env_var_name = env_var_match.group(1)
+                    rest_of_path = env_var_match.group(2).lstrip('/')  # Remove leading slash
+                    env_value = os.environ.get(env_var_name)
+                    if env_value:
+                        # Construct full path: env_value / rest_of_path / baseName
+                        base_dir = Path(env_value)
+                        if rest_of_path:
+                            base_dir = base_dir / rest_of_path
+                        if basename_value:
+                            full_path = base_dir / str(basename_value)
+                            logger.debug("Constructed path from env var $%s: %s", env_var_name, full_path)
+                            return str(full_path)
+                        else:
+                            logger.debug("Constructed dir path from env var $%s: %s", env_var_name, base_dir)
+                            return str(base_dir)
+                    else:
+                        logger.warning("Environment variable $%s not set for relPath: %s", env_var_name, relpath_str)
+
                 # Determine base directory: PROJECT root for imported files, workDirectory for job outputs
                 plugin = self._find_plugin_parent()
+                # DEBUG: Log plugin resolution for CCP4_IMPORTED_FILES
+                if relpath_str == 'CCP4_IMPORTED_FILES' or relpath_str.startswith('CCP4_IMPORTED_FILES/'):
+                    print(f"[DEBUG getFullPath] CCP4_IMPORTED_FILES case: baseName={basename_value}, plugin={plugin}, parent={self.parent()}")
                 if plugin:
                     # For CCP4_IMPORTED_FILES, use project directory as base
                     if relpath_str == 'CCP4_IMPORTED_FILES' or relpath_str.startswith('CCP4_IMPORTED_FILES/'):
@@ -778,8 +809,12 @@ class CDataFile(CData):
         """
         from pathlib import Path
         path = self.getFullPath()
+        print(f"[DEBUG exists] getFullPath returned: {path}")
         if path:
-            return Path(path).exists()
+            result = Path(path).exists()
+            print(f"[DEBUG exists] Path.exists() returned: {result}")
+            return result
+        print(f"[DEBUG exists] No path, returning False")
         return False
 
     def getExt(self) -> str:
@@ -908,8 +943,23 @@ class CDataFile(CData):
             super().set(value.get())
             # IMPORTANT: Also copy non-metadata attributes like 'content'
             # that are set directly in __init__ but not tracked by metadata
-            if hasattr(value, 'content'):
-                self.content = value.content
+            if hasattr(value, 'content') and value.content is not None:
+                # Deep-copy the content and re-parent it to self
+                # A shallow reference copy (self.content = value.content) doesn't work
+                # because the content's parent would still be the source file,
+                # and it wouldn't be serialized as a child of this file
+                source_content = value.content
+                content_type = type(source_content)
+                try:
+                    # Create a new content object with self as parent
+                    new_content = content_type(parent=self, name='fileContent')
+                    # Deep copy the data from source to new content
+                    if hasattr(new_content, '_deep_copy_from'):
+                        new_content._deep_copy_from(source_content)
+                    self.content = new_content
+                except Exception:
+                    # Fallback to reference copy if deep copy fails
+                    self.content = source_content
             if hasattr(value, 'file_path'):
                 self.file_path = value.file_path
         elif isinstance(value, dict):

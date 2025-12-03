@@ -504,11 +504,12 @@ class CAsuDataFile(CAsuDataFileStub):
                         seq_text = ET.SubElement(seq_elem, 'sequence')
                         seq_text.text = str(seq_obj.sequence.value if hasattr(seq_obj.sequence, 'value') else seq_obj.sequence)
 
-                    if hasattr(seq_obj, 'nCopies') and seq_obj.isSet('nCopies'):
+                    # Use allowDefault=True to include default values like nCopies=1 and polymerType=PROTEIN
+                    if hasattr(seq_obj, 'nCopies') and seq_obj.isSet('nCopies', allowDefault=True):
                         copies = ET.SubElement(seq_elem, 'nCopies')
                         copies.text = str(seq_obj.nCopies.value if hasattr(seq_obj.nCopies, 'value') else seq_obj.nCopies)
 
-                    if hasattr(seq_obj, 'polymerType') and seq_obj.isSet('polymerType'):
+                    if hasattr(seq_obj, 'polymerType') and seq_obj.isSet('polymerType', allowDefault=True):
                         polymer = ET.SubElement(seq_elem, 'polymerType')
                         polymer.text = str(seq_obj.polymerType.value if hasattr(seq_obj.polymerType, 'value') else seq_obj.polymerType)
 

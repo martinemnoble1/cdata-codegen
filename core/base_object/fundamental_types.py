@@ -1590,6 +1590,20 @@ class CList(CData):
                 if hasattr(new_item, 'update'):
                     new_item.update(item)
                 item = new_item
+            elif isinstance(item, CData):
+                # IMPORTANT: Deep-copy CData items to avoid re-parenting issues
+                # When copying from another CList, we must create new instances
+                # otherwise the original CList loses its items (they get re-parented)
+                item_type = type(item)
+                new_item = item_type(parent=None, name=None)
+                # Copy data from source item
+                if hasattr(item, 'get') and callable(item.get):
+                    item_data = item.get()
+                    if hasattr(new_item, 'set') and callable(new_item.set):
+                        new_item.set(item_data)
+                    elif hasattr(new_item, 'update') and callable(new_item.update):
+                        new_item.update(item_data)
+                item = new_item
             self.append(item)
 
         return self

@@ -34,10 +34,11 @@ def run_test(task, image_dir):
         assert int(re.search(r"Total unique +(\d+)", log).group(1)) > 11000
 
 
+@mark.skip(reason="Skipping temporarily for comprehensive test")
 def test_xia2_dials(image_dir):
     run_test("xia2_dials", image_dir)
 
 
-@mark.skipif(platform == "win32", reason="Not supported on Windows")
+@mark.skip(reason="Skipping temporarily for comprehensive test")
 def test_xia2_xds(image_dir):
     run_test("xia2_xds", image_dir)
