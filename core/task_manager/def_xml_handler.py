@@ -453,6 +453,22 @@ class DefXmlParser:
                     obj.set_qualifier("maxLength", value)
 
             elif key == "enumerators":
+                # Coerce string enumerators to numeric type for CInt/CFloat
+                # This ensures validation comparisons work correctly
+                if isinstance(value, list) and class_name in ("CInt", "CFloat"):
+                    coerced_value = []
+                    for item in value:
+                        if isinstance(item, str):
+                            try:
+                                if class_name == "CInt":
+                                    coerced_value.append(int(item))
+                                else:  # CFloat
+                                    coerced_value.append(float(item))
+                            except (ValueError, TypeError):
+                                coerced_value.append(item)  # Keep original if not convertible
+                        else:
+                            coerced_value.append(item)
+                    value = coerced_value
                 metadata.enumerators = value
                 if hasattr(obj, "set_qualifier"):
                     obj.set_qualifier("enumerators", value)

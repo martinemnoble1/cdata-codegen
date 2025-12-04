@@ -63,9 +63,11 @@ def test_gamma():
 
 @pytest.mark.order("first")
 def test_no_solution():
+    """Test that phaser correctly reports no solution when data doesn't match model."""
     args = ["phaser_simple"]
     args += ["--F_SIGF", demoData("gamma", "merged_intensities_Xe.mtz")]
     args += ["--XYZIN", demoData("rnase", "rnase_model.pdb")]
     args += ["--RESOLUTION_HIGH", "5.0"]
-    with i2run(args) as job:
+    # Use allow_errors=True because this test expects phaser to fail (no solution found)
+    with i2run(args, allow_errors=True) as job:
         assert not (job / "PHASER.1.pdb").exists()

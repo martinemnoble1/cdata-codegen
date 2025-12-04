@@ -46,7 +46,7 @@ def download(url: str):
 
 
 @contextmanager
-def i2run(args: list[str], project_name: str = None, project_path: Path = None):
+def i2run(args: list[str], project_name: str = None, project_path: Path = None, allow_errors: bool = False):
     """
     Run a task by calling Django management command directly (in-process).
 
@@ -66,6 +66,8 @@ def i2run(args: list[str], project_name: str = None, project_path: Path = None):
         project_path: Optional explicit project directory path (overrides project_name).
                      When provided, CCP4_JOBS and other project files will be created here.
                      This allows conftest.py to pass a random-suffixed directory for test isolation.
+        allow_errors: If True, skip the assertion that diagnostic.xml has no errors.
+                     Use for tests that expect task failures (e.g., no solution found).
     """
     # Use explicit project_path if provided, otherwise try to get from environment
     if project_path is None:
@@ -209,11 +211,14 @@ def i2run(args: list[str], project_name: str = None, project_path: Path = None):
     else:
         print(f"WARNING: Job directory does not exist: {directory}")
 
-    # Check diagnostic.xml for errors
+    # Check diagnostic.xml for errors (unless allow_errors is set)
     xml_path = directory / "diagnostic.xml"
     if xml_path.exists():
         errors = ET.parse(xml_path).findall(".//errorReport")
-        assert len(errors) == 0, f"Error reports found in diagnostic.xml: {errors}"
+        if not allow_errors:
+            assert len(errors) == 0, f"Error reports found in diagnostic.xml: {errors}"
+        elif errors:
+            print(f"Note: {len(errors)} error report(s) found in diagnostic.xml (expected, allow_errors=True)")
     else:
         print(f"Warning: diagnostic.xml not found at {xml_path}")
 

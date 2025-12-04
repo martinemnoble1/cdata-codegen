@@ -32,6 +32,34 @@ class phaser_simple(phaser_pipeline.phaser_pipeline):
         print(f"[DEBUG phaser_simple.checkInputData] returning invalidFiles: {invalidFiles}")
         return invalidFiles
 
+    def validity(self):
+        """Override to filter out ENSEMBLES list length error.
+
+        ENSEMBLES is intentionally empty at validation time because it's
+        populated programmatically by createEnsembleElements() during process().
+        """
+        from core import CCP4ErrorHandling
+
+        # Get parent validation
+        error = super(phaser_simple, self).validity()
+
+        # Filter out the ENSEMBLES minimum length error (code 101)
+        # This error is expected since ENSEMBLES is populated in createEnsembleElements()
+        filtered = CCP4ErrorHandling.CErrorReport()
+        for err in error.getErrors():
+            # Skip error code 101 (min list length) for ENSEMBLES
+            if err.get('code') == 101 and 'ENSEMBLES' in err.get('name', ''):
+                continue
+            filtered.append(
+                klass=err.get('class', ''),
+                code=err.get('code', 0),
+                details=err.get('details', ''),
+                name=err.get('name', ''),
+                severity=err.get('severity', 0)
+            )
+
+        return filtered
+
     def createEnsembleElements(self):
         try:
             from core.CCP4ModelData import CPdbDataFile, CAtomSelection, CPdbEnsembleItem

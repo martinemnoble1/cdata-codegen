@@ -104,9 +104,10 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
             inputObject.setHIRES(float(inp.RESOLUTION_HIGH))
         inputObject.setMUTE(False)
         resultObject = phaser.runMR_DAT(inputObject, outputObject)
-        with open (self.makeFileName('LOG'),'w') as logfile:
-            logfile.write(resultObject.logfile())
-        
+        # Note: Don't write logfile() here - it truncates the LOG while C++ stdout
+        # is still redirected to it. The logfile() write is done after
+        # finishCaptureCPlusPlusStdout() in startProcess().
+
         if not resultObject.Success():
             self.appendErrorReport(105, resultObject.ErrorName() + '-' + resultObject.ErrorMessage())
             return CPluginScript.FAILED
@@ -124,6 +125,11 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
         resultObject = self.runMR_DAT(outputObject)
         print("[DEBUG phaser_MR_AUTO.startProcess] runMR_DAT finished")
         self.finishCaptureCPlusPlusStdout()
+        # Write phaser's internal log buffer AFTER restoring stdout (not before!)
+        # The first call uses 'w' to start fresh, subsequent calls use 'a' to append
+        if resultObject != CPluginScript.FAILED:
+            with open(self.makeFileName('LOG'), 'w') as logfile:
+                logfile.write(resultObject.logfile())
 
         if resultObject == CPluginScript.FAILED: return CPluginScript.FAILED
         print("[DEBUG phaser_MR_AUTO.startProcess] Result object checked for failure")
@@ -198,10 +204,14 @@ class phaser_MR_AUTO(phaser_MR.phaser_MR):
 
 
         self.finishCaptureCPlusPlusStdout()
+        # Write phaser's internal log buffer for the main MR_AUTO phase (append mode)
+        with open(self.makeFileName('LOG'), 'a') as logfile:
+            logfile.write(self.resultObject.logfile())
+
         if not self.resultObject.Success():
             self.appendErrorReport(105, self.resultObject.ErrorName() + '-' + self.resultObject.ErrorMessage())
             return CPluginScript.FAILED
-            
+
         self.analyseResults(self.resultObject)
         return CPluginScript.SUCCEEDED
 

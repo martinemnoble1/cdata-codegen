@@ -387,7 +387,15 @@ class CInt(CData):
         only_enumerators = self.get_qualifier("onlyEnumerators")
         enumerators = self.get_qualifier("enumerators")
         if only_enumerators and enumerators:
-            if val not in enumerators:
+            # Convert string enumerators to int for proper comparison
+            # (metadata often stores enumerators as strings like ['0', '1', '2'])
+            numeric_enumerators = []
+            for e in enumerators:
+                try:
+                    numeric_enumerators.append(int(e) if isinstance(e, str) else e)
+                except (ValueError, TypeError):
+                    numeric_enumerators.append(e)  # Keep original if not convertible
+            if val not in numeric_enumerators:
                 report.append(
                     "CInt", 103,
                     f"Value {val} not in allowed values {enumerators}",
@@ -810,7 +818,15 @@ class CFloat(CData):
         only_enumerators = self.get_qualifier("onlyEnumerators")
         enumerators = self.get_qualifier("enumerators")
         if only_enumerators and enumerators:
-            if val not in enumerators:
+            # Convert string enumerators to float for proper comparison
+            # (metadata often stores enumerators as strings like ['0.0', '1.0', '2.0'])
+            numeric_enumerators = []
+            for e in enumerators:
+                try:
+                    numeric_enumerators.append(float(e) if isinstance(e, str) else e)
+                except (ValueError, TypeError):
+                    numeric_enumerators.append(e)  # Keep original if not convertible
+            if val not in numeric_enumerators:
                 report.append(
                     "CFloat", 103,
                     f"Value {val} not in allowed values {enumerators}",
